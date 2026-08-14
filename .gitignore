@@ -1,0 +1,28 @@
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+
+# Node / Angular
+**/node_modules/
+**/dist/
+**/.angular/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+secrets.json
+
+# IDE / OS
+.idea/
+.vs/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Test output
+TestResults/
+coverage/

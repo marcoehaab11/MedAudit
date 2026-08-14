@@ -1,0 +1,7 @@
+:host { display: block; min-block-size: 100vh; }
+.shell { min-block-size: 100vh; background: radial-gradient(circle at 85% 5%, #d9fff4 0, transparent 32%), var(--surface); color: var(--ink); }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 1rem; padding-inline: clamp(1.25rem, 5vw, 5rem); border-block-end: 1px solid var(--border); background: rgb(255 255 255 / 88%); position: sticky; inset-block-start: 0; z-index: 10; backdrop-filter: blur(14px); }
+.brand, .actions { display: flex; gap: .75rem; align-items: center; }.brand { color: inherit; font-weight: 800; text-decoration: none; }.brand-mark { display: grid; place-items: center; inline-size: 2.25rem; block-size: 2.25rem; border-radius: .75rem; background: var(--brand); color: white; font-size: .78rem; }.actions a { color: var(--brand-dark); font-weight: 700; }
+.actions button { background: transparent; }.language { border-radius: 999px; background: white !important; }
+.content { max-inline-size: 76rem; margin-inline: auto; padding-block: clamp(2rem, 6vw, 5rem); padding-inline: clamp(1rem, 4vw, 3rem); }
+@media (max-width: 36rem) { .brand > span:last-child { display: none; }.actions { gap: .4rem; }.topbar { padding-inline: .8rem; } }

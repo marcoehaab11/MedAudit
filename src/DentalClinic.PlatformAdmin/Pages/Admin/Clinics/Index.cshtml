@@ -1,0 +1,78 @@
+@page "/admin/clinics"
+@model DentalClinic.PlatformAdmin.Pages.Admin.Clinics.IndexModel
+@using DentalClinic.Domain.Tenancy
+@{
+    ViewData["Title"] = "Clinics";
+}
+
+<div class="page-heading">
+    <div>
+        <p class="eyebrow">Tenant management</p>
+        <h1>Clinics</h1>
+        <p class="text-secondary">Create, review, and control clinic access across the platform.</p>
+    </div>
+    <a class="btn btn-primary" asp-page="Create">Create clinic</a>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+{
+    <div class="alert alert-success" role="status">@Model.SuccessMessage</div>
+}
+
+<form method="get" class="filter-bar" data-loading-form>
+    <div>
+        <label class="form-label" asp-for="Search">Search</label>
+        <input class="form-control" asp-for="Search" placeholder="Name, slug, or email" />
+    </div>
+    <div>
+        <label class="form-label" asp-for="Status">Status</label>
+        <select class="form-select" asp-for="Status" asp-items="Html.GetEnumSelectList<TenantStatus>()">
+            <option value="">All statuses</option>
+        </select>
+    </div>
+    <button class="btn btn-outline-primary align-self-end" type="submit">
+        <span class="default-label">Apply filters</span><span class="loading-label">Loading…</span>
+    </button>
+</form>
+
+@if (Model.Clinics.Items.Count == 0)
+{
+    <div class="empty-state">
+        <span aria-hidden="true">⌕</span>
+        <h2>No clinics found</h2>
+        <p>Adjust the filters or create the first clinic.</p>
+        <a class="btn btn-primary" asp-page="Create">Create clinic</a>
+    </div>
+}
+else
+{
+    <div class="table-responsive panel">
+        <table class="table align-middle mb-0">
+            <thead><tr><th>Clinic</th><th>Status</th><th>Location</th><th>Admin</th><th>Created</th><th class="text-end">Actions</th></tr></thead>
+            <tbody>
+            @foreach (var clinic in Model.Clinics.Items)
+            {
+                <tr>
+                    <td><a class="fw-semibold text-decoration-none" asp-page="Details" asp-route-id="@clinic.Id">@clinic.Name</a><small class="d-block text-secondary">@clinic.Slug</small></td>
+                    <td><span class="status-badge status-@clinic.Status.ToString().ToLowerInvariant()">@clinic.Status</span></td>
+                    <td>@clinic.City, @clinic.Country</td>
+                    <td>@(clinic.AdminEmail ?? "Pending")</td>
+                    <td>@clinic.CreatedAt.ToString("yyyy-MM-dd")</td>
+                    <td class="text-end"><a class="btn btn-sm btn-outline-secondary" asp-page="Edit" asp-route-id="@clinic.Id">Edit</a></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.Clinics.TotalPages > 1)
+    {
+        <nav class="pagination-bar" aria-label="Clinic pages">
+            <span>Page @Model.Clinics.Page of @Model.Clinics.TotalPages · @Model.Clinics.TotalCount clinics</span>
+            <div>
+                <a class="btn btn-sm btn-outline-secondary @(Model.Clinics.Page <= 1 ? "disabled" : null)" asp-route-Search="@Model.Search" asp-route-Status="@Model.Status" asp-route-PageNumber="@(Model.Clinics.Page - 1)">Previous</a>
+                <a class="btn btn-sm btn-outline-secondary @(Model.Clinics.Page >= Model.Clinics.TotalPages ? "disabled" : null)" asp-route-Search="@Model.Search" asp-route-Status="@Model.Status" asp-route-PageNumber="@(Model.Clinics.Page + 1)">Next</a>
+            </div>
+        </nav>
+    }
+}

@@ -1,0 +1,24 @@
+<div class="shell">
+  <header>
+    <a href="/" class="brand"><span aria-hidden="true">DC</span> Dental Clinic</a>
+    <button type="button" (click)="toggleLanguage()">{{ language() === 'en' ? 'العربية' : 'English' }}</button>
+  </header>
+  <main>
+    <div class="card">
+      <div class="symbol" aria-hidden="true">✦</div>
+      @if (language() === 'en') {
+        <p class="eyebrow">Patient experience</p>
+        <h1>Care starts here.</h1>
+        <p>Secure booking and prescription verification are being prepared.</p>
+      } @else {
+        <div lang="ar">
+          <p class="eyebrow">تجربة المريض</p>
+          <h1>الرعاية تبدأ هنا.</h1>
+          <p>يجري تجهيز الحجز الآمن والتحقق من الوصفات الطبية.</p>
+        </div>
+      }
+      <div class="privacy">No internal clinic or patient identifiers are exposed.</div>
+    </div>
+    <router-outlet />
+  </main>
+</div>

@@ -1,0 +1,32 @@
+@page "/admin/clinics/{id:guid}"
+@model DentalClinic.PlatformAdmin.Pages.Admin.Clinics.DetailsModel
+@using DentalClinic.Domain.Tenancy
+@{ ViewData["Title"] = Model.Clinic.Name; }
+
+<div class="page-heading">
+    <div><p class="eyebrow">Clinic details</p><h1>@Model.Clinic.Name</h1><p class="text-secondary">@Model.Clinic.Slug</p></div>
+    <a class="btn btn-outline-primary" asp-page="Edit" asp-route-id="@Model.Clinic.Id">Edit clinic</a>
+</div>
+@if (!string.IsNullOrWhiteSpace(Model.SuccessMessage)) { <div class="alert alert-success" role="status">@Model.SuccessMessage</div> }
+
+<div class="detail-layout">
+    <section class="panel detail-card">
+        <div class="detail-title"><h2>Clinic profile</h2><span class="status-badge status-@Model.Clinic.Status.ToString().ToLowerInvariant()">@Model.Clinic.Status</span></div>
+        <dl class="detail-grid">
+            <div><dt>Email</dt><dd>@Model.Clinic.Email</dd></div><div><dt>Phone</dt><dd>@Model.Clinic.Phone</dd></div>
+            <div><dt>Location</dt><dd>@Model.Clinic.City, @Model.Clinic.Country</dd></div><div><dt>Address</dt><dd>@Model.Clinic.Address</dd></div>
+            <div><dt>Timezone</dt><dd>@Model.Clinic.TimeZone</dd></div><div><dt>Currency</dt><dd>@Model.Clinic.Currency</dd></div>
+            <div><dt>Created</dt><dd>@Model.Clinic.CreatedAt.ToString("yyyy-MM-dd HH:mm 'UTC'")</dd></div><div><dt>Updated</dt><dd>@Model.Clinic.UpdatedAt.ToString("yyyy-MM-dd HH:mm 'UTC'")</dd></div>
+        </dl>
+    </section>
+    <aside class="panel detail-card">
+        <h2>Clinic administrator</h2><p class="fw-semibold">@(Model.Clinic.AdminEmail ?? "Invitation pending")</p>
+        <p class="text-secondary small">The administrator sets their own credentials through the invitation workflow.</p>
+        <hr /><h2>Status actions</h2>
+        <div class="status-actions">
+            @if (Model.Clinic.Status != TenantStatus.Active) { <form method="post" asp-page-handler="Status" data-confirm="Activate this clinic?"><input type="hidden" name="id" value="@Model.Clinic.Id" /><input type="hidden" name="status" value="Active" /><button class="btn btn-sm btn-success">Activate</button></form> }
+            @if (Model.Clinic.Status != TenantStatus.Inactive) { <form method="post" asp-page-handler="Status" data-confirm="Deactivate this clinic? Clinic access will be disabled."><input type="hidden" name="id" value="@Model.Clinic.Id" /><input type="hidden" name="status" value="Inactive" /><button class="btn btn-sm btn-outline-secondary">Deactivate</button></form> }
+            @if (Model.Clinic.Status != TenantStatus.Suspended) { <form method="post" asp-page-handler="Status" data-confirm="Suspend this clinic? Use this for policy or billing enforcement."><input type="hidden" name="id" value="@Model.Clinic.Id" /><input type="hidden" name="status" value="Suspended" /><button class="btn btn-sm btn-outline-danger">Suspend</button></form> }
+        </div>
+    </aside>
+</div>

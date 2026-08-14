@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DentalClinic.Api/DentalClinic.Api.csproj" />
+    <Project Path="src/DentalClinic.Application/DentalClinic.Application.csproj" />
+    <Project Path="src/DentalClinic.Contracts/DentalClinic.Contracts.csproj" />
+    <Project Path="src/DentalClinic.Domain/DentalClinic.Domain.csproj" />
+    <Project Path="src/DentalClinic.Infrastructure/DentalClinic.Infrastructure.csproj" />
+    <Project Path="src/DentalClinic.PlatformAdmin/DentalClinic.PlatformAdmin.csproj" />
+    <Project Path="src/DentalClinic.Worker/DentalClinic.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DentalClinic.ArchitectureTests/DentalClinic.ArchitectureTests.csproj" />
+    <Project Path="tests/DentalClinic.IntegrationTests/DentalClinic.IntegrationTests.csproj" />
+    <Project Path="tests/DentalClinic.UnitTests/DentalClinic.UnitTests.csproj" />
+  </Folder>
+</Solution>

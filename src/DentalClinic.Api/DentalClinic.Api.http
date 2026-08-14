@@ -1,0 +1,9 @@
+@DentalClinic.Api_HostAddress = http://localhost:5244
+
+GET {{DentalClinic.Api_HostAddress}}/health/live
+Accept: application/json
+
+###
+
+GET {{DentalClinic.Api_HostAddress}}/health/ready
+Accept: application/json

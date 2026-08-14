@@ -1,0 +1,23 @@
+<div class="shell">
+  <header class="topbar">
+    <a class="brand" routerLink="/patients" aria-label="Dental Clinic home"
+      ><span class="brand-mark" aria-hidden="true">DC</span><span>Dental Clinic</span></a
+    >
+    <nav class="actions">
+      @if (auth.authenticated()) {
+        <a routerLink="/patients">{{ i18n.language() === 'en' ? 'Patients' : 'المرضى' }}</a
+        ><a routerLink="/users">{{ i18n.language() === 'en' ? 'Users' : 'المستخدمون' }}</a>
+        @if (auth.hasPermission('Doctors.View')) {
+          <a routerLink="/doctors">{{ i18n.language() === 'en' ? 'Doctors' : 'الأطباء' }}</a>
+        }
+        ><button type="button" (click)="logout()">
+          {{ i18n.language() === 'en' ? 'Sign out' : 'تسجيل الخروج' }}
+        </button>
+      }
+      <button type="button" class="language" (click)="i18n.toggle()">
+        {{ i18n.language() === 'en' ? 'العربية' : 'English' }}
+      </button>
+    </nav>
+  </header>
+  <main class="content"><router-outlet /></main>
+</div>

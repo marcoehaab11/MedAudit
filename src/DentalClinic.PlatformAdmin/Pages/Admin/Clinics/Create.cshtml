@@ -1,0 +1,27 @@
+@page "/admin/clinics/create"
+@model DentalClinic.PlatformAdmin.Pages.Admin.Clinics.CreateModel
+@{
+    ViewData["Title"] = "Create clinic";
+}
+
+<div class="page-heading"><div><p class="eyebrow">Tenant onboarding</p><h1>Create clinic</h1><p class="text-secondary">The admin receives an invitation—no password is entered here.</p></div></div>
+
+<form method="post" class="panel form-panel" data-loading-form>
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+    <div class="form-grid">
+        <div><label asp-for="Input.Name" class="form-label"></label><input asp-for="Input.Name" class="form-control" /><span asp-validation-for="Input.Name" class="text-danger"></span></div>
+        <div><label asp-for="Input.Slug" class="form-label"></label><input asp-for="Input.Slug" class="form-control" placeholder="clinic-name" /><span asp-validation-for="Input.Slug" class="text-danger"></span></div>
+        <div><label asp-for="Input.Phone" class="form-label"></label><input asp-for="Input.Phone" class="form-control" /><span asp-validation-for="Input.Phone" class="text-danger"></span></div>
+        <div><label asp-for="Input.Email" class="form-label"></label><input asp-for="Input.Email" class="form-control" /><span asp-validation-for="Input.Email" class="text-danger"></span></div>
+        <div class="full"><label asp-for="Input.Address" class="form-label"></label><input asp-for="Input.Address" class="form-control" /><span asp-validation-for="Input.Address" class="text-danger"></span></div>
+        <div><label asp-for="Input.City" class="form-label"></label><input asp-for="Input.City" class="form-control" /><span asp-validation-for="Input.City" class="text-danger"></span></div>
+        <div><label asp-for="Input.Country" class="form-label"></label><input asp-for="Input.Country" class="form-control" /><span asp-validation-for="Input.Country" class="text-danger"></span></div>
+        <div><label asp-for="Input.TimeZone" class="form-label"></label><input asp-for="Input.TimeZone" class="form-control" /><span asp-validation-for="Input.TimeZone" class="text-danger"></span></div>
+        <div><label asp-for="Input.Currency" class="form-label"></label><input asp-for="Input.Currency" class="form-control text-uppercase" /><span asp-validation-for="Input.Currency" class="text-danger"></span></div>
+        <div><label asp-for="Input.AdminEmail" class="form-label">Clinic admin email</label><input asp-for="Input.AdminEmail" class="form-control" /><span asp-validation-for="Input.AdminEmail" class="text-danger"></span></div>
+        <div><label asp-for="Input.LogoReference" class="form-label">Logo reference</label><input asp-for="Input.LogoReference" class="form-control" /><span asp-validation-for="Input.LogoReference" class="text-danger"></span></div>
+    </div>
+    <div class="form-actions"><a class="btn btn-outline-secondary" asp-page="Index">Cancel</a><button class="btn btn-primary" type="submit"><span class="default-label">Create clinic</span><span class="loading-label">Creating…</span></button></div>
+</form>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }
