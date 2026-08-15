@@ -5,6 +5,7 @@ public static class SystemRoleDefinitions
     public const string ClinicAdmin = "ClinicAdmin";
     public const string Doctor = "Doctor";
     public const string Receptionist = "Receptionist";
+    public const string Pharmacist = "Pharmacist";
 
     public static IReadOnlyDictionary<string, IReadOnlyCollection<string>> Roles { get; } =
         new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.OrdinalIgnoreCase)
@@ -60,7 +61,9 @@ public static class SystemRoleDefinitions
                 Permissions.ReportsPrescriptions,
                 Permissions.NotificationsView,
                 Permissions.InventoryView,
-                Permissions.InventoryIssue
+                Permissions.InventoryIssue,
+                Permissions.PharmacyView,
+                Permissions.PharmacyViewHistory
             ],
             [Receptionist] =
             [
@@ -96,6 +99,16 @@ public static class SystemRoleDefinitions
                 Permissions.InventoryView,
                 Permissions.InventoryReceive,
                 Permissions.InventoryIssue
+            ],
+            [Pharmacist] =
+            [
+                Permissions.PatientsView,
+                Permissions.PrescriptionsView,
+                Permissions.InventoryView,
+                Permissions.PharmacyView,
+                Permissions.PharmacyDispense,
+                Permissions.PharmacyViewHistory,
+                Permissions.PharmacyViewDashboard
             ]
         };
 }

@@ -11,6 +11,8 @@ using DentalClinic.Application.Prescriptions;
 using DentalClinic.Application.Crm;
 using DentalClinic.Application.Finance;
 using DentalClinic.Application.Reports;
+using DentalClinic.Application.Inventory;
+using DentalClinic.Application.Pharmacy;
 using DentalClinic.Infrastructure.Prescriptions;
 using DentalClinic.Infrastructure.Services;
 using DentalClinic.Infrastructure.Health;
@@ -58,7 +60,8 @@ public static class DependencyInjection
         services.AddScoped<IFinanceStore, FinanceStore>();
         services.AddScoped<IReportStore, ReportStore>();
         services.AddScoped<DentalClinic.Application.Notifications.INotificationStore, DentalClinic.Infrastructure.Persistence.NotificationStore>();
-        services.AddScoped<DentalClinic.Application.Inventory.IInventoryStore, DentalClinic.Infrastructure.Persistence.InventoryStore>();
+        services.AddScoped<IInventoryStore, InventoryStore>();
+        services.AddScoped<IPharmacyStore, PharmacyStore>();
         services.AddScoped<DentalClinic.Infrastructure.Notifications.INotificationProvider, DentalClinic.Infrastructure.Notifications.EmailNotificationProvider>();
         services.AddScoped<DentalClinic.Infrastructure.Notifications.INotificationProvider, DentalClinic.Infrastructure.Notifications.SmsNotificationProvider>();
         services.AddScoped<DentalClinic.Infrastructure.Notifications.INotificationProvider, DentalClinic.Infrastructure.Notifications.WhatsAppNotificationProvider>();

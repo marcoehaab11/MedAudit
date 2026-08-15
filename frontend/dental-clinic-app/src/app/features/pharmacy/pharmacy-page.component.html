@@ -1,0 +1,380 @@
+<div class="pharmacy-container" [attr.dir]="loc.direction()">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">{{ loc.language() === 'ar' ? 'إدارة الصيدلية' : 'Pharmacy Management' }}</h1>
+      <p class="page-subtitle">{{ loc.language() === 'ar' ? 'صرف الروشتات وإدارة الأدوية' : 'Prescription Dispensing & Medication Catalog' }}</p>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="errorMessage()" class="alert alert-danger">{{ errorMessage() }}</div>
+  <div *ngIf="successMessage()" class="alert alert-success">{{ successMessage() }}</div>
+
+  <!-- Navigation Tabs -->
+  <div class="tabs-nav">
+    <button [class.active]="activeTab() === 'dashboard'" (click)="activeTab.set('dashboard')">
+      {{ loc.language() === 'ar' ? 'لوحة التحكم' : 'Dashboard' }}
+    </button>
+    <button [class.active]="activeTab() === 'prescriptions'" (click)="activeTab.set('prescriptions')">
+      {{ loc.language() === 'ar' ? 'الروشتات المطلوبة' : 'Prescriptions Ready' }}
+    </button>
+    <button [class.active]="activeTab() === 'dispensings'" (click)="activeTab.set('dispensings')">
+      {{ loc.language() === 'ar' ? 'سجل الصرف' : 'Dispensing History' }}
+    </button>
+    <button [class.active]="activeTab() === 'catalog'" (click)="activeTab.set('catalog')">
+      {{ loc.language() === 'ar' ? 'كتالوج الأدوية والربط' : 'Medication Catalog & Mapping' }}
+    </button>
+  </div>
+
+  <!-- Loading Indicator -->
+  <div *ngIf="loading()" class="loading-spinner">
+    <span>{{ loc.language() === 'ar' ? 'جاري التحميل...' : 'Loading...' }}</span>
+  </div>
+
+  <!-- DASHBOARD TAB -->
+  <div *ngIf="activeTab() === 'dashboard' && summary()" class="tab-content">
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-value">{{ summary()?.waitingForDispensingCount }}</div>
+        <div class="metric-label">{{ loc.language() === 'ar' ? 'في انتظار الصرف' : 'Waiting for Dispensing' }}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">{{ summary()?.partiallyDispensedCount }}</div>
+        <div class="metric-label">{{ loc.language() === 'ar' ? 'صرف جزئي' : 'Partially Dispensed' }}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">{{ summary()?.fullyDispensedTodayCount }}</div>
+        <div class="metric-label">{{ loc.language() === 'ar' ? 'صرف كامل اليوم' : 'Fully Dispensed Today' }}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value text-danger">{{ summary()?.lowStockMedicationCount }}</div>
+        <div class="metric-label">{{ loc.language() === 'ar' ? 'أدوية منخفضة المخزون' : 'Low-Stock Medications' }}</div>
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="card mt-4">
+      <div class="card-header">
+        <h3>{{ loc.language() === 'ar' ? 'نشاط الصرف الحديث' : 'Recent Dispensing Activity' }}</h3>
+      </div>
+      <div class="card-body">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{ loc.language() === 'ar' ? 'رقم الصرف' : 'Dispensing #' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'رقم الروشتة' : 'Rx #' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'المريض' : 'Patient' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'الحالة' : 'Status' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'التاريخ' : 'Date' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'إجراءات' : 'Actions' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of summary()?.recentActivity">
+              <td><strong>{{ item.dispensingNumber }}</strong></td>
+              <td>{{ item.prescriptionNumber }}</td>
+              <td>{{ item.patientName }}</td>
+              <td><span class="badge" [ngClass]="getStatusBadgeClass(item.status)">{{ getStatusText(item.status) }}</span></td>
+              <td>{{ item.dispensedAt | date:'medium' }}</td>
+              <td><button class="btn btn-sm btn-outline" (click)="viewDispensingDetail(item.id)">{{ loc.language() === 'ar' ? 'التفاصيل' : 'Details' }}</button></td>
+            </tr>
+            <tr *ngIf="summary()?.recentActivity?.length === 0">
+              <td colspan="6" class="text-center text-muted">{{ loc.language() === 'ar' ? 'لا يوجد عمليات صرف حديثة' : 'No recent dispensing activity.' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRESCRIPTIONS READY TAB -->
+  <div *ngIf="activeTab() === 'prescriptions'" class="tab-content">
+    <div class="card">
+      <div class="card-header">
+        <h3>{{ loc.language() === 'ar' ? 'الروشتات الجاهزة للصرف' : 'Prescriptions Ready for Dispensing' }}</h3>
+      </div>
+      <div class="card-body">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{ loc.language() === 'ar' ? 'رقم الروشتة' : 'Rx #' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'المريض' : 'Patient' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'الطبيب' : 'Doctor' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'تاريخ الإصدار' : 'Issued Date' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'عدد الأدوية' : 'Medications' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'إجراءات' : 'Actions' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let rx of prescriptions()">
+              <td><strong>{{ rx.prescriptionNumber }}</strong></td>
+              <td>{{ rx.patientName }}</td>
+              <td>{{ rx.doctorName }}</td>
+              <td>{{ rx.issuedAt | date:'mediumDate' }}</td>
+              <td>{{ rx.items.length }} {{ loc.language() === 'ar' ? 'أدوية' : 'items' }}</td>
+              <td>
+                <button class="btn btn-sm btn-primary" (click)="openDispenseModal(rx)">
+                  {{ loc.language() === 'ar' ? 'صرف الروشتة' : 'Dispense' }}
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="prescriptions().length === 0">
+              <td colspan="6" class="text-center text-muted">{{ loc.language() === 'ar' ? 'لا يوجد روشتات في انتظار الصرف' : 'No prescriptions waiting for dispensing.' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- DISPENSING HISTORY TAB -->
+  <div *ngIf="activeTab() === 'dispensings'" class="tab-content">
+    <div class="card">
+      <div class="card-header">
+        <h3>{{ loc.language() === 'ar' ? 'سجل عمليات الصرف' : 'Dispensing History' }}</h3>
+      </div>
+      <div class="card-body">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{ loc.language() === 'ar' ? 'رقم الصرف' : 'Dispensing #' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'رقم الروشتة' : 'Rx #' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'المريض' : 'Patient' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'الحالة' : 'Status' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'الصيدلي / المستخدم' : 'Dispensed By' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'التاريخ' : 'Date' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'إجراءات' : 'Actions' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let disp of dispensings()">
+              <td><strong>{{ disp.dispensingNumber }}</strong></td>
+              <td>{{ disp.prescriptionNumber }}</td>
+              <td>{{ disp.patientName }}</td>
+              <td><span class="badge" [ngClass]="getStatusBadgeClass(disp.status)">{{ getStatusText(disp.status) }}</span></td>
+              <td>{{ disp.dispensedByUserName || 'System' }}</td>
+              <td>{{ disp.dispensedAt | date:'medium' }}</td>
+              <td>
+                <button class="btn btn-sm btn-outline" (click)="viewDispensingDetail(disp.id)">
+                  {{ loc.language() === 'ar' ? 'التفاصيل' : 'Details' }}
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="dispensings().length === 0">
+              <td colspan="7" class="text-center text-muted">{{ loc.language() === 'ar' ? 'لا يوجد سجلات صرف' : 'No dispensing records found.' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEDICATION CATALOG & MAPPING TAB -->
+  <div *ngIf="activeTab() === 'catalog'" class="tab-content">
+    <div class="card">
+      <div class="card-header">
+        <h3>{{ loc.language() === 'ar' ? 'كتالوج الأدوية وربط المخزون' : 'Medication Catalog & Inventory Mapping' }}</h3>
+      </div>
+      <div class="card-body">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{ loc.language() === 'ar' ? 'اسم الدواء' : 'Medication Name' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'الاسم العلمي' : 'Generic Name' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'التركيز' : 'Strength' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'الباركود' : 'Barcode' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'عنصر المخزون المربوط' : 'Mapped Inventory Item' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'المخزون المتاح' : 'Available Stock' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'إجراءات' : 'Actions' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let med of catalog()">
+              <td><strong>{{ med.name }}</strong></td>
+              <td>{{ med.genericName || '-' }}</td>
+              <td>{{ med.strength || '-' }}</td>
+              <td>{{ med.barcode || '-' }}</td>
+              <td>
+                <span *ngIf="med.inventoryItemName" class="badge badge-info">{{ med.inventoryItemName }} ({{ med.inventoryItemSku }})</span>
+                <span *ngIf="!med.inventoryItemName" class="text-muted">{{ loc.language() === 'ar' ? 'غير مربوط' : 'Not mapped' }}</span>
+              </td>
+              <td>
+                <span *ngIf="med.availableStock !== null && med.availableStock !== undefined">{{ med.availableStock }}</span>
+                <span *ngIf="med.availableStock === null || med.availableStock === undefined" class="text-muted">-</span>
+              </td>
+              <td>
+                <button class="btn btn-sm btn-outline" (click)="openMappingModal(med)">
+                  {{ loc.language() === 'ar' ? 'ربط المخزون' : 'Map Stock' }}
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="catalog().length === 0">
+              <td colspan="7" class="text-center text-muted">{{ loc.language() === 'ar' ? 'لا يوجد أدوية في الكتالوج' : 'No medications found in catalog.' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- DISPENSE MODAL -->
+  <div *ngIf="selectedPrescriptionDetail()" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>{{ loc.language() === 'ar' ? 'صرف الروشتة' : 'Dispense Prescription' }} #{{ selectedPrescriptionDetail()?.prescriptionNumber }}</h3>
+        <button class="close-btn" (click)="closeDispenseModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p><strong>{{ loc.language() === 'ar' ? 'المريض' : 'Patient' }}:</strong> {{ selectedPrescriptionDetail()?.patientName }}</p>
+        <p><strong>{{ loc.language() === 'ar' ? 'الطبيب' : 'Doctor' }}:</strong> {{ selectedPrescriptionDetail()?.doctorName }}</p>
+
+        <div class="form-group mt-3" *ngFor="let fItem of dispenseItemsForm(); let i = index">
+          <label><strong>{{ fItem.medicationName }}</strong> ({{ loc.language() === 'ar' ? 'المتبقي للصرف' : 'Remaining' }}: {{ fItem.maxQuantity }})</label>
+          <div class="grid-2">
+            <div>
+              <label class="form-label-sm">{{ loc.language() === 'ar' ? 'اختر عنصر المخزون' : 'Select Inventory Stock Item' }}</label>
+              <select [(ngModel)]="fItem.inventoryItemId" class="form-control">
+                <option value="">-- {{ loc.language() === 'ar' ? 'اختر عنصر مخزون' : 'Select Item' }} --</option>
+                <option *ngFor="let inv of inventoryItems()" [value]="inv.id">
+                  {{ inv.name }} ({{ inv.sku }}) - {{ loc.language() === 'ar' ? 'المتاح' : 'Stock' }}: {{ inv.currentStock }}
+                </option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label-sm">{{ loc.language() === 'ar' ? 'الكمية المصروفة' : 'Quantity to Dispense' }}</label>
+              <input type="number" [(ngModel)]="fItem.quantityToDispense" [max]="fItem.maxQuantity" min="1" class="form-control" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group mt-3">
+          <label>{{ loc.language() === 'ar' ? 'ملاحظات الصرف' : 'Dispensing Notes' }}</label>
+          <textarea [(ngModel)]="dispenseNotes" class="form-control" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeDispenseModal()">{{ loc.language() === 'ar' ? 'إلغاء' : 'Cancel' }}</button>
+        <button class="btn btn-primary" (click)="submitDispense()" [disabled]="loading()">
+          {{ loc.language() === 'ar' ? 'تأكيد الصرف' : 'Confirm Dispensing' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DISPENSING DETAIL MODAL -->
+  <div *ngIf="selectedDispensingDetail()" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>{{ loc.language() === 'ar' ? 'تفاصيل عملية الصرف' : 'Dispensing Details' }} #{{ selectedDispensingDetail()?.dispensingNumber }}</h3>
+        <button class="close-btn" (click)="closeDetailModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="grid-2">
+          <div>
+            <p><strong>{{ loc.language() === 'ar' ? 'رقم الروشتة' : 'Rx #' }}:</strong> {{ selectedDispensingDetail()?.prescriptionNumber }}</p>
+            <p><strong>{{ loc.language() === 'ar' ? 'المريض' : 'Patient' }}:</strong> {{ selectedDispensingDetail()?.patientName }}</p>
+          </div>
+          <div>
+            <p><strong>{{ loc.language() === 'ar' ? 'الحالة' : 'Status' }}:</strong> <span class="badge" [ngClass]="getStatusBadgeClass(selectedDispensingDetail()!.status)">{{ getStatusText(selectedDispensingDetail()!.status) }}</span></p>
+            <p><strong>{{ loc.language() === 'ar' ? 'التاريخ' : 'Date' }}:</strong> {{ selectedDispensingDetail()?.dispensedAt | date:'medium' }}</p>
+          </div>
+        </div>
+
+        <h4 class="mt-3">{{ loc.language() === 'ar' ? 'الأدوية المصروفة' : 'Dispensed Items' }}</h4>
+        <table class="data-table mt-2">
+          <thead>
+            <tr>
+              <th>{{ loc.language() === 'ar' ? 'الدواء' : 'Medication' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'عنصر المخزون' : 'Inventory Item' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'الكمية المصروفة' : 'Qty Dispensed' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of selectedDispensingDetail()?.items">
+              <td>{{ item.medicationName }}</td>
+              <td>{{ item.inventoryItemName }} ({{ item.inventoryItemSku }})</td>
+              <td>{{ item.quantityDispensed }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div *ngIf="selectedDispensingDetail()?.reversal" class="alert alert-warning mt-3">
+          <strong>{{ loc.language() === 'ar' ? 'تم استرجاع عملية الصرف هذه' : 'Reversed' }}:</strong>
+          <p>{{ selectedDispensingDetail()?.reversal?.reason }}</p>
+          <small>{{ loc.language() === 'ar' ? 'بواسطة' : 'By' }}: {{ selectedDispensingDetail()?.reversal?.reversedByUserName || 'System' }} {{ loc.language() === 'ar' ? 'في' : 'on' }} {{ selectedDispensingDetail()?.reversal?.reversedAt | date:'medium' }}</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button *ngIf="selectedDispensingDetail()?.status !== 3" class="btn btn-danger" (click)="openReversalModal()">
+          {{ loc.language() === 'ar' ? 'استرجاع الصرف' : 'Reverse Dispensing' }}
+        </button>
+        <button class="btn btn-secondary" (click)="closeDetailModal()">{{ loc.language() === 'ar' ? 'إغلاق' : 'Close' }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REVERSAL MODAL -->
+  <div *ngIf="showReversalModal()" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>{{ loc.language() === 'ar' ? 'تأكيد استرجاع الصرف' : 'Confirm Dispensing Reversal' }}</h3>
+        <button class="close-btn" (click)="closeReversalModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-danger">
+          {{ loc.language() === 'ar' ? 'سيتم إرجاع جميع كميات الأدوية إلى المخزون. لا يمكن التراجع عن هذا الإجراء.' : 'All dispensed quantities will be returned to physical inventory stock. This action cannot be undone.' }}
+        </p>
+        <div class="form-group mt-3">
+          <label><strong>{{ loc.language() === 'ar' ? 'سبب الاسترجاع (مطلوب)' : 'Reason for Reversal (Required)' }}</strong></label>
+          <textarea [(ngModel)]="reversalReason" class="form-control" rows="3" required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeReversalModal()">{{ loc.language() === 'ar' ? 'إلغاء' : 'Cancel' }}</button>
+        <button class="btn btn-danger" (click)="submitReversal()" [disabled]="!reversalReason().trim() || loading()">
+          {{ loc.language() === 'ar' ? 'تأكيد الاسترجاع' : 'Confirm Reversal' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- INVENTORY MAPPING MODAL -->
+  <div *ngIf="showMappingModal()" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>{{ loc.language() === 'ar' ? 'ربط الدواء بالمخزون' : 'Map Medication to Inventory' }}</h3>
+        <button class="close-btn" (click)="closeMappingModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p><strong>{{ editingMedication()?.name }}</strong> ({{ editingMedication()?.strength }})</p>
+
+        <div class="form-group mt-3">
+          <label>{{ loc.language() === 'ar' ? 'اختر عنصر المخزون المربوط' : 'Mapped Inventory Item' }}</label>
+          <select [(ngModel)]="selectedInventoryItemId" class="form-control">
+            <option value="">-- {{ loc.language() === 'ar' ? 'غير مربوط' : 'Not Mapped' }} --</option>
+            <option *ngFor="let inv of inventoryItems()" [value]="inv.id">
+              {{ inv.name }} ({{ inv.sku }}) - {{ loc.language() === 'ar' ? 'المتاح' : 'Stock' }}: {{ inv.currentStock }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group mt-3">
+          <label>{{ loc.language() === 'ar' ? 'الباركود' : 'Barcode' }}</label>
+          <input type="text" [(ngModel)]="barcodeInput" class="form-control" />
+        </div>
+
+        <div class="form-group mt-3">
+          <label>{{ loc.language() === 'ar' ? 'الشركة المصنعة' : 'Manufacturer' }}</label>
+          <input type="text" [(ngModel)]="manufacturerInput" class="form-control" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeMappingModal()">{{ loc.language() === 'ar' ? 'إلغاء' : 'Cancel' }}</button>
+        <button class="btn btn-primary" (click)="submitMapping()" [disabled]="loading()">
+          {{ loc.language() === 'ar' ? 'حفظ الربط' : 'Save Mapping' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

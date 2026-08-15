@@ -81,6 +81,7 @@ app.MapReportEndpoints();
 app.MapPublicBookingEndpoints();
 app.MapNotificationEndpoints();
 app.MapInventoryEndpoints();
+app.MapPharmacyEndpoints();
 
 app.Run();
 

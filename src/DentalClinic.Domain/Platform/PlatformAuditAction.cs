@@ -112,5 +112,10 @@ public enum PlatformAuditAction
     SupplierUpdated = 108,
     StockReceived = 109,
     StockIssued = 110,
-    StockAdjusted = 111
+    StockAdjusted = 111,
+    PharmacyDispensingCreated = 112,
+    PharmacyDispensingPartial = 113,
+    PharmacyDispensingFull = 114,
+    PharmacyDispensingReversed = 115,
+    PharmacyMedicationMappingUpdated = 116
 }

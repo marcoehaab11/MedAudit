@@ -16,11 +16,33 @@ public sealed class MedicationCatalogItem : TenantOwnedEntity
     public string? Strength { get; private set; }
     public MedicationForm? Form { get; private set; }
     public string? Notes { get; private set; }
+    public string? Barcode { get; private set; }
+    public string? Manufacturer { get; private set; }
+    public decimal? ReorderLevel { get; private set; }
+    public Guid? InventoryItemId { get; private set; }
     public bool IsActive { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
+
     public void Update(string name, string? genericName, string? strength, MedicationForm? form, string? notes, bool active, DateTimeOffset now)
     { Apply(name, genericName, strength, form, notes); IsActive = active; UpdatedAt = now; }
+
+    public void UpdatePharmacyDetails(string? barcode, string? manufacturer, decimal? reorderLevel, Guid? inventoryItemId, DateTimeOffset now)
+    {
+        Barcode = PrescriptionRules.Optional(barcode, nameof(barcode), 50);
+        Manufacturer = PrescriptionRules.Optional(manufacturer, nameof(manufacturer), 100);
+        if (reorderLevel < 0) throw new ArgumentOutOfRangeException(nameof(reorderLevel), "Reorder level cannot be negative.");
+        ReorderLevel = reorderLevel;
+        InventoryItemId = inventoryItemId;
+        UpdatedAt = now;
+    }
+
+    public void SetInventoryMapping(Guid? inventoryItemId, DateTimeOffset now)
+    {
+        InventoryItemId = inventoryItemId;
+        UpdatedAt = now;
+    }
+
     private void Apply(string name, string? genericName, string? strength, MedicationForm? form, string? notes)
     {
         if (form.HasValue && !Enum.IsDefined(form.Value)) throw new ArgumentOutOfRangeException(nameof(form));

@@ -343,6 +343,14 @@ export const routes: Routes = [
         (x) => x.InventoryPageComponent,
       ),
   },
+  {
+    path: 'pharmacy',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/pharmacy/pharmacy-page.component').then(
+        (x) => x.PharmacyPageComponent,
+      ),
+  },
   { path: '', pathMatch: 'full', redirectTo: 'patients' },
   { path: '**', redirectTo: 'patients' },
 ];

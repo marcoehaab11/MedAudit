@@ -14,6 +14,7 @@ using DentalClinic.Domain.Crm;
 using DentalClinic.Domain.Finance;
 using DentalClinic.Domain.Notifications;
 using DentalClinic.Domain.Inventory;
+using DentalClinic.Domain.Pharmacy;
 using DentalClinic.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -80,6 +81,10 @@ public sealed class ApplicationDbContext(
     public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<DoctorCompensationCost> DoctorCompensationCosts => Set<DoctorCompensationCost>();
     public DbSet<FinancialTransaction> FinancialTransactions => Set<FinancialTransaction>();
+    public DbSet<PharmacyDispensing> PharmacyDispensings => Set<PharmacyDispensing>();
+    public DbSet<PharmacyDispensingItem> PharmacyDispensingItems => Set<PharmacyDispensingItem>();
+    public DbSet<PharmacyDispensingReversal> PharmacyDispensingReversals => Set<PharmacyDispensingReversal>();
+    public DbSet<PharmacyDispensingNumberSequence> PharmacyDispensingNumberSequences => Set<PharmacyDispensingNumberSequence>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -512,7 +517,10 @@ public sealed class ApplicationDbContext(
             entity.HasAlternateKey(x => new { x.TenantId, x.Id }); entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
             entity.Property(x => x.GenericName).HasMaxLength(200); entity.Property(x => x.Strength).HasMaxLength(100);
             entity.Property(x => x.Form).HasConversion<int?>(); entity.Property(x => x.Notes).HasMaxLength(1000);
+            entity.Property(x => x.Barcode).HasMaxLength(50); entity.Property(x => x.Manufacturer).HasMaxLength(100);
+            entity.Property(x => x.ReorderLevel).HasPrecision(18, 4);
             entity.HasIndex(x => new { x.TenantId, x.IsActive, x.Name }); entity.HasIndex(x => new { x.TenantId, x.GenericName });
+            entity.HasIndex(x => new { x.TenantId, x.Barcode });
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
             entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
         });
@@ -778,6 +786,52 @@ public sealed class ApplicationDbContext(
             entity.Property(x => x.Reference).HasMaxLength(100).IsRequired();
             entity.HasIndex(x => new { x.TenantId, x.ItemId, x.OccurredAt });
             entity.HasIndex(x => new { x.TenantId, x.OccurredAt });
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<PharmacyDispensing>(entity =>
+        {
+            entity.ToTable("pharmacy_dispensings");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).ValueGeneratedNever();
+            entity.HasAlternateKey(x => new { x.TenantId, x.Id });
+            entity.Property(x => x.DispensingNumber).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.Status).HasConversion<int>();
+            entity.Property(x => x.Notes).HasMaxLength(2000);
+            entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.HasIndex(x => new { x.TenantId, x.DispensingNumber }).IsUnique();
+            entity.HasIndex(x => new { x.TenantId, x.PrescriptionId });
+            entity.HasIndex(x => new { x.TenantId, x.PatientId, x.DispensedAt });
+            entity.HasIndex(x => new { x.TenantId, x.DispensedByUserId, x.DispensedAt });
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<PharmacyDispensingItem>(entity =>
+        {
+            entity.ToTable("pharmacy_dispensing_items");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.QuantityDispensed).HasPrecision(18, 4);
+            entity.Property(x => x.UnitCost).HasPrecision(18, 2);
+            entity.Property(x => x.TotalCost).HasPrecision(18, 2);
+            entity.HasIndex(x => new { x.TenantId, x.DispensingId });
+            entity.HasIndex(x => new { x.TenantId, x.PrescriptionItemId });
+            entity.HasIndex(x => new { x.TenantId, x.InventoryItemId });
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<PharmacyDispensingReversal>(entity =>
+        {
+            entity.ToTable("pharmacy_dispensing_reversals");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+            entity.HasIndex(x => new { x.TenantId, x.DispensingId }).IsUnique();
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<PharmacyDispensingNumberSequence>(entity =>
+        {
+            entity.ToTable("pharmacy_dispensing_number_sequences");
+            entity.HasKey(x => new { x.TenantId, x.LastValue });
             entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
         });
 
