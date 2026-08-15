@@ -11,6 +11,7 @@ using DentalClinic.Application.Prescriptions;
 using DentalClinic.Application.Tenants;
 using DentalClinic.Domain.Identity;
 using DentalClinic.Domain.Inventory;
+using DentalClinic.Domain.Patients;
 using DentalClinic.Domain.Pharmacy;
 using DentalClinic.Domain.Prescriptions;
 using DentalClinic.Domain.Tenancy;
@@ -461,12 +462,18 @@ public sealed class PharmacyWorkflowTests(PlatformPostgresFixture fixture)
 
         // Create doctor profile & patient for integration testing
         var docService = scope.ServiceProvider.GetRequiredService<IDoctorProfileCommands>();
-        var docId = await docService.CreateAsync(new CreateDoctorProfileCommand(clinic.AdminUserId, "Dr. " + slug, "Dental", null, null, true), CancellationToken.None);
+        var docId = await docService.CreateAsync(new CreateDoctorProfileCommand(
+            clinic.AdminUserId,
+            new DoctorProfileInput("General Dentistry", "LIC-" + slug, null, 30)),
+            CancellationToken.None);
 
         var patService = scope.ServiceProvider.GetRequiredService<IPatientCommands>();
-        var patResult = await patService.CreateAsync(new CreatePatientCommand("John", "Doe", null, "+20 1111", null, null, null, null, null, null), CancellationToken.None);
+        var patId = await patService.CreateAsync(new CreatePatientCommand(
+            new PatientProfileInput("John", null, "Doe", PatientGender.Male, new DateOnly(1990, 1, 1),
+                "+20 1111", null, null, null, "Cairo", "Egypt", null, null, null, null, null, null)),
+            CancellationToken.None);
 
-        return new ClinicSetupResult(clinic.TenantId, clinic.AdminUserId, docId, patResult.PatientId);
+        return new ClinicSetupResult(clinic.TenantId, clinic.AdminUserId, docId, patId);
     }
 
     private sealed record ClinicSetupResult(Guid TenantId, Guid AdminUserId, Guid DoctorProfileId, Guid PatientId);
