@@ -1,0 +1,261 @@
+.inventory-container {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  .page-header {
+    margin-bottom: 1.5rem;
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0 0 0.25rem 0;
+    }
+    .subtitle {
+      color: #64748b;
+      font-size: 0.95rem;
+      margin: 0;
+    }
+  }
+
+  .summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+
+      .card-label {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-bottom: 0.5rem;
+      }
+      .card-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #0f172a;
+      }
+
+      &.card-valuation {
+        border-left: 4px solid #0284c7;
+      }
+      &.card-warning.active {
+        border-left: 4px solid #f59e0b;
+        background: #fffbeb;
+      }
+      &.card-danger.active {
+        border-left: 4px solid #ef4444;
+        background: #fef2f2;
+      }
+    }
+  }
+
+  .alert {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+
+    &.alert-danger {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+    }
+    &.alert-success {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #16a34a;
+    }
+  }
+
+  .tabs-header {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 1.5rem;
+
+    .tab-btn {
+      padding: 0.75rem 1.25rem;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        color: #0f172a;
+      }
+
+      &.active {
+        color: #0284c7;
+        border-bottom-color: #0284c7;
+      }
+    }
+  }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+
+    .search-box input {
+      padding: 0.5rem 0.85rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      min-width: 280px;
+    }
+
+    .filter-box {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+
+      select {
+        padding: 0.5rem 0.85rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+      }
+
+      .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+    }
+  }
+
+  .table-responsive {
+    overflow-x: auto;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+
+      th, td {
+        padding: 0.85rem 1rem;
+        text-align: inherit;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.9rem;
+      }
+
+      th {
+        background: #f8fafc;
+        font-weight: 600;
+        color: #475569;
+      }
+
+      tr.row-low {
+        background: #fffbeb;
+      }
+      tr.row-out {
+        background: #fef2f2;
+      }
+
+      .sku-cell code {
+        background: #f1f5f9;
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        font-family: monospace;
+      }
+
+      .sub-text {
+        font-size: 0.8rem;
+        color: #64748b;
+        margin-top: 0.15rem;
+      }
+
+      .actions-cell {
+        display: flex;
+        gap: 0.35rem;
+      }
+    }
+  }
+
+  .badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+
+    &.badge-success { background: #dcfce7; color: #15803d; }
+    &.badge-warning { background: #fef3c7; color: #b45309; }
+    &.badge-danger { background: #fee2e2; color: #b91c1c; }
+    &.badge-secondary { background: #f1f5f9; color: #475569; }
+    &.badge-info { background: #e0f2fe; color: #0369a1; }
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+
+    .modal-card {
+      background: #ffffff;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 500px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        h3 { margin: 0; font-size: 1.2rem; }
+        .btn-close {
+          border: none; background: transparent; font-size: 1.5rem; cursor: pointer;
+        }
+      }
+
+      .modal-body {
+        margin-bottom: 1.5rem;
+        .form-group {
+          margin-bottom: 1rem;
+          label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; }
+          input, select, textarea {
+            width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box;
+          }
+          &.checkbox-group label {
+            display: flex; align-items: center; gap: 0.5rem; font-weight: normal;
+          }
+        }
+      }
+
+      .modal-footer {
+        display: flex; justify-content: flex-end; gap: 0.5rem;
+      }
+    }
+  }
+
+  .btn {
+    padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s;
+    &.btn-primary { background: #0284c7; color: #ffffff; &:hover { background: #0369a1; } }
+    &.btn-secondary { background: #e2e8f0; color: #334155; &:hover { background: #cbd5e1; } }
+    &.btn-sm { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
+    &.btn-outline-success { background: transparent; border: 1px solid #16a34a; color: #16a34a; &:hover { background: #f0fdf4; } }
+    &.btn-outline-primary { background: transparent; border: 1px solid #0284c7; color: #0284c7; &:hover { background: #f0f9ff; } }
+    &.btn-outline-secondary { background: transparent; border: 1px solid #64748b; color: #64748b; &:hover { background: #f8fafc; } }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+  }
+}

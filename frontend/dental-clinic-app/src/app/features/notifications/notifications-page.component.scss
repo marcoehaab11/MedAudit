@@ -1,0 +1,190 @@
+.notifications-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+
+  h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem 0;
+  }
+
+  .subtitle {
+    color: #64748b;
+    margin: 0;
+  }
+}
+
+.tabs {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.5rem;
+
+  .tab-btn {
+    background: none;
+    border: none;
+    padding: 0.5rem 1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    border-radius: 6px;
+
+    &.active {
+      background: #eff6ff;
+      color: #2563eb;
+    }
+
+    .badge {
+      background: #ef4444;
+      color: #ffffff;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 9999px;
+      margin-left: 0.35rem;
+    }
+  }
+}
+
+.filter-bar {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #475569;
+  }
+}
+
+.notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.notification-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+
+  &.unread {
+    border-left: 4px solid #2563eb;
+    background: #f8fafc;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+
+    .type-pill {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      background: #e2e8f0;
+      color: #334155;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .timestamp {
+      font-size: 0.8rem;
+      color: #94a3b8;
+    }
+  }
+
+  .card-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0 0 0.35rem 0;
+    color: #0f172a;
+  }
+
+  .card-body {
+    font-size: 0.925rem;
+    color: #334155;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .card-footer {
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.9rem;
+  }
+
+  th {
+    background: #f8fafc;
+    font-weight: 600;
+    color: #475569;
+  }
+}
+
+.status-pill {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+
+  &.status-1 {
+    background: #fef3c7;
+    color: #92400e;
+  } /* Pending */
+  &.status-2 {
+    background: #dbeafe;
+    color: #1e40af;
+  } /* Processing */
+  &.status-3 {
+    background: #dcfce7;
+    color: #166534;
+  } /* Sent */
+  &.status-4 {
+    background: #fee2e2;
+    color: #991b1b;
+  } /* Failed */
+  &.status-5 {
+    background: #f3f4f6;
+    color: #374151;
+  } /* Cancelled */
+}

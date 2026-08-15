@@ -17,6 +17,7 @@ builder.Services.AddSerilog();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHostedService<Worker>();
+builder.Services.AddHostedService<NotificationOutboxProcessorHost>();
 
 var host = builder.Build();
 await host.RunAsync();

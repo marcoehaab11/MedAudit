@@ -1,0 +1,350 @@
+﻿<div class="inventory-container" [attr.dir]="loc.direction()">
+  <div class="page-header">
+    <div>
+      <h1>{{ loc.language() === 'ar' ? 'ط¥ط¯ط§ط±ط© ط§ظ„ظ…ط®ط²ظˆظ† ظˆط§ظ„ظ…ظˆط§ط¯' : 'Inventory & Materials Management' }}</h1>
+      <p class="subtitle">{{ loc.language() === 'ar' ? 'طھطھط¨ط¹ ط§ظ„ظ…ظˆط§ط¯ ط§ظ„ط·ط¨ظٹط©طŒ ط§ظ„ظ…ظˆط±ط¯ظٹظ†طŒ ظˆط¥ط¯ط®ط§ظ„/ط¥ط®ط±ط§ط¬ ط§ظ„ظ…ط®ط²ظˆظ†' : 'Track clinical supplies, suppliers, stock movements, and valuation' }}</p>
+    </div>
+  </div>
+
+  <!-- Summary Dashboard Cards -->
+  @if (summary()) {
+    <div class="summary-cards">
+      <div class="card card-valuation">
+        <span class="card-label">{{ loc.language() === 'ar' ? 'ط¥ط¬ظ…ط§ظ„ظٹ ظ‚ظٹظ…ط© ط§ظ„ظ…ط®ط²ظˆظ†' : 'Total Stock Valuation' }}</span>
+        <span class="card-value">{{ summary()!.totalStockValuation | currency:'EGP':'symbol':'1.2-2' }}</span>
+      </div>
+      <div class="card">
+        <span class="card-label">{{ loc.language() === 'ar' ? 'ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ط£طµظ†ط§ظپ' : 'Total Items' }}</span>
+        <span class="card-value">{{ summary()!.totalItems }}</span>
+      </div>
+      <div class="card card-warning" [class.active]="summary()!.lowStockCount > 0">
+        <span class="card-label">{{ loc.language() === 'ar' ? 'ط£طµظ†ط§ظپ ظ…ظ†ط®ظپط¶ط©' : 'Low Stock Items' }}</span>
+        <span class="card-value">{{ summary()!.lowStockCount }}</span>
+      </div>
+      <div class="card card-danger" [class.active]="summary()!.outOfStockCount > 0">
+        <span class="card-label">{{ loc.language() === 'ar' ? 'ط£طµظ†ط§ظپ ظ…ظ†طھظ‡ظٹط©' : 'Out of Stock' }}</span>
+        <span class="card-value">{{ summary()!.outOfStockCount }}</span>
+      </div>
+    </div>
+  }
+
+  <!-- Alert Messages -->
+  @if (errorMessage()) {
+    <div class="alert alert-danger" role="alert">
+      {{ errorMessage() }}
+    </div>
+  }
+  @if (successMessage()) {
+    <div class="alert alert-success" role="alert">
+      {{ successMessage() }}
+    </div>
+  }
+
+  <!-- Tab Navigation -->
+  <div class="tabs-header">
+    <button class="tab-btn" [class.active]="activeTab() === 'items'" (click)="setTab('items')">
+      {{ loc.language() === 'ar' ? 'ط§ظ„ط£طµظ†ط§ظپ ظˆط§ظ„ظ…ط®ط²ظˆظ†' : 'Items & Stock' }}
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'categories'" (click)="setTab('categories')">
+      {{ loc.language() === 'ar' ? 'ط§ظ„طھطµظ†ظٹظپط§طھ' : 'Categories' }}
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'suppliers'" (click)="setTab('suppliers')">
+      {{ loc.language() === 'ar' ? 'ط§ظ„ظ…ظˆط±ط¯ظٹظ†' : 'Suppliers' }}
+    </button>
+    <button class="tab-btn" [class.active]="activeTab() === 'movements'" (click)="setTab('movements')">
+      {{ loc.language() === 'ar' ? 'ط³ط¬ظ„ ط§ظ„ط­ط±ظƒط§طھ' : 'Movement History' }}
+    </button>
+  </div>
+
+  <!-- Tab Content: Items -->
+  @if (activeTab() === 'items') {
+    <div class="tab-pane">
+      <div class="toolbar">
+        <div class="search-box">
+          <input
+            type="text"
+            [placeholder]="loc.language() === 'ar' ? 'ط¨ط­ط« ط¨ط§ط³ظ… ط§ظ„طµظ†ظپ ط£ظˆ SKU...' : 'Search item name or SKU...'"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event); loadItems()"
+          />
+        </div>
+        <div class="filter-box">
+          <select [ngModel]="selectedCategory()" (ngModelChange)="selectedCategory.set($event); loadItems()">
+            <option value="">{{ loc.language() === 'ar' ? 'ط¬ظ…ظٹط¹ ط§ظ„طھطµظ†ظٹظپط§طھ' : 'All Categories' }}</option>
+            @for (cat of categories(); track cat.id) {
+              <option [value]="cat.id">{{ loc.language() === 'ar' && cat.arabicName ? cat.arabicName : cat.name }}</option>
+            }
+          </select>
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              [ngModel]="lowStockFilter()"
+              (ngModelChange)="lowStockFilter.set($event); loadItems()"
+            />
+            {{ loc.language() === 'ar' ? 'ط§ظ„ظ…ط®ط²ظˆظ† ط§ظ„ظ…ظ†ط®ظپط¶ ظپظ‚ط·' : 'Low Stock Only' }}
+          </label>
+        </div>
+      </div>
+
+      @if (loading()) {
+        <div class="loading-state">{{ loc.language() === 'ar' ? 'ط¬ط§ط±ظٹ ط§ظ„طھط­ظ…ظٹظ„...' : 'Loading items...' }}</div>
+      } @else if (items().length === 0) {
+        <div class="empty-state">
+          <p>{{ loc.language() === 'ar' ? 'ظ„ط§ طھظˆط¬ط¯ ط£طµظ†ط§ظپ ظ…ط®ط²ظˆظ† ظ…ط·ط§ط¨ظ‚ط©.' : 'No inventory items found.' }}</p>
+        </div>
+      } @else {
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط±ظ…ط² SKU' : 'SKU' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'ط§ط³ظ… ط§ظ„طµظ†ظپ' : 'Item Name' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'ط§ظ„طھطµظ†ظٹظپ' : 'Category' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'ط§ظ„ظƒظ…ظٹط© ط§ظ„ط­ط§ظ„ظٹط©' : 'Current Stock' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'ط§ظ„ظˆط­ط¯ط©' : 'Unit' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'ط§ظ„طھظƒظ„ظپط©' : 'Cost' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'ط§ظ„ظ‚ظٹظ…ط© ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹط©' : 'Total Value' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط­ط§ظ„ط©' : 'Status' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط¥ط¬ط±ط§ط،ط§طھ' : 'Actions' }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of items(); track item.id) {
+                <tr [class.row-low]="item.isLowStock" [class.row-out]="item.isOutOfStock">
+                  <td class="sku-cell"><code>{{ item.sku }}</code></td>
+                  <td>
+                    <strong>{{ loc.language() === 'ar' && item.arabicName ? item.arabicName : item.name }}</strong>
+                    @if (item.supplierName) {
+                      <div class="sub-text">{{ loc.language() === 'ar' ? 'ط§ظ„ظ…ظˆط±ط¯: ' : 'Supplier: ' }}{{ item.supplierName }}</div>
+                    }
+                  </td>
+                  <td>{{ item.categoryName }}</td>
+                  <td class="stock-cell">
+                    <strong>{{ item.currentStock | number:'1.0-2' }}</strong>
+                  </td>
+                  <td>{{ item.unitOfMeasure }}</td>
+                  <td>{{ item.currentCost | currency:'EGP':'symbol':'1.2-2' }}</td>
+                  <td>{{ item.totalValue | currency:'EGP':'symbol':'1.2-2' }}</td>
+                  <td>
+                    @if (item.isOutOfStock) {
+                      <span class="badge badge-danger">{{ loc.language() === 'ar' ? 'ظ…ظ†طھظ‡ظٹ' : 'Out of Stock' }}</span>
+                    } @else if (item.isLowStock) {
+                      <span class="badge badge-warning">{{ loc.language() === 'ar' ? 'ظ…ظ†ط®ظپط¶' : 'Low Stock' }}</span>
+                    } @else {
+                      <span class="badge badge-success">{{ loc.language() === 'ar' ? 'ظ…طھظˆظپط±' : 'In Stock' }}</span>
+                    }
+                  </td>
+                  <td class="actions-cell">
+                    @if (auth.hasPermission('Inventory.Receive')) {
+                      <button class="btn btn-sm btn-outline-success" (click)="openReceiveModal(item)">
+                        {{ loc.language() === 'ar' ? 'طھظˆط±ظٹط¯ +' : 'Receive +' }}
+                      </button>
+                    }
+                    @if (auth.hasPermission('Inventory.Issue')) {
+                      <button class="btn btn-sm btn-outline-primary" [disabled]="item.isOutOfStock" (click)="openIssueModal(item)">
+                        {{ loc.language() === 'ar' ? 'طµط±ظپ -' : 'Issue -' }}
+                      </button>
+                    }
+                    @if (auth.hasPermission('Inventory.Adjust')) {
+                      <button class="btn btn-sm btn-outline-secondary" (click)="openAdjustModal(item)">
+                        {{ loc.language() === 'ar' ? 'طھط¹ط¯ظٹظ„' : 'Adjust' }}
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Tab Content: Categories -->
+  @if (activeTab() === 'categories') {
+    <div class="tab-pane">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط§ط³ظ…' : 'Name' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط§ط³ظ… ط¨ط§ظ„ط¹ط±ط¨ظٹط©' : 'Arabic Name' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ظˆطµظپ' : 'Description' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط­ط§ظ„ط©' : 'Status' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (cat of categories(); track cat.id) {
+              <tr>
+                <td><strong>{{ cat.name }}</strong></td>
+                <td>{{ cat.arabicName || '-' }}</td>
+                <td>{{ cat.description || '-' }}</td>
+                <td>
+                  <span class="badge" [class.badge-success]="cat.isActive" [class.badge-secondary]="!cat.isActive">
+                    {{ cat.isActive ? (loc.language() === 'ar' ? 'ظ†ط´ط·' : 'Active') : (loc.language() === 'ar' ? 'ط؛ظٹط± ظ†ط´ط·' : 'Inactive') }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- Tab Content: Suppliers -->
+  @if (activeTab() === 'suppliers') {
+    <div class="tab-pane">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{ loc.language() === 'ar' ? 'ط§ط³ظ… ط§ظ„ظ…ظˆط±ط¯' : 'Supplier Name' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'ظ…ط³ط¤ظˆظ„ ط§ظ„طھظˆط§طµظ„' : 'Contact Person' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ظ‡ط§طھظپ' : 'Phone' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط¨ط±ظٹط¯ ط§ظ„ط¥ظ„ظƒطھط±ظˆظ†ظٹ' : 'Email' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط­ط§ظ„ط©' : 'Status' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (sup of suppliers(); track sup.id) {
+              <tr>
+                <td><strong>{{ sup.name }}</strong></td>
+                <td>{{ sup.contactPerson || '-' }}</td>
+                <td>{{ sup.phone || '-' }}</td>
+                <td>{{ sup.email || '-' }}</td>
+                <td>
+                  <span class="badge" [class.badge-success]="sup.isActive" [class.badge-secondary]="!sup.isActive">
+                    {{ sup.isActive ? (loc.language() === 'ar' ? 'ظ†ط´ط·' : 'Active') : (loc.language() === 'ar' ? 'ط؛ظٹط± ظ†ط´ط·' : 'Inactive') }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- Tab Content: Movement History -->
+  @if (activeTab() === 'movements') {
+    <div class="tab-pane">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{ loc.language() === 'ar' ? 'ط§ظ„طھط§ط±ظٹط®' : 'Date & Time' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'ظ†ظˆط¹ ط§ظ„ط­ط±ظƒط©' : 'Movement Type' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'ط§ظ„طµظ†ظپ' : 'Item' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ظƒظ…ظٹط©' : 'Quantity' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'طھظƒظ„ظپط© ط§ظ„ظˆط­ط¯ط©' : 'Unit Cost' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹ' : 'Total' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ظ…ط±ط¬ط¹' : 'Reference' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'ظ…ظ„ط§ط­ط¸ط§طھ' : 'Notes' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of movements(); track m.id) {
+              <tr>
+                <td>{{ m.occurredAt | date:'medium' }}</td>
+                <td>
+                  <span class="badge"
+                        [class.badge-success]="m.movementType === 2 || m.movementType === 4"
+                        [class.badge-danger]="m.movementType === 3 || m.movementType === 5"
+                        [class.badge-info]="m.movementType === 1 || m.movementType === 6">
+                    {{ getMovementTypeName(m.movementType) }}
+                  </span>
+                </td>
+                <td><strong>{{ m.itemName }}</strong> <code class="sub-code">{{ m.itemSku }}</code></td>
+                <td><strong>{{ m.quantity | number:'1.0-2' }}</strong></td>
+                <td>{{ m.unitCost ? (m.unitCost | currency:'EGP':'symbol':'1.2-2') : '-' }}</td>
+                <td>{{ m.totalCost ? (m.totalCost | currency:'EGP':'symbol':'1.2-2') : '-' }}</td>
+                <td><code>{{ m.reference }}</code></td>
+                <td>{{ m.notes || '-' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- Movement Modal Dialog -->
+  @if (showMovementModal()) {
+    <div class="modal-backdrop" (click)="closeMovementModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>
+            @if (showMovementModal() === 'receive') {
+              {{ loc.language() === 'ar' ? 'طھظˆط±ظٹط¯ ظ…ط®ط²ظˆظ† ط¬ط¯ظٹط¯' : 'Receive Stock' }}
+            } @else if (showMovementModal() === 'issue') {
+              {{ loc.language() === 'ar' ? 'طµط±ظپ ظ…ط®ط²ظˆظ†' : 'Issue Stock' }}
+            } @else {
+              {{ loc.language() === 'ar' ? 'طھط¹ط¯ظٹظ„ ط¬ط±ط¯ ط§ظ„ظ…ط®ط²ظˆظ†' : 'Adjust Stock' }}
+            }
+          </h3>
+          <button class="btn-close" (click)="closeMovementModal()">أ—</button>
+        </div>
+
+        <div class="modal-body">
+          <p><strong>{{ targetItem()?.name }}</strong> ({{ loc.language() === 'ar' ? 'ط§ظ„ط±طµظٹط¯ ط§ظ„ط­ط§ظ„ظٹ: ' : 'Current Stock: ' }} <strong>{{ targetItem()?.currentStock }}</strong> {{ targetItem()?.unitOfMeasure }})</p>
+
+          @if (showMovementModal() === 'adjust') {
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'ط§طھط¬ط§ظ‡ ط§ظ„طھط¹ط¯ظٹظ„' : 'Adjustment Direction' }}</label>
+              <select [ngModel]="movementAdjustType()" (ngModelChange)="movementAdjustType.set($event)">
+                <option [value]="4">{{ loc.language() === 'ar' ? 'ط²ظٹط§ط¯ط© ظ…ط®ط²ظˆظ† (+)' : 'Adjustment Increase (+)' }}</option>
+                <option [value]="5">{{ loc.language() === 'ar' ? 'طھط®ظپظٹط¶ ظ…ط®ط²ظˆظ† (-)' : 'Adjustment Decrease (-)' }}</option>
+              </select>
+            </div>
+          }
+
+          <div class="form-group">
+            <label>{{ loc.language() === 'ar' ? 'ط§ظ„ظƒظ…ظٹط©' : 'Quantity' }}</label>
+            <input type="number" min="0.01" step="1" [ngModel]="movementQty()" (ngModelChange)="movementQty.set($event)" />
+          </div>
+
+          @if (showMovementModal() === 'receive') {
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'طھظƒظ„ظپط© ط§ظ„ظˆط­ط¯ط© (ط¬.ظ…)' : 'Unit Cost (EGP)' }}</label>
+              <input type="number" min="0" step="0.5" [ngModel]="movementCost()" (ngModelChange)="movementCost.set($event)" />
+            </div>
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'ط§ظ„ظ…ظˆط±ط¯' : 'Supplier' }}</label>
+              <select [ngModel]="movementSupplierId()" (ngModelChange)="movementSupplierId.set($event)">
+                <option value="">{{ loc.language() === 'ar' ? '-- ط§ط®طھظٹط§ط± ظ…ظˆط±ط¯ --' : '-- Select Supplier --' }}</option>
+                @for (sup of suppliers(); track sup.id) {
+                  <option [value]="sup.id">{{ sup.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group checkbox-group">
+              <label>
+                <input type="checkbox" [ngModel]="movementPostExpense()" (ngModelChange)="movementPostExpense.set($event)" />
+                {{ loc.language() === 'ar' ? 'طھط³ط¬ظٹظ„ ظ…طµط±ظˆظپ طھظ„ظ‚ط§ط¦ظٹ ظپظٹ ط§ظ„ظ…ط§ظ„ظٹط©' : 'Post expense to Finance module' }}
+              </label>
+            </div>
+          }
+
+          <div class="form-group">
+            <label>{{ loc.language() === 'ar' ? 'ط§ظ„ظ…ط±ط¬ط¹ / ط§ظ„ط±ظ‚ظ… ط§ظ„ظ…ط±ط¬ط¹ظٹ' : 'Reference / PO Number' }}</label>
+            <input type="text" [ngModel]="movementRef()" (ngModelChange)="movementRef.set($event)" />
+          </div>
+
+          <div class="form-group">
+            <label>{{ loc.language() === 'ar' ? 'ظ…ظ„ط§ط­ط¸ط§طھ' : 'Notes' }}</label>
+            <textarea rows="2" [ngModel]="movementNotes()" (ngModelChange)="movementNotes.set($event)"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="closeMovementModal()">{{ loc.language() === 'ar' ? 'ط¥ظ„ط؛ط§ط،' : 'Cancel' }}</button>
+          <button class="btn btn-primary" (click)="submitMovement()" [disabled]="loading()">
+            {{ loc.language() === 'ar' ? 'طھط§ظƒظٹط¯ ظˆطھط£ظƒظٹط¯ ط§ظ„ط­ط±ظƒط©' : 'Confirm Movement' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+

@@ -96,5 +96,21 @@ public enum PlatformAuditAction
     PaymentCreated = 92,
     ExpenseCreated = 93,
     DoctorCompensationCalculated = 94,
-    DoctorCompensationRecorded = 95
+    DoctorCompensationRecorded = 95,
+    NotificationCreated = 96,
+    NotificationDispatched = 97,
+    NotificationFailed = 98,
+    NotificationCancelled = 99,
+    NotificationTemplateCreated = 100,
+    NotificationTemplateUpdated = 101,
+    NotificationPreferenceUpdated = 102,
+    InventoryItemCreated = 103,
+    InventoryItemUpdated = 104,
+    InventoryCategoryCreated = 105,
+    InventoryCategoryUpdated = 106,
+    SupplierCreated = 107,
+    SupplierUpdated = 108,
+    StockReceived = 109,
+    StockIssued = 110,
+    StockAdjusted = 111
 }

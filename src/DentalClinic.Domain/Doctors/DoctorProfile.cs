@@ -7,13 +7,14 @@ public sealed class DoctorProfile : TenantOwnedEntity
     private DoctorProfile() { }
 
     public DoctorProfile(Guid tenantId, Guid clinicUserId, string specialization, string licenseNumber,
-        string? bio, int consultationDurationMinutes, DateTimeOffset createdAt)
+        string? bio, int consultationDurationMinutes, DateTimeOffset createdAt, bool isPublicBookingEnabled = true)
     {
         if (tenantId == Guid.Empty || clinicUserId == Guid.Empty)
             throw new ArgumentException("Tenant and clinic user IDs are required.");
         TenantId = tenantId;
         ClinicUserId = clinicUserId;
         Apply(specialization, licenseNumber, bio, consultationDurationMinutes);
+        IsPublicBookingEnabled = isPublicBookingEnabled;
         Status = DoctorProfileStatus.Active;
         CreatedAt = createdAt;
         UpdatedAt = createdAt;
@@ -24,15 +25,24 @@ public sealed class DoctorProfile : TenantOwnedEntity
     public string LicenseNumber { get; private set; } = string.Empty;
     public string? Bio { get; private set; }
     public int ConsultationDurationMinutes { get; private set; }
+    public bool IsPublicBookingEnabled { get; private set; } = true;
     public DoctorProfileStatus Status { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
     public void Update(string specialization, string licenseNumber, string? bio,
-        int consultationDurationMinutes, DateTimeOffset updatedAt)
+        int consultationDurationMinutes, DateTimeOffset updatedAt, bool isPublicBookingEnabled = true)
     {
         EnsureNotArchived();
         Apply(specialization, licenseNumber, bio, consultationDurationMinutes);
+        IsPublicBookingEnabled = isPublicBookingEnabled;
+        UpdatedAt = updatedAt;
+    }
+
+    public void SetPublicBookingEnabled(bool enabled, DateTimeOffset updatedAt)
+    {
+        EnsureNotArchived();
+        IsPublicBookingEnabled = enabled;
         UpdatedAt = updatedAt;
     }
 

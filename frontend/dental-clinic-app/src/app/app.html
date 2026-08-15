@@ -37,6 +37,16 @@
         @if (auth.hasPermission('Reports.View')) {
           <a routerLink="/reports">{{ i18n.language() === 'en' ? 'Reports' : 'التقارير' }}</a>
         }
+        @if (auth.hasPermission('Notifications.View')) {
+          <a routerLink="/notifications">{{
+            i18n.language() === 'en' ? 'Notifications' : 'الإشعارات'
+          }}</a>
+        }
+        @if (auth.hasPermission('Inventory.View')) {
+          <a routerLink="/inventory">{{
+            i18n.language() === 'en' ? 'Inventory' : 'المخزون'
+          }}</a>
+        }
         ><button type="button" (click)="logout()">
           {{ i18n.language() === 'en' ? 'Sign out' : 'تسجيل الخروج' }}
         </button>

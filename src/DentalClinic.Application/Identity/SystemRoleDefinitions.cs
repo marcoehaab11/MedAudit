@@ -57,7 +57,10 @@ public static class SystemRoleDefinitions
                 Permissions.ReportsAppointments,
                 Permissions.ReportsDoctors,
                 Permissions.ReportsTreatments,
-                Permissions.ReportsPrescriptions
+                Permissions.ReportsPrescriptions,
+                Permissions.NotificationsView,
+                Permissions.InventoryView,
+                Permissions.InventoryIssue
             ],
             [Receptionist] =
             [
@@ -88,7 +91,11 @@ public static class SystemRoleDefinitions
                 Permissions.ReportsAppointments,
                 Permissions.ReportsTreatments,
                 Permissions.ReportsPrescriptions,
-                Permissions.ReportsCrm
+                Permissions.ReportsCrm,
+                Permissions.NotificationsView,
+                Permissions.InventoryView,
+                Permissions.InventoryReceive,
+                Permissions.InventoryIssue
             ]
         };
 }

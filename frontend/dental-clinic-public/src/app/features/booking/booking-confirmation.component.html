@@ -1,0 +1,63 @@
+<div class="confirmation-container">
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Retrieving booking confirmation...</p>
+    </div>
+  } @else if (error()) {
+    <div class="error-card">
+      <div class="icon">❌</div>
+      <h2>Booking Not Found</h2>
+      <p>{{ error() }}</p>
+    </div>
+  } @else if (confirmation()) {
+    <div class="confirmation-card">
+      <div class="success-badge">
+        <span class="icon">✅</span>
+      </div>
+      <h2>Booking Confirmed!</h2>
+      <p class="subtitle">Thank you. Your appointment has been successfully scheduled.</p>
+
+      <div class="reference-badge">
+        <span class="label">Reference Number</span>
+        <span class="code">{{ confirmation()?.bookingReference }}</span>
+      </div>
+
+      <div class="details-grid">
+        <div class="detail-item">
+          <span class="label">Clinic</span>
+          <span class="value">{{ confirmation()?.clinicName }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Dentist</span>
+          <span class="value">{{ confirmation()?.doctorName }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Service</span>
+          <span class="value">{{ confirmation()?.serviceName }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Patient Name</span>
+          <span class="value">{{ confirmation()?.patientName }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Patient Phone</span>
+          <span class="value">{{ confirmation()?.patientPhone }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Date & Time</span>
+          <span class="value">{{ confirmation()?.startAt | date: 'medium' }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Status</span>
+          <span class="status-pill">{{ confirmation()?.status }}</span>
+        </div>
+      </div>
+
+      <div class="notice">
+        📌 Please keep your booking reference number
+        <strong>{{ confirmation()?.bookingReference }}</strong> for check-in upon arrival.
+      </div>
+    </div>
+  }
+</div>

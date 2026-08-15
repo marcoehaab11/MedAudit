@@ -12,6 +12,8 @@ using DentalClinic.Domain.Treatments;
 using DentalClinic.Domain.Prescriptions;
 using DentalClinic.Domain.Crm;
 using DentalClinic.Domain.Finance;
+using DentalClinic.Domain.Notifications;
+using DentalClinic.Domain.Inventory;
 using DentalClinic.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -61,6 +63,16 @@ public sealed class ApplicationDbContext(
     public DbSet<PrescriptionItem> PrescriptionItems => Set<PrescriptionItem>();
     public DbSet<PrescriptionNumberSequence> PrescriptionNumberSequences => Set<PrescriptionNumberSequence>();
     public DbSet<FollowUp> FollowUps => Set<FollowUp>();
+    public DbSet<PublicBookingIdempotencyRecord> PublicBookingIdempotencyRecords => Set<PublicBookingIdempotencyRecord>();
+    public DbSet<NotificationDelivery> NotificationDeliveries => Set<NotificationDelivery>();
+    public DbSet<NotificationTemplate> NotificationTemplates => Set<NotificationTemplate>();
+    public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
+    public DbSet<InAppNotification> InAppNotifications => Set<InAppNotification>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<InventoryCategory> InventoryCategories => Set<InventoryCategory>();
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
+    public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
+    public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<CommunicationActivity> CommunicationActivities => Set<CommunicationActivity>();
     public DbSet<FinancialCategory> FinancialCategories => Set<FinancialCategory>();
     public DbSet<Revenue> Revenues => Set<Revenue>();
@@ -301,7 +313,9 @@ public sealed class ApplicationDbContext(
             entity.Property(x => x.Status).HasConversion<int>();
             entity.Property(x => x.Notes).HasMaxLength(2000);
             entity.Property(x => x.CancellationReason).HasMaxLength(500);
+            entity.Property(x => x.BookingReference).HasMaxLength(50);
             entity.HasIndex(x => new { x.TenantId, x.StartAt });
+            entity.HasIndex(x => new { x.TenantId, x.BookingReference });
             entity.HasIndex(x => new { x.TenantId, x.DoctorProfileId, x.StartAt });
             entity.HasIndex(x => new { x.TenantId, x.PatientId, x.StartAt });
             entity.HasIndex(x => new { x.TenantId, x.Status, x.StartAt });
@@ -647,7 +661,123 @@ public sealed class ApplicationDbContext(
             entity.Property(x => x.Culture).HasMaxLength(10).IsRequired();
             entity.Property(x => x.TimeZone).HasMaxLength(100).IsRequired();
             entity.Property(x => x.Currency).HasMaxLength(3).IsRequired();
+            entity.Property(x => x.PublicBookingEnabled).HasDefaultValue(false);
+            entity.Property(x => x.PublicBookingHorizonDays).HasDefaultValue(30);
+            entity.Property(x => x.PublicPriceVisibility).HasDefaultValue(true);
             entity.HasIndex(x => x.TenantId).IsUnique();
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<PublicBookingIdempotencyRecord>(entity =>
+        {
+            entity.ToTable("public_booking_idempotency_records");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.IdempotencyKey).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.RequestHash).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.BookingReference).HasMaxLength(50).IsRequired();
+            entity.HasIndex(x => new { x.TenantId, x.IdempotencyKey }).IsUnique();
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<NotificationDelivery>(entity =>
+        {
+            entity.ToTable("notification_deliveries");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Destination).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.TemplateName).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Subject).HasMaxLength(250);
+            entity.Property(x => x.Language).HasMaxLength(10).IsRequired();
+            entity.HasIndex(x => new { x.TenantId, x.CreatedAt });
+            entity.HasIndex(x => new { x.TenantId, x.IdempotencyKey }).IsUnique().HasFilter("\"IdempotencyKey\" IS NOT NULL");
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<NotificationTemplate>(entity =>
+        {
+            entity.ToTable("notification_templates");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Language).HasMaxLength(10).IsRequired();
+            entity.Property(x => x.Subject).HasMaxLength(250);
+            entity.HasIndex(x => new { x.TenantId, x.Name, x.Channel, x.Language }).IsUnique();
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<NotificationPreference>(entity =>
+        {
+            entity.ToTable("notification_preferences");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.EventType).HasMaxLength(100).IsRequired();
+            entity.HasIndex(x => new { x.TenantId, x.EventType, x.Channel }).IsUnique();
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<InAppNotification>(entity =>
+        {
+            entity.ToTable("in_app_notifications");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Type).HasMaxLength(50).IsRequired();
+            entity.HasIndex(x => new { x.TenantId, x.UserId, x.IsRead, x.CreatedAt });
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<OutboxMessage>(entity =>
+        {
+            entity.ToTable("outbox_messages");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.EventType).HasMaxLength(100).IsRequired();
+            entity.HasIndex(x => new { x.Status, x.NextAttemptAt, x.OccurredAt });
+        });
+
+        builder.Entity<InventoryCategory>(entity =>
+        {
+            entity.ToTable("inventory_categories");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.ArabicName).HasMaxLength(100);
+            entity.HasIndex(x => new { x.TenantId, x.Name });
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<Supplier>(entity =>
+        {
+            entity.ToTable("suppliers");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.ContactPerson).HasMaxLength(100);
+            entity.Property(x => x.Phone).HasMaxLength(50);
+            entity.Property(x => x.Email).HasMaxLength(100);
+            entity.HasIndex(x => new { x.TenantId, x.Name });
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<InventoryItem>(entity =>
+        {
+            entity.ToTable("inventory_items");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(150).IsRequired();
+            entity.Property(x => x.ArabicName).HasMaxLength(150);
+            entity.Property(x => x.Sku).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.UnitOfMeasure).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.MinimumStockLevel).HasPrecision(18, 4);
+            entity.Property(x => x.ReorderLevel).HasPrecision(18, 4);
+            entity.Property(x => x.CurrentCost).HasPrecision(18, 2);
+            entity.HasIndex(x => new { x.TenantId, x.Sku }).IsUnique();
+            entity.HasIndex(x => new { x.TenantId, x.CategoryId });
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<StockMovement>(entity =>
+        {
+            entity.ToTable("stock_movements");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Quantity).HasPrecision(18, 4);
+            entity.Property(x => x.UnitCost).HasPrecision(18, 2);
+            entity.Property(x => x.TotalCost).HasPrecision(18, 2);
+            entity.Property(x => x.Reference).HasMaxLength(100).IsRequired();
+            entity.HasIndex(x => new { x.TenantId, x.ItemId, x.OccurredAt });
+            entity.HasIndex(x => new { x.TenantId, x.OccurredAt });
             entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
         });
 
@@ -679,7 +809,7 @@ public sealed class ApplicationDbContext(
             var tenantId = currentTenant.IsAvailable
                 ? currentTenant.RequireTenantId()
                 : platformWriteScope?.TenantId
-                    ?? throw new TenantUnavailableException();
+                    ?? (entry.Entity.TenantId != Guid.Empty ? entry.Entity.TenantId : throw new TenantUnavailableException());
             var property = entry.Property(nameof(ITenantOwned.TenantId));
 
             if (entry.State == EntityState.Added && (Guid)property.CurrentValue! == Guid.Empty)

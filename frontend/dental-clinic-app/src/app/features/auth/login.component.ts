@@ -11,21 +11,40 @@ import { LocalizationService } from '../../core/localization.service';
     <section class="auth-card">
       <p class="eyebrow">{{ i18n.language() === 'en' ? 'Clinic access' : 'دخول العيادة' }}</p>
       <h1>{{ i18n.language() === 'en' ? 'Welcome back' : 'مرحباً بعودتك' }}</h1>
-      <p>{{ i18n.language() === 'en' ? 'Use your activated clinic account.' : 'استخدم حساب العيادة المُفعّل.' }}</p>
-      @if (error()) { <div class="alert error" role="alert">{{ error() }}</div> }
+      <p>
+        {{
+          i18n.language() === 'en'
+            ? 'Use your activated clinic account.'
+            : 'استخدم حساب العيادة المُفعّل.'
+        }}
+      </p>
+      @if (error()) {
+        <div class="alert error" role="alert">{{ error() }}</div>
+      }
       <form [formGroup]="form" (ngSubmit)="submit()">
-        <label>Email<input type="email" formControlName="email" autocomplete="email"></label>
-        <label>{{ i18n.language() === 'en' ? 'Password' : 'كلمة المرور' }}
-          <input type="password" formControlName="password" autocomplete="current-password">
+        <label>Email<input type="email" formControlName="email" autocomplete="email" /></label>
+        <label
+          >{{ i18n.language() === 'en' ? 'Password' : 'كلمة المرور' }}
+          <input type="password" formControlName="password" autocomplete="current-password" />
         </label>
         <button class="primary" type="submit" [disabled]="loading() || form.invalid">
-          {{ loading() ? (i18n.language() === 'en' ? 'Signing in…' : 'جارٍ الدخول…') : (i18n.language() === 'en' ? 'Sign in' : 'تسجيل الدخول') }}
+          {{
+            loading()
+              ? i18n.language() === 'en'
+                ? 'Signing in…'
+                : 'جارٍ الدخول…'
+              : i18n.language() === 'en'
+                ? 'Sign in'
+                : 'تسجيل الدخول'
+          }}
         </button>
       </form>
-      <a routerLink="/accept-invitation">{{ i18n.language() === 'en' ? 'Accept an invitation' : 'قبول دعوة' }}</a>
+      <a routerLink="/accept-invitation">{{
+        i18n.language() === 'en' ? 'Accept an invitation' : 'قبول دعوة'
+      }}</a>
     </section>
   `,
-  styleUrl: './auth.scss'
+  styleUrl: './auth.scss',
 })
 export class LoginComponent {
   readonly i18n = inject(LocalizationService);
@@ -35,7 +54,7 @@ export class LoginComponent {
   readonly error = signal('');
   readonly form = inject(FormBuilder).nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
-    password: ['', Validators.required]
+    password: ['', Validators.required],
   });
 
   submit(): void {
@@ -46,8 +65,12 @@ export class LoginComponent {
       next: () => void this.router.navigate(['/users']),
       error: () => {
         this.loading.set(false);
-        this.error.set(this.i18n.language() === 'en' ? 'Invalid email or password.' : 'البريد الإلكتروني أو كلمة المرور غير صحيحة.');
-      }
+        this.error.set(
+          this.i18n.language() === 'en'
+            ? 'Invalid email or password.'
+            : 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+        );
+      },
     });
   }
 }

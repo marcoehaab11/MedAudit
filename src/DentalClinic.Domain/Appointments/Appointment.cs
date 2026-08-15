@@ -7,7 +7,8 @@ public sealed class Appointment : TenantOwnedEntity
     private Appointment() { }
 
     public Appointment(Guid tenantId, Guid patientId, Guid doctorProfileId, AppointmentType type,
-        DateTimeOffset startAt, int durationMinutes, string? notes, Guid createdBy, DateTimeOffset createdAt)
+        DateTimeOffset startAt, int durationMinutes, string? notes, Guid createdBy, DateTimeOffset createdAt,
+        string? bookingReference = null, Guid? treatmentCatalogItemId = null)
     {
         if (tenantId == Guid.Empty || patientId == Guid.Empty || doctorProfileId == Guid.Empty || createdBy == Guid.Empty)
             throw new ArgumentException("Tenant, patient, doctor, and creator IDs are required.");
@@ -19,6 +20,8 @@ public sealed class Appointment : TenantOwnedEntity
         if (!Enum.IsDefined(type)) throw new ArgumentOutOfRangeException(nameof(type));
         Type = type;
         Notes = NormalizeOptional(notes, nameof(notes), 2000);
+        BookingReference = NormalizeOptional(bookingReference, nameof(bookingReference), 50);
+        TreatmentCatalogItemId = treatmentCatalogItemId == Guid.Empty ? null : treatmentCatalogItemId;
         Status = AppointmentStatus.Scheduled;
         CreatedAt = createdAt;
         UpdatedAt = createdAt;
@@ -33,6 +36,8 @@ public sealed class Appointment : TenantOwnedEntity
     public int DurationMinutes { get; private set; }
     public string? Notes { get; private set; }
     public string? CancellationReason { get; private set; }
+    public string? BookingReference { get; private set; }
+    public Guid? TreatmentCatalogItemId { get; private set; }
     public Guid CreatedBy { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }

@@ -1,0 +1,324 @@
+<div class="booking-container">
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading clinic booking details...</p>
+    </div>
+  } @else if (error() && !clinic()) {
+    <div class="error-card">
+      <div class="icon">⚠️</div>
+      <h2>Booking Unavailable</h2>
+      <p>{{ error() }}</p>
+    </div>
+  } @else if (clinic()) {
+    <!-- Header Hero -->
+    <header class="clinic-hero">
+      @if (clinic()?.logoReference) {
+        <img [src]="clinic()?.logoReference" [alt]="clinic()?.name" class="clinic-logo" />
+      } @else {
+        <div class="clinic-avatar">🦷</div>
+      }
+      <div class="clinic-info">
+        <h1>{{ clinic()?.name }}</h1>
+        <p class="meta">
+          📍 {{ clinic()?.address }}, {{ clinic()?.city }} &bull; 📞 {{ clinic()?.phone }}
+        </p>
+      </div>
+    </header>
+
+    <!-- Stepper Navigation -->
+    <nav class="booking-stepper">
+      <button
+        type="button"
+        [class.active]="step() === 1"
+        [class.completed]="step() > 1"
+        (click)="goToStep(1)"
+      >
+        <span class="num">1</span> Doctor
+      </button>
+      <button
+        type="button"
+        [class.active]="step() === 2"
+        [class.completed]="step() > 2"
+        [disabled]="!selectedDoctorId()"
+        (click)="goToStep(2)"
+      >
+        <span class="num">2</span> Service
+      </button>
+      <button
+        type="button"
+        [class.active]="step() === 3"
+        [class.completed]="step() > 3"
+        [disabled]="!selectedServiceId()"
+        (click)="goToStep(3)"
+      >
+        <span class="num">3</span> Date & Time
+      </button>
+      <button
+        type="button"
+        [class.active]="step() === 4"
+        [disabled]="!selectedSlot()"
+        (click)="goToStep(4)"
+      >
+        <span class="num">4</span> Your Info
+      </button>
+    </nav>
+
+    @if (error()) {
+      <div class="banner error-banner">
+        <span>⚠️ {{ error() }}</span>
+      </div>
+    }
+
+    <!-- Step 1: Select Doctor -->
+    @if (step() === 1) {
+      <section class="step-card">
+        <h2>Select a Dentist</h2>
+        <p class="subtitle">Choose an expert practitioner for your appointment</p>
+
+        <div class="doctors-grid">
+          @for (doc of doctors(); track doc.doctorProfileId) {
+            <div
+              class="doctor-card"
+              [class.selected]="selectedDoctorId() === doc.doctorProfileId"
+              (click)="selectDoctor(doc.doctorProfileId)"
+            >
+              <div class="doc-avatar">👨‍⚕️</div>
+              <div class="doc-details">
+                <h3>{{ doc.displayName }}</h3>
+                <p class="specialization">{{ doc.specialization }}</p>
+                @if (doc.bio) {
+                  <p class="bio">{{ doc.bio }}</p>
+                }
+                <span class="badge">{{ doc.consultationDurationMinutes }} mins consultation</span>
+              </div>
+            </div>
+          }
+          @if (doctors().length === 0) {
+            <div class="empty-state">No doctors are currently available for online booking.</div>
+          }
+        </div>
+
+        <div class="actions">
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="!selectedDoctorId()"
+            (click)="goToStep(2)"
+          >
+            Continue to Service &rarr;
+          </button>
+        </div>
+      </section>
+    }
+
+    <!-- Step 2: Select Service -->
+    @if (step() === 2) {
+      <section class="step-card">
+        <h2>Select Service or Treatment</h2>
+        <p class="subtitle">Choose the procedure or consultation you require</p>
+
+        <div class="services-list">
+          @for (svc of services(); track svc.id) {
+            <div
+              class="service-item"
+              [class.selected]="selectedServiceId() === svc.id"
+              (click)="selectService(svc.id)"
+            >
+              <div class="svc-main">
+                <h3>{{ svc.name }}</h3>
+                @if (svc.description) {
+                  <p class="desc">{{ svc.description }}</p>
+                }
+              </div>
+              <div class="svc-meta">
+                <span class="duration">⏱️ {{ svc.durationMinutes }} mins</span>
+                @if (svc.price != null && clinic()?.publicPriceVisibility) {
+                  <span class="price">{{ svc.price | currency: clinic()?.currency }}</span>
+                }
+              </div>
+            </div>
+          }
+          @if (services().length === 0) {
+            <div class="empty-state">No services listed for public booking.</div>
+          }
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-secondary" (click)="goToStep(1)">&larr; Back</button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="!selectedServiceId()"
+            (click)="goToStep(3)"
+          >
+            Continue to Select Time &rarr;
+          </button>
+        </div>
+      </section>
+    }
+
+    <!-- Step 3: Select Date & Time Slot -->
+    @if (step() === 3) {
+      <section class="step-card">
+        <h2>Select Date & Available Time</h2>
+        <p class="subtitle">Pick a slot convenient for your schedule</p>
+
+        <div class="date-picker-row">
+          <label for="bookingDate">Appointment Date:</label>
+          <input
+            id="bookingDate"
+            type="date"
+            [ngModel]="selectedDate()"
+            [min]="minDate()"
+            [max]="maxDate()"
+            (ngModelChange)="onDateChange($event)"
+          />
+        </div>
+
+        @if (loadingSlots()) {
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Checking slot availability...</p>
+          </div>
+        } @else {
+          <div class="slots-container">
+            <h3>Available Time Slots for {{ selectedDate() }}</h3>
+            <div class="slots-grid">
+              @for (slot of slots(); track slot.startAt) {
+                <button
+                  type="button"
+                  class="slot-chip"
+                  [class.selected]="selectedSlot()?.startAt === slot.startAt"
+                  (click)="selectSlot(slot)"
+                >
+                  {{ slot.startTime }} - {{ slot.endTime }}
+                </button>
+              }
+            </div>
+            @if (slots().length === 0) {
+              <div class="empty-state">
+                No available time slots for {{ selectedDate() }}. Please select another date.
+              </div>
+            }
+          </div>
+        }
+
+        <div class="actions">
+          <button type="button" class="btn btn-secondary" (click)="goToStep(2)">&larr; Back</button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="!selectedSlot()"
+            (click)="goToStep(4)"
+          >
+            Continue to Patient Details &rarr;
+          </button>
+        </div>
+      </section>
+    }
+
+    <!-- Step 4: Patient Details & Confirm -->
+    @if (step() === 4) {
+      <section class="step-card">
+        <h2>Enter Patient Information</h2>
+        <p class="subtitle">Provide your contact details to complete your booking</p>
+
+        <div class="summary-box">
+          <div class="summary-item">
+            <strong>Doctor:</strong> {{ selectedDoctor()?.displayName }} ({{
+              selectedDoctor()?.specialization
+            }})
+          </div>
+          <div class="summary-item">
+            <strong>Service:</strong> {{ selectedService()?.name }} ({{
+              selectedService()?.durationMinutes
+            }}
+            mins)
+          </div>
+          <div class="summary-item">
+            <strong>Date & Time:</strong> {{ selectedSlot()?.date }} at
+            {{ selectedSlot()?.startTime }} - {{ selectedSlot()?.endTime }}
+          </div>
+        </div>
+
+        <form (ngSubmit)="submitBooking()" class="patient-form">
+          <div class="form-group">
+            <label for="fullName">Full Name <span class="required">*</span></label>
+            <input
+              id="fullName"
+              type="text"
+              [(ngModel)]="patientName"
+              name="patientName"
+              placeholder="e.g. Sarah Connor"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="phone">Phone Number <span class="required">*</span></label>
+            <input
+              id="phone"
+              type="tel"
+              [(ngModel)]="patientPhone"
+              name="patientPhone"
+              placeholder="e.g. +1234567890"
+              required
+            />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="email">Email (Optional)</label>
+              <input
+                id="email"
+                type="email"
+                [(ngModel)]="patientEmail"
+                name="patientEmail"
+                placeholder="sarah@example.com"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="dob">Date of Birth (Optional)</label>
+              <input
+                id="dob"
+                type="date"
+                [(ngModel)]="patientDateOfBirth"
+                name="patientDateOfBirth"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="notes">Notes or Symptoms (Optional)</label>
+            <textarea
+              id="notes"
+              rows="3"
+              [(ngModel)]="patientNotes"
+              name="patientNotes"
+              placeholder="Describe any dental concern or reason for visit..."
+            ></textarea>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn btn-secondary" (click)="goToStep(3)">
+              &larr; Back
+            </button>
+            <button
+              type="submit"
+              class="btn btn-success btn-lg"
+              [disabled]="submitting() || !patientName.trim() || !patientPhone.trim()"
+            >
+              @if (submitting()) {
+                <span class="spinner-inline"></span> Booking...
+              } @else {
+                Confirm Appointment &check;
+              }
+            </button>
+          </div>
+        </form>
+      </section>
+    }
+  }
+</div>

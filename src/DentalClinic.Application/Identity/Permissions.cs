@@ -97,6 +97,18 @@ public static class Permissions
     public const string UsersManageRoles = "Users.ManageRoles";
     public const string SettingsView = "Settings.View";
     public const string SettingsEdit = "Settings.Edit";
+    public const string NotificationsView = "Notifications.View";
+    public const string NotificationsManage = "Notifications.Manage";
+    public const string NotificationsTemplates = "Notifications.Templates";
+    public const string NotificationsPreferences = "Notifications.Preferences";
+    public const string InventoryView = "Inventory.View";
+    public const string InventoryManageItems = "Inventory.ManageItems";
+    public const string InventoryManageCategories = "Inventory.ManageCategories";
+    public const string InventoryManageSuppliers = "Inventory.ManageSuppliers";
+    public const string InventoryReceive = "Inventory.Receive";
+    public const string InventoryIssue = "Inventory.Issue";
+    public const string InventoryAdjust = "Inventory.Adjust";
+    public const string InventoryViewCosts = "Inventory.ViewCosts";
 
     public static IReadOnlySet<string> All { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
@@ -125,6 +137,9 @@ public static class Permissions
         ReportsView, ReportsClinical, ReportsFinancial, ReportsPatients, ReportsAppointments, ReportsDoctors,
         ReportsTreatments, ReportsPrescriptions, ReportsCrm, ReportsExport,
         UsersView, UsersCreate, UsersEdit, UsersActivate, UsersDeactivate, UsersManageRoles,
-        SettingsView, SettingsEdit
+        SettingsView, SettingsEdit,
+        NotificationsView, NotificationsManage, NotificationsTemplates, NotificationsPreferences,
+        InventoryView, InventoryManageItems, InventoryManageCategories, InventoryManageSuppliers,
+        InventoryReceive, InventoryIssue, InventoryAdjust, InventoryViewCosts
     };
 }

@@ -324,15 +324,13 @@ export class ExaminationComponent {
     });
   }
   private create() {
-    this.api
-      .create(this.appointmentId)
-      .subscribe({
-        next: (x) =>
-          this.api
-            .examination(x.id)
-            .subscribe({ next: (e) => this.set(e), error: (e) => this.fail(e) }),
-        error: (e) => this.fail(e),
-      });
+    this.api.create(this.appointmentId).subscribe({
+      next: (x) =>
+        this.api
+          .examination(x.id)
+          .subscribe({ next: (e) => this.set(e), error: (e) => this.fail(e) }),
+      error: (e) => this.fail(e),
+    });
   }
   private set(x: ExaminationDetails) {
     this.examination.set(x);

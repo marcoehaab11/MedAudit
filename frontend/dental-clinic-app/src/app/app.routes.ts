@@ -327,6 +327,22 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/reports/crm-report.component').then((x) => x.CrmReportComponent),
   },
+  {
+    path: 'notifications',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/notifications/notifications-page.component').then(
+        (x) => x.NotificationsPageComponent,
+      ),
+  },
+  {
+    path: 'inventory',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/inventory/inventory-page.component').then(
+        (x) => x.InventoryPageComponent,
+      ),
+  },
   { path: '', pathMatch: 'full', redirectTo: 'patients' },
   { path: '**', redirectTo: 'patients' },
 ];

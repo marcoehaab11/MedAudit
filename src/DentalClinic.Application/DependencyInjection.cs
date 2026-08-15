@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped<AppointmentSchedulingValidator>();
         services.AddScoped<IAppointmentQueries, AppointmentQueries>();
         services.AddScoped<IAppointmentAvailabilityQuery, AppointmentAvailabilityQuery>();
+        services.AddScoped<DentalClinic.Application.PublicBooking.IPublicBookingService, DentalClinic.Application.PublicBooking.PublicBookingService>();
         services.AddScoped<ICreateAppointment, CreateAppointment>();
         services.AddScoped<IRescheduleAppointment, RescheduleAppointment>();
         services.AddScoped<IAppointmentLifecycle, AppointmentLifecycle>();
@@ -68,6 +69,10 @@ public static class DependencyInjection
         services.AddScoped<ITreatmentRevenueCreator, TreatmentRevenueCreator>();
         services.AddSingleton<IDoctorCompensationCalculator, DoctorCompensationCalculator>();
         services.AddScoped<IReportServices, ReportServices>();
+        services.AddScoped<DentalClinic.Application.Notifications.INotificationService, DentalClinic.Application.Notifications.NotificationService>();
+        services.AddScoped<DentalClinic.Application.Inventory.InventoryService>();
+        services.AddScoped<DentalClinic.Application.Inventory.IInventoryService>(x => x.GetRequiredService<DentalClinic.Application.Inventory.InventoryService>());
+        services.AddScoped<DentalClinic.Application.Inventory.IMaterialConsumptionService>(x => x.GetRequiredService<DentalClinic.Application.Inventory.InventoryService>());
         return services;
     }
 }

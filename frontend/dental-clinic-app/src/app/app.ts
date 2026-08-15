@@ -7,7 +7,7 @@ import { LocalizationService } from './core/localization.service';
   selector: 'app-root',
   imports: [RouterOutlet, RouterLink],
   templateUrl: './app.html',
-  styleUrl: './app.scss'
+  styleUrl: './app.scss',
 })
 export class App {
   protected readonly i18n = inject(LocalizationService);
