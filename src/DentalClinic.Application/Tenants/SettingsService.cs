@@ -1,3 +1,4 @@
+using System.Globalization;
 using DentalClinic.Application.Common.Interfaces;
 using DentalClinic.Application.Identity;
 using DentalClinic.Domain.Identity;
@@ -378,8 +379,8 @@ internal sealed class SettingsService(
         {
             var ch = new ClinicHours(tenantId, h.DayOfWeek, h.IsOpen);
             var periods = h.Periods.Select(p => new ClinicHourPeriod(
-                TimeOnly.Parse(p.StartTime),
-                TimeOnly.Parse(p.EndTime),
+                TimeOnly.Parse(p.StartTime, CultureInfo.InvariantCulture),
+                TimeOnly.Parse(p.EndTime, CultureInfo.InvariantCulture),
                 p.PeriodType
             ));
             ch.SetPeriods(periods);
@@ -415,8 +416,8 @@ internal sealed class SettingsService(
         var tenantId = currentTenant.RequireTenantId();
         var userId = RequireUserId();
 
-        TimeOnly? sTime = !string.IsNullOrWhiteSpace(command.StartTime) ? TimeOnly.Parse(command.StartTime) : null;
-        TimeOnly? eTime = !string.IsNullOrWhiteSpace(command.EndTime) ? TimeOnly.Parse(command.EndTime) : null;
+        TimeOnly? sTime = !string.IsNullOrWhiteSpace(command.StartTime) ? TimeOnly.Parse(command.StartTime, CultureInfo.InvariantCulture) : null;
+        TimeOnly? eTime = !string.IsNullOrWhiteSpace(command.EndTime) ? TimeOnly.Parse(command.EndTime, CultureInfo.InvariantCulture) : null;
 
         var holiday = new ClinicHoliday(
             tenantId,
@@ -454,8 +455,8 @@ internal sealed class SettingsService(
 
         var holiday = await store.GetHolidayByIdAsync(tenantId, id, token) ?? throw new KeyNotFoundException("Clinic holiday not found.");
 
-        TimeOnly? sTime = !string.IsNullOrWhiteSpace(command.StartTime) ? TimeOnly.Parse(command.StartTime) : null;
-        TimeOnly? eTime = !string.IsNullOrWhiteSpace(command.EndTime) ? TimeOnly.Parse(command.EndTime) : null;
+        TimeOnly? sTime = !string.IsNullOrWhiteSpace(command.StartTime) ? TimeOnly.Parse(command.StartTime, CultureInfo.InvariantCulture) : null;
+        TimeOnly? eTime = !string.IsNullOrWhiteSpace(command.EndTime) ? TimeOnly.Parse(command.EndTime, CultureInfo.InvariantCulture) : null;
 
         holiday.Update(
             command.Name,
@@ -618,12 +619,12 @@ internal sealed class SettingsService(
         config.Version
     );
 
-    private static IReadOnlyCollection<ClinicHoursDto> MapClinicHours(IEnumerable<ClinicHours> hours)
+    private static List<ClinicHoursDto> MapClinicHours(IEnumerable<ClinicHours> hours)
     {
         return hours.Select(h => new ClinicHoursDto(
             h.DayOfWeek,
             h.IsOpen,
-            h.Periods.Select(p => new ClinicHourPeriodDto(p.StartTime.ToString("HH:mm"), p.EndTime.ToString("HH:mm"), p.PeriodType)).ToList()
+            h.Periods.Select(p => new ClinicHourPeriodDto(p.StartTime.ToString("HH:mm", CultureInfo.InvariantCulture), p.EndTime.ToString("HH:mm", CultureInfo.InvariantCulture), p.PeriodType)).ToList()
         )).ToList();
     }
 
@@ -633,8 +634,8 @@ internal sealed class SettingsService(
         h.ArabicName,
         h.StartDate,
         h.EndDate,
-        h.StartTime?.ToString("HH:mm"),
-        h.EndTime?.ToString("HH:mm"),
+        h.StartTime?.ToString("HH:mm", CultureInfo.InvariantCulture),
+        h.EndTime?.ToString("HH:mm", CultureInfo.InvariantCulture),
         h.Reason,
         h.IsFullDay,
         h.IsActive,
