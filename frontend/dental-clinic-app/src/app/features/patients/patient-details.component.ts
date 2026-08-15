@@ -4,11 +4,23 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
 import { PatientApiService, PatientDetails } from './patient-api.service';
+import { PatientDentalSummaryComponent } from '../dental/patient-dental-summary.component';
+import { PatientTreatmentSummaryComponent } from '../treatments/patient-treatment-summary.component';
+import { PatientPrescriptionSummaryComponent } from '../prescriptions/patient-prescription-summary.component';
+import { PatientCrmSummaryComponent } from '../crm/patient-crm-summary.component';
 
 type Tab = 'overview' | 'contact' | 'medical' | 'notes';
 @Component({
   selector: 'app-patient-details',
-  imports: [RouterLink, DatePipe, ReactiveFormsModule],
+  imports: [
+    RouterLink,
+    DatePipe,
+    ReactiveFormsModule,
+    PatientDentalSummaryComponent,
+    PatientTreatmentSummaryComponent,
+    PatientPrescriptionSummaryComponent,
+    PatientCrmSummaryComponent,
+  ],
   template: ` <a class="back" routerLink="/patients"
       >← {{ t('Back to patients', 'العودة إلى المرضى') }}</a
     >
@@ -87,6 +99,10 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
               </dl>
             </section>
           </div>
+          <app-patient-dental-summary [patientId]="id" />
+          <app-patient-treatment-summary [patientId]="id" />
+          <app-patient-prescription-summary [patientId]="id" />
+          <app-patient-crm-summary [patientId]="id" />
         }
         @case ('contact') {
           <div class="detail-grid">

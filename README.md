@@ -134,3 +134,34 @@ Clinic identity management is available in the Angular application at `/users`, 
 Permission policies are enforced by the API and rechecked by application use cases. Effective permissions are resolved from the current tenant's role assignments. PlatformAdmin remains a platform-only Identity role and cannot be assigned through clinic role endpoints. Deactivated users and users belonging to inactive or suspended clinics cannot authenticate.
 
 The email notifier remains provider-agnostic and deliberately does not log raw invitation tokens. A production email provider and its public invitation URL must be configured before real invitations can be delivered.
+
+## Appointments and scheduling
+
+Internal clinic scheduling is available at `/appointments` and `/appointments/create`. Doctor weekly schedules are authoritative for working periods, breaks, slot alignment, and appointment duration. The API converts tenant-local dates and times through the tenant's IANA timezone and stores appointment timestamps as UTC `timestamp with time zone` values. Ambiguous or nonexistent daylight-saving times, and appointments crossing a daylight-saving offset transition, are rejected.
+
+PostgreSQL exclusion constraints protect both doctor and patient time ranges using half-open `[start, end)` intervals scoped by `TenantId`. Only cancelled appointments are excluded from these constraints, so cancellation releases a slot while completed and no-show appointments preserve the historical occupancy of their original time. Application conflict checks provide early feedback, while the database constraints remain authoritative under concurrent requests. Public booking and holiday/calendar rules are intentionally not part of this phase and must reuse this scheduling engine later.
+
+## Dental chart and clinical examinations
+
+- Permanent teeth use validated FDI numbers and stable GUID tooth references; the catalog can be extended for primary dentition later.
+- Findings, procedures, normalized surfaces, examination notes, and multi-canal endodontic records are separate historical records. UI colors are centralized presentation metadata, never clinical truth.
+- Examinations open only from an in-progress appointment after verifying its tenant, patient, and assigned doctor. Draft writes carry a GUID concurrency token and stale requests return HTTP 409.
+- Completed examinations are immutable through the domain and API, with a PostgreSQL guard against subsequent examination updates or deletion. A future amendment can reference the completed record instead of rewriting it.
+- The patient chart is a focused projection over completed records. Recent history omits clinical free text, and detailed records load only on demand.
+- Tenant-aware composite foreign keys protect the patient, appointment, doctor, creator, examination, and all child records in addition to application authorization and query filters.
+
+## Prescriptions
+
+Prescriptions are tenant-owned clinical documents with concurrency-safe `RX-000001` numbering, optional appointment/examination/treatment references, medication snapshots, and Draft → Issued/Cancelled lifecycle rules. Issued content is immutable in the domain and application layers; PostgreSQL triggers also reject item mutations, deletion, or content changes while allowing only the explicit Issued → Cancelled transition.
+
+PDF and QR generation sit behind application abstractions. PDF download and print operations require their respective prescription permissions and apply the same tenant/doctor visibility rules as details. Each issued prescription receives a cryptographically random 256-bit document reference. The QR contains only the reserved verification path plus that opaque reference—never a patient name, medication, clinical note, database ID, or access token. No public verification or sharing endpoint is enabled in this phase; a future controlled route must retain authorization (or introduce an explicitly reviewed limited-disclosure policy) before the reserved QR destination becomes externally resolvable.
+
+The current PDF renderer produces a compact Latin-font document with clinic, doctor, patient, medication directions, verification reference, and signature placeholder. Arabic/non-Latin PDF font shaping and tenant logo embedding remain future renderer work; the Angular UI itself supports Arabic/English and RTL/LTR. Speech-to-text is an unconfigured abstraction only and cannot create or issue prescriptions automatically.
+
+## CRM and follow-ups
+
+The clinic CRM is intentionally patient-centric: `Patient` remains the canonical identity and no duplicate customer/lead table exists. `/crm` provides database-aggregated new-patient and follow-up indicators, while `/crm/follow-ups` uses server-side search, filters, sorting, and pagination. Due dates are entered in the tenant's local timezone, rejected when DST makes the local time invalid or ambiguous, stored as UTC, and rendered in the configured tenant timezone.
+
+Follow-ups support Pending, InProgress, Completed, and Cancelled states. Overdue is derived at query time from open status plus `DueAt`; it is not stored. GUID concurrency tokens protect edits and assignment, and a PostgreSQL trigger prevents terminal records from being changed or deleted. All patient, assignee, appointment, treatment plan, treatment, prescription, and activity relationships use tenant-aware composite foreign keys.
+
+`IFollowUpCreator` is the extension point for future appointment, treatment, and prescription automation. This phase does not automatically create follow-ups and does not contact patients. Communication activities record concise Call/WhatsApp/SMS/Email/Other metadata only; no provider credentials, delivery logic, campaigns, or full private message bodies are introduced.

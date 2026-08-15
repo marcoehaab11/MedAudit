@@ -1,4 +1,13 @@
 using DentalClinic.Application.Common.Exceptions;
+using DentalClinic.Application.Appointments;
+using DentalClinic.Application.Dental;
+using DentalClinic.Domain.Dental;
+using DentalClinic.Domain.Treatments;
+using DentalClinic.Application.Treatments;
+using DentalClinic.Application.Prescriptions;
+using DentalClinic.Domain.Prescriptions;
+using DentalClinic.Application.Crm;
+using DentalClinic.Domain.Crm;
 using DentalClinic.Contracts.Errors;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
@@ -40,6 +49,49 @@ internal sealed class GlobalExceptionHandler(
                 "Tenant context required",
                 exception.Message,
                 null),
+            AppointmentConflictException => (
+                StatusCodes.Status409Conflict,
+                "Appointment conflict",
+                exception.Message,
+                null),
+            DentalConcurrencyException => (
+                StatusCodes.Status409Conflict,
+                "Clinical record conflict",
+                exception.Message,
+                null),
+            DentalStateException => (
+                StatusCodes.Status409Conflict,
+                "Clinical workflow conflict",
+                exception.Message,
+                null),
+            DentalNotFoundException or KeyNotFoundException => (
+                StatusCodes.Status404NotFound,
+                "Clinical record not found",
+                exception.Message,
+                null),
+            TreatmentConcurrencyException => (
+                StatusCodes.Status409Conflict, "Treatment conflict", exception.Message, null),
+            TreatmentStateException => (
+                StatusCodes.Status409Conflict, "Treatment workflow conflict", exception.Message, null),
+            TreatmentNotFoundException => (
+                StatusCodes.Status404NotFound, "Treatment record not found", exception.Message, null),
+            ArgumentException => (
+                StatusCodes.Status400BadRequest,
+                "Invalid request",
+                exception.Message,
+                null),
+            PrescriptionConcurrencyException => (
+                StatusCodes.Status409Conflict, "Prescription conflict", exception.Message, null),
+            PrescriptionStateException => (
+                StatusCodes.Status409Conflict, "Prescription workflow conflict", exception.Message, null),
+            PrescriptionNotFoundException => (
+                StatusCodes.Status404NotFound, "Prescription not found", "The prescription or related clinical record is not available.", null),
+            FollowUpConcurrencyException => (
+                StatusCodes.Status409Conflict, "Follow-up conflict", exception.Message, null),
+            FollowUpStateException => (
+                StatusCodes.Status409Conflict, "Follow-up workflow conflict", exception.Message, null),
+            CrmNotFoundException => (
+                StatusCodes.Status404NotFound, "CRM record not found", "The requested CRM or related record is not available.", null),
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "Unexpected error",

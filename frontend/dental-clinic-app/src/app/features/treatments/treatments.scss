@@ -1,0 +1,123 @@
+.page-head,
+.head-actions,
+.summary-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.page-head {
+  margin-block-end: 1.25rem;
+}
+.page-head h1 {
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  margin: 0.2rem 0;
+}
+.panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 1.2rem;
+  padding: 1.2rem;
+  box-shadow: var(--shadow);
+  margin-block-end: 1rem;
+}
+.filters {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+.table-panel {
+  padding: 0;
+  overflow: hidden;
+}
+.table-scroll {
+  overflow: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th,
+td {
+  text-align: start;
+  padding: 1rem;
+  border-block-end: 1px solid var(--border);
+}
+th {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+.state {
+  text-align: center;
+  padding: 3rem;
+  color: var(--muted);
+}
+.badge {
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: #eef2ff;
+}
+.status-3,
+.status-4,
+.status-6 {
+  background: #dcfce7;
+  color: #166534;
+}
+.status-7,
+.status-5 {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.plan-form {
+  display: grid;
+  gap: 1rem;
+  max-width: 52rem;
+}
+.plan-form label {
+  display: grid;
+  gap: 0.35rem;
+}
+.plan-form fieldset {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+}
+.totals {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1.2rem;
+  padding: 1rem;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+.back {
+  display: inline-block;
+  margin-block-end: 1rem;
+}
+.treatment-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-block: 1rem;
+}
+.treatment-summary-grid div {
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 0.75rem;
+  display: grid;
+  gap: 0.2rem;
+}
+.treatment-summary-grid strong {
+  font-size: 1.4rem;
+}
+.treatment-summary-grid span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}

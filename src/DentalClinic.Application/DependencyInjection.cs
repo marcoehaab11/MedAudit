@@ -3,6 +3,11 @@ using DentalClinic.Application.Tenants;
 using DentalClinic.Application.Identity;
 using DentalClinic.Application.Patients;
 using DentalClinic.Application.Doctors;
+using DentalClinic.Application.Appointments;
+using DentalClinic.Application.Dental;
+using DentalClinic.Application.Treatments;
+using DentalClinic.Application.Prescriptions;
+using DentalClinic.Application.Crm;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -30,6 +35,29 @@ public static class DependencyInjection
         services.AddScoped<IDoctorProfileCommands, DoctorProfileCommands>();
         services.AddScoped<IDoctorScheduleService, DoctorScheduleService>();
         services.AddScoped<IDoctorCompensationService, DoctorCompensationService>();
+        services.AddScoped<AppointmentAccess>();
+        services.AddScoped<AppointmentSchedulingValidator>();
+        services.AddScoped<IAppointmentQueries, AppointmentQueries>();
+        services.AddScoped<IAppointmentAvailabilityQuery, AppointmentAvailabilityQuery>();
+        services.AddScoped<ICreateAppointment, CreateAppointment>();
+        services.AddScoped<IRescheduleAppointment, RescheduleAppointment>();
+        services.AddScoped<IAppointmentLifecycle, AppointmentLifecycle>();
+        services.AddScoped<IDentalQueries, DentalQueries>();
+        services.AddScoped<IExaminationCommands, ExaminationCommands>();
+        services.AddScoped<TreatmentAccess>();
+        services.AddScoped<ITreatmentCatalogService, TreatmentCatalogService>();
+        services.AddScoped<ITreatmentPlanService, TreatmentPlanService>();
+        services.AddScoped<ITreatmentService, TreatmentService>();
+        services.AddScoped<PrescriptionAccess>();
+        services.AddScoped<IMedicationCatalogService, MedicationCatalogService>();
+        services.AddScoped<IPrescriptionService, PrescriptionService>();
+        services.AddScoped<IFollowUpQueries, FollowUpQueries>();
+        services.AddScoped<ICreateFollowUp, CreateFollowUp>();
+        services.AddScoped<IFollowUpCreator>(x => (CreateFollowUp)x.GetRequiredService<ICreateFollowUp>());
+        services.AddScoped<IUpdateFollowUp, UpdateFollowUp>();
+        services.AddScoped<IAssignFollowUp, AssignFollowUp>();
+        services.AddScoped<IFollowUpLifecycle, FollowUpLifecycle>();
+        services.AddScoped<ICommunicationActivityService, CommunicationActivityService>();
         return services;
     }
 }

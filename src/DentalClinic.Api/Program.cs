@@ -51,6 +51,11 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 app.MapIdentityEndpoints();
 app.MapPatientEndpoints();
 app.MapDoctorEndpoints();
+app.MapAppointmentEndpoints();
+app.MapDentalEndpoints();
+app.MapTreatmentEndpoints();
+app.MapPrescriptionEndpoints();
+app.MapCrmEndpoints();
 
 app.Run();
 

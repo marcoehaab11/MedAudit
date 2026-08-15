@@ -1,0 +1,154 @@
+:host {
+  display: block;
+}
+.chart-panel {
+  background: white;
+  border: 1px solid #dce7e8;
+  border-radius: 1rem;
+  padding: 1rem;
+}
+.chart-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.chart-tools h2 {
+  margin: 0;
+}
+.chart-tools p {
+  margin: 0.25rem 0;
+  color: #657779;
+}
+.chart-tools form {
+  display: grid;
+  gap: 0.25rem;
+}
+.chart-tools form span {
+  display: flex;
+}
+.chart-tools input {
+  inline-size: 5rem;
+  border: 1px solid #b8cacc;
+  border-radius: 0.5rem 0 0 0.5rem;
+  padding: 0.55rem;
+}
+.chart-tools button {
+  border: 0;
+  background: #176a70;
+  color: white;
+  padding: 0.58rem 0.8rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+.dentition {
+  margin-block: 1.4rem;
+}
+.tooth-row {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(2.5rem, 1fr));
+  gap: 0.35rem;
+  margin-block: 0.35rem;
+}
+.tooth {
+  position: relative;
+  min-block-size: 5.4rem;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 0.65rem;
+  cursor: pointer;
+  padding: 0.3rem;
+}
+.tooth:hover,
+.tooth.selected {
+  background: #e7f5f5;
+  border-color: #18848b;
+}
+.tooth-shape {
+  display: block;
+  inline-size: 2.4rem;
+  block-size: 2.8rem;
+  margin: auto;
+  background: linear-gradient(#fff, #e5efed);
+  border: 2px solid #8ba9a8;
+  border-radius: 45% 45% 35% 35%;
+  box-shadow: inset 0 -0.3rem 0.4rem #b8cfca;
+}
+.lower .tooth-shape {
+  transform: rotate(180deg);
+}
+.tooth strong {
+  display: block;
+  margin-block-start: 0.2rem;
+}
+.markers {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  display: flex;
+  gap: 0.1rem;
+}
+.markers b {
+  display: grid;
+  place-items: center;
+  min-inline-size: 1.15rem;
+  block-size: 1.15rem;
+  border-radius: 50%;
+  font-size: 0.65rem;
+  color: #112;
+}
+.markers .caries,
+.markers .infection {
+  background: #ffb3a8;
+}
+.markers .healthy {
+  background: #9ee0be;
+}
+.markers .fracture,
+.markers .sensitivity {
+  background: #f6d479;
+}
+.markers .missing,
+.markers .extraction {
+  background: #d8dde0;
+}
+.markers .filling,
+.markers .crown {
+  background: #9bc8ee;
+}
+.markers .implant,
+.markers .root-canal {
+  background: #c8b4ef;
+}
+.arch-divider {
+  display: flex;
+  justify-content: space-between;
+  border-block-start: 1px dashed #b9cbcc;
+  margin: 0.8rem 0;
+  padding-block-start: 0.35rem;
+  color: #60787a;
+}
+.chart-help {
+  font-size: 0.85rem;
+  color: #617375;
+}
+.inline-error {
+  color: #8c241c;
+}
+@media (max-width: 850px) {
+  .tooth-row {
+    gap: 0.1rem;
+  }
+  .tooth {
+    min-block-size: 4.6rem;
+    padding: 0.1rem;
+  }
+  .tooth-shape {
+    inline-size: 1.8rem;
+    block-size: 2.2rem;
+  }
+  .chart-tools {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -1,0 +1,192 @@
+:host {
+  display: block;
+}
+.back {
+  display: inline-block;
+  margin-block-end: 1rem;
+  color: #275b66;
+}
+.dental-head,
+.exam-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.dental-head {
+  padding: 1.2rem 1.4rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #123f49, #266b71);
+  color: white;
+  margin-block-end: 1rem;
+}
+.dental-head h1 {
+  margin: 0.15rem 0;
+}
+.dental-head p {
+  margin: 0;
+  opacity: 0.75;
+}
+.dental-head > span,
+.exam-status {
+  background: #ffffff20;
+  border: 1px solid #ffffff40;
+  padding: 0.55rem 0.8rem;
+  border-radius: 2rem;
+}
+.dental-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(18rem, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.tooth-details,
+.history-panel,
+.exam-actions {
+  background: white;
+  border: 1px solid #dce7e8;
+  border-radius: 1rem;
+  padding: 1rem;
+}
+.tooth-details h2 {
+  margin: 0;
+}
+.tooth-details section {
+  border-block-start: 1px solid #e5ecec;
+  padding-block: 0.75rem;
+}
+.clinical-tag {
+  display: inline-block;
+  border: 1px solid #a9c4c5;
+  border-radius: 2rem;
+  padding: 0.3rem 0.55rem;
+  margin: 0.15rem;
+}
+.endo-flag {
+  background: #eee8fb;
+  padding: 0.6rem;
+  border-radius: 0.5rem;
+}
+.history-panel {
+  margin-block-start: 1rem;
+}
+.history-panel article,
+.record-stack article {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0;
+  border-block-end: 1px solid #edf1f1;
+}
+.history-panel article div,
+.record-stack article div {
+  display: grid;
+  gap: 0.2rem;
+}
+.history-panel small,
+.record-stack small {
+  color: #657779;
+}
+.clinical-tabs {
+  display: flex;
+  gap: 0.3rem;
+  overflow: auto;
+  margin-block: 0.8rem;
+}
+.clinical-tabs button {
+  border: 1px solid #b8caca;
+  background: white;
+  border-radius: 2rem;
+  padding: 0.45rem 0.65rem;
+  white-space: nowrap;
+}
+.clinical-tabs button.active {
+  background: #164f57;
+  color: white;
+}
+.clinical-form {
+  display: grid;
+  gap: 0.75rem;
+  margin-block-start: 1rem;
+  border-block-start: 1px solid #dde7e7;
+  padding-block-start: 1rem;
+}
+.clinical-form label {
+  display: grid;
+  gap: 0.3rem;
+}
+.clinical-form textarea,
+.clinical-form select {
+  border: 1px solid #b7c9ca;
+  border-radius: 0.5rem;
+  padding: 0.55rem;
+  inline-size: 100%;
+  box-sizing: border-box;
+}
+.clinical-form fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  border: 1px solid #d6e2e2;
+  border-radius: 0.6rem;
+}
+.clinical-form fieldset label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.clinical-form button,
+.complete {
+  border: 0;
+  background: #176a70;
+  color: white;
+  padding: 0.58rem 0.8rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+.danger-link {
+  border: 0;
+  background: transparent;
+  color: #a83228;
+  cursor: pointer;
+}
+.exam-actions {
+  margin-block-start: 1rem;
+}
+.complete {
+  background: #1d6650;
+}
+.dental-summary {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 1rem;
+  margin-block-start: 1rem;
+}
+.summary-numbers {
+  display: flex;
+  gap: 1rem;
+}
+.summary-numbers span {
+  display: grid;
+  text-align: center;
+}
+.summary-numbers strong {
+  font-size: 1.35rem;
+}
+@media (max-width: 850px) {
+  .dental-workspace {
+    grid-template-columns: 1fr;
+  }
+  .dental-head,
+  .exam-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .dental-summary {
+    grid-template-columns: 1fr;
+  }
+  .summary-numbers {
+    justify-content: space-around;
+  }
+}

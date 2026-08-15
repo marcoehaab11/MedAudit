@@ -10,6 +10,27 @@
         @if (auth.hasPermission('Doctors.View')) {
           <a routerLink="/doctors">{{ i18n.language() === 'en' ? 'Doctors' : 'الأطباء' }}</a>
         }
+        @if (auth.hasPermission('Appointments.View')) {
+          <a routerLink="/appointments">{{
+            i18n.language() === 'en' ? 'Appointments' : 'المواعيد'
+          }}</a>
+        }
+        @if (auth.hasPermission('TreatmentPlans.View')) {
+          <a routerLink="/treatment-plans">{{
+            i18n.language() === 'en' ? 'Treatment plans' : 'خطط العلاج'
+          }}</a>
+        }
+        @if (auth.hasPermission('Treatments.View')) {
+          <a routerLink="/treatments">{{ i18n.language() === 'en' ? 'Treatments' : 'العلاجات' }}</a>
+        }
+        @if (auth.hasPermission('Prescriptions.View')) {
+          <a routerLink="/prescriptions">{{
+            i18n.language() === 'en' ? 'Prescriptions' : 'الوصفات'
+          }}</a>
+        }
+        @if (auth.hasPermission('CRM.View')) {
+          <a routerLink="/crm">{{ i18n.language() === 'en' ? 'CRM' : 'إدارة العلاقات' }}</a>
+        }
         ><button type="button" (click)="logout()">
           {{ i18n.language() === 'en' ? 'Sign out' : 'تسجيل الخروج' }}
         </button>

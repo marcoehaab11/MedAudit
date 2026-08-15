@@ -1,0 +1,115 @@
+.page-head,
+.head-actions,
+.summary-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.page-head {
+  margin-block-end: 1.25rem;
+}
+.panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 1.2rem;
+  padding: 1.2rem;
+  box-shadow: var(--shadow);
+  margin-block-end: 1rem;
+}
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 1rem;
+}
+.metric {
+  display: grid;
+  gap: 0.5rem;
+  text-decoration: none;
+}
+.metric strong {
+  font-size: 2rem;
+}
+.filters,
+.form-grid,
+.activity-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+}
+.wide {
+  grid-column: 1/-1;
+}
+.table-panel {
+  padding: 0;
+  overflow: hidden;
+}
+.table-scroll {
+  overflow: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th,
+td {
+  text-align: start;
+  padding: 1rem;
+  border-block-end: 1px solid var(--border);
+}
+th {
+  color: var(--muted);
+}
+.state {
+  text-align: center;
+  padding: 3rem;
+  color: var(--muted);
+}
+.badge {
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+}
+.overdue,
+.overdue .badge {
+  background: #fff1f2;
+  color: #9f1239;
+}
+.pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+}
+.crm-form label {
+  display: grid;
+  gap: 0.35rem;
+}
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem;
+}
+.relations {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.timeline {
+  border-inline-start: 2px solid var(--border);
+  padding-inline-start: 1rem;
+  margin-block: 1rem;
+}
+.timeline article {
+  margin-block-end: 1rem;
+}
+.timeline time,
+.timeline strong {
+  display: block;
+}
+.back {
+  display: inline-block;
+  margin-block-end: 1rem;
+}

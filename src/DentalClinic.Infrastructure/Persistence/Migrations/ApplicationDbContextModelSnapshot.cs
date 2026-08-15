@@ -22,6 +22,485 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("DentalClinic.Domain.Appointments.Appointment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("CheckedInAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("ConfirmedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DoctorProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("EndAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("StartAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "CreatedBy");
+
+                    b.HasIndex("TenantId", "StartAt");
+
+                    b.HasIndex("TenantId", "DoctorProfileId", "StartAt");
+
+                    b.HasIndex("TenantId", "PatientId", "StartAt");
+
+                    b.HasIndex("TenantId", "Status", "StartAt");
+
+                    b.ToTable("appointments", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Crm.CommunicationActivity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Direction")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "OccurredAt");
+
+                    b.HasIndex("TenantId", "PatientId");
+
+                    b.HasIndex("TenantId", "UserId");
+
+                    b.ToTable("communication_activities", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Crm.FollowUp", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AssignedToUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("DueAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RelatedAppointmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RelatedPrescriptionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RelatedTreatmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RelatedTreatmentPlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("TenantId", "Id");
+
+                    b.HasIndex("TenantId", "AssignedToUserId");
+
+                    b.HasIndex("TenantId", "CreatedAt");
+
+                    b.HasIndex("TenantId", "CreatedByUserId");
+
+                    b.HasIndex("TenantId", "DueAt");
+
+                    b.HasIndex("TenantId", "PatientId");
+
+                    b.HasIndex("TenantId", "RelatedAppointmentId");
+
+                    b.HasIndex("TenantId", "RelatedPrescriptionId");
+
+                    b.HasIndex("TenantId", "RelatedTreatmentId");
+
+                    b.HasIndex("TenantId", "RelatedTreatmentPlanId");
+
+                    b.HasIndex("TenantId", "Status");
+
+                    b.HasIndex("TenantId", "Type");
+
+                    b.ToTable("follow_ups", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.DentalFinding", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ExaminationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("FindingType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ToothId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ToothNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "CreatedBy");
+
+                    b.HasIndex("TenantId", "ExaminationId");
+
+                    b.HasIndex("TenantId", "PatientId", "ToothNumber", "CreatedAt");
+
+                    b.ToTable("dental_findings", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.DentalFindingSurface", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FindingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Surface")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "FindingId", "Surface")
+                        .IsUnique();
+
+                    b.ToTable("dental_finding_surfaces", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.DentalProcedure", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ExaminationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ProcedureType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ToothId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ToothNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "CreatedBy");
+
+                    b.HasIndex("TenantId", "ExaminationId");
+
+                    b.HasIndex("TenantId", "PatientId", "ToothNumber", "CreatedAt");
+
+                    b.ToTable("dental_procedures", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.DentalProcedureSurface", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProcedureId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Surface")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ProcedureId", "Surface")
+                        .IsUnique();
+
+                    b.ToTable("dental_procedure_surfaces", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.EndodonticCanal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EndodonticRecordId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("LengthMm")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "EndodonticRecordId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("endodontic_canals", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.EndodonticRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ExaminationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ToothId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ToothNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "CreatedBy");
+
+                    b.HasIndex("TenantId", "ExaminationId");
+
+                    b.HasIndex("TenantId", "PatientId", "ToothNumber", "CreatedAt");
+
+                    b.ToTable("endodontic_records", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.Examination", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AppointmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DoctorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "AppointmentId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "CreatedBy");
+
+                    b.HasIndex("TenantId", "DoctorUserId");
+
+                    b.HasIndex("TenantId", "PatientId", "CreatedAt");
+
+                    b.ToTable("examinations", (string)null);
+                });
+
             modelBuilder.Entity("DentalClinic.Domain.Doctors.DoctorCompensation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -622,6 +1101,231 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.ToTable("platform_audit_logs", (string)null);
                 });
 
+            modelBuilder.Entity("DentalClinic.Domain.Prescriptions.MedicationCatalogItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("Form")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("GenericName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Strength")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "GenericName");
+
+                    b.HasIndex("TenantId", "IsActive", "Name");
+
+                    b.ToTable("medication_catalog_items", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Prescriptions.Prescription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AppointmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DoctorProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DocumentReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("ExaminationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("IssuedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("IssuedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PrescriptionNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TreatmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentReference")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "AppointmentId");
+
+                    b.HasIndex("TenantId", "CreatedBy");
+
+                    b.HasIndex("TenantId", "ExaminationId");
+
+                    b.HasIndex("TenantId", "IssuedBy");
+
+                    b.HasIndex("TenantId", "PrescriptionNumber")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "TreatmentId");
+
+                    b.HasIndex("TenantId", "DoctorProfileId", "CreatedAt");
+
+                    b.HasIndex("TenantId", "PatientId", "CreatedAt");
+
+                    b.HasIndex("TenantId", "Status", "CreatedAt");
+
+                    b.ToTable("prescriptions", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Prescriptions.PrescriptionItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Dose")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Duration")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int?>("FormSnapshot")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Frequency")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("GenericNameSnapshot")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Instructions")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("MedicationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MedicationNameSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("PrescriptionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Route")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("StrengthSnapshot")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "MedicationId");
+
+                    b.HasIndex("TenantId", "PrescriptionId", "SortOrder");
+
+                    b.ToTable("prescription_items", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Prescriptions.PrescriptionNumberSequence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("LastValue")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique();
+
+                    b.ToTable("prescription_number_sequences", (string)null);
+                });
+
             modelBuilder.Entity("DentalClinic.Domain.Tenancy.AdminInvitation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -777,6 +1481,295 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("tenant_configurations", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Treatments.Treatment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AppointmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DoctorProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid?>("SourceDentalProcedureId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TreatmentCatalogItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TreatmentName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("TreatmentPlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TreatmentPlanItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "AppointmentId");
+
+                    b.HasIndex("TenantId", "SourceDentalProcedureId");
+
+                    b.HasIndex("TenantId", "TreatmentCatalogItemId");
+
+                    b.HasIndex("TenantId", "TreatmentPlanId");
+
+                    b.HasIndex("TenantId", "TreatmentPlanItemId");
+
+                    b.HasIndex("TenantId", "PatientId", "CreatedAt");
+
+                    b.HasIndex("TenantId", "DoctorProfileId", "Status", "CreatedAt");
+
+                    b.ToTable("treatments", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Treatments.TreatmentCatalogItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("DefaultPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Code")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "IsActive", "Name");
+
+                    b.ToTable("treatment_catalog_items", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Treatments.TreatmentPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("DoctorProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ProposedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("RejectedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "PatientId", "CreatedAt");
+
+                    b.HasIndex("TenantId", "DoctorProfileId", "Status", "CreatedAt");
+
+                    b.ToTable("treatment_plans", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Treatments.TreatmentPlanItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("ToothNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("TreatmentCatalogItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TreatmentName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("TreatmentPlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TreatmentType")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "TreatmentCatalogItemId");
+
+                    b.HasIndex("TenantId", "TreatmentPlanId");
+
+                    b.ToTable("treatment_plan_items", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Treatments.TreatmentTooth", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ToothId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ToothNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TreatmentId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ToothNumber");
+
+                    b.HasIndex("TenantId", "TreatmentId", "ToothNumber")
+                        .IsUnique();
+
+                    b.ToTable("treatment_teeth", (string)null);
                 });
 
             modelBuilder.Entity("DentalClinic.Infrastructure.Identity.ApplicationUser", b =>
@@ -982,6 +1975,228 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("DentalClinic.Domain.Appointments.Appointment", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Identity.ClinicUser", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "CreatedBy")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Doctors.DoctorProfile", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "DoctorProfileId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Crm.CommunicationActivity", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Identity.ClinicUser", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "UserId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Crm.FollowUp", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Identity.ClinicUser", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "AssignedToUserId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Identity.ClinicUser", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "CreatedByUserId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Appointments.Appointment", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "RelatedAppointmentId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DentalClinic.Domain.Prescriptions.Prescription", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "RelatedPrescriptionId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DentalClinic.Domain.Treatments.Treatment", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "RelatedTreatmentId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DentalClinic.Domain.Treatments.TreatmentPlan", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "RelatedTreatmentPlanId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.DentalFinding", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Identity.ClinicUser", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "CreatedBy")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Dental.Examination", null)
+                        .WithMany("Findings")
+                        .HasForeignKey("TenantId", "ExaminationId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.DentalFindingSurface", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Dental.DentalFinding", null)
+                        .WithMany("Surfaces")
+                        .HasForeignKey("TenantId", "FindingId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.DentalProcedure", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Identity.ClinicUser", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "CreatedBy")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Dental.Examination", null)
+                        .WithMany("Procedures")
+                        .HasForeignKey("TenantId", "ExaminationId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.DentalProcedureSurface", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Dental.DentalProcedure", null)
+                        .WithMany("Surfaces")
+                        .HasForeignKey("TenantId", "ProcedureId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.EndodonticCanal", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Dental.EndodonticRecord", null)
+                        .WithMany("Canals")
+                        .HasForeignKey("TenantId", "EndodonticRecordId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.EndodonticRecord", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Identity.ClinicUser", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "CreatedBy")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Dental.Examination", null)
+                        .WithMany("EndodonticRecords")
+                        .HasForeignKey("TenantId", "ExaminationId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.Examination", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Appointments.Appointment", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "AppointmentId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Identity.ClinicUser", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "CreatedBy")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Identity.ClinicUser", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "DoctorUserId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("DentalClinic.Domain.Doctors.DoctorCompensation", b =>
                 {
                     b.HasOne("DentalClinic.Domain.Doctors.DoctorProfile", null)
@@ -1137,6 +2352,88 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("DentalClinic.Domain.Prescriptions.MedicationCatalogItem", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Prescriptions.Prescription", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Appointments.Appointment", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "AppointmentId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DentalClinic.Domain.Identity.ClinicUser", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "CreatedBy")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Doctors.DoctorProfile", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "DoctorProfileId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Dental.Examination", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ExaminationId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DentalClinic.Domain.Identity.ClinicUser", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "IssuedBy")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DentalClinic.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Treatments.Treatment", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "TreatmentId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Prescriptions.PrescriptionItem", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Prescriptions.MedicationCatalogItem", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "MedicationId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DentalClinic.Domain.Prescriptions.Prescription", null)
+                        .WithMany("Items")
+                        .HasForeignKey("TenantId", "PrescriptionId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Prescriptions.PrescriptionNumberSequence", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("DentalClinic.Domain.Tenancy.AdminInvitation", b =>
                 {
                     b.HasOne("DentalClinic.Domain.Tenancy.Tenant", null)
@@ -1149,6 +2446,107 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Treatments.Treatment", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Appointments.Appointment", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "AppointmentId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DentalClinic.Domain.Doctors.DoctorProfile", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "DoctorProfileId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Dental.DentalProcedure", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "SourceDentalProcedureId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DentalClinic.Domain.Treatments.TreatmentCatalogItem", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "TreatmentCatalogItemId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Treatments.TreatmentPlan", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "TreatmentPlanId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DentalClinic.Domain.Treatments.TreatmentPlanItem", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "TreatmentPlanItemId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Treatments.TreatmentCatalogItem", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Treatments.TreatmentPlan", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Doctors.DoctorProfile", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "DoctorProfileId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Treatments.TreatmentPlanItem", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Treatments.TreatmentCatalogItem", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "TreatmentCatalogItemId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Treatments.TreatmentPlan", null)
+                        .WithMany("Items")
+                        .HasForeignKey("TenantId", "TreatmentPlanId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Treatments.TreatmentTooth", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Treatments.Treatment", null)
+                        .WithMany("Teeth")
+                        .HasForeignKey("TenantId", "TreatmentId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -1211,9 +2609,48 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("DentalClinic.Domain.Dental.DentalFinding", b =>
+                {
+                    b.Navigation("Surfaces");
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.DentalProcedure", b =>
+                {
+                    b.Navigation("Surfaces");
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.EndodonticRecord", b =>
+                {
+                    b.Navigation("Canals");
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Dental.Examination", b =>
+                {
+                    b.Navigation("EndodonticRecords");
+
+                    b.Navigation("Findings");
+
+                    b.Navigation("Procedures");
+                });
+
             modelBuilder.Entity("DentalClinic.Domain.Doctors.DoctorSchedule", b =>
                 {
                     b.Navigation("Breaks");
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Prescriptions.Prescription", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Treatments.Treatment", b =>
+                {
+                    b.Navigation("Teeth");
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Treatments.TreatmentPlan", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }
