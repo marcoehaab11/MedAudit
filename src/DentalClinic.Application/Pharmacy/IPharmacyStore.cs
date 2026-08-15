@@ -6,12 +6,15 @@ namespace DentalClinic.Application.Pharmacy;
 public interface IPharmacyStore
 {
     Task<PharmacyDispensing?> FindDispensingByIdAsync(Guid tenantId, Guid dispensingId, CancellationToken token);
+
     Task<PharmacyDispensing?> FindDispensingByIdForUpdateAsync(Guid tenantId, Guid dispensingId, CancellationToken token);
+
     Task<PharmacyDispensingReversal?> FindReversalByDispensingIdAsync(Guid tenantId, Guid dispensingId, CancellationToken token);
-    
+
     Task<IReadOnlyCollection<PharmacyDispensingItem>> GetDispensingItemsForPrescriptionAsync(Guid tenantId, Guid prescriptionId, CancellationToken token);
+
     Task<IReadOnlyDictionary<Guid, decimal>> GetTotalDispensedQuantitiesByPrescriptionIdAsync(Guid tenantId, Guid prescriptionId, CancellationToken token);
-    
+
     Task<PagedResult<PharmacyDispensingSummaryDto>> GetDispensingsAsync(
         Guid tenantId,
         Guid? patientId,
@@ -27,7 +30,7 @@ public interface IPharmacyStore
     );
 
     Task<PharmacyDispensingDetailDto?> GetDispensingDetailAsync(Guid tenantId, Guid dispensingId, CancellationToken token);
-    
+
     Task<PagedResult<PrescriptionReadyForDispensingDto>> GetPrescriptionsReadyForDispensingAsync(
         Guid tenantId,
         string? search,
@@ -45,6 +48,7 @@ public interface IPharmacyStore
     Task<PharmacyDashboardSummaryDto> GetDashboardSummaryAsync(Guid tenantId, CancellationToken token);
 
     Task AddDispensingAsync(PharmacyDispensing dispensing, CancellationToken token);
+
     Task AddReversalAsync(PharmacyDispensingReversal reversal, CancellationToken token);
 
     Task<long> GetNextDispensingSequenceValueAsync(Guid tenantId, CancellationToken token);
@@ -55,7 +59,7 @@ public interface IPharmacyStore
 public interface IPharmacyService
 {
     Task<PharmacyDashboardSummaryDto> GetDashboardSummaryAsync(CancellationToken token);
-    
+
     Task<PagedResult<PharmacyDispensingSummaryDto>> GetDispensingsAsync(
         Guid? patientId,
         string? prescriptionNumber,

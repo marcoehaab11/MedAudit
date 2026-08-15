@@ -268,8 +268,8 @@ public sealed class InventoryWorkflowTests(PlatformPostgresFixture fixture)
             SafeRunAsync(taskB)
         );
 
-        int successCount = results.Count(r => r == null);          // null = succeeded
-        int failCount    = results.Count(r => r != null);           // non-null = InsufficientStockException
+        int successCount = results.Count(r => r == null); // null = succeeded
+        int failCount = results.Count(r => r != null); // non-null = InsufficientStockException
 
         // Exactly one must have succeeded, exactly one must have failed
         Assert.Equal(1, successCount);
