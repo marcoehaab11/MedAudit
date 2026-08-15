@@ -1,0 +1,362 @@
+<div class="settings-container" [attr.dir]="loc.direction()">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">{{ loc.language() === 'ar' ? 'إعدادات العيادة' : 'Clinic Settings & Configuration' }}</h1>
+      <p class="page-subtitle">{{ loc.language() === 'ar' ? 'إدارة بيانات العيادة، العلامة التجارية، ساعات العمل، وإعدادات الوحدات' : 'Manage clinic profile, branding, working hours, & module preferences' }}</p>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <div *ngIf="errorMessage()" class="alert alert-danger">{{ errorMessage() }}</div>
+  <div *ngIf="successMessage()" class="alert alert-success">{{ successMessage() }}</div>
+
+  <!-- Navigation Tabs -->
+  <div class="tabs-nav">
+    <button [class.active]="activeTab() === 'profile'" (click)="activeTab.set('profile')">
+      {{ loc.language() === 'ar' ? 'ملف العيادة' : 'Clinic Profile' }}
+    </button>
+    <button [class.active]="activeTab() === 'branding'" (click)="activeTab.set('branding')">
+      {{ loc.language() === 'ar' ? 'العلامة التجارية واللغة' : 'Branding & Localization' }}
+    </button>
+    <button [class.active]="activeTab() === 'hours'" (click)="activeTab.set('hours')">
+      {{ loc.language() === 'ar' ? 'ساعات العمل' : 'Working Hours' }}
+    </button>
+    <button [class.active]="activeTab() === 'holidays'" (click)="activeTab.set('holidays')">
+      {{ loc.language() === 'ar' ? 'العطلات والإغلاقات' : 'Holidays & Closures' }}
+    </button>
+    <button [class.active]="activeTab() === 'modules'" (click)="activeTab.set('modules')">
+      {{ loc.language() === 'ar' ? 'تفضيلات الوحدات' : 'Module Preferences' }}
+    </button>
+    <button [class.active]="activeTab() === 'preferences'" (click)="activeTab.set('preferences')">
+      {{ loc.language() === 'ar' ? 'تفضيلات المستخدم' : 'User Preferences' }}
+    </button>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div *ngIf="loading()" class="loading-spinner">
+    <span>{{ loc.language() === 'ar' ? 'جاري التحميل...' : 'Loading...' }}</span>
+  </div>
+
+  <!-- CLINIC PROFILE TAB -->
+  <div *ngIf="activeTab() === 'profile' && settings()" class="tab-content">
+    <div class="card">
+      <div class="card-header">
+        <h3>{{ loc.language() === 'ar' ? 'معلومات العيادة الأساسية' : 'Clinic Basic Information' }}</h3>
+      </div>
+      <div class="card-body">
+        <form (ngSubmit)="saveProfile()">
+          <div class="grid-2">
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'اسم العيادة (بالإنجليزية)' : 'Clinic Name (English)' }}</label>
+              <input type="text" [(ngModel)]="profileForm().name" name="name" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'اسم العيادة (بالعربية)' : 'Clinic Name (Arabic)' }}</label>
+              <input type="text" [(ngModel)]="profileForm().arabicName" name="arabicName" class="form-control" />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'الهاتف الرئيسي' : 'Primary Phone' }}</label>
+              <input type="text" [(ngModel)]="profileForm().phone" name="phone" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'الهاتف الإضافي' : 'Secondary Phone' }}</label>
+              <input type="text" [(ngModel)]="profileForm().secondaryPhone" name="secondaryPhone" class="form-control" />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'البريد الإلكتروني' : 'Email Address' }}</label>
+              <input type="email" [(ngModel)]="profileForm().email" name="email" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'الموقع الإلكتروني' : 'Website URL' }}</label>
+              <input type="url" [(ngModel)]="profileForm().website" name="website" class="form-control" />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'العنوان (بالإنجليزية)' : 'Address (English)' }}</label>
+              <input type="text" [(ngModel)]="profileForm().address" name="address" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'العنوان (بالعربية)' : 'Address (Arabic)' }}</label>
+              <input type="text" [(ngModel)]="profileForm().arabicAddress" name="arabicAddress" class="form-control" />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'المدينة' : 'City' }}</label>
+              <input type="text" [(ngModel)]="profileForm().city" name="city" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'الدولة' : 'Country' }}</label>
+              <input type="text" [(ngModel)]="profileForm().country" name="country" class="form-control" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>{{ loc.language() === 'ar' ? 'الرقم الضريبي' : 'Tax Registration Number' }}</label>
+            <input type="text" [(ngModel)]="profileForm().taxNumber" name="taxNumber" class="form-control" />
+          </div>
+
+          <div class="mt-4 text-right">
+            <button type="submit" class="btn btn-primary" [disabled]="loading()">
+              {{ loc.language() === 'ar' ? 'حفظ ملف العيادة' : 'Save Clinic Profile' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- BRANDING TAB -->
+  <div *ngIf="activeTab() === 'branding' && settings()" class="tab-content">
+    <div class="card">
+      <div class="card-header">
+        <h3>{{ loc.language() === 'ar' ? 'العلامة التجارية والألوان' : 'Branding & Theme Colors' }}</h3>
+      </div>
+      <div class="card-body">
+        <form (ngSubmit)="saveBranding()">
+          <div class="grid-3">
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'اللون الرئيسي' : 'Primary Color' }}</label>
+              <input type="color" [(ngModel)]="brandingForm().primaryColor" name="primaryColor" class="form-control color-picker" />
+            </div>
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'اللون الثانوي' : 'Secondary Color' }}</label>
+              <input type="color" [(ngModel)]="brandingForm().secondaryColor" name="secondaryColor" class="form-control color-picker" />
+            </div>
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'لون التمييز' : 'Accent Color' }}</label>
+              <input type="color" [(ngModel)]="brandingForm().accentColor" name="accentColor" class="form-control color-picker" />
+            </div>
+          </div>
+
+          <div class="grid-2 mt-3">
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'اللغة الافتراضية' : 'Default Language' }}</label>
+              <select [(ngModel)]="brandingForm().defaultLanguage" name="defaultLanguage" class="form-control">
+                <option value="en">English</option>
+                <option value="ar">العربية (Arabic)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'اتجاه النص الافتراضي' : 'RTL Text Direction' }}</label>
+              <div class="checkbox-group">
+                <input type="checkbox" [(ngModel)]="brandingForm().rtlEnabled" name="rtlEnabled" id="rtlEnabled" />
+                <label for="rtlEnabled">{{ loc.language() === 'ar' ? 'تفعيل الاتجاه من اليمين لليار (RTL)' : 'Enable Right-To-Left (RTL)' }}</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 text-right">
+            <button type="submit" class="btn btn-primary" [disabled]="loading()">
+              {{ loc.language() === 'ar' ? 'حفظ إعدادات الهوية' : 'Save Branding Settings' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKING HOURS TAB -->
+  <div *ngIf="activeTab() === 'hours'" class="tab-content">
+    <div class="card">
+      <div class="card-header">
+        <h3>{{ loc.language() === 'ar' ? 'ساعات العمل الرسمية للعيادة' : 'Clinic Working Hours' }}</h3>
+      </div>
+      <div class="card-body">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{ loc.language() === 'ar' ? 'اليوم' : 'Day' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'مفتوح' : 'Status' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'فترات العمل' : 'Periods' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let h of hours()">
+              <td><strong>{{ getDayName(h.dayOfWeek) }}</strong></td>
+              <td>
+                <span [class.text-success]="h.isOpen" [class.text-danger]="!h.isOpen">
+                  {{ h.isOpen ? (loc.language() === 'ar' ? 'مفتوح' : 'Open') : (loc.language() === 'ar' ? 'مغلق' : 'Closed') }}
+                </span>
+              </td>
+              <td>
+                <div *ngFor="let p of h.periods" class="period-pill">
+                  {{ p.startTime }} - {{ p.endTime }} ({{ p.periodType === 1 ? 'Work' : 'Break' }})
+                </div>
+                <span *ngIf="h.periods.length === 0" class="text-muted">-</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOLIDAYS TAB -->
+  <div *ngIf="activeTab() === 'holidays'" class="tab-content">
+    <div class="card">
+      <div class="card-header flex-between">
+        <h3>{{ loc.language() === 'ar' ? 'عطلات وإغلاقات العيادة' : 'Holidays & Clinic Closures' }}</h3>
+        <button class="btn btn-primary btn-sm" (click)="openHolidayModal()">
+          + {{ loc.language() === 'ar' ? 'إضافة عطلة' : 'Add Holiday' }}
+        </button>
+      </div>
+      <div class="card-body">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{{ loc.language() === 'ar' ? 'اسم العطلة' : 'Holiday Name' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'تاريخ البداية' : 'Start Date' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'تاريخ النهاية' : 'End Date' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'السبب' : 'Reason' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'إجراءات' : 'Actions' }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let hol of holidays()">
+              <td><strong>{{ hol.name }}</strong> <small *ngIf="hol.arabicName">({{ hol.arabicName }})</small></td>
+              <td>{{ hol.startDate }}</td>
+              <td>{{ hol.endDate }}</td>
+              <td>{{ hol.reason || '-' }}</td>
+              <td>
+                <button class="btn btn-sm btn-outline" (click)="openHolidayModal(hol)">{{ loc.language() === 'ar' ? 'تعديل' : 'Edit' }}</button>
+                <button class="btn btn-sm btn-danger ml-2" (click)="deleteHoliday(hol.id)">{{ loc.language() === 'ar' ? 'حذف' : 'Delete' }}</button>
+              </td>
+            </tr>
+            <tr *ngIf="holidays().length === 0">
+              <td colspan="5" class="text-center text-muted">{{ loc.language() === 'ar' ? 'لا يوجد عطلات مسجلة' : 'No holiday closures recorded.' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE PREFERENCES TAB -->
+  <div *ngIf="activeTab() === 'modules' && settings()" class="tab-content">
+    <div class="card">
+      <div class="card-header">
+        <h3>{{ loc.language() === 'ar' ? 'تفضيلات الوحدات التشغيلية' : 'Module Operations Preferences' }}</h3>
+      </div>
+      <div class="card-body">
+        <form (ngSubmit)="saveModules()">
+          <h4>{{ loc.language() === 'ar' ? 'إعدادات الحجز والروشتات' : 'Appointments & Prescriptions' }}</h4>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'بادئة الروشتة' : 'Prescription Prefix' }}</label>
+              <input type="text" [(ngModel)]="modulesForm().prescriptionPrefix" name="prescriptionPrefix" class="form-control" />
+            </div>
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'بادئة السندات المالية' : 'Receipt Prefix' }}</label>
+              <input type="text" [(ngModel)]="modulesForm().receiptPrefix" name="receiptPrefix" class="form-control" />
+            </div>
+          </div>
+
+          <h4 class="mt-4">{{ loc.language() === 'ar' ? 'تفضيلات الإشعارات' : 'Notification Toggles' }}</h4>
+          <div class="grid-2">
+            <div class="checkbox-group">
+              <input type="checkbox" [(ngModel)]="modulesForm().appointmentsNotificationEnabled" name="appointmentsNotificationEnabled" id="appNotif" />
+              <label for="appNotif">{{ loc.language() === 'ar' ? 'إشعارات المواعيد' : 'Appointment Notifications' }}</label>
+            </div>
+            <div class="checkbox-group">
+              <input type="checkbox" [(ngModel)]="modulesForm().prescriptionsNotificationEnabled" name="prescriptionsNotificationEnabled" id="rxNotif" />
+              <label for="rxNotif">{{ loc.language() === 'ar' ? 'إشعارات الروشتات' : 'Prescription Notifications' }}</label>
+            </div>
+          </div>
+
+          <div class="mt-4 text-right">
+            <button type="submit" class="btn btn-primary" [disabled]="loading()">
+              {{ loc.language() === 'ar' ? 'حفظ تفضيلات الوحدات' : 'Save Module Preferences' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- USER PREFERENCES TAB -->
+  <div *ngIf="activeTab() === 'preferences'" class="tab-content">
+    <div class="card">
+      <div class="card-header">
+        <h3>{{ loc.language() === 'ar' ? 'تفضيلات المستخدم الشخصية' : 'Personal User Preferences' }}</h3>
+      </div>
+      <div class="card-body">
+        <form (ngSubmit)="saveUserPreferences()">
+          <div class="grid-2">
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'المظهر (الثيم)' : 'Theme' }}</label>
+              <select [(ngModel)]="prefForm().theme" name="theme" class="form-control">
+                <option value="Light">Light</option>
+                <option value="Dark">Dark</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'عرض التقويم الافتراضي' : 'Default Calendar View' }}</label>
+              <select [(ngModel)]="prefForm().defaultCalendarView" name="defaultCalendarView" class="form-control">
+                <option value="timeGridWeek">Weekly</option>
+                <option value="timeGridDay">Daily</option>
+                <option value="dayGridMonth">Monthly</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mt-4 text-right">
+            <button type="submit" class="btn btn-primary" [disabled]="loading()">
+              {{ loc.language() === 'ar' ? 'حفظ تفضيلاتي' : 'Save User Preferences' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOLIDAY MODAL -->
+  <div *ngIf="showHolidayModal()" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>{{ editingHoliday() ? (loc.language() === 'ar' ? 'تعديل عطلة' : 'Edit Holiday') : (loc.language() === 'ar' ? 'إضافة عطلة جديدة' : 'Add New Holiday') }}</h3>
+        <button class="close-btn" (click)="closeHolidayModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>{{ loc.language() === 'ar' ? 'اسم العطلة (بالإنجليزية)' : 'Holiday Name (English)' }}</label>
+          <input type="text" [(ngModel)]="holidayName" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label>{{ loc.language() === 'ar' ? 'اسم العطلة (بالعربية)' : 'Holiday Name (Arabic)' }}</label>
+          <input type="text" [(ngModel)]="holidayArabicName" class="form-control" />
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>{{ loc.language() === 'ar' ? 'تاريخ البداية' : 'Start Date' }}</label>
+            <input type="date" [(ngModel)]="holidayStartDate" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label>{{ loc.language() === 'ar' ? 'تاريخ النهاية' : 'End Date' }}</label>
+            <input type="date" [(ngModel)]="holidayEndDate" class="form-control" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>{{ loc.language() === 'ar' ? 'السبب' : 'Reason' }}</label>
+          <textarea [(ngModel)]="holidayReason" class="form-control" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeHolidayModal()">{{ loc.language() === 'ar' ? 'إلغاء' : 'Cancel' }}</button>
+        <button class="btn btn-primary" (click)="submitHoliday()" [disabled]="loading()">
+          {{ loc.language() === 'ar' ? 'حفظ العطلة' : 'Save Holiday' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

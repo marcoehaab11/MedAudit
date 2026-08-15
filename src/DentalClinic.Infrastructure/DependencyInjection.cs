@@ -62,6 +62,7 @@ public static class DependencyInjection
         services.AddScoped<DentalClinic.Application.Notifications.INotificationStore, DentalClinic.Infrastructure.Persistence.NotificationStore>();
         services.AddScoped<IInventoryStore, InventoryStore>();
         services.AddScoped<IPharmacyStore, PharmacyStore>();
+        services.AddScoped<ISettingsStore, SettingsStore>();
         services.AddScoped<DentalClinic.Infrastructure.Notifications.INotificationProvider, DentalClinic.Infrastructure.Notifications.EmailNotificationProvider>();
         services.AddScoped<DentalClinic.Infrastructure.Notifications.INotificationProvider, DentalClinic.Infrastructure.Notifications.SmsNotificationProvider>();
         services.AddScoped<DentalClinic.Infrastructure.Notifications.INotificationProvider, DentalClinic.Infrastructure.Notifications.WhatsAppNotificationProvider>();

@@ -97,6 +97,15 @@ public static class Permissions
     public const string UsersManageRoles = "Users.ManageRoles";
     public const string SettingsView = "Settings.View";
     public const string SettingsEdit = "Settings.Edit";
+    public const string SettingsClinicProfile = "Settings.ClinicProfile";
+    public const string SettingsBranding = "Settings.Branding";
+    public const string SettingsAppointments = "Settings.Appointments";
+    public const string SettingsPublicBooking = "Settings.PublicBooking";
+    public const string SettingsPrescriptions = "Settings.Prescriptions";
+    public const string SettingsNotifications = "Settings.Notifications";
+    public const string SettingsInventory = "Settings.Inventory";
+    public const string SettingsPharmacy = "Settings.Pharmacy";
+    public const string SettingsFinance = "Settings.Finance";
     public const string NotificationsView = "Notifications.View";
     public const string NotificationsManage = "Notifications.Manage";
     public const string NotificationsTemplates = "Notifications.Templates";
@@ -143,7 +152,9 @@ public static class Permissions
         ReportsView, ReportsClinical, ReportsFinancial, ReportsPatients, ReportsAppointments, ReportsDoctors,
         ReportsTreatments, ReportsPrescriptions, ReportsCrm, ReportsExport,
         UsersView, UsersCreate, UsersEdit, UsersActivate, UsersDeactivate, UsersManageRoles,
-        SettingsView, SettingsEdit,
+        SettingsView, SettingsEdit, SettingsClinicProfile, SettingsBranding, SettingsAppointments,
+        SettingsPublicBooking, SettingsPrescriptions, SettingsNotifications, SettingsInventory,
+        SettingsPharmacy, SettingsFinance,
         NotificationsView, NotificationsManage, NotificationsTemplates, NotificationsPreferences,
         InventoryView, InventoryManageItems, InventoryManageCategories, InventoryManageSuppliers,
         InventoryReceive, InventoryIssue, InventoryAdjust, InventoryViewCosts,

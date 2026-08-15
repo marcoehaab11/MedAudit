@@ -30,6 +30,10 @@ public sealed class ApplicationDbContext(
 {
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<TenantConfiguration> TenantConfigurations => Set<TenantConfiguration>();
+    public DbSet<ClinicHours> ClinicHours => Set<ClinicHours>();
+    public DbSet<ClinicHourPeriod> ClinicHourPeriods => Set<ClinicHourPeriod>();
+    public DbSet<ClinicHoliday> ClinicHolidays => Set<ClinicHoliday>();
+    public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
     public DbSet<AdminInvitation> AdminInvitations => Set<AdminInvitation>();
     public DbSet<PlatformAuditLog> PlatformAuditLogs => Set<PlatformAuditLog>();
     public DbSet<ClinicUser> ClinicUsers => Set<ClinicUser>();
@@ -672,7 +676,79 @@ public sealed class ApplicationDbContext(
             entity.Property(x => x.PublicBookingEnabled).HasDefaultValue(false);
             entity.Property(x => x.PublicBookingHorizonDays).HasDefaultValue(30);
             entity.Property(x => x.PublicPriceVisibility).HasDefaultValue(true);
+
+            entity.Property(x => x.ArabicName).HasMaxLength(200);
+            entity.Property(x => x.Description).HasMaxLength(1000);
+            entity.Property(x => x.ArabicDescription).HasMaxLength(1000);
+            entity.Property(x => x.SecondaryPhone).HasMaxLength(50);
+            entity.Property(x => x.Website).HasMaxLength(256);
+            entity.Property(x => x.ArabicAddress).HasMaxLength(500);
+            entity.Property(x => x.TaxNumber).HasMaxLength(50);
+            entity.Property(x => x.FaviconReference).HasMaxLength(500);
+
+            entity.Property(x => x.PrimaryColor).HasMaxLength(7).HasDefaultValue("#1e40af");
+            entity.Property(x => x.SecondaryColor).HasMaxLength(7).HasDefaultValue("#0284c7");
+            entity.Property(x => x.AccentColor).HasMaxLength(7).HasDefaultValue("#f59e0b");
+            entity.Property(x => x.DefaultLanguage).HasMaxLength(5).HasDefaultValue("en");
+            entity.Property(x => x.SupportedLanguages).HasMaxLength(50).HasDefaultValue("en,ar");
+
+            entity.Property(x => x.CurrencySymbol).HasMaxLength(10).HasDefaultValue("$");
+            entity.Property(x => x.SymbolPosition).HasMaxLength(10).HasDefaultValue("Before");
+
+            entity.Property(x => x.PrescriptionPrefix).HasMaxLength(10).HasDefaultValue("RX-");
+            entity.Property(x => x.DefaultPrescriptionLanguage).HasMaxLength(5).HasDefaultValue("en");
+            entity.Property(x => x.DefaultInstructionsLanguage).HasMaxLength(5).HasDefaultValue("en");
+
+            entity.Property(x => x.DefaultPaymentMethod).HasMaxLength(50).HasDefaultValue("Cash");
+            entity.Property(x => x.ReceiptPrefix).HasMaxLength(10).HasDefaultValue("REC-");
+            entity.Property(x => x.ExpensePrefix).HasMaxLength(10).HasDefaultValue("EXP-");
+
+            entity.Property(x => x.Version).IsConcurrencyToken();
+
             entity.HasIndex(x => x.TenantId).IsUnique();
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<ClinicHours>(entity =>
+        {
+            entity.ToTable("clinic_hours");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.DayOfWeek).IsRequired();
+            entity.HasMany(x => x.Periods).WithOne().HasForeignKey(x => x.ClinicHoursId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(x => new { x.TenantId, x.DayOfWeek }).IsUnique();
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<ClinicHourPeriod>(entity =>
+        {
+            entity.ToTable("clinic_hour_periods");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.StartTime).IsRequired();
+            entity.Property(x => x.EndTime).IsRequired();
+            entity.Property(x => x.PeriodType).HasConversion<int>().IsRequired();
+        });
+
+        builder.Entity<ClinicHoliday>(entity =>
+        {
+            entity.ToTable("clinic_holidays");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.ArabicName).HasMaxLength(200);
+            entity.Property(x => x.Reason).HasMaxLength(500);
+            entity.HasIndex(x => new { x.TenantId, x.StartDate, x.EndDate });
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<UserPreference>(entity =>
+        {
+            entity.ToTable("user_preferences");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Language).HasMaxLength(5).HasDefaultValue("en");
+            entity.Property(x => x.Theme).HasMaxLength(10).HasDefaultValue("Light");
+            entity.Property(x => x.DateFormat).HasMaxLength(20).HasDefaultValue("YYYY-MM-DD");
+            entity.Property(x => x.TimeFormat).HasMaxLength(20).HasDefaultValue("24h");
+            entity.Property(x => x.DefaultCalendarView).HasMaxLength(20).HasDefaultValue("timeGridWeek");
+            entity.HasIndex(x => new { x.TenantId, x.UserId }).IsUnique();
             entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
         });
 

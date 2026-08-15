@@ -74,6 +74,7 @@ public static class DependencyInjection
         services.AddScoped<DentalClinic.Application.Inventory.IInventoryService>(x => x.GetRequiredService<DentalClinic.Application.Inventory.InventoryService>());
         services.AddScoped<DentalClinic.Application.Inventory.IMaterialConsumptionService>(x => x.GetRequiredService<DentalClinic.Application.Inventory.InventoryService>());
         services.AddScoped<DentalClinic.Application.Pharmacy.IPharmacyService, DentalClinic.Application.Pharmacy.PharmacyService>();
+        services.AddScoped<ISettingsService, SettingsService>();
         return services;
     }
 }

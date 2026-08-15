@@ -117,5 +117,13 @@ public enum PlatformAuditAction
     PharmacyDispensingPartial = 113,
     PharmacyDispensingFull = 114,
     PharmacyDispensingReversed = 115,
-    PharmacyMedicationMappingUpdated = 116
+    PharmacyMedicationMappingUpdated = 116,
+    SettingsClinicProfileUpdated = 117,
+    SettingsBrandingUpdated = 118,
+    SettingsTimezoneCurrencyUpdated = 119,
+    SettingsClinicHoursUpdated = 120,
+    SettingsHolidayCreated = 121,
+    SettingsHolidayUpdated = 122,
+    SettingsHolidayDeleted = 123,
+    SettingsModuleConfigUpdated = 124
 }

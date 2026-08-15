@@ -351,6 +351,14 @@ export const routes: Routes = [
         (x) => x.PharmacyPageComponent,
       ),
   },
+  {
+    path: 'settings',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/settings/settings-page.component').then(
+        (x) => x.SettingsPageComponent,
+      ),
+  },
   { path: '', pathMatch: 'full', redirectTo: 'patients' },
   { path: '**', redirectTo: 'patients' },
 ];
