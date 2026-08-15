@@ -11,8 +11,7 @@ internal sealed class SettingsService(
     ICurrentTenant currentTenant,
     ICurrentUser currentUser,
     IPermissionService permissions,
-    ISystemClock clock,
-    IPlatformAuditLogger auditLogger
+    ISystemClock clock
 ) : ISettingsService
 {
     public async Task<TenantSettingsDto> GetSettingsAsync(CancellationToken token)
@@ -61,16 +60,17 @@ internal sealed class SettingsService(
             command.Version
         );
 
-        await store.CommitAsync(token);
-
-        await auditLogger.LogAsync(
-            PlatformAuditAction.SettingsClinicProfileUpdated,
-            userId,
-            "Updated clinic profile details.",
+        store.AddAudit(new PlatformAuditLog(
             tenantId,
+            userId,
+            PlatformAuditAction.SettingsClinicProfileUpdated,
+            nameof(TenantConfiguration),
+            config.Id,
             clock.UtcNow,
-            token
-        );
+            null
+        ));
+
+        await store.CommitAsync(token);
 
         return MapSettings(tenant, config);
     }
@@ -94,16 +94,17 @@ internal sealed class SettingsService(
             command.Version
         );
 
-        await store.CommitAsync(token);
-
-        await auditLogger.LogAsync(
-            PlatformAuditAction.SettingsBrandingUpdated,
-            userId,
-            "Updated clinic branding and localization options.",
+        store.AddAudit(new PlatformAuditLog(
             tenantId,
+            userId,
+            PlatformAuditAction.SettingsBrandingUpdated,
+            nameof(TenantConfiguration),
+            config.Id,
             clock.UtcNow,
-            token
-        );
+            null
+        ));
+
+        await store.CommitAsync(token);
 
         return MapSettings(tenant, config);
     }
@@ -140,16 +141,17 @@ internal sealed class SettingsService(
             command.Version
         );
 
-        await store.CommitAsync(token);
-
-        await auditLogger.LogAsync(
-            PlatformAuditAction.SettingsTimezoneCurrencyUpdated,
-            userId,
-            $"Updated timezone to '{command.TimeZone}' and currency to '{command.Currency}'.",
+        store.AddAudit(new PlatformAuditLog(
             tenantId,
+            userId,
+            PlatformAuditAction.SettingsTimezoneCurrencyUpdated,
+            nameof(TenantConfiguration),
+            config.Id,
             clock.UtcNow,
-            token
-        );
+            null
+        ));
+
+        await store.CommitAsync(token);
 
         return MapSettings(tenant, config);
     }
@@ -178,16 +180,17 @@ internal sealed class SettingsService(
             command.PublicPriceVisibility
         );
 
-        await store.CommitAsync(token);
-
-        await auditLogger.LogAsync(
-            PlatformAuditAction.SettingsModuleConfigUpdated,
-            userId,
-            "Updated appointment scheduling and public booking configuration.",
+        store.AddAudit(new PlatformAuditLog(
             tenantId,
+            userId,
+            PlatformAuditAction.SettingsModuleConfigUpdated,
+            nameof(TenantConfiguration),
+            config.Id,
             clock.UtcNow,
-            token
-        );
+            null
+        ));
+
+        await store.CommitAsync(token);
 
         return MapSettings(tenant, config);
     }
@@ -211,16 +214,17 @@ internal sealed class SettingsService(
             command.Version
         );
 
-        await store.CommitAsync(token);
-
-        await auditLogger.LogAsync(
-            PlatformAuditAction.SettingsModuleConfigUpdated,
-            userId,
-            "Updated prescription print & formatting configuration.",
+        store.AddAudit(new PlatformAuditLog(
             tenantId,
+            userId,
+            PlatformAuditAction.SettingsModuleConfigUpdated,
+            nameof(TenantConfiguration),
+            config.Id,
             clock.UtcNow,
-            token
-        );
+            null
+        ));
+
+        await store.CommitAsync(token);
 
         return MapSettings(tenant, config);
     }
@@ -245,16 +249,17 @@ internal sealed class SettingsService(
             command.Version
         );
 
-        await store.CommitAsync(token);
-
-        await auditLogger.LogAsync(
-            PlatformAuditAction.SettingsModuleConfigUpdated,
-            userId,
-            "Updated notification channel preferences.",
+        store.AddAudit(new PlatformAuditLog(
             tenantId,
+            userId,
+            PlatformAuditAction.SettingsModuleConfigUpdated,
+            nameof(TenantConfiguration),
+            config.Id,
             clock.UtcNow,
-            token
-        );
+            null
+        ));
+
+        await store.CommitAsync(token);
 
         return MapSettings(tenant, config);
     }
@@ -275,16 +280,17 @@ internal sealed class SettingsService(
             command.Version
         );
 
-        await store.CommitAsync(token);
-
-        await auditLogger.LogAsync(
-            PlatformAuditAction.SettingsModuleConfigUpdated,
-            userId,
-            "Updated inventory policies.",
+        store.AddAudit(new PlatformAuditLog(
             tenantId,
+            userId,
+            PlatformAuditAction.SettingsModuleConfigUpdated,
+            nameof(TenantConfiguration),
+            config.Id,
             clock.UtcNow,
-            token
-        );
+            null
+        ));
+
+        await store.CommitAsync(token);
 
         return MapSettings(tenant, config);
     }
@@ -306,16 +312,17 @@ internal sealed class SettingsService(
             command.Version
         );
 
-        await store.CommitAsync(token);
-
-        await auditLogger.LogAsync(
-            PlatformAuditAction.SettingsModuleConfigUpdated,
-            userId,
-            "Updated pharmacy operation preferences.",
+        store.AddAudit(new PlatformAuditLog(
             tenantId,
+            userId,
+            PlatformAuditAction.SettingsModuleConfigUpdated,
+            nameof(TenantConfiguration),
+            config.Id,
             clock.UtcNow,
-            token
-        );
+            null
+        ));
+
+        await store.CommitAsync(token);
 
         return MapSettings(tenant, config);
     }
@@ -337,16 +344,17 @@ internal sealed class SettingsService(
             command.Version
         );
 
-        await store.CommitAsync(token);
-
-        await auditLogger.LogAsync(
-            PlatformAuditAction.SettingsModuleConfigUpdated,
-            userId,
-            "Updated finance settings and receipt prefixes.",
+        store.AddAudit(new PlatformAuditLog(
             tenantId,
+            userId,
+            PlatformAuditAction.SettingsModuleConfigUpdated,
+            nameof(TenantConfiguration),
+            config.Id,
             clock.UtcNow,
-            token
-        );
+            null
+        ));
+
+        await store.CommitAsync(token);
 
         return MapSettings(tenant, config);
     }
@@ -378,17 +386,17 @@ internal sealed class SettingsService(
             entities.Add(ch);
         }
 
-        await store.SaveClinicHoursAsync(tenantId, entities, token);
-        await store.CommitAsync(token);
-
-        await auditLogger.LogAsync(
-            PlatformAuditAction.SettingsClinicHoursUpdated,
+        store.AddAudit(new PlatformAuditLog(
+            tenantId,
             userId,
-            "Updated clinic working hours and operational breaks.",
+            PlatformAuditAction.SettingsClinicHoursUpdated,
+            nameof(ClinicHours),
             tenantId,
             clock.UtcNow,
-            token
-        );
+            null
+        ));
+
+        await store.CommitAsync(token);
 
         return MapClinicHours(entities);
     }
@@ -423,17 +431,17 @@ internal sealed class SettingsService(
             clock.UtcNow
         );
 
-        await store.AddHolidayAsync(holiday, token);
-        await store.CommitAsync(token);
-
-        await auditLogger.LogAsync(
-            PlatformAuditAction.SettingsHolidayCreated,
-            userId,
-            $"Created clinic holiday '{holiday.Name}'.",
+        store.AddAudit(new PlatformAuditLog(
             tenantId,
+            userId,
+            PlatformAuditAction.SettingsHolidayCreated,
+            nameof(ClinicHoliday),
+            holiday.Id,
             clock.UtcNow,
-            token
-        );
+            null
+        ));
+
+        await store.CommitAsync(token);
 
         return MapHoliday(holiday);
     }
@@ -462,16 +470,17 @@ internal sealed class SettingsService(
             clock.UtcNow
         );
 
-        await store.CommitAsync(token);
-
-        await auditLogger.LogAsync(
-            PlatformAuditAction.SettingsHolidayUpdated,
-            userId,
-            $"Updated clinic holiday '{holiday.Name}'.",
+        store.AddAudit(new PlatformAuditLog(
             tenantId,
+            userId,
+            PlatformAuditAction.SettingsHolidayUpdated,
+            nameof(ClinicHoliday),
+            holiday.Id,
             clock.UtcNow,
-            token
-        );
+            null
+        ));
+
+        await store.CommitAsync(token);
 
         return MapHoliday(holiday);
     }
@@ -482,17 +491,17 @@ internal sealed class SettingsService(
         var tenantId = currentTenant.RequireTenantId();
         var userId = RequireUserId();
 
-        await store.DeleteHolidayAsync(tenantId, id, token);
-        await store.CommitAsync(token);
-
-        await auditLogger.LogAsync(
-            PlatformAuditAction.SettingsHolidayDeleted,
-            userId,
-            $"Deleted clinic holiday ID '{id}'.",
+        store.AddAudit(new PlatformAuditLog(
             tenantId,
+            userId,
+            PlatformAuditAction.SettingsHolidayDeleted,
+            nameof(ClinicHoliday),
+            id,
             clock.UtcNow,
-            token
-        );
+            null
+        ));
+
+        await store.CommitAsync(token);
     }
 
     public async Task<UserPreferenceDto> GetUserPreferenceAsync(CancellationToken token)

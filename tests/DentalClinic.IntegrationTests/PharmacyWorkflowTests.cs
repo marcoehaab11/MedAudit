@@ -1,6 +1,7 @@
 using DentalClinic.Application;
 using DentalClinic.Application.Common.Exceptions;
 using DentalClinic.Application.Common.Interfaces;
+using DentalClinic.Application.Doctors;
 using DentalClinic.Application.Identity;
 using DentalClinic.Application.Inventory;
 using DentalClinic.Application.Patients;

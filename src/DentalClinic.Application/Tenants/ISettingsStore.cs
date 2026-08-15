@@ -1,4 +1,5 @@
 using DentalClinic.Domain.Identity;
+using DentalClinic.Domain.Platform;
 using DentalClinic.Domain.Tenancy;
 
 namespace DentalClinic.Application.Tenants;
@@ -24,6 +25,8 @@ public interface ISettingsStore
     Task<UserPreference?> GetUserPreferenceAsync(Guid tenantId, Guid userId, CancellationToken token);
 
     Task SaveUserPreferenceAsync(UserPreference preference, CancellationToken token);
+
+    void AddAudit(PlatformAuditLog audit);
 
     Task CommitAsync(CancellationToken token);
 }

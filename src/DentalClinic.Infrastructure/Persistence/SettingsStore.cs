@@ -1,5 +1,6 @@
 using DentalClinic.Application.Tenants;
 using DentalClinic.Domain.Identity;
+using DentalClinic.Domain.Platform;
 using DentalClinic.Domain.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
@@ -85,6 +86,11 @@ internal sealed class SettingsStore(ApplicationDbContext context) : ISettingsSto
         {
             await context.UserPreferences.AddAsync(preference, token);
         }
+    }
+
+    public void AddAudit(PlatformAuditLog audit)
+    {
+        context.PlatformAuditLogs.Add(audit);
     }
 
     public async Task CommitAsync(CancellationToken token)
