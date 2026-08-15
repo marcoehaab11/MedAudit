@@ -56,6 +56,8 @@ app.MapDentalEndpoints();
 app.MapTreatmentEndpoints();
 app.MapPrescriptionEndpoints();
 app.MapCrmEndpoints();
+app.MapFinanceEndpoints();
+app.MapReportEndpoints();
 
 app.Run();
 

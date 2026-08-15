@@ -2,6 +2,7 @@ using DentalClinic.Application.Tenants.Models;
 using DentalClinic.Domain.Platform;
 using DentalClinic.Domain.Identity;
 using DentalClinic.Domain.Tenancy;
+using DentalClinic.Domain.Finance;
 
 namespace DentalClinic.Application.Tenants;
 
@@ -22,5 +23,6 @@ public interface IPlatformClinicStore
     void AddTenantRole(TenantRole role);
     void AddRolePermission(RolePermissionGrant permission);
     void AddUserRole(UserRoleAssignment assignment);
+    void AddFinancialCategory(FinancialCategory category) { }
     Task SavePlatformChangesAsync(Guid tenantId, CancellationToken cancellationToken);
 }

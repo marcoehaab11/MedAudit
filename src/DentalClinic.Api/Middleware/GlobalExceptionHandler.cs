@@ -8,6 +8,7 @@ using DentalClinic.Application.Prescriptions;
 using DentalClinic.Domain.Prescriptions;
 using DentalClinic.Application.Crm;
 using DentalClinic.Domain.Crm;
+using DentalClinic.Domain.Finance;
 using DentalClinic.Contracts.Errors;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
@@ -92,6 +93,10 @@ internal sealed class GlobalExceptionHandler(
                 StatusCodes.Status409Conflict, "Follow-up workflow conflict", exception.Message, null),
             CrmNotFoundException => (
                 StatusCodes.Status404NotFound, "CRM record not found", "The requested CRM or related record is not available.", null),
+            FinanceConcurrencyException or FinanceConflictException => (
+                StatusCodes.Status409Conflict, "Financial conflict", exception.Message, null),
+            FinanceNotFoundException => (
+                StatusCodes.Status404NotFound, "Financial record not found", exception.Message, null),
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "Unexpected error",

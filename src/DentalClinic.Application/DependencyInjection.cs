@@ -8,6 +8,8 @@ using DentalClinic.Application.Dental;
 using DentalClinic.Application.Treatments;
 using DentalClinic.Application.Prescriptions;
 using DentalClinic.Application.Crm;
+using DentalClinic.Application.Finance;
+using DentalClinic.Application.Reports;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<ITenantGuard, TenantGuard>();
         services.AddScoped<IClinicManagementService, ClinicManagementService>();
         services.AddScoped<ITenantInitializer, CoreTenantInitializer>();
+        services.AddScoped<ITenantInitializer, FinanceTenantInitializer>();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IUserManagementService, UserManagementService>();
         services.AddScoped<IInvitationService, InvitationService>();
@@ -58,6 +61,13 @@ public static class DependencyInjection
         services.AddScoped<IAssignFollowUp, AssignFollowUp>();
         services.AddScoped<IFollowUpLifecycle, FollowUpLifecycle>();
         services.AddScoped<ICommunicationActivityService, CommunicationActivityService>();
+        services.AddScoped<IFinanceQueries, FinanceQueries>();
+        services.AddScoped<IFinancialCategoryService, FinancialCategoryService>();
+        services.AddScoped<IPaymentService, PaymentService>();
+        services.AddScoped<IExpenseService, ExpenseService>();
+        services.AddScoped<ITreatmentRevenueCreator, TreatmentRevenueCreator>();
+        services.AddSingleton<IDoctorCompensationCalculator, DoctorCompensationCalculator>();
+        services.AddScoped<IReportServices, ReportServices>();
         return services;
     }
 }

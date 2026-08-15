@@ -11,6 +11,7 @@ using DentalClinic.Domain.Dental;
 using DentalClinic.Domain.Treatments;
 using DentalClinic.Domain.Prescriptions;
 using DentalClinic.Domain.Crm;
+using DentalClinic.Domain.Finance;
 using DentalClinic.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -61,6 +62,12 @@ public sealed class ApplicationDbContext(
     public DbSet<PrescriptionNumberSequence> PrescriptionNumberSequences => Set<PrescriptionNumberSequence>();
     public DbSet<FollowUp> FollowUps => Set<FollowUp>();
     public DbSet<CommunicationActivity> CommunicationActivities => Set<CommunicationActivity>();
+    public DbSet<FinancialCategory> FinancialCategories => Set<FinancialCategory>();
+    public DbSet<Revenue> Revenues => Set<Revenue>();
+    public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<Expense> Expenses => Set<Expense>();
+    public DbSet<DoctorCompensationCost> DoctorCompensationCosts => Set<DoctorCompensationCost>();
+    public DbSet<FinancialTransaction> FinancialTransactions => Set<FinancialTransaction>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -560,6 +567,65 @@ public sealed class ApplicationDbContext(
             entity.HasIndex(x => new { x.TenantId, x.PatientId }); entity.HasIndex(x => new { x.TenantId, x.OccurredAt });
             entity.HasOne<Patient>().WithMany().HasForeignKey(x => new { x.TenantId, x.PatientId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<ClinicUser>().WithMany().HasForeignKey(x => new { x.TenantId, x.UserId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<FinancialCategory>(entity =>
+        {
+            entity.ToTable("financial_categories"); entity.HasKey(x => x.Id); entity.Property(x => x.Id).ValueGeneratedNever();
+            entity.HasAlternateKey(x => new { x.TenantId, x.Id }); entity.Property(x => x.Name).HasMaxLength(150).IsRequired();
+            entity.Property(x => x.Code).HasMaxLength(50).IsRequired(); entity.Property(x => x.Type).HasConversion<int>(); entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.HasIndex(x => new { x.TenantId, x.Code }).IsUnique(); entity.HasIndex(x => new { x.TenantId, x.Type, x.IsActive });
+            entity.HasOne<FinancialCategory>().WithMany().HasForeignKey(x => new { x.TenantId, x.ParentId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+        builder.Entity<Revenue>(entity =>
+        {
+            entity.ToTable("revenues"); entity.HasKey(x => x.Id); entity.Property(x => x.Id).ValueGeneratedNever(); entity.HasAlternateKey(x => new { x.TenantId, x.Id });
+            entity.Property(x => x.Amount).HasPrecision(18, 2); entity.Property(x => x.Currency).HasMaxLength(3).IsRequired(); entity.Property(x => x.Description).HasMaxLength(500).IsRequired();
+            entity.HasIndex(x => new { x.TenantId, x.OccurredAt }); entity.HasIndex(x => new { x.TenantId, x.PatientId }); entity.HasIndex(x => new { x.TenantId, x.DoctorProfileId }); entity.HasIndex(x => new { x.TenantId, x.CategoryId });
+            entity.HasIndex(x => new { x.TenantId, x.TreatmentId }).IsUnique().HasFilter("\"TreatmentId\" IS NOT NULL");
+            entity.HasOne<FinancialCategory>().WithMany().HasForeignKey(x => new { x.TenantId, x.CategoryId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Patient>().WithMany().HasForeignKey(x => new { x.TenantId, x.PatientId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Treatment>().WithMany().HasForeignKey(x => new { x.TenantId, x.TreatmentId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<TreatmentPlan>().WithMany().HasForeignKey(x => new { x.TenantId, x.TreatmentPlanId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<DoctorProfile>().WithMany().HasForeignKey(x => new { x.TenantId, x.DoctorProfileId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+        builder.Entity<Payment>(entity =>
+        {
+            entity.ToTable("payments"); entity.HasKey(x => x.Id); entity.Property(x => x.Id).ValueGeneratedNever(); entity.HasAlternateKey(x => new { x.TenantId, x.Id });
+            entity.Property(x => x.Amount).HasPrecision(18, 2); entity.Property(x => x.Currency).HasMaxLength(3).IsRequired(); entity.Property(x => x.PaymentMethod).HasConversion<int>(); entity.Property(x => x.Reference).HasMaxLength(150); entity.Property(x => x.Notes).HasMaxLength(1000);
+            entity.HasIndex(x => new { x.TenantId, x.PaidAt }); entity.HasIndex(x => new { x.TenantId, x.PatientId }); entity.HasIndex(x => new { x.TenantId, x.RevenueId }); entity.HasIndex(x => new { x.TenantId, x.TreatmentId });
+            entity.HasOne<Revenue>().WithMany().HasForeignKey(x => new { x.TenantId, x.RevenueId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Patient>().WithMany().HasForeignKey(x => new { x.TenantId, x.PatientId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Treatment>().WithMany().HasForeignKey(x => new { x.TenantId, x.TreatmentId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ClinicUser>().WithMany().HasForeignKey(x => new { x.TenantId, x.CreatedBy }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+        builder.Entity<Expense>(entity =>
+        {
+            entity.ToTable("expenses"); entity.HasKey(x => x.Id); entity.Property(x => x.Id).ValueGeneratedNever(); entity.HasAlternateKey(x => new { x.TenantId, x.Id });
+            entity.Property(x => x.Amount).HasPrecision(18, 2); entity.Property(x => x.Currency).HasMaxLength(3).IsRequired(); entity.Property(x => x.Description).HasMaxLength(500).IsRequired(); entity.Property(x => x.VendorName).HasMaxLength(200); entity.Property(x => x.Reference).HasMaxLength(150); entity.Property(x => x.Notes).HasMaxLength(1000);
+            entity.HasIndex(x => new { x.TenantId, x.ExpenseDate }); entity.HasIndex(x => new { x.TenantId, x.CategoryId });
+            entity.HasOne<FinancialCategory>().WithMany().HasForeignKey(x => new { x.TenantId, x.CategoryId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ClinicUser>().WithMany().HasForeignKey(x => new { x.TenantId, x.CreatedBy }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+        builder.Entity<DoctorCompensationCost>(entity =>
+        {
+            entity.ToTable("doctor_compensation_costs"); entity.HasKey(x => x.Id); entity.Property(x => x.Id).ValueGeneratedNever(); entity.HasAlternateKey(x => new { x.TenantId, x.Id });
+            entity.Property(x => x.Amount).HasPrecision(18, 2); entity.Property(x => x.Currency).HasMaxLength(3).IsRequired(); entity.Property(x => x.CompensationRuleSnapshot).HasMaxLength(500).IsRequired();
+            entity.HasIndex(x => new { x.TenantId, x.TreatmentId }).IsUnique(); entity.HasIndex(x => new { x.TenantId, x.DoctorProfileId }); entity.HasIndex(x => new { x.TenantId, x.OccurredAt });
+            entity.HasOne<Treatment>().WithMany().HasForeignKey(x => new { x.TenantId, x.TreatmentId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<DoctorProfile>().WithMany().HasForeignKey(x => new { x.TenantId, x.DoctorProfileId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+        builder.Entity<FinancialTransaction>(entity =>
+        {
+            entity.ToTable("financial_transactions"); entity.HasKey(x => x.Id); entity.Property(x => x.Id).ValueGeneratedNever();
+            entity.Property(x => x.Type).HasConversion<int>(); entity.Property(x => x.Amount).HasPrecision(18, 2); entity.Property(x => x.Currency).HasMaxLength(3).IsRequired(); entity.Property(x => x.SourceType).HasConversion<int>(); entity.Property(x => x.Description).HasMaxLength(500).IsRequired();
+            entity.HasIndex(x => new { x.TenantId, x.OccurredAt }); entity.HasIndex(x => new { x.TenantId, x.SourceType, x.SourceId }).IsUnique();
             entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
         });
 

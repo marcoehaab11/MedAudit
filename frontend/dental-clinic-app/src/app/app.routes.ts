@@ -207,6 +207,126 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/crm/follow-up-details.component').then((x) => x.FollowUpDetailsComponent),
   },
+  {
+    path: 'finance',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/finance/finance-dashboard.component').then(
+        (x) => x.FinanceDashboardComponent,
+      ),
+  },
+  {
+    path: 'finance/revenue',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/finance/revenue-page.component').then((x) => x.RevenuePageComponent),
+  },
+  {
+    path: 'finance/payments',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/finance/payments-page.component').then((x) => x.PaymentsPageComponent),
+  },
+  {
+    path: 'finance/payments/create',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/finance/payments-page.component').then((x) => x.PaymentFormComponent),
+  },
+  {
+    path: 'finance/expenses',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/finance/expenses-page.component').then((x) => x.ExpensesPageComponent),
+  },
+  {
+    path: 'finance/expenses/create',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/finance/expenses-page.component').then((x) => x.ExpenseFormComponent),
+  },
+  {
+    path: 'finance/categories',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/finance/categories-page.component').then((x) => x.CategoriesPageComponent),
+  },
+  {
+    path: 'reports',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/reports/reports-dashboard.component').then(
+        (x) => x.ReportsDashboardComponent,
+      ),
+  },
+  {
+    path: 'reports/financial',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/reports/financial-report.component').then(
+        (x) => x.FinancialReportComponent,
+      ),
+  },
+  {
+    path: 'reports/revenue',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/reports/revenue-report.component').then((x) => x.RevenueReportComponent),
+  },
+  {
+    path: 'reports/expenses',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/reports/expense-report.component').then((x) => x.ExpenseReportComponent),
+  },
+  {
+    path: 'reports/profit',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/reports/profit-report.component').then((x) => x.ProfitReportComponent),
+  },
+  {
+    path: 'reports/patients',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/reports/patient-report.component').then((x) => x.PatientReportComponent),
+  },
+  {
+    path: 'reports/appointments',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/reports/appointment-report.component').then(
+        (x) => x.AppointmentReportComponent,
+      ),
+  },
+  {
+    path: 'reports/doctors',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/reports/doctor-report.component').then((x) => x.DoctorReportComponent),
+  },
+  {
+    path: 'reports/treatments',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/reports/treatment-report.component').then(
+        (x) => x.TreatmentReportComponent,
+      ),
+  },
+  {
+    path: 'reports/prescriptions',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/reports/prescription-report.component').then(
+        (x) => x.PrescriptionReportComponent,
+      ),
+  },
+  {
+    path: 'reports/crm',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/reports/crm-report.component').then((x) => x.CrmReportComponent),
+  },
   { path: '', pathMatch: 'full', redirectTo: 'patients' },
   { path: '**', redirectTo: 'patients' },
 ];

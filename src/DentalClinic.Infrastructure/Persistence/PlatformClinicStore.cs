@@ -4,6 +4,7 @@ using DentalClinic.Domain.Platform;
 using DentalClinic.Domain.Tenancy;
 using DentalClinic.Infrastructure.Identity;
 using DentalClinic.Domain.Identity;
+using DentalClinic.Domain.Finance;
 using Microsoft.EntityFrameworkCore;
 
 namespace DentalClinic.Infrastructure.Persistence;
@@ -128,6 +129,7 @@ internal sealed class PlatformClinicStore(
     public void AddTenantRole(TenantRole role) => context.TenantRoles.Add(role);
     public void AddRolePermission(RolePermissionGrant permission) => context.RolePermissions.Add(permission);
     public void AddUserRole(UserRoleAssignment assignment) => context.UserRoleAssignments.Add(assignment);
+    public void AddFinancialCategory(FinancialCategory category) => context.FinancialCategories.Add(category);
 
     public async Task SavePlatformChangesAsync(Guid tenantId, CancellationToken cancellationToken)
     {

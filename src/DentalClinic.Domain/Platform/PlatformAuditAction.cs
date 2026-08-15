@@ -89,5 +89,12 @@ public enum PlatformAuditAction
     FollowUpStarted = 85,
     FollowUpCompleted = 86,
     FollowUpCancelled = 87,
-    CommunicationActivityCreated = 88
+    CommunicationActivityCreated = 88,
+    FinancialCategoryCreated = 89,
+    FinancialCategoryUpdated = 90,
+    RevenueCreated = 91,
+    PaymentCreated = 92,
+    ExpenseCreated = 93,
+    DoctorCompensationCalculated = 94,
+    DoctorCompensationRecorded = 95
 }

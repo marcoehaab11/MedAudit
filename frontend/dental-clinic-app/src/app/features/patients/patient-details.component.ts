@@ -8,6 +8,7 @@ import { PatientDentalSummaryComponent } from '../dental/patient-dental-summary.
 import { PatientTreatmentSummaryComponent } from '../treatments/patient-treatment-summary.component';
 import { PatientPrescriptionSummaryComponent } from '../prescriptions/patient-prescription-summary.component';
 import { PatientCrmSummaryComponent } from '../crm/patient-crm-summary.component';
+import { PatientFinanceSummaryComponent } from '../finance/patient-finance-summary.component';
 
 type Tab = 'overview' | 'contact' | 'medical' | 'notes';
 @Component({
@@ -20,6 +21,7 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
     PatientTreatmentSummaryComponent,
     PatientPrescriptionSummaryComponent,
     PatientCrmSummaryComponent,
+    PatientFinanceSummaryComponent,
   ],
   template: ` <a class="back" routerLink="/patients"
       >← {{ t('Back to patients', 'العودة إلى المرضى') }}</a
@@ -103,6 +105,7 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
           <app-patient-treatment-summary [patientId]="id" />
           <app-patient-prescription-summary [patientId]="id" />
           <app-patient-crm-summary [patientId]="id" />
+          <app-patient-finance-summary [patientId]="id" />
         }
         @case ('contact') {
           <div class="detail-grid">

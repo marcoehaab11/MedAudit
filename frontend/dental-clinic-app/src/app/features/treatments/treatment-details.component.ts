@@ -5,9 +5,10 @@ import { AuthService } from '../../core/auth.service';
 import { LocalizationService } from '../../core/localization.service';
 import { Treatment, TreatmentApiService } from './treatment-api.service';
 import { treatmentStatus } from './treatment-labels';
+import { TreatmentFinanceSummaryComponent } from '../finance/treatment-finance-summary.component';
 @Component({
   selector: 'app-treatment-details',
-  imports: [RouterLink, DatePipe],
+  imports: [RouterLink, DatePipe, TreatmentFinanceSummaryComponent],
   template: `<a class="back" routerLink="/treatments"
       >← {{ t('Back to treatments', 'العودة للعلاجات') }}</a
     >
@@ -59,6 +60,7 @@ import { treatmentStatus } from './treatment-labels';
           <p>{{ item()!.notes || '—' }}</p>
         </section>
       </div>
+      <app-treatment-finance-summary [treatmentId]="id" />
     }`,
   styleUrl: './treatments.scss',
 })

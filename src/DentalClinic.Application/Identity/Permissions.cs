@@ -65,12 +65,28 @@ public static class Permissions
     public const string CrmViewActivities = "CRM.ViewActivities";
     public const string CrmCreateActivity = "CRM.CreateActivity";
     public const string FinanceView = "Finance.View";
-    public const string FinanceCreatePayment = "Finance.CreatePayment";
-    public const string FinanceCreateExpense = "Finance.CreateExpense";
+    public const string FinanceDashboard = "Finance.Dashboard";
+    public const string FinanceCategoriesView = "Finance.Categories.View";
+    public const string FinanceCategoriesManage = "Finance.Categories.Manage";
+    public const string FinanceRevenueView = "Finance.Revenue.View";
+    public const string FinancePaymentsView = "Finance.Payments.View";
+    public const string FinancePaymentsCreate = "Finance.Payments.Create";
+    public const string FinanceExpensesView = "Finance.Expenses.View";
+    public const string FinanceExpensesCreate = "Finance.Expenses.Create";
+    public const string FinanceExpensesEdit = "Finance.Expenses.Edit";
+    public const string FinanceDoctorCompensationView = "Finance.DoctorCompensation.View";
+    public const string FinanceDoctorCompensationManage = "Finance.DoctorCompensation.Manage";
+    public const string FinanceCreatePayment = FinancePaymentsCreate;
+    public const string FinanceCreateExpense = FinanceExpensesCreate;
     public const string FinanceManageSalaries = "Finance.ManageSalaries";
     public const string ReportsView = "Reports.View";
     public const string ReportsClinical = "Reports.Clinical";
     public const string ReportsFinancial = "Reports.Financial";
+    public const string ReportsPatients = "Reports.Patients";
+    public const string ReportsAppointments = "Reports.Appointments";
+    public const string ReportsDoctors = "Reports.Doctors";
+    public const string ReportsTreatments = "Reports.Treatments";
+    public const string ReportsPrescriptions = "Reports.Prescriptions";
     public const string ReportsCrm = "Reports.CRM";
     public const string ReportsExport = "Reports.Export";
     public const string UsersView = "Users.View";
@@ -103,8 +119,11 @@ public static class Permissions
         PrescriptionsDownload, PrescriptionsSend,
         CrmView, CrmCreateFollowUp, CrmEditFollowUp, CrmAssignFollowUp,
         CrmCompleteFollowUp, CrmCancelFollowUp, CrmViewActivities, CrmCreateActivity,
-        FinanceView, FinanceCreatePayment, FinanceCreateExpense, FinanceManageSalaries,
-        ReportsView, ReportsClinical, ReportsFinancial, ReportsCrm, ReportsExport,
+        FinanceView, FinanceDashboard, FinanceCategoriesView, FinanceCategoriesManage, FinanceRevenueView,
+        FinancePaymentsView, FinancePaymentsCreate, FinanceExpensesView, FinanceExpensesCreate, FinanceExpensesEdit,
+        FinanceDoctorCompensationView, FinanceDoctorCompensationManage, FinanceManageSalaries,
+        ReportsView, ReportsClinical, ReportsFinancial, ReportsPatients, ReportsAppointments, ReportsDoctors,
+        ReportsTreatments, ReportsPrescriptions, ReportsCrm, ReportsExport,
         UsersView, UsersCreate, UsersEdit, UsersActivate, UsersDeactivate, UsersManageRoles,
         SettingsView, SettingsEdit
     };

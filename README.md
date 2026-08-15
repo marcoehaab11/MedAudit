@@ -165,3 +165,12 @@ The clinic CRM is intentionally patient-centric: `Patient` remains the canonical
 Follow-ups support Pending, InProgress, Completed, and Cancelled states. Overdue is derived at query time from open status plus `DueAt`; it is not stored. GUID concurrency tokens protect edits and assignment, and a PostgreSQL trigger prevents terminal records from being changed or deleted. All patient, assignee, appointment, treatment plan, treatment, prescription, and activity relationships use tenant-aware composite foreign keys.
 
 `IFollowUpCreator` is the extension point for future appointment, treatment, and prescription automation. This phase does not automatically create follow-ups and does not contact patients. Communication activities record concise Call/WhatsApp/SMS/Email/Other metadata only; no provider credentials, delivery logic, campaigns, or full private message bodies are introduced.
+
+## Finance and ERP foundation
+
+- Completed treatments create one immutable revenue record from the treatment price snapshot. A tenant-scoped unique source constraint makes posting idempotent.
+- Payments represent received cash separately from earned revenue. PostgreSQL locks the revenue row and validates balance, currency, patient, and treatment before insertion.
+- Expenses, doctor percentage costs, and the financial transaction index are immutable posted records. Future corrections must use reversal records rather than deletion.
+- Doctor costs reuse the compensation rule effective on the treatment date. Fixed salary is never allocated per treatment; combined rules contribute only their percentage component.
+- Patient balances and dashboard summaries use SQL aggregation. Date filters convert clinic-local boundaries to UTC.
+- Finance uses tenant filters and granular permissions. Doctors have no finance access by default; receptionists have payment-focused access without dashboard, expense, or compensation visibility.

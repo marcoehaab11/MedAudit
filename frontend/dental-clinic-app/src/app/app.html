@@ -31,6 +31,12 @@
         @if (auth.hasPermission('CRM.View')) {
           <a routerLink="/crm">{{ i18n.language() === 'en' ? 'CRM' : 'إدارة العلاقات' }}</a>
         }
+        @if (auth.hasPermission('Finance.View')) {
+          <a routerLink="/finance">{{ i18n.language() === 'en' ? 'Finance' : 'المالية' }}</a>
+        }
+        @if (auth.hasPermission('Reports.View')) {
+          <a routerLink="/reports">{{ i18n.language() === 'en' ? 'Reports' : 'التقارير' }}</a>
+        }
         ><button type="button" (click)="logout()">
           {{ i18n.language() === 'en' ? 'Sign out' : 'تسجيل الخروج' }}
         </button>

@@ -10,6 +10,7 @@ public interface IDoctorProfileStore
     Task<DoctorProfileDetails?> GetDetailsAsync(Guid id, bool canManageSchedule, bool canManageCompensation, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<DoctorCandidate>> GetCandidatesAsync(CancellationToken cancellationToken);
     Task<DoctorProfile?> FindAsync(Guid id, CancellationToken cancellationToken);
+    Task<DoctorProfile?> FindByUserIdAsync(Guid clinicUserId, CancellationToken cancellationToken);
     Task<bool> IsDoctorUserAsync(Guid clinicUserId, CancellationToken cancellationToken);
     Task<bool> ProfileExistsForUserAsync(Guid clinicUserId, CancellationToken cancellationToken);
     Task<bool> LicenseExistsAsync(string licenseNumber, Guid? excludingId, CancellationToken cancellationToken);

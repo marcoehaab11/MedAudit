@@ -61,6 +61,8 @@ internal sealed class DoctorStore(ApplicationDbContext context) :
 
     public Task<DoctorProfile?> FindAsync(Guid id, CancellationToken cancellationToken) =>
         context.DoctorProfiles.SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
+    public Task<DoctorProfile?> FindByUserIdAsync(Guid clinicUserId, CancellationToken cancellationToken) =>
+        context.DoctorProfiles.AsNoTracking().FirstOrDefaultAsync(x => x.ClinicUserId == clinicUserId, cancellationToken);
     Task<DoctorProfile?> IDoctorScheduleStore.FindDoctorAsync(Guid id, CancellationToken cancellationToken) => FindAsync(id, cancellationToken);
     Task<DoctorProfile?> IDoctorCompensationStore.FindDoctorAsync(Guid id, CancellationToken cancellationToken) => FindAsync(id, cancellationToken);
     public Task<bool> IsDoctorUserAsync(Guid clinicUserId, CancellationToken cancellationToken) =>

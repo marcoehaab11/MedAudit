@@ -3,6 +3,7 @@ using DentalClinic.Application.Identity;
 using DentalClinic.Application.Tenants.Models;
 using DentalClinic.Domain.Platform;
 using DentalClinic.Domain.Treatments;
+using DentalClinic.Application.Finance;
 
 namespace DentalClinic.Application.Treatments;
 
@@ -95,7 +96,7 @@ internal sealed class TreatmentPlanService(ITreatmentStore store, TreatmentAcces
 }
 
 internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess access, IPermissionService permissions,
-    ICurrentTenant tenant, ICurrentUser user, ISystemClock clock) : ITreatmentService
+    ICurrentTenant tenant, ICurrentUser user, ISystemClock clock, ITreatmentRevenueCreator revenueCreator) : ITreatmentService
 {
     public async Task<PagedResult<TreatmentListItem>> SearchAsync(TreatmentSearch query, CancellationToken token)
     { if (query.Page < 1 || query.PageSize is < 1 or > 100 || query.From > query.To) throw new ArgumentException("Invalid treatment search."); if ((query.Type.HasValue && !Enum.IsDefined(query.Type.Value)) || (query.Status.HasValue && !Enum.IsDefined(query.Status.Value))) throw new ArgumentException("Invalid treatment filter."); if (query.ToothNumber.HasValue) DentalClinic.Domain.Dental.PermanentToothCatalog.Get(query.ToothNumber.Value); return await store.SearchTreatmentsAsync(query, await access.VisibleDoctorAsync(Permissions.TreatmentsView, token), token); }
@@ -138,7 +139,7 @@ internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess ac
         await permissions.EnsurePermissionAsync(permission, token); var item = await store.FindTreatmentAsync(id, true, token); if (item is null) return false;
         await access.EnsureDoctorAsync(item.DoctorProfileId, permission, token);
         var audit = action == "start" ? PlatformAuditAction.TreatmentStarted : action == "complete" ? PlatformAuditAction.TreatmentCompleted : PlatformAuditAction.TreatmentCancelled;
-        if (action == "start") item.Start(version, clock.UtcNow); else if (action == "complete") item.Complete(version, clock.UtcNow); else item.Cancel(version, clock.UtcNow);
+        if (action == "start") item.Start(version, clock.UtcNow); else if (action == "complete") { item.Complete(version, clock.UtcNow); await revenueCreator.EnsureForCompletedTreatmentAsync(id, token); } else item.Cancel(version, clock.UtcNow);
         Audit(audit, id); await store.SaveChangesAsync(token); return true;
     }
     private void Audit(PlatformAuditAction action, Guid id) => store.AddAudit(new(tenant.RequireTenantId(), user.UserId, action, "Treatment", id, clock.UtcNow, null));

@@ -51,7 +51,13 @@ public static class SystemRoleDefinitions
                 Permissions.PrescriptionsIssue,
                 Permissions.PrescriptionsCancel,
                 Permissions.PrescriptionsPrint,
-                Permissions.PrescriptionsDownload
+                Permissions.PrescriptionsDownload,
+                Permissions.ReportsView,
+                Permissions.ReportsPatients,
+                Permissions.ReportsAppointments,
+                Permissions.ReportsDoctors,
+                Permissions.ReportsTreatments,
+                Permissions.ReportsPrescriptions
             ],
             [Receptionist] =
             [
@@ -72,7 +78,17 @@ public static class SystemRoleDefinitions
                 Permissions.CrmCompleteFollowUp,
                 Permissions.CrmCancelFollowUp,
                 Permissions.CrmViewActivities,
-                Permissions.CrmCreateActivity
+                Permissions.CrmCreateActivity,
+                Permissions.FinanceView,
+                Permissions.FinanceRevenueView,
+                Permissions.FinancePaymentsView,
+                Permissions.FinancePaymentsCreate,
+                Permissions.ReportsView,
+                Permissions.ReportsPatients,
+                Permissions.ReportsAppointments,
+                Permissions.ReportsTreatments,
+                Permissions.ReportsPrescriptions,
+                Permissions.ReportsCrm
             ]
         };
 }
