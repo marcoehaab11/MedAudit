@@ -11,7 +11,6 @@ namespace DentalClinic.PlatformAdmin.Pages.Account;
 
 [AllowAnonymous]
 public sealed class LoginModel(
-    SignInManager<ApplicationUser> signInManager,
     UserManager<ApplicationUser> userManager) : PageModel
 {
     [BindProperty]
@@ -62,7 +61,7 @@ public sealed class LoginModel(
             new(ClaimTypes.NameIdentifier, user.Id.ToString("D")),
             new(ClaimTypes.Email, user.Email ?? string.Empty),
             new(ClaimTypes.Name, user.UserName ?? string.Empty),
-            new(AuthConstants.IsPlatformAdminClaim, "true")
+            new(ClaimTypes.Role, AuthConstants.PlatformAdminRole)
         };
 
         var claimsIdentity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
