@@ -28,12 +28,6 @@ public sealed class ApplicationDbContext(
     PlatformWriteScope? platformWriteScope = null)
     : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>(options)
 {
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        base.OnConfiguring(optionsBuilder);
-        optionsBuilder.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
-    }
-
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<TenantConfiguration> TenantConfigurations => Set<TenantConfiguration>();
     public DbSet<ClinicHours> ClinicHours => Set<ClinicHours>();
