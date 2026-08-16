@@ -83,7 +83,8 @@ public static class DependencyInjection
 
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(postgres, npgsql =>
-                npgsql.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
+                npgsql.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName))
+            .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
         services.AddIdentityCore<ApplicationUser>(options =>
             {

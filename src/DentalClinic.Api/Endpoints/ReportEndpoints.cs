@@ -82,7 +82,7 @@ internal static class ReportEndpoints
         {
             var (bytes, contentType, fileName) = await s.ExportCsvAsync(reportType, new(period ?? ReportPeriod.ThisMonth, from, to, doctorId, categoryId, treatmentType, status), t);
             return Results.File(bytes, contentType, fileName);
-        }).RequireAuthorization(Permissions.ReportsExport);
+        }).RequireAuthorization(Permissions.ReportsExport).RequireRateLimiting("tenant-export");
 
         return endpoints;
     }

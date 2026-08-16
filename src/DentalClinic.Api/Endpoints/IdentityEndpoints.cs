@@ -12,9 +12,9 @@ internal static class IdentityEndpoints
     public static IEndpointRouteBuilder MapIdentityEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var auth = endpoints.MapGroup("/api/auth").AllowAnonymous();
-        auth.MapPost("/login", LoginAsync);
-        auth.MapPost("/invitations/inspect", InspectInvitationAsync);
-        auth.MapPost("/invitations/accept", AcceptInvitationAsync);
+        auth.MapPost("/login", LoginAsync).RequireRateLimiting("auth-login");
+        auth.MapPost("/invitations/inspect", InspectInvitationAsync).RequireRateLimiting("public-read");
+        auth.MapPost("/invitations/accept", AcceptInvitationAsync).RequireRateLimiting("auth-login");
 
         var users = endpoints.MapGroup("/api/users")
             .RequireAuthorization(AuthConstants.TenantMemberPolicy);
