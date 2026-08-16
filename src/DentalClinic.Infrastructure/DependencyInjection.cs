@@ -88,7 +88,11 @@ public static class DependencyInjection
 
         services.AddIdentityCore<ApplicationUser>(options =>
             {
-                options.Password.RequiredLength = 12;
+                options.Password.RequiredLength = 6;
+                options.Password.RequireDigit = false;
+                options.Password.RequireLowercase = false;
+                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequireUppercase = false;
                 options.User.RequireUniqueEmail = true;
             })
             .AddRoles<IdentityRole<Guid>>()

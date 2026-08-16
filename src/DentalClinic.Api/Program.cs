@@ -71,6 +71,8 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
+await DentalClinic.Infrastructure.Persistence.DatabaseSeeder.SeedAsync(app.Services);
+
 app.Use(async (context, next) =>
 {
     context.Response.Headers.Append("X-Frame-Options", "DENY");
@@ -84,7 +86,10 @@ app.Use(async (context, next) =>
 app.UseExceptionHandler();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseAuthentication();
 app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthorization();

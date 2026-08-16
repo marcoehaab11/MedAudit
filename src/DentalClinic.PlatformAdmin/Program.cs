@@ -2,6 +2,7 @@ using System.Globalization;
 using DentalClinic.Application;
 using DentalClinic.Infrastructure;
 using DentalClinic.Infrastructure.Identity;
+using DentalClinic.Infrastructure.Persistence;
 using DentalClinic.Infrastructure.Tenancy;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
@@ -17,16 +18,28 @@ builder.Host.UseSerilog((context, configuration) => configuration
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme).AddIdentityCookies();
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.AccessDeniedPath = "/Account/Login";
+});
+
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy(AuthConstants.PlatformAdminPolicy, policy =>
         policy.RequireAuthenticatedUser()
             .RequireAssertion(context => PlatformAccess.IsPlatformAdmin(context.User)));
 });
+
 builder.Services.AddRazorPages(options =>
-    options.Conventions.AuthorizeFolder("/", AuthConstants.PlatformAdminPolicy));
+{
+    options.Conventions.AllowAnonymousToPage("/Account/Login");
+    options.Conventions.AuthorizeFolder("/", AuthConstants.PlatformAdminPolicy);
+});
 
 var app = builder.Build();
+
+await DatabaseSeeder.SeedAsync(app.Services);
 
 if (!app.Environment.IsDevelopment())
 {
@@ -34,7 +47,11 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
