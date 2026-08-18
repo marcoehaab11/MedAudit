@@ -2,6 +2,7 @@ using DentalClinic.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 
 namespace DentalClinic.Infrastructure.Persistence;
 
@@ -18,15 +19,7 @@ public static class DatabaseSeeder
         await context.Database.MigrateAsync();
 
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-
-        // Resolve the seeded admin by its stable ID first. This makes the seeder
-        // idempotent even if the email was changed or the existing row was created
-        // by an earlier deployment.
-        var adminUser = await userManager.FindByIdAsync(PlatformAdminId.ToString());
-        if (adminUser is null)
-        {
-            adminUser = await userManager.FindByEmailAsync(AdminEmail);
-        }
+        var adminUser = await FindAdminAsync(userManager);
 
         if (adminUser is null)
         {
@@ -39,17 +32,29 @@ public static class DatabaseSeeder
                 IsPlatformAdmin = true
             };
 
-            var createResult = await userManager.CreateAsync(adminUser, AdminPassword);
-            if (!createResult.Succeeded)
+            try
             {
-                throw new InvalidOperationException(
-                    $"Failed to seed platform admin: {string.Join(", ", createResult.Errors.Select(x => x.Description))}");
+                var createResult = await userManager.CreateAsync(adminUser, AdminPassword);
+                if (!createResult.Succeeded)
+                {
+                    throw new InvalidOperationException(
+                        $"Failed to seed platform admin: {string.Join(", ", createResult.Errors.Select(x => x.Description))}");
+                }
+            }
+            catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+            {
+                context.Entry(adminUser).State = EntityState.Detached;
+                adminUser = await FindAdminAsync(userManager);
+                if (adminUser is null)
+                {
+                    throw;
+                }
             }
         }
-        else if (!adminUser.IsPlatformAdmin)
+
+        if (!adminUser.IsPlatformAdmin)
         {
             adminUser.IsPlatformAdmin = true;
-
             var updateResult = await userManager.UpdateAsync(adminUser);
             if (!updateResult.Succeeded)
             {
@@ -57,5 +62,17 @@ public static class DatabaseSeeder
                     $"Failed to update platform admin: {string.Join(", ", updateResult.Errors.Select(x => x.Description))}");
             }
         }
+    }
+
+    private static async Task<ApplicationUser?> FindAdminAsync(UserManager<ApplicationUser> userManager)
+    {
+        var adminUser = await userManager.FindByIdAsync(PlatformAdminId.ToString());
+        return adminUser ?? await userManager.FindByEmailAsync(AdminEmail);
+    }
+
+    private static bool IsUniqueViolation(DbUpdateException exception)
+    {
+        return exception.InnerException is PostgresException postgresException
+            && postgresException.SqlState == PostgresErrorCodes.UniqueViolation;
     }
 }
