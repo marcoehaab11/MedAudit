@@ -44,10 +44,13 @@ public static class DatabaseSeeder
             catch (DbUpdateException ex) when (IsUniqueViolation(ex))
             {
                 context.Entry(adminUser).State = EntityState.Detached;
-                adminUser = await FindAdminAsync(userManager);
+                adminUser = await FindAdminWithRetryAsync(userManager);
+
                 if (adminUser is null)
                 {
-                    throw;
+                    throw new InvalidOperationException(
+                        "A concurrent platform-admin seed detected an existing user, but the user could not be read after the unique-key conflict.",
+                        ex);
                 }
             }
         }
@@ -68,6 +71,23 @@ public static class DatabaseSeeder
     {
         var adminUser = await userManager.FindByIdAsync(PlatformAdminId.ToString());
         return adminUser ?? await userManager.FindByEmailAsync(AdminEmail);
+    }
+
+    private static async Task<ApplicationUser?> FindAdminWithRetryAsync(
+        UserManager<ApplicationUser> userManager)
+    {
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            var adminUser = await FindAdminAsync(userManager);
+            if (adminUser is not null)
+            {
+                return adminUser;
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(250 * (attempt + 1)));
+        }
+
+        return null;
     }
 
     private static bool IsUniqueViolation(DbUpdateException exception)
