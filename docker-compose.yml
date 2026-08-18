@@ -41,7 +41,9 @@ services:
       ASPNETCORE_HTTP_PORTS: 8080
       ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
       ConnectionStrings__Redis: redis:6379,abortConnect=false
-      Authentication__Jwt__SigningKey: ${JWT_SIGNING_KEY:-SuperSecretDefaultSigningKeyForDockerBuild123!}
+      Authentication__Jwt__Issuer: ${JWT_ISSUER:-MedDentist}
+      Authentication__Jwt__Audience: ${JWT_AUDIENCE:-MedDentist.Client}
+      Authentication__Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY must be set}
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
