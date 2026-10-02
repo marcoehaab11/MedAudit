@@ -101,6 +101,21 @@
   <script src="particles.js" defer></script>
   <script src="dental-art.js" defer></script>
   <script src="app.js" defer></script>
-<script>const login = document.getElementById("planora-login"); if (login) { let host = location.host.replace(/^(www|book|rx)\./, ""); login.href = location.hostname === "localhost" || location.hostname === "127.0.0.1" ? "http://localhost:4200/login" : location.protocol + "//app." + host + "/login"; }</script></body>
+<script>
+  const login = document.getElementById('planora-login');
+  if (login) {
+    const baseHost = location.hostname.replace(/^(www|book|rx)\./, '');
+    const local = baseHost === 'localhost' || baseHost === '127.0.0.1';
+    const appUrl = new URL(location.href);
+    appUrl.hostname = local ? 'app.localhost' : `app.${baseHost}`;
+    appUrl.port = local
+      ? (location.hostname === 'localhost' || location.hostname === '127.0.0.1' ? '8080' : location.port || '8080')
+      : location.port;
+    appUrl.pathname = '/login';
+    appUrl.search = '';
+    appUrl.hash = '';
+    login.href = appUrl.href;
+  }
+</script></body>
 </html>
 
