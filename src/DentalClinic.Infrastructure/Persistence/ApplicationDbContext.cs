@@ -52,6 +52,7 @@ public sealed class ApplicationDbContext(
     public DbSet<DoctorCompensation> DoctorCompensations => Set<DoctorCompensation>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<BookingInquiry> BookingInquiries => Set<BookingInquiry>();
+    public DbSet<BookingPageVisit> BookingPageVisits => Set<BookingPageVisit>();
     public DbSet<Examination> Examinations => Set<Examination>();
     public DbSet<DentalFinding> DentalFindings => Set<DentalFinding>();
     public DbSet<DentalFindingSurface> DentalFindingSurfaces => Set<DentalFindingSurface>();
@@ -324,6 +325,10 @@ public sealed class ApplicationDbContext(
             entity.Property(x => x.Notes).HasMaxLength(2000);
             entity.Property(x => x.CancellationReason).HasMaxLength(500);
             entity.Property(x => x.BookingReference).HasMaxLength(50);
+            entity.Property(x => x.PublicBookingStaffNotes).HasMaxLength(2000);
+            entity.Property(x => x.PublicManagementTokenHash).HasMaxLength(64);
+            entity.Property(x => x.PublicBookingSource).HasMaxLength(40);
+            entity.HasIndex(x => x.PublicManagementTokenHash).IsUnique();
             entity.HasIndex(x => new { x.TenantId, x.StartAt });
             entity.HasIndex(x => new { x.TenantId, x.BookingReference });
             entity.HasIndex(x => new { x.TenantId, x.DoctorProfileId, x.StartAt });
@@ -352,9 +357,22 @@ public sealed class ApplicationDbContext(
             entity.Property(x => x.Phone).HasMaxLength(50).IsRequired();
             entity.Property(x => x.Email).HasMaxLength(256);
             entity.Property(x => x.Message).HasMaxLength(2000);
+            entity.Property(x => x.StaffNotes).HasMaxLength(2000);
+            entity.Property(x => x.Status).HasMaxLength(30).IsRequired();
+            entity.Property(x => x.Source).HasMaxLength(40).IsRequired();
             entity.HasIndex(x => new { x.TenantId, x.CreatedAt });
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
             entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<BookingPageVisit>(entity =>
+        {
+            entity.ToTable("booking_page_visits");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Source).HasMaxLength(40).IsRequired();
+            entity.HasIndex(x => new { x.TenantId, x.CreatedAt });
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+            entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<Examination>(entity =>

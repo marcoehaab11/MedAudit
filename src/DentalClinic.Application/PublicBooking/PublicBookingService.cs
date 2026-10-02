@@ -213,6 +213,9 @@ internal sealed partial class PublicBookingService(
             reference,
             service.Id
         );
+        var managementToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
+        appointment.SetPublicManagementToken(Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(managementToken))));
+        appointment.SetPublicBookingSource(request.Source);
 
         await store.AddAppointmentAsync(appointment, token);
 
@@ -226,8 +229,9 @@ internal sealed partial class PublicBookingService(
 
         await store.CommitTransactionAsync(token);
 
-        return (await store.GetBookingConfirmationAsync(reference, token))
+        var created = await store.GetBookingConfirmationAsync(reference, token)
             ?? throw new InvalidOperationException("Failed to load created booking confirmation.");
+        return created with { ManagementToken = managementToken };
     }
 
     public async Task<PublicBookingConfirmationDto?> GetBookingByReferenceAsync(string reference, CancellationToken token)
@@ -241,7 +245,7 @@ internal sealed partial class PublicBookingService(
         await GetClinicBySlugAsync(slug, token);
         var tenantId = await GetTenantIdAsync(slug, token);
         var inquiry = new BookingInquiry(tenantId, request.PatientName, request.PatientPhone,
-            request.PatientEmail, request.Message, clock.UtcNow);
+            request.PatientEmail, request.Message, clock.UtcNow, request.Source);
         await store.AddInquiryAsync(inquiry, token);
         await store.CommitTransactionAsync(token);
         return inquiry.Id;
@@ -282,9 +286,9 @@ internal sealed partial class PublicBookingService(
 
     private static string GenerateBookingReference()
     {
-        var bytes = new byte[6];
+        var bytes = new byte[12];
         RandomNumberGenerator.Fill(bytes);
-        var alphaNumeric = Convert.ToHexString(bytes).ToUpperInvariant()[..8];
+        var alphaNumeric = Convert.ToHexString(bytes);
         return $"BK-{alphaNumeric}";
     }
 

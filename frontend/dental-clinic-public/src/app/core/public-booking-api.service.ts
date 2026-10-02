@@ -68,6 +68,7 @@ export interface PublicBookingRequest {
   patientDateOfBirth?: string;
   patientNotes?: string;
   idempotencyKey?: string;
+  source?: string;
 }
 
 export interface PublicBookingInquiryRequest {
@@ -75,6 +76,7 @@ export interface PublicBookingInquiryRequest {
   patientPhone: string;
   patientEmail?: string;
   message?: string;
+  source?: string;
 }
 
 export interface PublicBookingConfirmationDto {
@@ -88,6 +90,7 @@ export interface PublicBookingConfirmationDto {
   patientName: string;
   patientPhone: string;
   status: string;
+  managementToken?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -97,6 +100,10 @@ export class PublicBookingApiService {
 
   getClinicBySlug(slug: string): Observable<PublicClinicDto> {
     return this.http.get<PublicClinicDto>(`${this.baseUrl}/clinics/${slug}`);
+  }
+
+  recordVisit(slug: string, source: string): void {
+    this.http.post<void>(`${this.baseUrl}/clinics/${slug}/visits`, { source }).subscribe({ error: () => {} });
   }
 
   sendInquiry(slug: string, request: PublicBookingInquiryRequest): Observable<{ id: string }> {
@@ -138,5 +145,25 @@ export class PublicBookingApiService {
     return this.http.get<PublicBookingConfirmationDto>(
       `${this.baseUrl}/bookings/confirmation/${reference}`,
     );
+  }
+
+  getManagedBooking(token: string): Observable<PublicBookingConfirmationDto> {
+    return this.http.get<PublicBookingConfirmationDto>(`${this.baseUrl}/bookings/manage/${token}`);
+  }
+
+  confirmBooking(token: string): Observable<PublicBookingConfirmationDto> {
+    return this.http.post<PublicBookingConfirmationDto>(`${this.baseUrl}/bookings/manage/${token}/confirm`, {});
+  }
+
+  cancelBooking(token: string, reason: string): Observable<PublicBookingConfirmationDto> {
+    return this.http.post<PublicBookingConfirmationDto>(`${this.baseUrl}/bookings/manage/${token}/cancel`, { reason });
+  }
+
+  rescheduleBooking(token: string, startAt: string): Observable<PublicBookingConfirmationDto> {
+    return this.http.post<PublicBookingConfirmationDto>(`${this.baseUrl}/bookings/manage/${token}/reschedule`, { startAt });
+  }
+
+  getManagedAvailability(token: string, date: string): Observable<PublicAvailabilitySlotDto[]> {
+    return this.http.get<PublicAvailabilitySlotDto[]>(`${this.baseUrl}/bookings/manage/${token}/availability`, { params: { date } });
   }
 }

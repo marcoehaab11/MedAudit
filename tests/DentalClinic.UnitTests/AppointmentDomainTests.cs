@@ -73,6 +73,23 @@ public sealed class AppointmentDomainTests
         Assert.Throws<InvalidOperationException>(() => appointment.Reschedule(Now, 30, Now));
     }
 
+    [Fact]
+    public void PublicBookingFollowUpRequiresAnOnlineBooking()
+    {
+        var local = Create();
+        Assert.Throws<InvalidOperationException>(() => local.SetPublicManagementToken(new string('A', 64)));
+        Assert.Throws<InvalidOperationException>(() => local.UpdatePublicBookingFollowUp(Guid.NewGuid(), "Call tomorrow", Now.AddDays(1), Now));
+
+        var online = new Appointment(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(),
+            AppointmentType.Consultation, Now, 30, null, Guid.NewGuid(), Now, "BK-TEST");
+        online.SetPublicManagementToken(new string('A', 64));
+        online.SetPublicBookingSource("google");
+        online.UpdatePublicBookingFollowUp(Guid.NewGuid(), "Confirmed by phone", Now.AddDays(1), Now);
+        Assert.Equal("google", online.PublicBookingSource);
+        Assert.Equal(new string('A', 64), online.PublicManagementTokenHash);
+        Assert.Equal("Confirmed by phone", online.PublicBookingStaffNotes);
+    }
+
     private static Appointment Create(DateTimeOffset? start = null, int duration = 30) => new(
         Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), AppointmentType.Consultation,
         start ?? Now, duration, "Notes", Guid.NewGuid(), Now);

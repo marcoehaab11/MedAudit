@@ -58,6 +58,30 @@
         📌 Please keep your booking reference number
         <strong>{{ confirmation()?.bookingReference }}</strong> for check-in upon arrival.
       </div>
+      @if (managementToken()) {
+        <section class="patient-actions">
+          <h3>Manage your appointment</h3>
+          <p>Keep this private link to confirm, change or cancel your visit.</p>
+          @if (actionMessage()) { <p role="status">{{ actionMessage() }}</p> }
+          @if (confirmation()?.status === 'Scheduled' || confirmation()?.status === 'Confirmed') {
+            @if (confirmation()?.status === 'Scheduled') { <button type="button" [disabled]="actionBusy()" (click)="confirm()">Confirm appointment</button> }
+            <div class="change-time">
+              <label>Choose a new date <input type="date" [(ngModel)]="selectedDate" (change)="loadManagedAvailability()" /></label>
+              @if (slots().length) {
+                <label>Available time
+                  <select [(ngModel)]="selectedStartAt">
+                    <option value="">Select a time</option>
+                    @for (slot of slots(); track slot.startAt) { <option [value]="slot.startAt">{{ slot.startAt | date:'shortTime' }}</option> }
+                  </select>
+                </label>
+                <button type="button" [disabled]="!selectedStartAt || actionBusy()" (click)="reschedule()">Change time</button>
+              }
+            </div>
+            <label>Cancellation reason (optional) <input [(ngModel)]="cancelReason" maxlength="500" /></label>
+            <button type="button" [disabled]="actionBusy()" (click)="cancel()">Cancel appointment</button>
+          }
+        </section>
+      }
     </div>
   }
 </div>

@@ -112,12 +112,15 @@ public sealed class PublicBookingWorkflowTests(PlatformPostgresFixture fixture)
         Assert.NotNull(confirmation);
         Assert.StartsWith("BK-", confirmation.BookingReference);
         Assert.Equal("Laila Mahmoud", confirmation.PatientName);
+        Assert.Equal(48, confirmation.ManagementToken?.Length);
 
         // Verify patient record created and phone normalized
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var patient = await db.Patients.IgnoreQueryFilters().FirstOrDefaultAsync(p => p.TenantId == clinic.TenantId && p.Phone == "201012345678");
         Assert.NotNull(patient);
         Assert.Equal("Laila", patient.FirstName);
+        var managedBooking = await db.Appointments.IgnoreQueryFilters().SingleAsync(x => x.BookingReference == confirmation.BookingReference);
+        Assert.NotNull(managedBooking.PublicManagementTokenHash);
 
         // Verify lookup by reference works
         var lookedUp = await service.GetBookingByReferenceAsync(confirmation.BookingReference, CancellationToken.None);

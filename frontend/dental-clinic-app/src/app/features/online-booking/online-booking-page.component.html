@@ -8,6 +8,17 @@
   @if (error()) { <div class="notice error" role="alert">{{ error() }}</div> }
 
   @if (settings(); as clinic) {
+    @if (summary(); as stats) {
+      <section class="metrics" aria-label="Booking results in the last 30 days">
+        <div><small>Page visits · 30 days</small><strong>{{ stats.visits30Days }}</strong></div>
+        <div><small>Online bookings</small><strong>{{ stats.bookings30Days }}</strong></div>
+        <div><small>Callback requests</small><strong>{{ stats.inquiries30Days }}</strong></div>
+        <div [class.alert]="stats.overdue > 0"><small>Waiting over 2 hours</small><strong>{{ stats.overdue }}</strong></div>
+        <div><small>Completed visits</small><strong>{{ stats.completed30Days }}</strong></div>
+        <div><small>No-shows</small><strong>{{ stats.noShows30Days }}</strong></div>
+      </section>
+      <div class="source-bar"><strong>Traffic sources · 30 days</strong> @for (source of stats.sources; track source.source) { <span>{{ source.source }}: {{ source.count }} visits · {{ bookingCountForSource(source.source) }} bookings</span> }</div>
+    }
     <div class="top-grid">
       <section class="panel share-panel">
         <div class="panel-title"><span class="eyebrow">YOUR CLINIC LINK</span><span class="status" [class.off]="!clinic.publicBookingEnabled">{{ clinic.publicBookingEnabled ? 'Live' : 'Paused' }}</span></div>
@@ -16,10 +27,13 @@
         <div class="link-box"><input [value]="bookingUrl" aria-label="Patient booking link" readonly /><button type="button" (click)="copyLink()">Copy</button></div>
         <div class="share-actions">
           <button type="button" (click)="downloadQr()" [disabled]="!clinic.publicBookingEnabled">Download QR code</button>
+          <button type="button" class="outline" (click)="copyGoogleLink()">Copy Google link</button>
           @if (auth.hasPermission('Settings.Appointments')) {
             <button type="button" class="outline" (click)="setBookingEnabled(!clinic.publicBookingEnabled)" [disabled]="saving()">{{ clinic.publicBookingEnabled ? 'Pause bookings' : 'Enable bookings' }}</button>
           }
         </div>
+        <p class="hint">Add this booking link to your Google Business Profile. Use <code>?source=google</code> at the end to track visits from Google, or <code>?source=social</code> for social media.</p>
+        <p class="hint">WhatsApp buttons open WhatsApp Web with a prepared message. Staff scan the QR in WhatsApp Web if needed, review the message and press Send.</p>
         @if (!clinic.publicBookingEnabled) { <p class="hint">Turn on online booking before sharing this link. Existing clinics may start with booking paused.</p> }
       </section>
       <section class="panel qr-panel">
@@ -58,7 +72,16 @@
             @for (inquiry of inquiries(); track inquiry.id) {
               <article class="request-card">
                 <div class="request-main"><strong>{{ inquiry.patientName }}</strong><small>{{ inquiry.createdAt | date:'medium' }}</small>@if (inquiry.message) { <p>{{ inquiry.message }}</p> }</div>
-                <div class="request-contact"><a [href]="'tel:' + inquiry.phone">{{ inquiry.phone }}</a>@if (inquiry.email) { <a [href]="'mailto:' + inquiry.email">{{ inquiry.email }}</a> }<span class="status" [class.off]="!inquiry.contactedAt">{{ inquiry.contactedAt ? 'Contacted' : 'Needs follow-up' }}</span>@if (!inquiry.contactedAt && auth.hasPermission('Appointments.Edit')) { <button type="button" (click)="markInquiryContacted(inquiry)">Mark contacted</button> }</div>
+                <div class="request-contact"><a [href]="'tel:' + inquiry.phone">{{ inquiry.phone }}</a><a [href]="whatsappLink(inquiry.phone, inquiry.patientName)" target="_blank" rel="noopener">Open WhatsApp Web ↗</a>@if (inquiry.email) { <a [href]="'mailto:' + inquiry.email">{{ inquiry.email }}</a> }<span class="status" [class.off]="!inquiry.contactedAt">{{ inquiry.status }}</span>@if (!inquiry.contactedAt && auth.hasPermission('Appointments.Edit')) { <button type="button" (click)="markInquiryContacted(inquiry)">Mark contacted</button> }</div>
+                @if (auth.hasPermission('Appointments.Edit')) {
+                  <div class="follow-up-controls">
+                    <label>Status <select [(ngModel)]="inquiry.status"><option value="New">New</option><option value="Contacted">Contacted</option><option value="Booked">Booked</option><option value="Closed">Closed</option></select></label>
+                    <label>Assigned to <select [(ngModel)]="inquiry.assignedToUserId"><option [ngValue]="null">Unassigned</option>@for (person of staff(); track person.id) { <option [value]="person.id">{{ person.displayName }}</option> }</select></label>
+                    <label>Next follow-up <input type="datetime-local" [ngModel]="localDateTime(inquiry.followUpAt)" (ngModelChange)="inquiry.followUpAt = $event ? newDateIso($event) : null" /></label>
+                    <label>Staff notes <input [(ngModel)]="inquiry.staffNotes" maxlength="2000" /></label>
+                    <button type="button" (click)="saveInquiry(inquiry)">Save</button>
+                  </div>
+                }
               </article>
             }
           </div>
@@ -72,7 +95,15 @@
             @for (request of requests(); track request.id) {
               <article class="request-card">
                 <div class="request-main"><strong>{{ request.patientName }}</strong><small>{{ request.bookingReference }} · {{ request.createdAt | date:'mediumDate' }}</small><span>{{ request.doctorName }} · {{ request.startAt | date:'medium' }}</span>@if (request.notes) { <p>{{ request.notes }}</p> }</div>
-                <div class="request-contact"><a [href]="'tel:' + request.patientPhone">{{ request.patientPhone }}</a>@if (request.patientEmail) { <a [href]="'mailto:' + request.patientEmail">{{ request.patientEmail }}</a> }<span class="status" [class.off]="!request.contactedAt">{{ request.contactedAt ? 'Contacted' : 'Needs follow-up' }}</span>@if (!request.contactedAt && auth.hasPermission('Appointments.Edit')) { <button type="button" (click)="markContacted(request)">Mark contacted</button> }</div>
+                <div class="request-contact"><a [href]="'tel:' + request.patientPhone">{{ request.patientPhone }}</a><a [href]="whatsappLink(request.patientPhone, request.patientName, request.startAt)" target="_blank" rel="noopener">Open WhatsApp Web ↗</a>@if (request.patientEmail) { <a [href]="'mailto:' + request.patientEmail">{{ request.patientEmail }}</a> }<span class="status" [class.off]="!request.contactedAt">{{ request.status }} · {{ request.contactedAt ? 'Contacted' : 'Needs follow-up' }}</span>@if (!request.contactedAt && auth.hasPermission('Appointments.Edit')) { <button type="button" (click)="markContacted(request)">Mark contacted</button> }</div>
+                @if (auth.hasPermission('Appointments.Edit')) {
+                  <div class="follow-up-controls">
+                    <label>Assigned to <select [(ngModel)]="request.assignedToUserId"><option [ngValue]="null">Unassigned</option>@for (person of staff(); track person.id) { <option [value]="person.id">{{ person.displayName }}</option> }</select></label>
+                    <label>Next follow-up <input type="datetime-local" [ngModel]="localDateTime(request.followUpAt)" (ngModelChange)="request.followUpAt = $event ? newDateIso($event) : null" /></label>
+                    <label>Staff notes <input [(ngModel)]="request.staffNotes" maxlength="2000" /></label>
+                    <button type="button" (click)="saveRequest(request)">Save</button>
+                  </div>
+                }
               </article>
             }
           </div>

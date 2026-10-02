@@ -62,11 +62,12 @@ public sealed record PublicBookingRequest(
     string? PatientEmail,
     DateOnly? PatientDateOfBirth,
     string? PatientNotes,
-    string? IdempotencyKey
+    string? IdempotencyKey,
+    string? Source = null
 );
 
 public sealed record PublicBookingInquiryRequest(string PatientName, string PatientPhone,
-    string? PatientEmail, string? Message);
+    string? PatientEmail, string? Message, string? Source = null);
 
 public sealed record PublicBookingConfirmationDto(
     string BookingReference,
@@ -78,5 +79,6 @@ public sealed record PublicBookingConfirmationDto(
     string TimeZone,
     string PatientName,
     string PatientPhone,
-    string Status
+    string Status,
+    string? ManagementToken = null
 );

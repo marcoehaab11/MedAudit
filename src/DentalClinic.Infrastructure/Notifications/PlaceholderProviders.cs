@@ -1,23 +1,39 @@
 using DentalClinic.Domain.Notifications;
 using DentalClinic.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
+using System.Net;
+using System.Net.Mail;
 
 namespace DentalClinic.Infrastructure.Notifications;
 
 public sealed class EmailNotificationProvider(IConfiguration configuration) : INotificationProvider
 {
     public NotificationChannel Channel => NotificationChannel.Email;
-    public string ProviderName => "EmailPlaceholderProvider";
+    public string ProviderName => "SmtpEmailProvider";
 
-    public Task<NotificationProviderResult> SendAsync(NotificationDispatchContext context, CancellationToken cancellationToken)
+    public async Task<NotificationProviderResult> SendAsync(NotificationDispatchContext context, CancellationToken cancellationToken)
     {
-        var connection = configuration["ConnectionStrings:EmailProvider"] ?? configuration["EMAIL_PROVIDER_CONNECTION"];
-        if (string.IsNullOrWhiteSpace(connection))
+        var host = configuration["Smtp:Host"] ?? configuration["SMTP_HOST"];
+        var from = configuration["Smtp:From"] ?? configuration["SMTP_FROM"];
+        if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(from))
         {
-            return Task.FromResult(NotificationProviderResult.NotConfigured("Email provider is not configured."));
+            return NotificationProviderResult.NotConfigured("SMTP host and sender are not configured.");
         }
-
-        return Task.FromResult(NotificationProviderResult.Success($"EMAIL-{Guid.NewGuid():N}"));
+        try
+        {
+            using var client = new SmtpClient(host, int.TryParse(configuration["Smtp:Port"] ?? configuration["SMTP_PORT"], out var port) ? port : 587)
+            {
+                EnableSsl = !string.Equals(configuration["Smtp:EnableSsl"] ?? configuration["SMTP_ENABLE_SSL"], "false", StringComparison.OrdinalIgnoreCase),
+            };
+            var user = configuration["Smtp:Username"] ?? configuration["SMTP_USERNAME"];
+            var password = configuration["Smtp:Password"] ?? configuration["SMTP_PASSWORD"];
+            if (!string.IsNullOrWhiteSpace(user)) client.Credentials = new NetworkCredential(user, password);
+            using var message = new MailMessage(from, context.Destination, context.Subject ?? "Planora appointment", context.Body);
+            await client.SendMailAsync(message, cancellationToken);
+            return NotificationProviderResult.Success($"SMTP-{context.DeliveryId:N}");
+        }
+        catch (FormatException ex) { return NotificationProviderResult.PermanentFailure("INVALID_ADDRESS", ex.Message); }
+        catch (SmtpException ex) { return NotificationProviderResult.TransientFailure("SMTP_ERROR", ex.Message); }
     }
 }
 

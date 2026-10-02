@@ -18,6 +18,9 @@ interface BookingRequest {
   createdAt: string;
   status: string;
   contactedAt: string | null;
+  assignedToUserId: string | null;
+  staffNotes: string | null;
+  followUpAt: string | null;
 }
 
 interface BookingInquiry {
@@ -28,6 +31,22 @@ interface BookingInquiry {
   message: string | null;
   createdAt: string;
   contactedAt: string | null;
+  status: string;
+  assignedToUserId: string | null;
+  staffNotes: string | null;
+  followUpAt: string | null;
+}
+
+interface BookingSummary {
+  visits30Days: number;
+  sources: { source: string; count: number }[];
+  bookingSources: { source: string; count: number }[];
+  bookings30Days: number;
+  inquiries30Days: number;
+  awaitingContact: number;
+  overdue: number;
+  completed30Days: number;
+  noShows30Days: number;
 }
 
 @Component({
@@ -44,6 +63,8 @@ export class OnlineBookingPageComponent implements OnInit {
   protected readonly settings = signal<TenantSettings | null>(null);
   protected readonly requests = signal<BookingRequest[]>([]);
   protected readonly inquiries = signal<BookingInquiry[]>([]);
+  protected readonly staff = signal<{ id: string; displayName: string }[]>([]);
+  protected readonly summary = signal<BookingSummary | null>(null);
   protected readonly inquiryTotal = signal(0);
   protected readonly inquiryPage = signal(1);
   protected readonly total = signal(0);
@@ -79,7 +100,58 @@ export class OnlineBookingPageComponent implements OnInit {
       next: s => { this.settings.set(s); this.fillProfile(s); },
       error: () => this.error.set('Could not load online booking settings.'),
     });
-    if (this.auth.hasPermission('Appointments.View')) { this.loadRequests(); this.loadInquiries(); }
+    if (this.auth.hasPermission('Appointments.View')) { this.loadRequests(); this.loadInquiries(); this.loadSummary(); this.loadStaff(); }
+  }
+
+  protected loadSummary(): void {
+    this.http.get<BookingSummary>('/api/online-booking/summary').subscribe({ next: value => this.summary.set(value) });
+  }
+
+  private loadStaff(): void {
+    this.http.get<{ id: string; displayName: string }[]>('/api/online-booking/staff').subscribe({ next: value => this.staff.set(value) });
+  }
+
+  protected whatsappLink(phone: string, name: string, startAt?: string): string {
+    let digits = phone.replace(/\D/g, '');
+    if (digits.startsWith('00')) digits = digits.slice(2);
+    else if (digits.startsWith('0') && /egypt|مصر/i.test(this.settings()?.country || 'Egypt')) digits = `20${digits.slice(1)}`;
+    const text = startAt
+      ? `أهلاً ${name}، معك عيادة ${this.settings()?.clinicName || ''}. بخصوص موعدك يوم ${new Date(startAt).toLocaleString('ar-EG')}. هل الموعد مناسب لك؟`
+      : `أهلاً ${name}، معك عيادة ${this.settings()?.clinicName || ''}. وصلنا طلب التواصل الخاص بك، ما الوقت المناسب للاتصال بك؟`;
+    return `https://web.whatsapp.com/send?phone=${digits}&text=${encodeURIComponent(text)}`;
+  }
+
+  protected localDateTime(value: string | null): string {
+    if (!value) return '';
+    const date = new Date(value);
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+  }
+
+  protected newDateIso(value: string): string { return new Date(value).toISOString(); }
+
+  protected bookingCountForSource(source: string): number {
+    return this.summary()?.bookingSources.find(item => item.source === source)?.count || 0;
+  }
+
+  protected saveInquiry(item: BookingInquiry): void {
+    this.http.put<void>(`/api/online-booking/inquiries/${item.id}/follow-up`, {
+      status: item.status, assignedToUserId: item.assignedToUserId || null,
+      notes: item.staffNotes || null, followUpAt: item.followUpAt || null,
+    }).subscribe({
+      next: () => { this.message.set('Follow-up saved.'); this.loadInquiries(this.inquiryPage()); this.loadSummary(); },
+      error: err => this.error.set(err?.error?.title || 'Could not save follow-up.'),
+    });
+  }
+
+  protected saveRequest(item: BookingRequest): void {
+    this.http.put<void>(`/api/online-booking/requests/${item.id}/follow-up`, {
+      assignedToUserId: item.assignedToUserId || null,
+      notes: item.staffNotes || null, followUpAt: item.followUpAt || null,
+    }).subscribe({
+      next: () => { this.message.set('Follow-up saved.'); this.loadRequests(this.page()); },
+      error: err => this.error.set(err?.error?.title || 'Could not save follow-up.'),
+    });
   }
 
   protected loadRequests(page = 1): void {
@@ -132,14 +204,14 @@ export class OnlineBookingPageComponent implements OnInit {
 
   protected markContacted(request: BookingRequest): void {
     this.http.post<void>(`/api/online-booking/requests/${request.id}/contacted`, {}).subscribe({
-      next: () => this.loadRequests(this.page()),
+      next: () => { this.loadRequests(this.page()); this.loadSummary(); },
       error: () => this.error.set('Could not mark this patient as contacted.'),
     });
   }
 
   protected markInquiryContacted(inquiry: BookingInquiry): void {
     this.http.post<void>(`/api/online-booking/inquiries/${inquiry.id}/contacted`, {}).subscribe({
-      next: () => this.loadInquiries(this.inquiryPage()),
+      next: () => { this.loadInquiries(this.inquiryPage()); this.loadSummary(); },
       error: () => this.error.set('Could not mark this callback request as contacted.'),
     });
   }
@@ -147,6 +219,11 @@ export class OnlineBookingPageComponent implements OnInit {
   protected async copyLink(): Promise<void> {
     try { await navigator.clipboard.writeText(this.bookingUrl); this.message.set('Booking link copied.'); }
     catch { this.error.set('Copy failed. Select and copy the link below.'); }
+  }
+
+  protected async copyGoogleLink(): Promise<void> {
+    try { await navigator.clipboard.writeText(`${this.bookingUrl}?source=google`); this.message.set('Google booking link copied.'); }
+    catch { this.error.set('Could not copy the Google link.'); }
   }
 
   protected downloadQr(): void {

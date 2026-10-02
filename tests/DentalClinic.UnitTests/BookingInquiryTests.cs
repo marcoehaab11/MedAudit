@@ -25,4 +25,19 @@ public sealed class BookingInquiryTests
         Assert.Throws<ArgumentException>(() => new BookingInquiry(Guid.NewGuid(), " ", "123", null, null, DateTimeOffset.UtcNow));
         Assert.Throws<ArgumentException>(() => new BookingInquiry(Guid.NewGuid(), "Sara", " ", null, null, DateTimeOffset.UtcNow));
     }
+
+    [Fact]
+    public void FollowUpTracksOwnerStatusAndNextAction()
+    {
+        var now = new DateTimeOffset(2026, 10, 2, 10, 0, 0, TimeSpan.Zero);
+        var inquiry = new BookingInquiry(Guid.NewGuid(), "Sara", "01000000000", null, null, now, "qr");
+        var staff = Guid.NewGuid();
+        inquiry.UpdateFollowUp("Contacted", staff, "Call again tomorrow", now.AddDays(1), now);
+        Assert.Equal("Contacted", inquiry.Status);
+        Assert.Equal("qr", inquiry.Source);
+        Assert.Equal(staff, inquiry.AssignedToUserId);
+        Assert.Equal(now.AddDays(1), inquiry.FollowUpAt);
+        Assert.Equal(now, inquiry.ContactedAt);
+        Assert.Throws<ArgumentException>(() => inquiry.UpdateFollowUp("Invalid", null, null, null, now));
+    }
 }

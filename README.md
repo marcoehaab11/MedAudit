@@ -141,6 +141,16 @@ Internal clinic scheduling is available at `/appointments` and `/appointments/cr
 
 PostgreSQL exclusion constraints protect both doctor and patient time ranges using half-open `[start, end)` intervals scoped by `TenantId`. Only cancelled appointments are excluded from these constraints, so cancellation releases a slot while completed and no-show appointments preserve the historical occupancy of their original time. Application conflict checks provide early feedback, while the database constraints remain authoritative under concurrent requests. Public booking and holiday/calendar rules are intentionally not part of this phase and must reuse this scheduling engine later.
 
+### Online booking follow-up
+
+The clinic's Online Booking page shows callback requests, bookings, staff ownership, follow-up notes and dates, overdue requests, and 30-day visit and booking sources. The QR link identifies its source as `qr`. The Google Business Profile button copies the clinic booking URL with `?source=google`; adding that URL to the clinic's Google profile is done by its owner.
+
+A patient receives a private management URL after booking and, if an email address was entered, by email. It can confirm, cancel, or reschedule the appointment subject to the clinic's cancellation notice period. Treat the management URL as a secret.
+
+Booking confirmations and reminder emails use the notification worker and SMTP. Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_ENABLE_SSL` on the API and worker. When SMTP is unconfigured, deliveries remain unsuccessful in the notification log; the booking still succeeds.
+
+Staff can open a patient chat in WhatsApp Web from the follow-up page. WhatsApp Web itself prompts for QR login when needed. A prepared message opens, and a staff member reviews and sends it. No background WhatsApp Web session or unattended sending is used.
+
 ## Dental chart and clinical examinations
 
 - Permanent teeth use validated FDI numbers and stable GUID tooth references; the catalog can be extended for primary dentition later.

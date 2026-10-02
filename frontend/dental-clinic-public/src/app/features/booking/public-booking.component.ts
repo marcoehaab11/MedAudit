@@ -58,6 +58,10 @@ export class PublicBookingComponent implements OnInit {
   protected readonly inquirySubmitting = signal(false);
   protected readonly inquirySent = signal(false);
   protected readonly inquiryError = signal('');
+  private get source(): string {
+    const value = this.route.snapshot.queryParamMap.get('source')?.toLowerCase();
+    return value === 'qr' || value === 'google' || value === 'social' ? value : 'direct';
+  }
 
   protected sendInquiry(): void {
     if (!this.inquiryName.trim() || !this.inquiryPhone.trim() || this.inquirySubmitting()) return;
@@ -66,6 +70,7 @@ export class PublicBookingComponent implements OnInit {
     this.api.sendInquiry(this.clinicSlug(), {
       patientName: this.inquiryName, patientPhone: this.inquiryPhone,
       patientEmail: this.inquiryEmail || undefined, message: this.inquiryMessage || undefined,
+      source: this.source,
     }).subscribe({
       next: () => { this.inquirySubmitting.set(false); this.inquirySent.set(true); },
       error: () => { this.inquirySubmitting.set(false); this.inquiryError.set('Could not send your request. Please try again.'); },
@@ -112,6 +117,7 @@ export class PublicBookingComponent implements OnInit {
     this.api.getClinicBySlug(slug).subscribe({
       next: (clinic) => {
         this.clinic.set(clinic);
+        this.api.recordVisit(slug, this.source);
         this.loadDoctorsAndServices(slug);
       },
       error: (err) => {
@@ -242,12 +248,15 @@ export class PublicBookingComponent implements OnInit {
       patientDateOfBirth: this.patientDateOfBirth || undefined,
       patientNotes: this.patientNotes.trim() || undefined,
       idempotencyKey,
+      source: this.source,
     };
 
     this.api.createBooking(this.clinicSlug(), payload).subscribe({
       next: (confirmation) => {
         this.submitting.set(false);
-        this.router.navigate(['/book/confirmation', confirmation.bookingReference]);
+        this.router.navigate(['/book/confirmation', confirmation.bookingReference], {
+          queryParams: confirmation.managementToken ? { manage: confirmation.managementToken } : {},
+        });
       },
       error: (err) => {
         this.submitting.set(false);

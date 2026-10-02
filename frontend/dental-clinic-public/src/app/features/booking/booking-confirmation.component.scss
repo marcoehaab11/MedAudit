@@ -109,3 +109,10 @@
   border-radius: 8px;
   text-align: left;
 }
+.patient-actions { margin-top: 24px; padding: 20px; border: 1px solid #cfe4d3; border-radius: 14px; display: grid; gap: 12px; text-align: left; }
+.patient-actions h3,.patient-actions p { margin: 0; }
+.patient-actions label { display: grid; gap: 5px; }
+.patient-actions input,.patient-actions select { padding: 10px; border: 1px solid #cbded1; border-radius: 8px; }
+.patient-actions button { border: 0; background: #0b7656; color: white; border-radius: 8px; padding: 10px 15px; cursor: pointer; justify-self: start; }
+.patient-actions button:disabled { opacity: .5; }
+.change-time { display: grid; gap: 10px; }

@@ -37,7 +37,12 @@ public sealed class Appointment : TenantOwnedEntity
     public string? Notes { get; private set; }
     public string? CancellationReason { get; private set; }
     public string? BookingReference { get; private set; }
+    public string? PublicBookingSource { get; private set; }
     public DateTimeOffset? PublicBookingContactedAt { get; private set; }
+    public Guid? PublicBookingAssignedToUserId { get; private set; }
+    public string? PublicBookingStaffNotes { get; private set; }
+    public DateTimeOffset? PublicBookingFollowUpAt { get; private set; }
+    public string? PublicManagementTokenHash { get; private set; }
     public Guid? TreatmentCatalogItemId { get; private set; }
     public Guid CreatedBy { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
@@ -54,6 +59,27 @@ public sealed class Appointment : TenantOwnedEntity
         if (BookingReference is null) throw new InvalidOperationException("This is not an online booking.");
         PublicBookingContactedAt = occurredAt;
         UpdatedAt = occurredAt;
+    }
+
+    public void SetPublicManagementToken(string tokenHash)
+    {
+        if (BookingReference is null) throw new InvalidOperationException("This is not an online booking.");
+        PublicManagementTokenHash = NormalizeRequired(tokenHash, nameof(tokenHash), 64);
+    }
+
+    public void SetPublicBookingSource(string? source)
+    {
+        if (BookingReference is null) throw new InvalidOperationException("This is not an online booking.");
+        PublicBookingSource = string.IsNullOrWhiteSpace(source) ? "direct" : NormalizeRequired(source, nameof(source), 40).ToLowerInvariant();
+    }
+
+    public void UpdatePublicBookingFollowUp(Guid? assignedToUserId, string? notes, DateTimeOffset? followUpAt, DateTimeOffset now)
+    {
+        if (BookingReference is null) throw new InvalidOperationException("This is not an online booking.");
+        PublicBookingAssignedToUserId = assignedToUserId;
+        PublicBookingStaffNotes = NormalizeOptional(notes, nameof(notes), 2000);
+        PublicBookingFollowUpAt = followUpAt;
+        UpdatedAt = now;
     }
 
     public void Reschedule(DateTimeOffset startAt, int durationMinutes, DateTimeOffset updatedAt)
