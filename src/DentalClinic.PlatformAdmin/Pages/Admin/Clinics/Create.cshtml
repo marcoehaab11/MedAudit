@@ -112,6 +112,15 @@
 
         <!-- Right Column: Administrator Account & Handover -->
         <div class="col-12 col-lg-4">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 px-4 border-bottom"><h5 class="fw-bold mb-0">Subscription</h5></div>
+                <div class="card-body p-4">
+                    <label asp-for="Input.SubscriptionMonths" class="form-label fw-semibold">Initial duration in months</label>
+                    <input asp-for="Input.SubscriptionMonths" type="number" min="1" max="120" class="form-control" />
+                    <span asp-validation-for="Input.SubscriptionMonths" class="text-danger small"></span>
+                    <div class="form-text">Starts when the clinic is created. Access ends automatically at the expiry date unless you extend it.</div>
+                </div>
+            </div>
             <div class="card shadow-sm border-0 mb-4 bg-emerald-subtle border-emerald-subtle">
                 <div class="card-header bg-transparent py-3 px-4 border-bottom border-emerald-200">
                     <h5 class="fw-bold mb-0 text-emerald-900 d-flex align-items-center gap-2">

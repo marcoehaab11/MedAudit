@@ -10,4 +10,6 @@ public interface IClinicManagementService
     Task<CreateClinicResult> CreateAsync(CreateClinicCommand command, CancellationToken cancellationToken);
     Task<bool> UpdateAsync(UpdateClinicCommand command, CancellationToken cancellationToken);
     Task<bool> ChangeStatusAsync(Guid tenantId, TenantStatus status, CancellationToken cancellationToken);
+    Task<bool> ExtendSubscriptionAsync(Guid tenantId, int months, CancellationToken cancellationToken);
+    Task<bool> SetUserActiveAsync(Guid tenantId, Guid userId, bool active, CancellationToken cancellationToken);
 }

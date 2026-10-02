@@ -87,6 +87,7 @@ else
                         <th class="ps-4">Clinic Name</th>
                         <th>Tenant Slug</th>
                         <th>Status</th>
+                        <th>Subscription</th>
                         <th>Location</th>
                         <th>Admin Contact</th>
                         <th>Created</th>
@@ -124,6 +125,12 @@ else
                                     @clinic.Status
                                 </span>
                             }
+                        </td>
+                        <td>
+                            @if (clinic.SubscriptionExpiresAt <= DateTimeOffset.UtcNow)
+                            { <span class="badge bg-danger">Expired</span> }
+                            else
+                            { <span class="badge bg-success">Until @clinic.SubscriptionExpiresAt.ToString("dd/MM/yyyy")</span> }
                         </td>
                         <td class="text-slate-600">@clinic.City, @clinic.Country</td>
                         <td class="text-slate-600 font-monospace small">@(clinic.AdminEmail ?? "Pending")</td>

@@ -10,4 +10,5 @@ public sealed record ClinicListItem(
     string Country,
     string City,
     string? AdminEmail,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    DateTimeOffset SubscriptionExpiresAt);

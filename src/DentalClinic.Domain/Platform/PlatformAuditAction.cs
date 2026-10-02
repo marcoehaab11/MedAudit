@@ -126,5 +126,6 @@ public enum PlatformAuditAction
     SettingsHolidayUpdated = 122,
     SettingsHolidayDeleted = 123,
     SettingsModuleConfigUpdated = 124,
-    DoctorProfileRestored = 125
+    DoctorProfileRestored = 125,
+    SubscriptionExtended = 126
 }

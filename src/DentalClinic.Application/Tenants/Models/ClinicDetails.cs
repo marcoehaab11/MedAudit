@@ -17,4 +17,6 @@ public sealed record ClinicDetails(
     TenantStatus Status,
     string? AdminEmail,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    DateTimeOffset SubscriptionStartsAt,
+    DateTimeOffset SubscriptionExpiresAt);

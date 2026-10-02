@@ -18,8 +18,11 @@ public sealed partial class Tenant : Entity
         string timeZone,
         string currency,
         DateTimeOffset createdAt,
-        string? logoReference = null)
+        string? logoReference = null,
+        int subscriptionMonths = 1)
     {
+        if (subscriptionMonths < 1 || subscriptionMonths > 120)
+            throw new ArgumentOutOfRangeException(nameof(subscriptionMonths));
         Name = Required(name, nameof(name), 200);
         Slug = NormalizeSlug(slug);
         Phone = Required(phone, nameof(phone), 50);
@@ -33,6 +36,8 @@ public sealed partial class Tenant : Entity
         Status = TenantStatus.Active;
         CreatedAt = createdAt;
         UpdatedAt = createdAt;
+        SubscriptionStartsAt = createdAt;
+        SubscriptionExpiresAt = createdAt.AddMonths(subscriptionMonths);
     }
 
     public string Name { get; private set; } = string.Empty;
@@ -48,6 +53,17 @@ public sealed partial class Tenant : Entity
     public TenantStatus Status { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
+    public DateTimeOffset SubscriptionStartsAt { get; private set; }
+    public DateTimeOffset SubscriptionExpiresAt { get; private set; }
+    public bool HasActiveSubscription(DateTimeOffset now) => SubscriptionStartsAt <= now && now < SubscriptionExpiresAt;
+
+    public void ExtendSubscription(int months, DateTimeOffset now)
+    {
+        if (months < 1 || months > 120) throw new ArgumentOutOfRangeException(nameof(months));
+        if (SubscriptionExpiresAt <= now) SubscriptionStartsAt = now;
+        SubscriptionExpiresAt = (SubscriptionExpiresAt > now ? SubscriptionExpiresAt : now).AddMonths(months);
+        UpdatedAt = now;
+    }
 
     public void Update(
         string name,

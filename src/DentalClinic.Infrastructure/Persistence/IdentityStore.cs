@@ -216,7 +216,8 @@ internal sealed class IdentityStore(
                join user in context.ClinicUsers.IgnoreQueryFilters().AsNoTracking() on identity.Id equals user.Id
                join tenant in context.Tenants.AsNoTracking() on user.TenantId equals tenant.Id
                where identity.NormalizedEmail == normalizedEmail
-               select new LoginAccount(user.Id, user.TenantId, user.DisplayName, user.Status, tenant.Status))
+               select new LoginAccount(user.Id, user.TenantId, user.DisplayName, user.Status,
+                   tenant.Status, tenant.SubscriptionStartsAt, tenant.SubscriptionExpiresAt))
             .SingleOrDefaultAsync(cancellationToken);
 
     public async Task<IReadOnlyCollection<string>> GetRoleNamesForUserAsync(

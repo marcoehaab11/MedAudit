@@ -1,6 +1,7 @@
 @page "/admin/clinics/{id:guid}"
 @model DentalClinic.PlatformAdmin.Pages.Admin.Clinics.DetailsModel
 @using DentalClinic.Domain.Tenancy
+@using DentalClinic.Domain.Identity
 @{
     ViewData["Title"] = Model.Clinic.Name;
     var adminPassword = TempData["CreatedAdminPassword"] as string;
@@ -46,6 +47,34 @@
         <a class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" asp-page="Index">
             <i class="bi bi-arrow-left"></i> All Clinics
         </a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white py-3 px-4 border-bottom"><h5 class="fw-bold mb-0">Subscription &amp; clinic access</h5></div>
+    <div class="card-body p-4">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3"><span class="text-muted small d-block">Started (UTC)</span><strong>@Model.Clinic.SubscriptionStartsAt.ToString("dd/MM/yyyy HH:mm")</strong></div>
+            <div class="col-md-3"><span class="text-muted small d-block">Expires (UTC)</span><strong>@Model.Clinic.SubscriptionExpiresAt.ToString("dd/MM/yyyy HH:mm")</strong></div>
+            <div class="col-md-3">
+                @if (Model.Clinic.SubscriptionExpiresAt <= Model.Now)
+                { <span class="badge bg-danger">Expired — all clinic users blocked</span> }
+                else if (Model.Clinic.Status != TenantStatus.Active)
+                { <span class="badge bg-warning text-dark">Subscription valid; clinic disabled</span> }
+                else
+                { <span class="badge bg-success">Active — @Math.Ceiling((Model.Clinic.SubscriptionExpiresAt - Model.Now).TotalDays) days left</span> }
+            </div>
+            <div class="col-md-3">
+                <form method="post" asp-page-handler="Extend" class="d-flex gap-2">
+                    <input type="hidden" name="id" value="@Model.Clinic.Id" />
+                    <input name="months" type="number" min="1" max="120" value="1" required class="form-control" aria-label="Months to add" />
+                    <button type="submit" class="btn btn-primary text-nowrap">Add months</button>
+                </form>
+                @if (ViewData.ModelState.TryGetValue("months", out var monthErrors) && monthErrors.Errors.Count > 0)
+                { <span class="text-danger small">@monthErrors.Errors[0].ErrorMessage</span> }
+            </div>
+        </div>
+        <p class="text-muted small mt-3 mb-0">Expiry blocks the owner and every staff account automatically. Suspending the clinic blocks them immediately even when the subscription is valid.</p>
     </div>
 </div>
 
@@ -227,6 +256,41 @@
             </div>
         </div>
     </div>
+</div>
+
+<div class="card shadow-sm border-0 mt-4 mb-4">
+    <div class="card-header bg-white py-3 px-4 border-bottom"><h5 class="fw-bold mb-0">Clinic users &amp; individual access</h5></div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th class="ps-4">User</th><th>Role</th><th>Status</th><th class="text-end pe-4">Access</th></tr></thead>
+            <tbody>
+            @foreach (var user in Model.Users.Items)
+            {
+                <tr>
+                    <td class="ps-4"><strong>@user.DisplayName</strong><div class="text-muted small">@user.Email</div></td>
+                    <td>@string.Join(", ", user.Roles)</td>
+                    <td><span class="badge @(user.Status == UserStatus.Active ? "bg-success" : "bg-secondary")">@user.Status</span></td>
+                    <td class="text-end pe-4">
+                        <form method="post" asp-page-handler="UserAccess" class="d-inline">
+                                <input type="hidden" name="id" value="@Model.Clinic.Id" />
+                                <input type="hidden" name="userId" value="@user.Id" />
+                                <input type="hidden" name="active" value="@(user.Status == UserStatus.Inactive ? "true" : "false")" />
+                            <button class="btn btn-sm @(user.Status == UserStatus.Inactive ? "btn-outline-success" : "btn-outline-danger")" type="submit">@(user.Status == UserStatus.Active ? "Disable now" : user.Status == UserStatus.Invited ? "Cancel access" : "Restore access")</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.Users.TotalCount > Model.Users.PageSize)
+    {
+        <div class="card-footer bg-white d-flex justify-content-between">
+            @if (Model.Users.Page > 1) { <a asp-route-id="@Model.Clinic.Id" asp-route-userPage="@(Model.Users.Page - 1)">Previous</a> }
+            <span>Page @Model.Users.Page</span>
+            @if (Model.Users.Page * Model.Users.PageSize < Model.Users.TotalCount) { <a asp-route-id="@Model.Clinic.Id" asp-route-userPage="@(Model.Users.Page + 1)">Next</a> }
+        </div>
+    }
 </div>
 
 @section Scripts {

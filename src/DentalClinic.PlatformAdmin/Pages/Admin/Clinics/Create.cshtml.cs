@@ -42,7 +42,8 @@ public sealed class CreateModel(
                 Input.TimeZone,
                 Input.Currency,
                 Input.AdminEmail,
-                Input.LogoReference), cancellationToken);
+                Input.LogoReference,
+                Input.SubscriptionMonths), cancellationToken);
 
             if (!string.IsNullOrWhiteSpace(Input.AdminPassword))
             {
@@ -72,6 +73,9 @@ public sealed class CreateModel(
 
     public sealed class InputModel
     {
+        [Range(1, 120, ErrorMessage = "Choose between 1 and 120 months.")]
+        [Display(Name = "Initial subscription (months)")]
+        public int SubscriptionMonths { get; set; } = 1;
         [Required(ErrorMessage = "Clinic name is required"), StringLength(200)]
         [Display(Name = "Clinic Name")]
         public string Name { get; set; } = string.Empty;

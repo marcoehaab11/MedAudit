@@ -11,4 +11,5 @@ public sealed record CreateClinicCommand(
     string TimeZone,
     string Currency,
     string AdminEmail,
-    string? LogoReference);
+    string? LogoReference,
+    int SubscriptionMonths = 1);

@@ -12,6 +12,7 @@ public interface IPlatformClinicStore
     Task<PagedResult<ClinicListItem>> SearchAsync(ClinicSearchQuery query, CancellationToken cancellationToken);
     Task<ClinicDetails?> GetDetailsAsync(Guid tenantId, CancellationToken cancellationToken);
     Task<Tenant?> FindTenantAsync(Guid tenantId, CancellationToken cancellationToken);
+    Task<DentalClinic.Domain.Identity.ClinicUser?> FindClinicUserAsync(Guid tenantId, Guid userId, CancellationToken cancellationToken);
     Task<bool> SlugExistsAsync(string slug, Guid? excludingTenantId, CancellationToken cancellationToken);
     Task<AdminInvitation?> FindInvitationByTokenHashAsync(string tokenHash, CancellationToken cancellationToken);
     Task<TenantRole?> FindRoleByNameAsync(Guid tenantId, string normalizedName, CancellationToken cancellationToken);

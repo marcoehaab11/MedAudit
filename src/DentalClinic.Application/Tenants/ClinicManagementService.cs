@@ -69,7 +69,8 @@ internal sealed class ClinicManagementService(
             command.TimeZone,
             command.Currency,
             now,
-            command.LogoReference);
+            command.LogoReference,
+            command.SubscriptionMonths);
 
         store.AddTenant(tenant);
         await store.SavePlatformChangesAsync(tenant.Id, cancellationToken);
@@ -191,6 +192,36 @@ internal sealed class ClinicManagementService(
 
         store.AddAudit(Audit(tenant.Id, action, nameof(Tenant), tenant.Id, now));
         await store.SavePlatformChangesAsync(tenant.Id, cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> ExtendSubscriptionAsync(Guid tenantId, int months, CancellationToken cancellationToken)
+    {
+        EnsurePlatformAdmin();
+        if (months < 1 || months > 120) throw Validation(nameof(months), "Choose between 1 and 120 months.");
+        var tenant = await store.FindTenantAsync(tenantId, cancellationToken);
+        if (tenant is null) return false;
+        var now = clock.UtcNow;
+        tenant.ExtendSubscription(months, now);
+        store.AddAudit(Audit(tenantId, PlatformAuditAction.SubscriptionExtended, nameof(Tenant), tenantId, now));
+        await store.SavePlatformChangesAsync(tenantId, cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> SetUserActiveAsync(Guid tenantId, Guid userId, bool active, CancellationToken cancellationToken)
+    {
+        EnsurePlatformAdmin();
+        if (tenantId == Guid.Empty || userId == Guid.Empty) return false;
+        var user = await store.FindClinicUserAsync(tenantId, userId, cancellationToken);
+        if (user is null) return false;
+        if (active && user.Status == UserStatus.Invited) return false;
+        var now = clock.UtcNow;
+        if (active) user.Activate(now);
+        else if (user.Status == UserStatus.Invited) user.CancelInvitation(now);
+        else user.Deactivate(now);
+        store.AddAudit(Audit(tenantId, active ? PlatformAuditAction.UserActivated : PlatformAuditAction.UserDeactivated,
+            nameof(ClinicUser), userId, now));
+        await store.SavePlatformChangesAsync(tenantId, cancellationToken);
         return true;
     }
 

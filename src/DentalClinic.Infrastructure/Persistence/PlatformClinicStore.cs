@@ -58,7 +58,8 @@ internal sealed class PlatformClinicStore(
                 adminUsers.Where(user => user.TenantId == tenant.Id)
                     .Select(user => user.Email)
                     .FirstOrDefault(),
-                tenant.CreatedAt))
+                tenant.CreatedAt,
+                tenant.SubscriptionExpiresAt))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<ClinicListItem>(items, query.Page, query.PageSize, totalCount);
@@ -91,12 +92,18 @@ internal sealed class PlatformClinicStore(
                 tenant.Status,
                 adminUsers.Select(user => user.Email).FirstOrDefault(),
                 tenant.CreatedAt,
-                tenant.UpdatedAt))
+                tenant.UpdatedAt,
+                tenant.SubscriptionStartsAt,
+                tenant.SubscriptionExpiresAt))
             .SingleOrDefaultAsync(cancellationToken);
     }
 
     public Task<Tenant?> FindTenantAsync(Guid tenantId, CancellationToken cancellationToken) =>
         context.Tenants.SingleOrDefaultAsync(x => x.Id == tenantId, cancellationToken);
+
+    public Task<ClinicUser?> FindClinicUserAsync(Guid tenantId, Guid userId, CancellationToken cancellationToken) =>
+        context.ClinicUsers.IgnoreQueryFilters().SingleOrDefaultAsync(
+            x => x.TenantId == tenantId && x.Id == userId, cancellationToken);
 
     public Task<bool> SlugExistsAsync(
         string slug,

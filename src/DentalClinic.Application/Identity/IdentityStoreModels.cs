@@ -8,7 +8,9 @@ public sealed record LoginAccount(
     Guid TenantId,
     string DisplayName,
     UserStatus UserStatus,
-    TenantStatus TenantStatus);
+    TenantStatus TenantStatus,
+    DateTimeOffset SubscriptionStartsAt,
+    DateTimeOffset SubscriptionExpiresAt);
 
 public sealed record InvitationAccount(
     AdminInvitation Invitation,

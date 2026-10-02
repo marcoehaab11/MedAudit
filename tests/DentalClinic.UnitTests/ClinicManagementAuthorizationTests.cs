@@ -31,6 +31,12 @@ public sealed class ClinicManagementAuthorizationTests
 
         await Assert.ThrowsAsync<ForbiddenAccessException>(() =>
             service.ChangeStatusAsync(Guid.NewGuid(), TenantStatus.Suspended, CancellationToken.None));
+
+        await Assert.ThrowsAsync<ForbiddenAccessException>(() =>
+            service.ExtendSubscriptionAsync(Guid.NewGuid(), 1, CancellationToken.None));
+
+        await Assert.ThrowsAsync<ForbiddenAccessException>(() =>
+            service.SetUserActiveAsync(Guid.NewGuid(), Guid.NewGuid(), false, CancellationToken.None));
     }
 
     private static ServiceProvider CreateProvider()
@@ -70,6 +76,7 @@ public sealed class ClinicManagementAuthorizationTests
         public Task<PagedResult<ClinicListItem>> SearchAsync(ClinicSearchQuery query, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<ClinicDetails?> GetDetailsAsync(Guid tenantId, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<Tenant?> FindTenantAsync(Guid tenantId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<ClinicUser?> FindClinicUserAsync(Guid tenantId, Guid userId, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<bool> SlugExistsAsync(string slug, Guid? excludingTenantId, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<AdminInvitation?> FindInvitationByTokenHashAsync(string tokenHash, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<TenantRole?> FindRoleByNameAsync(Guid tenantId, string normalizedName, CancellationToken cancellationToken) => throw new NotSupportedException();

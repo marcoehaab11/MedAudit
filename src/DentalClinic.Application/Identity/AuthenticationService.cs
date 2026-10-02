@@ -21,6 +21,8 @@ internal sealed class AuthenticationService(
         if (account is null ||
             account.UserStatus != UserStatus.Active ||
             account.TenantStatus != TenantStatus.Active ||
+            account.SubscriptionStartsAt > DateTimeOffset.UtcNow ||
+            account.SubscriptionExpiresAt <= DateTimeOffset.UtcNow ||
             !await credentials.CheckPasswordAsync(account.UserId, command.Password, cancellationToken))
         {
             return null;

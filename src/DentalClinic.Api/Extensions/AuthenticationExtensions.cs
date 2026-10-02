@@ -5,6 +5,10 @@ using DentalClinic.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
+using DentalClinic.Infrastructure.Persistence;
+using DentalClinic.Domain.Tenancy;
+using DentalClinic.Domain.Identity;
 
 namespace DentalClinic.Api.Extensions;
 
@@ -42,6 +46,29 @@ internal static class AuthenticationExtensions
                     NameClaimType = "name",
                     RoleClaimType = "role",
                     ClockSkew = TimeSpan.FromMinutes(1)
+                };
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        var tenantClaim = context.Principal?.FindFirst(AuthConstants.TenantIdClaim)?.Value;
+                        var userClaim = context.Principal?.FindFirst("sub")?.Value;
+                        if (!Guid.TryParse(tenantClaim, out var tenantId) ||
+                            !Guid.TryParse(userClaim, out var userId))
+                        {
+                            context.Fail("Invalid clinic session.");
+                            return;
+                        }
+                        var db = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
+                        var now = DateTimeOffset.UtcNow;
+                        var allowed = await (from user in db.ClinicUsers.IgnoreQueryFilters().AsNoTracking()
+                                             join tenant in db.Tenants.AsNoTracking() on user.TenantId equals tenant.Id
+                                             where user.Id == userId && user.TenantId == tenantId &&
+                                                   user.Status == UserStatus.Active && tenant.Status == TenantStatus.Active &&
+                                                   tenant.SubscriptionStartsAt <= now && tenant.SubscriptionExpiresAt > now
+                                             select user.Id).AnyAsync(context.HttpContext.RequestAborted);
+                        if (!allowed) context.Fail("Clinic subscription or user access is inactive.");
+                    }
                 };
             });
 
