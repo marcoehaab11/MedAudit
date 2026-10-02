@@ -43,6 +43,7 @@
                                 <i class="bi bi-building me-1"></i> Clinics Management
                             </a>
                         </li>
+                        <li class="nav-item"><a class="nav-link @(ViewContext.RouteData.Values["page"]?.ToString() == "/Admin/Operations" ? "active" : "")" asp-page="/Admin/Operations"><i class="bi bi-activity me-1"></i> Operations</a></li>
                     </ul>
                     <div class="d-flex align-items-center gap-3">
                         <span class="system-status-pill d-none d-md-inline-flex align-items-center gap-2">

@@ -1,0 +1,49 @@
+name: Planora production health
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      API_URL: ${{ vars.PLANORA_API_HEALTH_URL || 'https://api.medaudit.online/health/ready' }}
+      ADMIN_URL: ${{ vars.PLANORA_ADMIN_HEALTH_URL || 'https://admin.medaudit.online/health/ready' }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Check public endpoints and manage incident
+        shell: bash
+        run: |
+          title='Planora production health alert'
+          failures=''
+          for name in API Admin; do
+            url_var="${name}_URL"
+            url="${!url_var}"
+            status=$(curl --silent --show-error --location --max-time 12 --output /dev/null --write-out '%{http_code}' "$url") || status='unreachable'
+            if [[ "$status" != '200' ]]; then
+              failures+="$name ($url): $status"$'\n'
+            fi
+          done
+
+          issue=$(gh issue list --repo "$GH_REPO" --state open --limit 100 --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)
+          if [[ -n "$failures" ]]; then
+            if [[ -z "$issue" ]]; then
+              gh issue create --repo "$GH_REPO" --title "$title" --body "The external health check failed at $(date -u +'%Y-%m-%d %H:%M UTC').
+
+$failures
+The workflow runs every 10 minutes and will close this issue after recovery."
+            fi
+            printf '%s' "$failures"
+            exit 1
+          fi
+
+          if [[ -n "$issue" ]]; then
+            gh issue close "$issue" --repo "$GH_REPO" --comment "Both public health endpoints recovered at $(date -u +'%Y-%m-%d %H:%M UTC')."
+          fi

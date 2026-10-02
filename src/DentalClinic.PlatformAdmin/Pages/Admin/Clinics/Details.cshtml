@@ -50,6 +50,21 @@
     </div>
 </div>
 
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white py-3 px-4"><h2 class="h5 fw-bold mb-0">Clinic activity · last 30 days</h2></div>
+    <div class="card-body p-4">
+        <div class="row g-3">
+            <div class="col-6 col-lg-2"><div class="p-3 bg-light rounded"><small>New patients</small><div class="h3 mb-0">@Model.Usage.Patients</div></div></div>
+            <div class="col-6 col-lg-2"><div class="p-3 bg-light rounded"><small>Appointments</small><div class="h3 mb-0">@Model.Usage.Appointments</div></div></div>
+            <div class="col-6 col-lg-2"><div class="p-3 bg-light rounded"><small>Online bookings</small><div class="h3 mb-0">@Model.Usage.OnlineBookings</div></div></div>
+            <div class="col-6 col-lg-2"><div class="p-3 bg-light rounded"><small>Booking leads</small><div class="h3 mb-0">@Model.Usage.BookingInquiries</div></div></div>
+            <div class="col-6 col-lg-2"><div class="p-3 bg-light rounded"><small>Page visits</small><div class="h3 mb-0">@Model.Usage.PageVisits</div></div></div>
+            <div class="col-6 col-lg-2"><div class="p-3 bg-light rounded"><small>Failed messages</small><div class="h3 mb-0 @(Model.Usage.FailedNotifications > 0 ? "text-danger" : "")">@Model.Usage.FailedNotifications</div></div></div>
+        </div>
+        <div class="mt-3 small text-muted">Uncontacted booking leads over 2 hours: <strong class="@(Model.Usage.UncontactedLeads > 0 ? "text-warning" : "")">@Model.Usage.UncontactedLeads</strong> · Last appointment recorded: @(Model.Usage.LastActivity?.ToString("dd MMM yyyy HH:mm 'UTC'") ?? "None yet")</div>
+    </div>
+</div>
+
 <div class="card shadow-sm border-0 mb-4 booking-share-card">
     <div class="card-body p-4 d-flex flex-wrap gap-4 align-items-center justify-content-between">
         <div class="flex-grow-1">

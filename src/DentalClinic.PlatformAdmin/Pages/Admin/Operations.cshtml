@@ -1,0 +1,30 @@
+@page "/admin/operations"
+@model DentalClinic.PlatformAdmin.Pages.Admin.OperationsModel
+@using DentalClinic.Domain.Platform
+@{
+    ViewData["Title"] = "Operations";
+}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <div><div class="eyebrow text-emerald-600 fw-bold">PLATFORM MONITORING</div><h1 class="h2 fw-bold mb-1">Operations &amp; alerts</h1><p class="text-muted mb-0">Automatic checks every minute. Times are UTC.</p></div>
+    <a asp-page="/Index" class="btn btn-outline-secondary">Overview</a>
+</div>
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white py-3 px-4"><h2 class="h5 mb-0 fw-bold">Services</h2></div>
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th class="ps-4">Service</th><th>Status</th><th>Last check</th><th>Last healthy</th><th>Details</th></tr></thead><tbody>
+    @if (Model.Probes.Count == 0) { <tr><td colspan="5" class="p-4 text-muted">No checks recorded. Configure Monitoring URLs and restart the admin service.</td></tr> }
+    @foreach (var probe in Model.Probes) {
+        var stale = probe.CheckedAt is null || probe.CheckedAt < Model.Now.AddMinutes(-3);
+        <tr><td class="ps-4 fw-semibold">@probe.Name</td><td><span class="badge @(stale ? "bg-secondary" : probe.State == PlatformHealthState.Healthy ? "bg-success" : "bg-danger")">@(stale ? "Stale" : probe.State.ToString())</span></td><td>@(probe.CheckedAt?.ToString("dd MMM HH:mm") ?? "—")</td><td>@(probe.LastSuccessAt?.ToString("dd MMM HH:mm") ?? "—")</td><td class="small text-danger">@probe.LastError</td></tr>
+    }
+    </tbody></table></div>
+</div>
+<div class="row g-4">
+    <div class="col-lg-7"><div class="card shadow-sm border-0 h-100"><div class="card-header bg-white py-3 px-4"><h2 class="h5 mb-0 fw-bold">Clinic issues</h2></div><div class="list-group list-group-flush">
+        @if (Model.ClinicIssues.Count == 0) { <div class="p-4 text-muted">No current clinic issues detected.</div> }
+        @foreach (var issue in Model.ClinicIssues) { <a asp-page="/Admin/Clinics/Details" asp-route-id="@issue.Id" class="list-group-item list-group-item-action px-4"><strong>@issue.Name</strong><div class="small text-muted">@issue.Reason</div></a> }
+    </div></div></div>
+    <div class="col-lg-5"><div class="card shadow-sm border-0 h-100"><div class="card-header bg-white py-3 px-4"><h2 class="h5 mb-0 fw-bold">Recent service events</h2></div><div class="list-group list-group-flush">
+        @if (Model.Events.Count == 0) { <div class="p-4 text-muted">No service changes recorded.</div> }
+        @foreach (var item in Model.Events) { <div class="list-group-item px-4"><div class="d-flex justify-content-between"><strong>@item.ProbeKey</strong><span class="badge @(item.State == PlatformHealthState.Healthy ? "bg-success" : "bg-danger")">@item.State</span></div><div class="small text-muted">@item.OccurredAt.ToString("dd MMM yyyy HH:mm") UTC</div>@if (item.Details is not null) { <div class="small text-danger">@item.Details</div> }</div> }
+    </div></div></div>
+</div>

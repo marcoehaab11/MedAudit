@@ -37,3 +37,11 @@
 - [x] Database migrations executed and verified (`dotnet ef database update`).
 - [x] Backup script configured with daily GPG AES-256 encrypted dumps and WAL archiving.
 - [x] Rollback procedure tested: container image tag rollback and point-in-time database restore.
+
+## 8. Operations monitoring
+
+- The Platform Admin **Operations** page records API, clinic app, and booking app checks every minute. The API readiness check includes PostgreSQL and Redis.
+- Set `MONITOR_ALERT_EMAIL` plus `SMTP_HOST`, `SMTP_FROM`, and any SMTP authentication values in the deployment environment to receive email on service failure and recovery. Without SMTP, incidents still appear in the admin dashboard.
+- The GitHub Actions `Planora production health` workflow checks the public API and admin readiness URLs every 10 minutes. It opens one GitHub issue while either endpoint is unavailable and closes it after recovery. GitHub issue notifications depend on repository notification settings and Actions permissions.
+- If production domains change, set repository variables `PLANORA_API_HEALTH_URL` and `PLANORA_ADMIN_HEALTH_URL`. The defaults are the current `medaudit.online` hostnames.
+- Internal monitoring cannot report while the database or admin service itself is unavailable; the GitHub workflow covers this case. A clinic with no recent usage is not automatically treated as down.

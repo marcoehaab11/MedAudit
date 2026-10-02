@@ -36,6 +36,8 @@ public sealed class ApplicationDbContext(
     public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
     public DbSet<AdminInvitation> AdminInvitations => Set<AdminInvitation>();
     public DbSet<PlatformAuditLog> PlatformAuditLogs => Set<PlatformAuditLog>();
+    public DbSet<PlatformHealthProbe> PlatformHealthProbes => Set<PlatformHealthProbe>();
+    public DbSet<PlatformHealthEvent> PlatformHealthEvents => Set<PlatformHealthEvent>();
     public DbSet<ClinicUser> ClinicUsers => Set<ClinicUser>();
     public DbSet<TenantRole> TenantRoles => Set<TenantRole>();
     public DbSet<RolePermissionGrant> RolePermissions => Set<RolePermissionGrant>();
@@ -696,6 +698,26 @@ public sealed class ApplicationDbContext(
             entity.Property(x => x.CorrelationId).HasMaxLength(100);
             entity.HasIndex(x => new { x.TenantId, x.OccurredAt });
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<PlatformHealthProbe>(entity =>
+        {
+            entity.ToTable("platform_health_probes");
+            entity.HasKey(x => x.Key);
+            entity.Property(x => x.Key).HasMaxLength(80);
+            entity.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.State).HasConversion<int>();
+            entity.Property(x => x.LastError).HasMaxLength(500);
+        });
+
+        builder.Entity<PlatformHealthEvent>(entity =>
+        {
+            entity.ToTable("platform_health_events");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ProbeKey).HasMaxLength(80).IsRequired();
+            entity.Property(x => x.State).HasConversion<int>();
+            entity.Property(x => x.Details).HasMaxLength(500);
+            entity.HasIndex(x => x.OccurredAt);
         });
 
         builder.Entity<TenantConfiguration>(entity =>

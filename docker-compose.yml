@@ -44,6 +44,16 @@ services:
       Authentication__Jwt__Issuer: ${JWT_ISSUER:-MedDentist}
       Authentication__Jwt__Audience: ${JWT_AUDIENCE:-MedDentist.Client}
       Authentication__Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY must be set}
+      Monitoring__ApiReadyUrl: http://api:8080/health/ready
+      Monitoring__ClinicAppUrl: http://clinic-app:80/
+      Monitoring__BookingAppUrl: http://public-app:80/
+      Monitoring__AlertEmail: ${MONITOR_ALERT_EMAIL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_ENABLE_SSL: ${SMTP_ENABLE_SSL:-true}
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }

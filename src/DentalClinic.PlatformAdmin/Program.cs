@@ -5,6 +5,7 @@ using DentalClinic.Infrastructure;
 using DentalClinic.Infrastructure.Identity;
 using DentalClinic.Infrastructure.Persistence;
 using DentalClinic.Infrastructure.Tenancy;
+using DentalClinic.PlatformAdmin.Monitoring;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
 
@@ -18,6 +19,8 @@ builder.Host.UseSerilog((context, configuration) => configuration
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddHttpClient(nameof(PlatformHealthMonitor), client => client.Timeout = TimeSpan.FromSeconds(8));
+builder.Services.AddHostedService<PlatformHealthMonitor>();
 builder.Services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme).AddIdentityCookies();
 builder.Services.ConfigureApplicationCookie(options =>

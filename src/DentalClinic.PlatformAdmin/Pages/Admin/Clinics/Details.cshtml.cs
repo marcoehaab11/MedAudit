@@ -5,6 +5,9 @@ using DentalClinic.Application.Identity.Models;
 using DentalClinic.Domain.Identity;
 using DentalClinic.Domain.Tenancy;
 using DentalClinic.Infrastructure.Identity;
+using DentalClinic.Infrastructure.Persistence;
+using DentalClinic.Domain.Notifications;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -14,8 +17,11 @@ using System.Text;
 namespace DentalClinic.PlatformAdmin.Pages.Admin.Clinics;
 
 [Authorize(Policy = AuthConstants.PlatformAdminPolicy)]
-public sealed class DetailsModel(IClinicManagementService clinics, IPlatformUserInspectionService users) : PageModel
+public sealed class DetailsModel(IClinicManagementService clinics, IPlatformUserInspectionService users, ApplicationDbContext db) : PageModel
 {
+    public sealed record UsageStats(int Patients, int Appointments, int OnlineBookings, int BookingInquiries,
+        int PageVisits, int FailedNotifications, int UncontactedLeads, DateTimeOffset? LastActivity);
+    public UsageStats Usage { get; private set; } = new(0, 0, 0, 0, 0, 0, 0, null);
     public ClinicDetails Clinic { get; private set; } = null!;
     public PagedResult<UserListItem> Users { get; private set; } = null!;
     public DateTimeOffset Now { get; private set; }
@@ -31,6 +37,19 @@ public sealed class DetailsModel(IClinicManagementService clinics, IPlatformUser
         Clinic = clinic;
         Users = await users.SearchAsync(id, new UserSearchQuery(Page: userPage, PageSize: 20), cancellationToken);
         Now = DateTimeOffset.UtcNow;
+        var since = Now.AddDays(-30);
+        var appointments = db.Appointments.IgnoreQueryFilters().AsNoTracking().Where(x => x.TenantId == id);
+        var inquiries = db.BookingInquiries.IgnoreQueryFilters().AsNoTracking().Where(x => x.TenantId == id);
+        Usage = new UsageStats(
+            await db.Patients.IgnoreQueryFilters().CountAsync(x => x.TenantId == id && x.CreatedAt >= since, cancellationToken),
+            await appointments.CountAsync(x => x.CreatedAt >= since, cancellationToken),
+            await appointments.CountAsync(x => x.CreatedAt >= since && x.BookingReference != null, cancellationToken),
+            await inquiries.CountAsync(x => x.CreatedAt >= since, cancellationToken),
+            await db.BookingPageVisits.IgnoreQueryFilters().CountAsync(x => x.TenantId == id && x.CreatedAt >= since, cancellationToken),
+            await db.NotificationDeliveries.IgnoreQueryFilters().CountAsync(x => x.TenantId == id && x.CreatedAt >= since && x.Status == NotificationStatus.Failed, cancellationToken),
+            await inquiries.CountAsync(x => x.Status == "New" && x.CreatedAt < Now.AddHours(-2), cancellationToken)
+                + await appointments.CountAsync(x => x.BookingReference != null && x.PublicBookingContactedAt == null && x.CreatedAt < Now.AddHours(-2), cancellationToken),
+            await appointments.MaxAsync(x => (DateTimeOffset?)x.CreatedAt, cancellationToken));
         var host = Request.Host.Host;
         var baseHost = host.StartsWith("admin.", StringComparison.OrdinalIgnoreCase) ? host[6..] : host;
         var publicHost = baseHost.StartsWith("book.", StringComparison.OrdinalIgnoreCase) ? baseHost : $"book.{baseHost}";
