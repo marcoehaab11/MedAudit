@@ -19,4 +19,5 @@ public sealed record ClinicDetails(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     DateTimeOffset SubscriptionStartsAt,
-    DateTimeOffset SubscriptionExpiresAt);
+    DateTimeOffset SubscriptionExpiresAt,
+    bool PublicBookingEnabled);

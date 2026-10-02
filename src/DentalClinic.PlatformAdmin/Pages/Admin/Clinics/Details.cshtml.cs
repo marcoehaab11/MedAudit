@@ -8,6 +8,8 @@ using DentalClinic.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using QRCoder;
+using System.Text;
 
 namespace DentalClinic.PlatformAdmin.Pages.Admin.Clinics;
 
@@ -17,6 +19,9 @@ public sealed class DetailsModel(IClinicManagementService clinics, IPlatformUser
     public ClinicDetails Clinic { get; private set; } = null!;
     public PagedResult<UserListItem> Users { get; private set; } = null!;
     public DateTimeOffset Now { get; private set; }
+    public string BookingUrl { get; private set; } = string.Empty;
+    public string ClinicAppUrl { get; private set; } = string.Empty;
+    public string BookingQrDataUri { get; private set; } = string.Empty;
     [TempData] public string? SuccessMessage { get; set; }
 
     public async Task<IActionResult> OnGetAsync(Guid id, int userPage = 1, CancellationToken cancellationToken = default)
@@ -26,6 +31,15 @@ public sealed class DetailsModel(IClinicManagementService clinics, IPlatformUser
         Clinic = clinic;
         Users = await users.SearchAsync(id, new UserSearchQuery(Page: userPage, PageSize: 20), cancellationToken);
         Now = DateTimeOffset.UtcNow;
+        var host = Request.Host.Host;
+        var baseHost = host.StartsWith("admin.", StringComparison.OrdinalIgnoreCase) ? host[6..] : host;
+        var publicHost = baseHost.StartsWith("book.", StringComparison.OrdinalIgnoreCase) ? baseHost : $"book.{baseHost}";
+        var portSuffix = Request.Host.Port is { } port ? $":{port}" : string.Empty;
+        ClinicAppUrl = $"{Request.Scheme}://app.{baseHost}{portSuffix}";
+        BookingUrl = $"{Request.Scheme}://{publicHost}{portSuffix}/book/{Uri.EscapeDataString(clinic.Slug)}";
+        using var data = QRCodeGenerator.GenerateQrCode(BookingUrl, QRCodeGenerator.ECCLevel.Q);
+        using var qr = new SvgQRCode(data);
+        BookingQrDataUri = "data:image/svg+xml;base64," + Convert.ToBase64String(Encoding.UTF8.GetBytes(qr.GetGraphic(6)));
         return Page();
     }
 

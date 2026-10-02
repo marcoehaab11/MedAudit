@@ -13,7 +13,8 @@ internal sealed class CoreTenantInitializer(IPlatformClinicStore store, ISystemC
             tenant.Id,
             "en",
             tenant.TimeZone,
-            tenant.Currency));
+            tenant.Currency,
+            publicBookingEnabled: true));
 
         foreach (var definition in SystemRoleDefinitions.Roles)
         {

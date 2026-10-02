@@ -126,6 +126,7 @@ app.MapCrmEndpoints();
 app.MapFinanceEndpoints();
 app.MapReportEndpoints();
 app.MapPublicBookingEndpoints();
+app.MapOnlineBookingManagementEndpoints();
 app.MapNotificationEndpoints();
 app.MapInventoryEndpoints();
 app.MapPharmacyEndpoints();

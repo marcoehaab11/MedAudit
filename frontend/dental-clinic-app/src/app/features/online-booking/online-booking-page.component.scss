@@ -1,0 +1,48 @@
+:host { display: block; }
+.online-booking-page { max-width: 1280px; margin: auto; padding: 28px; color: #15352b; }
+.page-heading,.section-heading { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
+.page-heading { margin-bottom: 26px; }
+h1 { font-size: clamp(2rem, 3vw, 2.8rem); margin: 6px 0; letter-spacing: -.05em; }
+h2 { font-size: 1.32rem; margin: 8px 0; letter-spacing: -.025em; }
+p { color: #61756b; line-height: 1.65; margin: 0; }
+.eyebrow { color: #0e9770; font-size: .7rem; font-weight: 800; letter-spacing: .13em; }
+.panel { background: #fff; border: 1px solid #e0eae3; border-radius: 22px; box-shadow: 0 12px 36px #163b2610; padding: 28px; margin-bottom: 24px; }
+.top-grid { display: grid; grid-template-columns: 1fr 300px; gap: 24px; }
+.share-panel { background: linear-gradient(135deg,#f5fcf7,#fff 65%); }
+.panel-title { display: flex; align-items: center; justify-content: space-between; }
+.status { display: inline-flex; border-radius: 99px; padding: 5px 10px; color: #087750; background: #def5e7; font-size: .75rem; font-weight: 800; white-space: nowrap; }
+.status.off { color: #a25520; background: #fff0da; }
+.link-box { display: flex; margin: 26px 0 14px; padding: 5px; border: 1px solid #cbded1; border-radius: 12px; background: #fff; }
+.link-box input { flex: 1; min-width: 0; border: 0; outline: 0; padding: 8px; color: #1a4d39; background: transparent; }
+button,.primary-link { cursor: pointer; border: 0; background: #086b4c; color: #fff; padding: 11px 17px; border-radius: 10px; text-decoration: none; font-weight: 700; }
+button:hover,.primary-link:hover { background: #064e39; }
+button:disabled { opacity: .55; cursor: not-allowed; }
+.share-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.share-actions .outline,.section-heading button,.pagination button { border: 1px solid #b8d7c4; color: #11694c; background: white; }
+.hint { margin-top: 15px; font-size: .84rem; }
+.qr-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; }
+.qr-panel img { width: 195px; height: 195px; max-width: 100%; }
+.qr-panel span { color: #698277; font-size: .84rem; }
+.qr-placeholder { display: grid; place-items: center; width: 190px; height: 190px; color: #96a99f; background: #f0f4f1; border-radius: 15px; font-weight: 800; font-size: 2rem; }
+.section-heading { margin-bottom: 22px; }
+.section-heading a { color: #087750; font-weight: 700; text-decoration: none; }
+.form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 17px; }
+.form-grid label { display: flex; flex-direction: column; gap: 7px; color: #375345; font-size: .86rem; font-weight: 700; }
+.form-grid .wide { grid-column: 1/-1; }
+.form-grid input,.form-grid textarea { border: 1px solid #cadbd0; border-radius: 10px; padding: 11px 13px; font: inherit; color: #173d2e; background: #fcfefd; }
+.form-grid input:focus,.form-grid textarea:focus { outline: 2px solid #61ba8d; border-color: transparent; }
+.save-button { margin-top: 20px; }
+.count { font-size: .85rem; color: #0b7858; background: #e1f6e9; border-radius: 99px; padding: 4px 9px; }
+.request-list { display: grid; gap: 11px; }
+.request-card { border: 1px solid #e0ebe2; border-radius: 14px; padding: 18px; display: flex; justify-content: space-between; gap: 18px; }
+.request-main,.request-contact { display: flex; flex-direction: column; gap: 5px; }
+.request-main small { color: #82968b; }
+.request-main p { margin-top: 4px; font-size: .84rem; }
+.request-contact { align-items: flex-end; font-size: .87rem; }
+.request-contact a { color: #0d7558; text-decoration: none; font-weight: 700; }
+.request-contact button { padding: 7px 12px; font-size: .8rem; }
+.pagination { display: flex; align-items: center; justify-content: flex-end; gap: 15px; margin-top: 20px; }
+.empty { text-align: center; color: #798e81; padding: 35px; }
+.notice { padding: 12px 18px; margin-bottom: 20px; border-radius: 10px; }
+.notice.success { background: #e1f7e9; color: #116a48; }.notice.error { background: #fff0eb; color: #b23824; }
+@media(max-width:850px) { .online-booking-page { padding: 16px; }.top-grid { grid-template-columns: 1fr; }.page-heading,.section-heading { align-items: flex-start; flex-direction: column; }.form-grid { grid-template-columns: 1fr; }.form-grid .wide { grid-column: auto; }.request-card { flex-direction: column; }.request-contact { align-items: flex-start; } }

@@ -20,6 +20,7 @@ public interface IPublicBookingStore
     Task<Patient?> FindPatientByNormalizedPhoneAsync(Guid tenantId, string normalizedPhone, CancellationToken token);
     Task AddPatientAsync(Patient patient, CancellationToken token);
     Task AddAppointmentAsync(Appointment appointment, CancellationToken token);
+    Task AddInquiryAsync(BookingInquiry inquiry, CancellationToken token);
     Task<PublicBookingIdempotencyRecord?> FindIdempotencyRecordAsync(Guid tenantId, string idempotencyKey, CancellationToken token);
     Task AddIdempotencyRecordAsync(PublicBookingIdempotencyRecord record, CancellationToken token);
     Task<Appointment?> FindBookingByReferenceAsync(string reference, CancellationToken token);

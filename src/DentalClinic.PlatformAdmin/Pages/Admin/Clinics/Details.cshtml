@@ -50,6 +50,20 @@
     </div>
 </div>
 
+<div class="card shadow-sm border-0 mb-4 booking-share-card">
+    <div class="card-body p-4 d-flex flex-wrap gap-4 align-items-center justify-content-between">
+        <div class="flex-grow-1">
+            <span class="text-emerald-600 small fw-bold text-uppercase">Patient registration</span>
+            <h2 class="h4 fw-bold mt-1">Public booking page</h2>
+            @if (!Model.Clinic.PublicBookingEnabled) { <span class="badge bg-warning text-dark mb-2">Booking paused — clinic owner can enable it in Online Booking</span> }
+            <p class="text-muted mb-3">Share this clinic-specific link with patients. The clinic owner can edit the public details and follow up on bookings from the clinic app.</p>
+            <div class="input-group" style="max-width: 680px"><input id="clinic-booking-url" class="form-control" value="@Model.BookingUrl" readonly aria-label="Clinic booking link" /><button type="button" class="btn btn-outline-primary" onclick="navigator.clipboard.writeText(document.getElementById('clinic-booking-url').value)">Copy link</button></div>
+            <a href="@Model.BookingUrl" target="_blank" rel="noopener" class="btn btn-primary mt-3">Open patient page ↗</a>
+        </div>
+        <div class="booking-share-qr text-center"><img src="@Model.BookingQrDataUri" alt="QR code for @Model.Clinic.Name online booking" width="170" height="170" /><div><a class="btn btn-sm btn-outline-secondary mt-2" href="@Model.BookingQrDataUri" download="@($"{Model.Clinic.Slug}-booking-qr.svg")">Download QR</a></div></div>
+    </div>
+</div>
+
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-header bg-white py-3 px-4 border-bottom"><h5 class="fw-bold mb-0">Subscription &amp; clinic access</h5></div>
     <div class="card-body p-4">
@@ -95,7 +109,7 @@
             </h5>
             <small class="text-slate-500">Credentials to log into the Dental Clinic Application workspace</small>
         </div>
-        <a href="http://app.localhost:8080" target="_blank" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1">
+        <a id="clinic-portal-link" href="@Model.ClinicAppUrl" target="_blank" rel="noopener" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1">
             <span>Open Clinic Portal</span> <i class="bi bi-box-arrow-up-right"></i>
         </a>
     </div>
@@ -104,8 +118,8 @@
             <div class="col-12 col-md-4">
                 <div class="p-3 bg-slate-50 border rounded-3">
                     <span class="text-slate-500 small text-uppercase fw-semibold d-block">Web Application URL</span>
-                    <a href="http://app.localhost:8080" target="_blank" class="fw-bold font-monospace text-emerald-700 text-decoration-none d-flex align-items-center gap-1 mt-1">
-                        http://app.localhost:8080 <i class="bi bi-box-arrow-up-right small"></i>
+                    <a href="@Model.ClinicAppUrl" target="_blank" rel="noopener" class="fw-bold font-monospace text-emerald-700 text-decoration-none d-flex align-items-center gap-1 mt-1">
+                        @Model.ClinicAppUrl <i class="bi bi-box-arrow-up-right small"></i>
                     </a>
                 </div>
             </div>
@@ -131,7 +145,7 @@
         </div>
         <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top text-muted small">
             <div>
-                <i class="bi bi-info-circle me-1"></i> Clinic staff can sign in at <code>http://app.localhost:8080</code> using their email and password.
+                <i class="bi bi-info-circle me-1"></i> Clinic staff can sign in at <code>@Model.ClinicAppUrl</code> using their email and password.
             </div>
             @if (!string.IsNullOrEmpty(adminPassword))
             {
@@ -246,11 +260,11 @@
                 <ul class="list-group list-group-flush small">
                     <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                         <span>Clinic Staff App</span>
-                        <a href="http://app.localhost:8080" target="_blank" class="text-decoration-none">app.localhost:8080 <i class="bi bi-box-arrow-up-right"></i></a>
+                        <a href="@Model.ClinicAppUrl" target="_blank" rel="noopener" class="text-decoration-none">Clinic app <i class="bi bi-box-arrow-up-right"></i></a>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                         <span>Public Booking</span>
-                        <a href="http://book.localhost:8080" target="_blank" class="text-decoration-none">book.localhost:8080 <i class="bi bi-box-arrow-up-right"></i></a>
+                        <a href="@Model.BookingUrl" target="_blank" rel="noopener" class="text-decoration-none">Patient booking <i class="bi bi-box-arrow-up-right"></i></a>
                     </li>
                 </ul>
             </div>
@@ -296,7 +310,7 @@
 @section Scripts {
     <script>
         function copyCredentials(email, password) {
-            const text = `Clinic Portal: http://app.localhost:8080\nEmail: ${email}\nPassword: ${password}`;
+            const text = `Clinic Portal: ${document.getElementById('clinic-portal-link').href}\nEmail: ${email}\nPassword: ${password}`;
             navigator.clipboard.writeText(text).then(() => {
                 alert('Credentials copied to clipboard!');
             });

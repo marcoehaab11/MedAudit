@@ -387,6 +387,8 @@ internal sealed class SettingsService(
             entities.Add(ch);
         }
 
+        await store.SaveClinicHoursAsync(tenantId, entities, token);
+
         store.AddAudit(new PlatformAuditLog(
             tenantId,
             userId,

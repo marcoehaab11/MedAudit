@@ -19,12 +19,46 @@
         <div class="clinic-avatar">🦷</div>
       }
       <div class="clinic-info">
-        <h1>{{ clinic()?.name }}</h1>
+        <span class="clinic-eyebrow">PLANORA · ONLINE BOOKING</span>
+        <h1>{{ clinic()?.arabicName || clinic()?.name }}</h1>
+        @if (clinic()?.arabicName) { <p class="clinic-alt-name">{{ clinic()?.name }}</p> }
+        @if (clinic()?.arabicDescription || clinic()?.description) {
+          <p class="clinic-description">{{ clinic()?.arabicDescription || clinic()?.description }}</p>
+        }
         <p class="meta">
           📍 {{ clinic()?.address }}, {{ clinic()?.city }} &bull; 📞 {{ clinic()?.phone }}
         </p>
+        @if (clinic()?.website) { <a class="clinic-website" [href]="clinic()?.website" target="_blank" rel="noopener noreferrer">Visit clinic website ↗</a> }
       </div>
     </header>
+
+    @if (clinic()?.hours?.length) {
+      <section class="clinic-hours" aria-label="Clinic opening hours">
+        <div><span class="clinic-eyebrow">VISIT US</span><h2>Opening hours</h2><p>Choose an available appointment below. Our team will contact you to confirm the details.</p></div>
+        <div class="hours-list">
+          @for (day of clinic()?.hours; track day.dayOfWeek) {
+            <div class="hours-day"><strong>{{ ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][day.dayOfWeek] }}</strong>
+              <span>{{ formatHours(day) }}</span>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <section class="callback-panel" aria-label="Request a call from the clinic">
+      <div><span class="clinic-eyebrow">NEED HELP CHOOSING?</span><h2>Ask the clinic to call you</h2><p>Leave your number and the clinic team will contact you. You can also choose an appointment below.</p></div>
+      @if (inquirySent()) { <div class="callback-success" role="status">Your request was received. The clinic team will contact you soon.</div> }
+      @else {
+        <form (ngSubmit)="sendInquiry()" class="callback-form">
+          <input name="inquiryName" [(ngModel)]="inquiryName" placeholder="Your name" aria-label="Your name" required maxlength="200" />
+          <input name="inquiryPhone" [(ngModel)]="inquiryPhone" placeholder="Phone number" aria-label="Phone number" type="tel" required maxlength="50" />
+          <input name="inquiryEmail" [(ngModel)]="inquiryEmail" placeholder="Email (optional)" aria-label="Email (optional)" type="email" maxlength="256" />
+          <textarea name="inquiryMessage" [(ngModel)]="inquiryMessage" placeholder="How can we help? (optional)" aria-label="How can we help?" rows="2" maxlength="2000"></textarea>
+          <button type="submit" [disabled]="inquirySubmitting()">{{ inquirySubmitting() ? 'Sending…' : 'Request a call' }}</button>
+          @if (inquiryError()) { <span class="callback-error" role="alert">{{ inquiryError() }}</span> }
+        </form>
+      }
+    </section>
 
     <!-- Stepper Navigation -->
     <nav class="booking-stepper">

@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   PublicBookingApiService,
   PublicClinicDto,
+  PublicClinicHoursDto,
   PublicDoctorDto,
   PublicServiceDto,
   PublicAvailabilitySlotDto,
@@ -19,6 +20,11 @@ import {
   styleUrls: ['./public-booking.component.scss'],
 })
 export class PublicBookingComponent implements OnInit {
+  protected formatHours(day: PublicClinicHoursDto): string {
+    return day.isOpen && day.periods.length
+      ? day.periods.map(period => `${period.startTime}–${period.endTime}`).join(', ')
+      : 'Closed';
+  }
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(PublicBookingApiService);
@@ -45,6 +51,26 @@ export class PublicBookingComponent implements OnInit {
   protected patientEmail = '';
   protected patientDateOfBirth = '';
   protected patientNotes = '';
+  protected inquiryName = '';
+  protected inquiryPhone = '';
+  protected inquiryEmail = '';
+  protected inquiryMessage = '';
+  protected readonly inquirySubmitting = signal(false);
+  protected readonly inquirySent = signal(false);
+  protected readonly inquiryError = signal('');
+
+  protected sendInquiry(): void {
+    if (!this.inquiryName.trim() || !this.inquiryPhone.trim() || this.inquirySubmitting()) return;
+    this.inquirySubmitting.set(true);
+    this.inquiryError.set('');
+    this.api.sendInquiry(this.clinicSlug(), {
+      patientName: this.inquiryName, patientPhone: this.inquiryPhone,
+      patientEmail: this.inquiryEmail || undefined, message: this.inquiryMessage || undefined,
+    }).subscribe({
+      next: () => { this.inquirySubmitting.set(false); this.inquirySent.set(true); },
+      error: () => { this.inquirySubmitting.set(false); this.inquiryError.set('Could not send your request. Please try again.'); },
+    });
+  }
 
   protected readonly selectedDoctor = computed(() =>
     this.doctors().find((d) => d.doctorProfileId === this.selectedDoctorId()),

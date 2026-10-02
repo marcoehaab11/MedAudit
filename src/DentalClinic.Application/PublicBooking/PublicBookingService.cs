@@ -236,6 +236,17 @@ internal sealed partial class PublicBookingService(
         return await store.GetBookingConfirmationAsync(reference.Trim(), token);
     }
 
+    public async Task<Guid> CreateInquiryAsync(string slug, PublicBookingInquiryRequest request, CancellationToken token)
+    {
+        await GetClinicBySlugAsync(slug, token);
+        var tenantId = await GetTenantIdAsync(slug, token);
+        var inquiry = new BookingInquiry(tenantId, request.PatientName, request.PatientPhone,
+            request.PatientEmail, request.Message, clock.UtcNow);
+        await store.AddInquiryAsync(inquiry, token);
+        await store.CommitTransactionAsync(token);
+        return inquiry.Id;
+    }
+
     private async Task<Guid> GetTenantIdAsync(string slug, CancellationToken token)
     {
         return await store.FindTenantIdBySlugAsync(slug, token)

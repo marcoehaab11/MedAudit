@@ -1,0 +1,84 @@
+<div class="online-booking-page">
+  <header class="page-heading">
+    <div><span class="eyebrow">PLANORA · GROW YOUR PRACTICE</span><h1>Online booking</h1><p>Share your clinic page, shape what patients see, and follow up on every request.</p></div>
+    @if (bookingUrl) { <a class="primary-link" [href]="bookingUrl" target="_blank" rel="noopener">Open patient page ↗</a> }
+  </header>
+
+  @if (message()) { <div class="notice success" role="status">{{ message() }}</div> }
+  @if (error()) { <div class="notice error" role="alert">{{ error() }}</div> }
+
+  @if (settings(); as clinic) {
+    <div class="top-grid">
+      <section class="panel share-panel">
+        <div class="panel-title"><span class="eyebrow">YOUR CLINIC LINK</span><span class="status" [class.off]="!clinic.publicBookingEnabled">{{ clinic.publicBookingEnabled ? 'Live' : 'Paused' }}</span></div>
+        <h2>One link for every patient</h2>
+        <p>Patients can view your clinic, doctors and opening hours, then choose an available appointment.</p>
+        <div class="link-box"><input [value]="bookingUrl" aria-label="Patient booking link" readonly /><button type="button" (click)="copyLink()">Copy</button></div>
+        <div class="share-actions">
+          <button type="button" (click)="downloadQr()" [disabled]="!clinic.publicBookingEnabled">Download QR code</button>
+          @if (auth.hasPermission('Settings.Appointments')) {
+            <button type="button" class="outline" (click)="setBookingEnabled(!clinic.publicBookingEnabled)" [disabled]="saving()">{{ clinic.publicBookingEnabled ? 'Pause bookings' : 'Enable bookings' }}</button>
+          }
+        </div>
+        @if (!clinic.publicBookingEnabled) { <p class="hint">Turn on online booking before sharing this link. Existing clinics may start with booking paused.</p> }
+      </section>
+      <section class="panel qr-panel">
+        @if (clinic.publicBookingEnabled) { <img [src]="qrUrl" [alt]="'QR code for ' + clinic.clinicName + ' booking page'" /> }
+        @else { <div class="qr-placeholder">QR</div> }
+        <strong>Scan to book</strong><span>{{ clinic.clinicName }}</span>
+      </section>
+    </div>
+
+    @if (auth.hasPermission('Settings.ClinicProfile')) {
+      <section class="panel edit-panel">
+        <div class="section-heading"><div><span class="eyebrow">PUBLIC PROFILE</span><h2>What patients see</h2><p>Edit the introduction and clinic details shown above the booking form.</p></div><a routerLink="/settings" [queryParams]="{ tab: 'hours' }">Edit working hours ↗</a></div>
+        <form (ngSubmit)="saveProfile()">
+          <div class="form-grid">
+            <label>Clinic name<input name="name" [(ngModel)]="profile.name" required maxlength="200" /></label>
+            <label>Arabic name<input name="arabicName" [(ngModel)]="profile.arabicName" maxlength="200" /></label>
+            <label class="wide">Description<textarea name="description" [(ngModel)]="profile.description" rows="3" maxlength="2000" placeholder="Tell patients about your clinic"></textarea></label>
+            <label class="wide">Arabic description<textarea name="arabicDescription" [(ngModel)]="profile.arabicDescription" rows="3" maxlength="2000"></textarea></label>
+            <label>Phone<input name="phone" [(ngModel)]="profile.phone" required /></label>
+            <label>Email<input name="email" [(ngModel)]="profile.email" type="email" required /></label>
+            <label>Address<input name="address" [(ngModel)]="profile.address" required /></label>
+            <label>City<input name="city" [(ngModel)]="profile.city" required /></label>
+            <label>Website<input name="website" [(ngModel)]="profile.website" type="url" placeholder="https://" /></label>
+            <label>Logo URL<input name="logoReference" [(ngModel)]="profile.logoReference" type="url" placeholder="https://" /></label>
+          </div>
+          <button class="save-button" type="submit" [disabled]="saving()">{{ saving() ? 'Saving...' : 'Save public page' }}</button>
+        </form>
+      </section>
+    }
+
+    @if (auth.hasPermission('Appointments.View')) {
+      <section class="panel requests-panel">
+        <div class="section-heading"><div><span class="eyebrow">CALLBACK REQUESTS</span><h2>Patients waiting for a call <span class="count">{{ inquiryTotal() }}</span></h2><p>These patients sent their details without choosing a time. Call them to arrange their visit.</p></div><button type="button" (click)="loadInquiries(inquiryPage())">Refresh</button></div>
+        @if (inquiries().length) {
+          <div class="request-list">
+            @for (inquiry of inquiries(); track inquiry.id) {
+              <article class="request-card">
+                <div class="request-main"><strong>{{ inquiry.patientName }}</strong><small>{{ inquiry.createdAt | date:'medium' }}</small>@if (inquiry.message) { <p>{{ inquiry.message }}</p> }</div>
+                <div class="request-contact"><a [href]="'tel:' + inquiry.phone">{{ inquiry.phone }}</a>@if (inquiry.email) { <a [href]="'mailto:' + inquiry.email">{{ inquiry.email }}</a> }<span class="status" [class.off]="!inquiry.contactedAt">{{ inquiry.contactedAt ? 'Contacted' : 'Needs follow-up' }}</span>@if (!inquiry.contactedAt && auth.hasPermission('Appointments.Edit')) { <button type="button" (click)="markInquiryContacted(inquiry)">Mark contacted</button> }</div>
+              </article>
+            }
+          </div>
+          <div class="pagination"><button type="button" (click)="loadInquiries(inquiryPage() - 1)" [disabled]="inquiryPage() <= 1">Previous</button><span>Page {{ inquiryPage() }}</span><button type="button" (click)="loadInquiries(inquiryPage() + 1)" [disabled]="inquiryPage() * 20 >= inquiryTotal()">Next</button></div>
+        } @else { <div class="empty">No callback requests yet.</div> }
+      </section>
+      <section class="panel requests-panel">
+        <div class="section-heading"><div><span class="eyebrow">PATIENT FOLLOW-UP</span><h2>Online booking requests <span class="count">{{ total() }}</span></h2><p>Call patients to confirm their appointment and mark each one as contacted.</p></div><button type="button" (click)="loadRequests(page())">Refresh</button></div>
+        @if (requests().length) {
+          <div class="request-list">
+            @for (request of requests(); track request.id) {
+              <article class="request-card">
+                <div class="request-main"><strong>{{ request.patientName }}</strong><small>{{ request.bookingReference }} · {{ request.createdAt | date:'mediumDate' }}</small><span>{{ request.doctorName }} · {{ request.startAt | date:'medium' }}</span>@if (request.notes) { <p>{{ request.notes }}</p> }</div>
+                <div class="request-contact"><a [href]="'tel:' + request.patientPhone">{{ request.patientPhone }}</a>@if (request.patientEmail) { <a [href]="'mailto:' + request.patientEmail">{{ request.patientEmail }}</a> }<span class="status" [class.off]="!request.contactedAt">{{ request.contactedAt ? 'Contacted' : 'Needs follow-up' }}</span>@if (!request.contactedAt && auth.hasPermission('Appointments.Edit')) { <button type="button" (click)="markContacted(request)">Mark contacted</button> }</div>
+              </article>
+            }
+          </div>
+          <div class="pagination"><button type="button" (click)="loadRequests(page() - 1)" [disabled]="page() <= 1">Previous</button><span>Page {{ page() }}</span><button type="button" (click)="loadRequests(page() + 1)" [disabled]="page() * 20 >= total()">Next</button></div>
+        } @else { <div class="empty">No online bookings yet. Share your link to get started.</div> }
+      </section>
+    }
+  } @else { <div class="panel empty">Loading online booking workspace…</div> }
+</div>

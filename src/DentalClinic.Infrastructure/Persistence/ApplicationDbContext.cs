@@ -51,6 +51,7 @@ public sealed class ApplicationDbContext(
     public DbSet<DoctorScheduleBreak> DoctorScheduleBreaks => Set<DoctorScheduleBreak>();
     public DbSet<DoctorCompensation> DoctorCompensations => Set<DoctorCompensation>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<BookingInquiry> BookingInquiries => Set<BookingInquiry>();
     public DbSet<Examination> Examinations => Set<Examination>();
     public DbSet<DentalFinding> DentalFindings => Set<DentalFinding>();
     public DbSet<DentalFindingSurface> DentalFindingSurfaces => Set<DentalFindingSurface>();
@@ -340,6 +341,19 @@ public sealed class ApplicationDbContext(
                 .HasForeignKey(x => new { x.TenantId, x.CreatedBy })
                 .HasPrincipalKey(x => new { x.TenantId, x.Id })
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<BookingInquiry>(entity =>
+        {
+            entity.ToTable("booking_inquiries");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.PatientName).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Phone).HasMaxLength(50).IsRequired();
+            entity.Property(x => x.Email).HasMaxLength(256);
+            entity.Property(x => x.Message).HasMaxLength(2000);
+            entity.HasIndex(x => new { x.TenantId, x.CreatedAt });
+            entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
             entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
         });
 

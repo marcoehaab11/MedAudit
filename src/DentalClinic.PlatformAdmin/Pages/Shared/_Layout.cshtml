@@ -1,9 +1,16 @@
+@{
+    var adminHost = Context.Request.Host.Host;
+    var baseHost = adminHost.StartsWith("admin.", StringComparison.OrdinalIgnoreCase) ? adminHost[6..] : adminHost;
+    var portalPort = Context.Request.Host.Port is { } value ? $":{value}" : string.Empty;
+    var appUrl = $"{Context.Request.Scheme}://app.{baseHost}{portalPort}";
+    var bookingUrl = $"{Context.Request.Scheme}://book.{baseHost}{portalPort}";
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] · MedDentist Platform Admin</title>
+    <title>@ViewData["Title"] · Planora Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -14,11 +21,11 @@
 </head>
 <body>
     <header class="sticky-top">
-        <nav class="navbar navbar-expand-lg navbar-dark bg-slate-900 border-bottom border-slate-800 shadow-sm">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-slate-900 border-bottom border-slate-800 shadow-sm planora-navbar">
             <div class="container-xl">
                 <a class="navbar-brand d-flex align-items-center gap-2" asp-area="" asp-page="/Index">
-                    <span class="brand-badge"><i class="bi bi-hospital"></i></span>
-                    <span class="brand-text">MedDentist <span class="badge bg-emerald-subtle text-emerald-400 ms-1 fw-semibold">Platform</span></span>
+                    <span class="brand-badge"><img src="~/images/planora-logo.jpg" alt="" /></span>
+                    <span class="brand-text">Planora <span class="brand-console-label">ADMIN CONSOLE</span></span>
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent"
                         aria-expanded="false" aria-label="Toggle navigation">
@@ -39,7 +46,7 @@
                     </ul>
                     <div class="d-flex align-items-center gap-3">
                         <span class="system-status-pill d-none d-md-inline-flex align-items-center gap-2">
-                            <span class="status-dot online"></span> System Healthy
+                            <span class="status-dot online"></span> Platform workspace
                         </span>
                         <div class="user-dropdown d-flex align-items-center gap-2 text-white">
                             <div class="avatar-sm">
@@ -65,12 +72,11 @@
     <footer class="app-footer mt-auto py-4 border-top">
         <div class="container-xl d-flex flex-wrap justify-content-between align-items-center gap-2 text-muted small">
             <div>
-                <strong>MedDentist Multi-Tenant Platform</strong> &copy; 2026. All rights reserved.
+                <strong>Planora Platform</strong> &copy; 2026. All rights reserved.
             </div>
             <div class="d-flex gap-3">
-                <a href="http://app.localhost:8080" target="_blank" class="text-decoration-none text-muted"><i class="bi bi-box-arrow-up-right me-1"></i>Clinic App</a>
-                <a href="http://book.localhost:8080" target="_blank" class="text-decoration-none text-muted"><i class="bi bi-calendar-check me-1"></i>Patient Booking</a>
-                <a href="http://api.localhost:8080/health/ready" target="_blank" class="text-decoration-none text-muted"><i class="bi bi-heart-pulse me-1"></i>API Health</a>
+                <a href="@appUrl" target="_blank" rel="noopener" class="text-decoration-none text-muted"><i class="bi bi-box-arrow-up-right me-1"></i>Clinic App</a>
+                <a href="@bookingUrl" target="_blank" rel="noopener" class="text-decoration-none text-muted"><i class="bi bi-calendar-check me-1"></i>Patient Booking</a>
             </div>
         </div>
     </footer>

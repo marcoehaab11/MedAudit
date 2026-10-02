@@ -222,7 +222,8 @@
         <h3>{{ loc.language() === 'ar' ? 'ساعات العمل الرسمية للعيادة' : 'Clinic Working Hours' }}</h3>
       </div>
       <div class="card-body">
-        <div class="table-responsive">`n<div class="table-responsive"><table class="data-table">
+        <p class="hours-help">{{ loc.language() === 'ar' ? 'ساعات العمل دي بتظهر للمرضى على صفحة الحجز الإلكتروني. اضبط أيام وفترات العمل ثم احفظ.' : 'These opening hours appear on your public booking page. Set each day and save.' }}</p>
+        <div class="table-responsive"><table class="data-table hours-table">
           <thead>
             <tr>
               <th>{{ loc.language() === 'ar' ? 'اليوم' : 'Day' }}</th>
@@ -233,20 +234,21 @@
           <tbody>
             <tr *ngFor="let h of hours()">
               <td><strong>{{ getDayName(h.dayOfWeek) }}</strong></td>
+              <td><label class="hours-toggle"><input type="checkbox" [(ngModel)]="h.isOpen" /> {{ h.isOpen ? (loc.language() === 'ar' ? 'مفتوح' : 'Open') : (loc.language() === 'ar' ? 'مغلق' : 'Closed') }}</label></td>
               <td>
-                <span [class.text-success]="h.isOpen" [class.text-danger]="!h.isOpen">
-                  {{ h.isOpen ? (loc.language() === 'ar' ? 'مفتوح' : 'Open') : (loc.language() === 'ar' ? 'مغلق' : 'Closed') }}
-                </span>
-              </td>
-              <td>
-                <div *ngFor="let p of h.periods" class="period-pill">
-                  {{ p.startTime }} - {{ p.endTime }} ({{ p.periodType === 1 ? 'Work' : 'Break' }})
+                <div *ngFor="let p of h.periods; let i = index" class="hours-period">
+                  <input type="time" [(ngModel)]="p.startTime" [attr.aria-label]="'Start time for ' + getDayName(h.dayOfWeek)" />
+                  <span>—</span>
+                  <input type="time" [(ngModel)]="p.endTime" [attr.aria-label]="'End time for ' + getDayName(h.dayOfWeek)" />
+                  <select [(ngModel)]="p.periodType" aria-label="Period type"><option [ngValue]="1">Work</option><option [ngValue]="2">Break</option></select>
+                  <button type="button" class="hours-remove" (click)="removeWorkPeriod(h, i)" aria-label="Remove period">×</button>
                 </div>
-                <span *ngIf="h.periods.length === 0" class="text-muted">-</span>
+                <button type="button" class="hours-add" (click)="addWorkPeriod(h)" [disabled]="!h.isOpen">+ {{ loc.language() === 'ar' ? 'إضافة فترة' : 'Add period' }}</button>
               </td>
             </tr>
           </tbody>
-        </table></div>`n</div>
+        </table></div>
+        <button type="button" class="btn btn-primary mt-4" (click)="saveHours()" [disabled]="loading()">{{ loc.language() === 'ar' ? 'حفظ ساعات العمل' : 'Save opening hours' }}</button>
       </div>
     </div>
   </div>
@@ -261,7 +263,7 @@
         </button>
       </div>
       <div class="card-body">
-        <div class="table-responsive">`n<div class="table-responsive"><table class="data-table">
+        <div class="table-responsive"><table class="data-table">
           <thead>
             <tr>
               <th>{{ loc.language() === 'ar' ? 'اسم العطلة' : 'Holiday Name' }}</th>
@@ -286,7 +288,7 @@
               <td colspan="5" class="text-center text-muted">{{ loc.language() === 'ar' ? 'لا يوجد عطلات مسجلة' : 'No holiday closures recorded.' }}</td>
             </tr>
           </tbody>
-        </table></div>`n</div>
+        </table></div>
       </div>
     </div>
   </div>

@@ -37,6 +37,7 @@ public sealed class Appointment : TenantOwnedEntity
     public string? Notes { get; private set; }
     public string? CancellationReason { get; private set; }
     public string? BookingReference { get; private set; }
+    public DateTimeOffset? PublicBookingContactedAt { get; private set; }
     public Guid? TreatmentCatalogItemId { get; private set; }
     public Guid CreatedBy { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
@@ -47,6 +48,13 @@ public sealed class Appointment : TenantOwnedEntity
     public DateTimeOffset? CancelledAt { get; private set; }
 
     public bool IsTerminal => Status is AppointmentStatus.Completed or AppointmentStatus.Cancelled or AppointmentStatus.NoShow;
+
+    public void MarkPublicBookingContacted(DateTimeOffset occurredAt)
+    {
+        if (BookingReference is null) throw new InvalidOperationException("This is not an online booking.");
+        PublicBookingContactedAt = occurredAt;
+        UpdatedAt = occurredAt;
+    }
 
     public void Reschedule(DateTimeOffset startAt, int durationMinutes, DateTimeOffset updatedAt)
     {

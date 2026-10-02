@@ -8,4 +8,5 @@ public interface IPublicBookingService
     Task<IReadOnlyCollection<PublicAvailabilitySlotDto>> GetAvailabilityAsync(string slug, Guid doctorProfileId, DateOnly bookingDate, Guid? serviceId, CancellationToken token);
     Task<PublicBookingConfirmationDto> CreateBookingAsync(PublicBookingRequest request, CancellationToken token);
     Task<PublicBookingConfirmationDto?> GetBookingByReferenceAsync(string reference, CancellationToken token);
+    Task<Guid> CreateInquiryAsync(string slug, PublicBookingInquiryRequest request, CancellationToken token);
 }

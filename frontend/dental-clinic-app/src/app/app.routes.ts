@@ -382,6 +382,11 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'online-booking',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/online-booking/online-booking-page.component').then((x) => x.OnlineBookingPageComponent),
+  },
+  {
     path: 'settings',
     canActivate: [authGuard],
     loadComponent: () =>

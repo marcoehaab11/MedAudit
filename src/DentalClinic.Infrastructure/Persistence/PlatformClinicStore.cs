@@ -94,7 +94,11 @@ internal sealed class PlatformClinicStore(
                 tenant.CreatedAt,
                 tenant.UpdatedAt,
                 tenant.SubscriptionStartsAt,
-                tenant.SubscriptionExpiresAt))
+                tenant.SubscriptionExpiresAt,
+                context.TenantConfigurations.IgnoreQueryFilters()
+                    .Where(configuration => configuration.TenantId == tenant.Id)
+                    .Select(configuration => configuration.PublicBookingEnabled)
+                    .FirstOrDefault()))
             .SingleOrDefaultAsync(cancellationToken);
     }
 

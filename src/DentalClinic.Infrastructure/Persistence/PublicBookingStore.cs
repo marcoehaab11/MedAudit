@@ -2,6 +2,7 @@ using DentalClinic.Application.Appointments;
 using DentalClinic.Application.PublicBooking;
 using DentalClinic.Domain.Appointments;
 using DentalClinic.Domain.Doctors;
+using DentalClinic.Domain.Identity;
 using DentalClinic.Domain.Patients;
 using DentalClinic.Domain.Tenancy;
 using DentalClinic.Domain.Treatments;
@@ -15,32 +16,39 @@ internal sealed class PublicBookingStore(ApplicationDbContext context) : IPublic
     public async Task<PublicClinicDto?> FindClinicBySlugAsync(string slug, CancellationToken token)
     {
         var normalizedSlug = slug.Trim().ToLowerInvariant();
+        var now = DateTimeOffset.UtcNow;
 
-        return await (from t in context.Tenants.AsNoTracking().IgnoreQueryFilters()
+        var clinic = await (from t in context.Tenants.AsNoTracking().IgnoreQueryFilters()
                       join c in context.TenantConfigurations.AsNoTracking().IgnoreQueryFilters() on t.Id equals c.TenantId
-                      where t.Slug == normalizedSlug && t.Status == TenantStatus.Active
-                      select new PublicClinicDto(
-                          t.Name,
-                          t.Slug,
-                          t.Phone,
-                          t.Email,
-                          t.Address,
-                          t.City,
-                          t.Country,
-                          c.TimeZone,
-                          c.Currency,
-                          t.LogoReference,
-                          c.PublicBookingEnabled,
-                          c.PublicBookingHorizonDays,
-                          c.PublicPriceVisibility
-                      )).FirstOrDefaultAsync(token);
+                      where t.Slug == normalizedSlug && t.Status == TenantStatus.Active &&
+                            t.SubscriptionStartsAt <= now && t.SubscriptionExpiresAt > now
+                      select new { Tenant = t, Config = c }).FirstOrDefaultAsync(token);
+        if (clinic is null) return null;
+        var hours = await context.ClinicHours.AsNoTracking().IgnoreQueryFilters()
+            .Include(x => x.Periods).Where(x => x.TenantId == clinic.Tenant.Id)
+            .OrderBy(x => x.DayOfWeek).ToListAsync(token);
+        return new PublicClinicDto(clinic.Tenant.Name, clinic.Tenant.Slug, clinic.Tenant.Phone,
+            clinic.Tenant.Email, clinic.Tenant.Address, clinic.Tenant.City, clinic.Tenant.Country,
+            clinic.Config.TimeZone, clinic.Config.Currency, clinic.Tenant.LogoReference,
+            clinic.Config.PublicBookingEnabled, clinic.Config.PublicBookingHorizonDays,
+            clinic.Config.PublicPriceVisibility, clinic.Config.ArabicName, clinic.Config.Description,
+            clinic.Config.ArabicDescription, clinic.Config.Website,
+            hours.Select(h => new PublicClinicHoursDto(h.DayOfWeek, h.IsOpen,
+                h.Periods.Where(p => p.PeriodType == ClinicPeriodType.Work)
+                    .OrderBy(p => p.StartTime)
+                    .Select(p => new PublicClinicHourPeriodDto(
+                        p.StartTime.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture),
+                        p.EndTime.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)))
+                    .ToArray())).ToArray());
     }
 
     public async Task<Guid?> FindTenantIdBySlugAsync(string slug, CancellationToken token)
     {
         var normalizedSlug = slug.Trim().ToLowerInvariant();
+        var now = DateTimeOffset.UtcNow;
         return await context.Tenants.AsNoTracking().IgnoreQueryFilters()
-            .Where(t => t.Slug == normalizedSlug && t.Status == TenantStatus.Active)
+            .Where(t => t.Slug == normalizedSlug && t.Status == TenantStatus.Active &&
+                        t.SubscriptionStartsAt <= now && t.SubscriptionExpiresAt > now)
             .Select(t => (Guid?)t.Id)
             .FirstOrDefaultAsync(token);
     }
@@ -49,7 +57,8 @@ internal sealed class PublicBookingStore(ApplicationDbContext context) : IPublic
     {
         return await (from doc in context.DoctorProfiles.AsNoTracking().IgnoreQueryFilters()
                       join u in context.ClinicUsers.AsNoTracking().IgnoreQueryFilters() on doc.ClinicUserId equals u.Id
-                      where doc.TenantId == tenantId && doc.Status == DoctorProfileStatus.Active && doc.IsPublicBookingEnabled
+                      where doc.TenantId == tenantId && doc.Status == DoctorProfileStatus.Active &&
+                            doc.IsPublicBookingEnabled && u.Status == UserStatus.Active
                       select new PublicDoctorDto(
                           doc.Id,
                           u.DisplayName,
@@ -62,7 +71,9 @@ internal sealed class PublicBookingStore(ApplicationDbContext context) : IPublic
     public async Task<DoctorProfile?> FindDoctorAsync(Guid tenantId, Guid doctorProfileId, CancellationToken token)
     {
         return await context.DoctorProfiles.AsNoTracking().IgnoreQueryFilters()
-            .FirstOrDefaultAsync(d => d.TenantId == tenantId && d.Id == doctorProfileId, token);
+            .FirstOrDefaultAsync(d => d.TenantId == tenantId && d.Id == doctorProfileId &&
+                context.ClinicUsers.IgnoreQueryFilters().Any(u => u.Id == d.ClinicUserId &&
+                    u.TenantId == tenantId && u.Status == UserStatus.Active), token);
     }
 
     public async Task<IReadOnlyCollection<DoctorSchedule>> GetDoctorScheduleAsync(Guid doctorProfileId, CancellationToken token)
@@ -126,6 +137,9 @@ internal sealed class PublicBookingStore(ApplicationDbContext context) : IPublic
     {
         await context.Appointments.AddAsync(appointment, token);
     }
+
+    public async Task AddInquiryAsync(BookingInquiry inquiry, CancellationToken token) =>
+        await context.BookingInquiries.AddAsync(inquiry, token);
 
     public async Task<PublicBookingIdempotencyRecord?> FindIdempotencyRecordAsync(Guid tenantId, string idempotencyKey, CancellationToken token)
     {

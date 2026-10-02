@@ -17,6 +17,17 @@ export interface PublicClinicDto {
   publicBookingEnabled: boolean;
   publicBookingHorizonDays: number;
   publicPriceVisibility: boolean;
+  arabicName?: string | null;
+  description?: string | null;
+  arabicDescription?: string | null;
+  website?: string | null;
+  hours: PublicClinicHoursDto[];
+}
+
+export interface PublicClinicHoursDto {
+  dayOfWeek: number;
+  isOpen: boolean;
+  periods: { startTime: string; endTime: string }[];
 }
 
 export interface PublicDoctorDto {
@@ -59,6 +70,13 @@ export interface PublicBookingRequest {
   idempotencyKey?: string;
 }
 
+export interface PublicBookingInquiryRequest {
+  patientName: string;
+  patientPhone: string;
+  patientEmail?: string;
+  message?: string;
+}
+
 export interface PublicBookingConfirmationDto {
   bookingReference: string;
   clinicName: string;
@@ -79,6 +97,10 @@ export class PublicBookingApiService {
 
   getClinicBySlug(slug: string): Observable<PublicClinicDto> {
     return this.http.get<PublicClinicDto>(`${this.baseUrl}/clinics/${slug}`);
+  }
+
+  sendInquiry(slug: string, request: PublicBookingInquiryRequest): Observable<{ id: string }> {
+    return this.http.post<{ id: string }>(`${this.baseUrl}/clinics/${slug}/inquiries`, request);
   }
 
   getDoctors(slug: string): Observable<PublicDoctorDto[]> {

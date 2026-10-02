@@ -283,6 +283,11 @@
             </a>
           }
 
+          <a class="nav-item" routerLink="/online-booking" routerLinkActive="active" (click)="closeMobileSidebar()">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/><path d="M17 17l3 3"/></svg></span>
+            <span class="nav-text">{{ t('Online booking', 'الحجز الإلكتروني') }}</span>
+          </a>
+
           <a class="nav-item" routerLink="/settings" routerLinkActive="active" (click)="closeMobileSidebar()">
             <span class="nav-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

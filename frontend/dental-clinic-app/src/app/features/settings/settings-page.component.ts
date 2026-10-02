@@ -11,6 +11,7 @@ import {
 import { LocalizationService } from '../../core/localization.service';
 import { AuthService } from '../../core/auth.service';
 import { PhoneInputComponent } from '../../shared/phone-input/phone-input.component';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   styleUrl: './settings-page.component.scss',
@@ -23,6 +24,7 @@ export class SettingsPageComponent implements OnInit {
   private api = inject(SettingsApiService);
   loc = inject(LocalizationService);
   auth = inject(AuthService);
+  private readonly route = inject(ActivatedRoute);
 
   activeTab = signal<'profile' | 'branding' | 'hours' | 'holidays' | 'modules' | 'preferences'>('profile');
   loading = signal<boolean>(false);
@@ -51,6 +53,7 @@ export class SettingsPageComponent implements OnInit {
   holidayIsFullDay = signal<boolean>(true);
 
   ngOnInit() {
+    if (this.route.snapshot.queryParamMap.get('tab') === 'hours') this.activeTab.set('hours');
     this.loadAllSettings();
   }
 
@@ -71,7 +74,8 @@ export class SettingsPageComponent implements OnInit {
     });
 
     this.api.getClinicHours().subscribe({
-      next: (h) => this.hours.set(h)
+      next: (h) => this.hours.set(Array.from({ length: 7 }, (_, dayOfWeek) =>
+        h.find(item => Number(item.dayOfWeek) === dayOfWeek) ?? { dayOfWeek, isOpen: false, periods: [] }))
     });
 
     this.api.getClinicHolidays().subscribe({
@@ -83,6 +87,25 @@ export class SettingsPageComponent implements OnInit {
         this.userPreference.set(p);
         this.prefForm.set({ ...p });
       }
+    });
+  }
+
+  addWorkPeriod(day: ClinicHours) {
+    day.periods.push({ startTime: '09:00', endTime: '17:00', periodType: 1 });
+    this.hours.set([...this.hours()]);
+  }
+
+  removeWorkPeriod(day: ClinicHours, index: number) {
+    day.periods.splice(index, 1);
+    this.hours.set([...this.hours()]);
+  }
+
+  saveHours() {
+    this.loading.set(true);
+    this.errorMessage.set(null);
+    this.api.updateClinicHours(this.hours()).subscribe({
+      next: hours => { this.hours.set(hours); this.loading.set(false); this.successMessage.set('Clinic opening hours saved.'); },
+      error: err => { this.loading.set(false); this.errorMessage.set(err?.error?.error || 'Could not save opening hours. Check that periods do not overlap.'); }
     });
   }
 

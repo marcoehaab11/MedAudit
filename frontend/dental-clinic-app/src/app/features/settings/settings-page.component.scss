@@ -388,3 +388,12 @@ select.form-control {
   .page-header { flex-direction: column; }
 }
 
+.hours-help { color: #61786a; margin: 0 0 1rem; line-height: 1.6; }
+.hours-table td { vertical-align: middle; }
+.hours-toggle { display: inline-flex; align-items: center; gap: .5rem; white-space: nowrap; }
+.hours-toggle input { width: 18px; height: 18px; accent-color: #087650; }
+.hours-period { display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; margin-bottom: .4rem; }
+.hours-period input,.hours-period select { padding: .35rem .5rem; border: 1px solid #cadfd1; border-radius: 7px; background: #fff; color: #254b36; }
+.hours-remove { background: #fff1ef; color: #a33a31; border: 0; border-radius: 7px; padding: .3rem .6rem; cursor: pointer; }
+.hours-add { background: transparent; color: #087650; border: 1px dashed #79b899; border-radius: 7px; padding: .35rem .55rem; cursor: pointer; }
+.hours-add:disabled { opacity: .4; cursor: not-allowed; }

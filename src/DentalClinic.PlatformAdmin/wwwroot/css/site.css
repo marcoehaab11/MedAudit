@@ -212,3 +212,40 @@ body {
 .app-footer {
   background-color: #ffffff;
 }
+
+/* Planora admin workspace */
+body { background: radial-gradient(circle at 92% 2%, #e4f4e8 0, transparent 27%), #f5f8f5; color: #193b2d; }
+.planora-navbar { background: linear-gradient(100deg, #08271b, #0a4030) !important; padding-block: .75rem; }
+.planora-navbar .container-xl { gap: 1.25rem; }
+.brand-badge { width: 37px; height: 37px; border-radius: 11px; overflow: hidden; background: white; }
+.brand-badge img { width: 100%; height: 100%; object-fit: cover; }
+.brand-text { color: #fff; letter-spacing: -.045em; }
+.brand-console-label { display: inline-block; margin-left: .4rem; padding: .3rem .45rem; border: 1px solid #76d1a752; border-radius: 6px; vertical-align: middle; color: #9bd7b7; font-size: .55rem; letter-spacing: .12em; }
+.navbar .nav-link { color: #bdd6c6; padding: .6rem .95rem !important; border-radius: 9px; }
+.navbar .nav-link.active { color: #fff; background: #ffffff24; }
+.navbar .nav-link:hover { color: #fff; background: #ffffff18; }
+.app-container { flex: 1; padding-top: 2.2rem !important; padding-bottom: 3.5rem !important; }
+.app-container h1,.app-container h2,.app-container h3,.app-container h4 { letter-spacing: -.035em; }
+.app-container h1 { color: #113a28 !important; }
+.app-container .border-bottom { border-color: #dceae0 !important; }
+.card { border: 1px solid #e1ece4 !important; border-radius: 18px; box-shadow: 0 12px 32px #163d2710 !important; overflow: hidden; }
+.card-header { background: #fff !important; border-bottom: 1px solid #e6eee8 !important; }
+.card-header h5,.card-header h6 { color: #1b4430; }
+.stat-card { background: linear-gradient(145deg, #fff, #f8fcf8); }
+.stat-icon-wrapper,.portal-icon { border-radius: 13px; }
+.btn { border-radius: 9px; font-weight: 650; }
+.btn-primary { background: #087650; border-color: #087650; box-shadow: 0 4px 11px #08765022; }
+.btn-primary:hover,.btn-primary:focus { background: #075b40; border-color: #075b40; }
+.btn-outline-primary { color: #087650; border-color: #87bfa0; }
+.btn-outline-primary:hover { background: #087650; border-color: #087650; }
+.form-control,.form-select,.input-group-text { border-color: #d3e2d7; border-radius: 9px; }
+.form-control:focus,.form-select:focus { border-color: #30a670; box-shadow: 0 0 0 .22rem #30a67020; }
+.table thead { color: #567064; }
+.table > :not(caption) > * > * { padding-top: .95rem; padding-bottom: .95rem; border-color: #eaf0ea; }
+.table-hover > tbody > tr:hover > * { background: #f6fbf7; }
+.badge { border-radius: 7px; font-weight: 700; }
+.app-footer { background: #fff; border-color: #e0eae3 !important; }
+.booking-share-card { background: linear-gradient(120deg, #f8fefa, #fff) !important; }
+.booking-share-qr { border: 1px solid #d9e9dc; border-radius: 16px; padding: 12px; background: #fff; }
+.booking-share-qr img { display: block; }
+@media (max-width: 768px) { .app-container { padding-top: 1.2rem !important; }.booking-share-qr { margin-inline: auto; }.table-responsive { border-radius: 0 0 18px 18px; } }

@@ -1,24 +1,48 @@
 .booking-container {
-  max-width: 800px;
+  max-width: 980px;
   margin: 0 auto;
-  padding: 1.5rem 1rem;
+  padding: 2rem 1rem 4rem;
 }
+
+.clinic-eyebrow { color: #0a8a69; font-size: .7rem; font-weight: 800; letter-spacing: .14em; }
+.clinic-alt-name { color: #597269; margin: 0 0 .4rem; }
+.clinic-description { color: #314e44; line-height: 1.8; max-width: 58ch; margin: .6rem 0; white-space: pre-line; }
+.clinic-website { display: inline-block; margin-top: .65rem; color: #087b68; font-weight: 700; }
+.clinic-hours { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 1.2fr); gap: 1.5rem; padding: 1.5rem; background: #eff8f3; border: 1px solid #d8ecdf; border-radius: 18px; margin-bottom: 1.5rem; }
+.clinic-hours h2 { margin: .3rem 0 .4rem; color: #123f31; }
+.clinic-hours p { margin: 0; color: #5a7166; line-height: 1.6; }
+.hours-list { display: grid; gap: .4rem; }
+.hours-day { display: flex; justify-content: space-between; gap: 1rem; padding: .3rem .5rem; border-bottom: 1px solid #dbeadf; font-size: .88rem; }
+.hours-day span { color: #47695b; text-align: right; }
+@media (max-width: 650px) { .clinic-hours { grid-template-columns: 1fr; } }
+.callback-panel { display: grid; grid-template-columns: .9fr 1.3fr; gap: 2rem; padding: 1.8rem; margin-bottom: 1.5rem; color: #fff; background: linear-gradient(125deg, #0b3527, #0c6b4b); border-radius: 20px; }
+.callback-panel .clinic-eyebrow { color: #8fe2ae; }
+.callback-panel h2 { margin: .5rem 0; font-size: 1.45rem; }
+.callback-panel p { color: #c3e2d0; line-height: 1.6; margin: 0; }
+.callback-form { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; }
+.callback-form input,.callback-form textarea { min-width: 0; padding: .72rem .85rem; border: 1px solid #aad5b7; border-radius: 9px; font: inherit; }
+.callback-form textarea { grid-column: 1/-1; resize: vertical; }
+.callback-form button { border: 0; border-radius: 9px; padding: .7rem 1rem; color: #073a2a; background: #a8f0b7; font-weight: 800; cursor: pointer; }
+.callback-form button:disabled { opacity: .6; }
+.callback-error { color: #ffe3da; align-self: center; }
+.callback-success { align-self: center; color: #b7f4c6; font-weight: 800; }
+@media (max-width: 700px) { .callback-panel { grid-template-columns: 1fr; }.callback-form { grid-template-columns: 1fr; }.callback-form textarea { grid-column: auto; } }
 
 .clinic-hero {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1.5rem;
-  background: var(--surface, #ffffff);
-  border-radius: 12px;
-  border: 1px solid var(--border, #e2e8f0);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  background: linear-gradient(115deg, #fff, #effaf2);
+  border-radius: 24px;
+  border: 1px solid #d8ecdf;
   margin-bottom: 1.5rem;
 
   .clinic-avatar,
   .clinic-logo {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
+    width: 82px;
+    height: 82px;
+    border-radius: 18px;
     object-fit: cover;
     background: #f1f5f9;
     display: flex;
@@ -30,7 +54,7 @@
   .clinic-info {
     h1 {
       margin: 0 0 0.25rem 0;
-      font-size: 1.5rem;
+      font-size: clamp(1.5rem, 3vw, 2.25rem);
       font-weight: 700;
     }
     .meta {
@@ -382,6 +406,21 @@
   animation: spin 0.8s linear infinite;
   margin: 0 auto 0.75rem auto;
 }
+
+.booking-stepper button { border-radius: 12px; }
+.booking-stepper button.active { border-color: #0b9061; color: #076647; background: #e8f8ee; }
+.booking-stepper button.active .num { background: #0b9061; }
+.step-card { border-color: #e1eee5; border-radius: 20px; padding: clamp(1.25rem, 3vw, 2rem); box-shadow: 0 12px 35px #1f4f3210; }
+.doctor-card,.service-item { border-radius: 13px; border-color: #dce9df; }
+.doctor-card:hover,.service-item:hover { border-color: #8bc9a0; }
+.doctor-card.selected,.service-item.selected { border-color: #0b9061; background: #effaf2; }
+.doctor-card .doc-details .specialization { color: #0b8058; }
+.slot-chip { border-radius: 10px; }
+.slot-chip:hover { border-color: #0b9061; color: #0b8058; }
+.slot-chip.selected,.btn-primary { background: #087650; border-color: #087650; color: #fff; }
+.spinner { border-top-color: #087650; }
+.patient-form .form-group input,.patient-form .form-group textarea { border-radius: 10px; border-color: #d2e4d7; }
+@media(max-width:650px) { .clinic-hero { align-items: flex-start; flex-direction: column; }.clinic-hero .clinic-info .meta { line-height: 1.6; } }
 
 @keyframes spin {
   to {

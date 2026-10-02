@@ -13,8 +13,17 @@ public sealed record PublicClinicDto(
     string? LogoReference,
     bool PublicBookingEnabled,
     int PublicBookingHorizonDays,
-    bool PublicPriceVisibility
+    bool PublicPriceVisibility,
+    string? ArabicName,
+    string? Description,
+    string? ArabicDescription,
+    string? Website,
+    IReadOnlyCollection<PublicClinicHoursDto> Hours
 );
+
+public sealed record PublicClinicHoursDto(DayOfWeek DayOfWeek, bool IsOpen,
+    IReadOnlyCollection<PublicClinicHourPeriodDto> Periods);
+public sealed record PublicClinicHourPeriodDto(string StartTime, string EndTime);
 
 public sealed record PublicDoctorDto(
     Guid DoctorProfileId,
@@ -55,6 +64,9 @@ public sealed record PublicBookingRequest(
     string? PatientNotes,
     string? IdempotencyKey
 );
+
+public sealed record PublicBookingInquiryRequest(string PatientName, string PatientPhone,
+    string? PatientEmail, string? Message);
 
 public sealed record PublicBookingConfirmationDto(
     string BookingReference,
