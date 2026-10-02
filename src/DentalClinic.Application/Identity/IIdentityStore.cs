@@ -1,6 +1,7 @@
 using DentalClinic.Application.Identity.Models;
 using DentalClinic.Application.Tenants.Models;
 using DentalClinic.Domain.Identity;
+using DentalClinic.Domain.Doctors;
 using DentalClinic.Domain.Platform;
 using DentalClinic.Domain.Tenancy;
 
@@ -28,7 +29,9 @@ public interface IIdentityStore
     Task<LoginAccount?> FindLoginAccountAsync(string normalizedEmail, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<string>> GetRoleNamesForUserAsync(Guid tenantId, Guid userId, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<string>> GetEffectivePermissionsForUserAsync(Guid tenantId, Guid userId, CancellationToken cancellationToken);
+    Task<bool> DoctorProfileExistsForUserAsync(Guid clinicUserId, CancellationToken cancellationToken);
     void AddUser(ClinicUser user);
+    void AddDoctorProfile(DoctorProfile profile);
     void AddRole(TenantRole role);
     void AddRolePermission(RolePermissionGrant permission);
     void AddUserRole(UserRoleAssignment assignment);

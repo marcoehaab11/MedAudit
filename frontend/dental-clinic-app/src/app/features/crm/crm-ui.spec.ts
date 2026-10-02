@@ -40,3 +40,4 @@ describe('CRM UI behavior', () => {
     expect(isCrmConflict(400)).toBe(false);
   });
 });
+

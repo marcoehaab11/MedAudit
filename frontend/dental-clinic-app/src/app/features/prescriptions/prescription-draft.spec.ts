@@ -45,3 +45,4 @@ describe('prescription draft UI model', () => {
     expect(isPrescriptionReadOnly(3)).toBe(true);
   });
 });
+

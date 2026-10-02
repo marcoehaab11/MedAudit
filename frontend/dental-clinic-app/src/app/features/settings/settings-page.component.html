@@ -60,7 +60,7 @@
           <div class="grid-2">
             <div class="form-group">
               <label>{{ loc.language() === 'ar' ? 'الهاتف الرئيسي' : 'Primary Phone' }}</label>
-              <input type="text" [(ngModel)]="profileForm().phone" name="phone" class="form-control" required />
+              <app-phone-input [(ngModel)]="profileForm().phone" name="phone" required></app-phone-input>
             </div>
             <div class="form-group">
               <label>{{ loc.language() === 'ar' ? 'الهاتف الإضافي' : 'Secondary Phone' }}</label>
@@ -156,9 +156,58 @@
             </div>
           </div>
 
+          <hr class="my-4" style="border: none; border-top: 1px solid var(--border, #e2e8f0); margin: 1.5rem 0;" />
+          <h4 style="margin-bottom: 1rem; font-weight: 700; color: var(--ink);">{{ loc.language() === 'ar' ? 'إعدادات العملة والتوقيت المالي' : 'Currency & Financial Settings' }}</h4>
+
+          <div class="grid-2">
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'العملة الأساسية' : 'Default Currency' }}</label>
+              <select [(ngModel)]="brandingForm().currency" name="currency" class="form-control">
+                <option value="EGP">{{ loc.language() === 'ar' ? 'الجنيه المصري (EGP - ج.م)' : 'Egyptian Pound (EGP - ج.م)' }}</option>
+                <option value="SAR">{{ loc.language() === 'ar' ? 'الريال السعودي (SAR - ر.س)' : 'Saudi Riyal (SAR - ر.س)' }}</option>
+                <option value="AED">{{ loc.language() === 'ar' ? 'الدرهم الإماراتي (AED - د.إ)' : 'UAE Dirham (AED - د.إ)' }}</option>
+                <option value="KWD">{{ loc.language() === 'ar' ? 'الدينار الكويتي (KWD - د.ك)' : 'Kuwaiti Dinar (KWD - د.ك)' }}</option>
+                <option value="QAR">{{ loc.language() === 'ar' ? 'الريال القطري (QAR - ر.ق)' : 'Qatari Riyal (QAR - ر.ق)' }}</option>
+                <option value="BHD">{{ loc.language() === 'ar' ? 'الدينار البحريني (BHD - د.ب)' : 'Bahraini Dinar (BHD - د.ب)' }}</option>
+                <option value="OMR">{{ loc.language() === 'ar' ? 'الريال العماني (OMR - ر.ع)' : 'Omani Rial (OMR - ر.ع)' }}</option>
+                <option value="JOD">{{ loc.language() === 'ar' ? 'الدينار الأردني (JOD - د.أ)' : 'Jordanian Dinar (JOD - د.أ)' }}</option>
+                <option value="IQD">{{ loc.language() === 'ar' ? 'الدينار العراقي (IQD - د.ع)' : 'Iraqi Dinar (IQD - د.ع)' }}</option>
+                <option value="USD">{{ loc.language() === 'ar' ? 'الدولار الأمريكي (USD - $)' : 'US Dollar (USD - $)' }}</option>
+                <option value="EUR">{{ loc.language() === 'ar' ? 'اليورو (EUR - €)' : 'Euro (EUR - €)' }}</option>
+                <option value="GBP">{{ loc.language() === 'ar' ? 'الجنيه الإسترليني (GBP - £)' : 'British Pound (GBP - £)' }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'رمز / اختصار العملة' : 'Currency Symbol' }}</label>
+              <input type="text" [(ngModel)]="brandingForm().currencySymbol" name="currencySymbol" class="form-control" [placeholder]="loc.language() === 'ar' ? 'مثال: ج.م أو جنيه' : 'e.g. ج.م or EGP'" />
+            </div>
+          </div>
+
+          <div class="grid-2 mt-3">
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'موضع الرمز' : 'Symbol Position' }}</label>
+              <select [(ngModel)]="brandingForm().symbolPosition" name="symbolPosition" class="form-control">
+                <option value="After">{{ loc.language() === 'ar' ? 'بعد المبلغ (مثال: 500 ج.م)' : 'After Amount (e.g. 500 ج.م)' }}</option>
+                <option value="Before">{{ loc.language() === 'ar' ? 'قبل المبلغ (مثال: ج.م 500)' : 'Before Amount (e.g. ج.م 500)' }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{{ loc.language() === 'ar' ? 'النطاق الزمني للعيادة' : 'Clinic Timezone' }}</label>
+              <select [(ngModel)]="brandingForm().timeZone" name="timeZone" class="form-control">
+                <option value="Africa/Cairo">Africa/Cairo (مصر - GMT+2)</option>
+                <option value="Asia/Riyadh">Asia/Riyadh (السعودية - GMT+3)</option>
+                <option value="Asia/Dubai">Asia/Dubai (الإمارات - GMT+4)</option>
+                <option value="Asia/Kuwait">Asia/Kuwait (الكويت - GMT+3)</option>
+                <option value="Asia/Amman">Asia/Amman (الأردن - GMT+3)</option>
+                <option value="Asia/Baghdad">Asia/Baghdad (العراق - GMT+3)</option>
+                <option value="UTC">UTC (Universal Coordinated Time)</option>
+              </select>
+            </div>
+          </div>
+
           <div class="mt-4 text-right">
             <button type="submit" class="btn btn-primary" [disabled]="loading()">
-              {{ loc.language() === 'ar' ? 'حفظ إعدادات الهوية' : 'Save Branding Settings' }}
+              {{ loc.language() === 'ar' ? 'حفظ إعدادات الهوية والعملة' : 'Save Branding & Currency' }}
             </button>
           </div>
         </form>
@@ -173,7 +222,7 @@
         <h3>{{ loc.language() === 'ar' ? 'ساعات العمل الرسمية للعيادة' : 'Clinic Working Hours' }}</h3>
       </div>
       <div class="card-body">
-        <table class="data-table">
+        <div class="table-responsive">`n<div class="table-responsive"><table class="data-table">
           <thead>
             <tr>
               <th>{{ loc.language() === 'ar' ? 'اليوم' : 'Day' }}</th>
@@ -197,7 +246,7 @@
               </td>
             </tr>
           </tbody>
-        </table>
+        </table></div>`n</div>
       </div>
     </div>
   </div>
@@ -212,7 +261,7 @@
         </button>
       </div>
       <div class="card-body">
-        <table class="data-table">
+        <div class="table-responsive">`n<div class="table-responsive"><table class="data-table">
           <thead>
             <tr>
               <th>{{ loc.language() === 'ar' ? 'اسم العطلة' : 'Holiday Name' }}</th>
@@ -237,7 +286,7 @@
               <td colspan="5" class="text-center text-muted">{{ loc.language() === 'ar' ? 'لا يوجد عطلات مسجلة' : 'No holiday closures recorded.' }}</td>
             </tr>
           </tbody>
-        </table>
+        </table></div>`n</div>
       </div>
     </div>
   </div>
@@ -360,3 +409,6 @@
     </div>
   </div>
 </div>
+
+
+

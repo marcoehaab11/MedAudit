@@ -22,3 +22,4 @@ describe('Reports UI & Filter Logic', () => {
     expect(filter.doctorId).toBe('d-123');
   });
 });
+

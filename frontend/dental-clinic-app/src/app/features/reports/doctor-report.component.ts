@@ -53,7 +53,7 @@ import {
 
       <div *ngIf="!loading && data" class="content">
         <div class="table-card">
-          <table class="data-table">
+          <div class="table-responsive"><table class="data-table">
             <thead>
               <tr>
                 <th>Doctor / الطبيب</th>
@@ -78,7 +78,7 @@ import {
                 <td>{{ doc.doctorCompensationCost | number: '1.0-2' }} {{ data.currency }}</td>
               </tr>
             </tbody>
-          </table>
+          </table></div>
         </div>
       </div>
     </div>
@@ -200,3 +200,5 @@ export class DoctorReportComponent implements OnInit {
     });
   }
 }
+
+

@@ -33,6 +33,7 @@ public interface ITreatmentCatalogService
     Task<IReadOnlyCollection<CatalogItemDetails>> ListAsync(bool includeInactive, CancellationToken token);
     Task<Guid> CreateAsync(CatalogItemInput input, CancellationToken token);
     Task<bool> UpdateAsync(Guid id, CatalogItemInput input, CancellationToken token);
+    Task<bool> DeleteAsync(Guid id, CancellationToken token);
 }
 public interface ITreatmentPlanService
 {

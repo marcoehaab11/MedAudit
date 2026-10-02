@@ -28,7 +28,7 @@ public sealed record TreatmentPlanSearch(Guid? PatientId = null, Guid? DoctorPro
 
 public sealed record CreateTreatmentCommand(Guid PatientId, Guid DoctorProfileId, Guid CatalogItemId,
     Guid? AppointmentId, Guid? TreatmentPlanItemId, Guid? SourceDentalProcedureId,
-    IReadOnlyCollection<int> ToothNumbers, string? Notes);
+    IReadOnlyCollection<int> ToothNumbers, string? Notes, decimal? Price = null);
 public sealed record TreatmentDetails(Guid Id, Guid PatientId, string PatientName, Guid DoctorProfileId,
     string DoctorName, Guid? AppointmentId, Guid? TreatmentPlanId, Guid? TreatmentPlanItemId,
     Guid CatalogItemId, Guid? SourceDentalProcedureId, TreatmentType Type, string TreatmentName,

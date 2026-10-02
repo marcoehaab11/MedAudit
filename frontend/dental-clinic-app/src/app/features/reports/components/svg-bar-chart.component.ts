@@ -121,3 +121,4 @@ export class SvgBarChartComponent {
     return this.colors[index % this.colors.length];
   }
 }
+

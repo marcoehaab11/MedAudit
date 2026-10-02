@@ -1,3 +1,4 @@
+using DentalClinic.Domain.Appointments;
 using DentalClinic.Domain.Doctors;
 using DentalClinic.Domain.Patients;
 
@@ -6,7 +7,7 @@ namespace DentalClinic.Application.Appointments;
 internal sealed class AppointmentSchedulingValidator(IAppointmentStore store)
 {
     public async Task<(Patient Patient, DoctorProfile Doctor, DateTimeOffset StartAt, DateTimeOffset EndAt)> ValidateAsync(
-        Guid patientId, Guid doctorProfileId, AppointmentTimeInput time, Guid? excludeAppointmentId,
+        Guid patientId, Guid doctorProfileId, AppointmentTimeInput time, AppointmentType? type, Guid? excludeAppointmentId,
         CancellationToken cancellationToken)
     {
         var patient = await store.FindPatientAsync(patientId, cancellationToken);
@@ -15,12 +16,25 @@ internal sealed class AppointmentSchedulingValidator(IAppointmentStore store)
         var doctor = await store.FindDoctorAsync(doctorProfileId, cancellationToken);
         if (doctor?.Status != DoctorProfileStatus.Active)
             throw AppointmentRules.Error(nameof(doctorProfileId), "An active doctor in this tenant is required.");
-        var schedule = await store.GetScheduleAsync(doctor.Id, cancellationToken);
-        AppointmentRules.EnsureScheduleFit(schedule, time.Date, time.StartTime, time.DurationMinutes);
+        
+        if (type != AppointmentType.Emergency)
+        {
+            var schedule = await store.GetScheduleAsync(doctor.Id, cancellationToken);
+            AppointmentRules.EnsureScheduleFit(schedule, time.Date, time.StartTime, time.DurationMinutes);
+        }
+        else
+        {
+            if (time.DurationMinutes is < 5 or > 480)
+                throw AppointmentRules.Error(nameof(time.DurationMinutes), "Duration must be between 5 and 480 minutes.");
+        }
+
         var zone = AppointmentRules.ResolveTimeZone(await store.GetTenantTimeZoneAsync(cancellationToken));
-        var startAt = AppointmentRules.ToUtc(time.Date, time.StartTime, zone);
-        var endAt = AppointmentRules.ToUtc(time.Date, time.StartTime.AddMinutes(time.DurationMinutes), zone);
-        if ((endAt - startAt).TotalMinutes != time.DurationMinutes)
+        var localStart = time.Date.ToDateTime(time.StartTime, DateTimeKind.Unspecified);
+        var localEnd = localStart.AddMinutes(time.DurationMinutes);
+        var startAt = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(localStart, zone), TimeSpan.Zero);
+        var endAt = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(localEnd, zone), TimeSpan.Zero);
+
+        if (Math.Round((endAt - startAt).TotalMinutes) != time.DurationMinutes)
             throw AppointmentRules.Error(nameof(time.StartTime),
                 "Appointments cannot cross a daylight-saving timezone transition.");
         if (await store.HasConflictAsync(doctor.Id, patient.Id, startAt, endAt, excludeAppointmentId, cancellationToken))

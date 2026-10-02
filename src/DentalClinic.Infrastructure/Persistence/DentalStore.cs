@@ -53,13 +53,13 @@ internal sealed class DentalStore(ApplicationDbContext context) : IDentalStore
     {
         var patient = await FindPatientAsync(patientId, token); if (patient is null) return null;
         var findings = await context.DentalFindings.AsNoTracking()
-            .Where(x => x.PatientId == patientId && context.Examinations.Any(e => e.Id == x.ExaminationId && e.Status == ExaminationStatus.Completed))
+            .Where(x => x.PatientId == patientId)
             .Select(x => new { x.ToothNumber, x.ToothId, x.FindingType, x.CreatedAt }).ToListAsync(token);
         var procedures = await context.DentalProcedures.AsNoTracking()
-            .Where(x => x.PatientId == patientId && context.Examinations.Any(e => e.Id == x.ExaminationId && e.Status == ExaminationStatus.Completed))
+            .Where(x => x.PatientId == patientId)
             .Select(x => new { x.ToothNumber, x.ToothId, x.ProcedureType, x.CreatedAt }).ToListAsync(token);
         var endodontic = await context.EndodonticRecords.AsNoTracking()
-            .Where(x => x.PatientId == patientId && context.Examinations.Any(e => e.Id == x.ExaminationId && e.Status == ExaminationStatus.Completed))
+            .Where(x => x.PatientId == patientId)
             .Select(x => new { x.ToothNumber, x.CreatedAt }).ToListAsync(token);
         var teeth = PermanentToothCatalog.All.Select(tooth => new ToothChartSummary(tooth.Id, tooth.Number,
             findings.Where(x => x.ToothNumber == tooth.Number).OrderByDescending(x => x.CreatedAt).Select(x => x.FindingType).Distinct().ToArray(),

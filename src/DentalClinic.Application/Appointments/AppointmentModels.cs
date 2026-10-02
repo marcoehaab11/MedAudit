@@ -10,7 +10,7 @@ public sealed record RescheduleAppointmentCommand(Guid AppointmentId, Appointmen
 public sealed record AppointmentSearchQuery(DateOnly From, DateOnly To, Guid? DoctorProfileId = null,
     Guid? PatientId = null, AppointmentStatus? Status = null, AppointmentType? Type = null,
     int Page = 1, int PageSize = 100);
-public sealed record DoctorAvailabilityQuery(Guid DoctorProfileId, DateOnly Date, int DurationMinutes);
+public sealed record DoctorAvailabilityQuery(Guid DoctorProfileId, DateOnly Date, int DurationMinutes, bool IsEmergency = false);
 public sealed record AppointmentListItem(Guid Id, Guid PatientId, string PatientName, Guid DoctorProfileId,
     string DoctorName, AppointmentType Type, AppointmentStatus Status, DateTimeOffset StartAt,
     DateTimeOffset EndAt, int DurationMinutes, string TimeZone);

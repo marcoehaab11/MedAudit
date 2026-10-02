@@ -3,6 +3,12 @@ namespace DentalClinic.Contracts.Identity;
 public sealed record LoginRequest(string Email, string Password);
 public sealed record AcceptInvitationRequest(string Token, string Password, string ConfirmPassword);
 public sealed record InspectInvitationRequest(string Token);
+public sealed record CreateUserRequest(
+    string DisplayName,
+    string Email,
+    string Password,
+    string? Phone,
+    IReadOnlyCollection<Guid> RoleIds);
 public sealed record InviteUserRequest(
     string DisplayName,
     string Email,

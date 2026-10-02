@@ -9,7 +9,7 @@ internal static class DoctorValidation
     {
         var errors = new List<ValidationFailure>();
         Required(input.Specialization, nameof(input.Specialization), 150, errors);
-        Required(input.LicenseNumber, nameof(input.LicenseNumber), 100, errors);
+        Optional(input.LicenseNumber, nameof(input.LicenseNumber), 100, errors);
         Optional(input.Bio, nameof(input.Bio), 2000, errors);
         if (input.ConsultationDurationMinutes is < 5 or > 480)
             errors.Add(new(nameof(input.ConsultationDurationMinutes), "Consultation duration must be between 5 and 480 minutes."));

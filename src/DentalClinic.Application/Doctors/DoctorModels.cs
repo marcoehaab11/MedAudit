@@ -4,15 +4,16 @@ using DentalClinic.Domain.Identity;
 
 namespace DentalClinic.Application.Doctors;
 
-public sealed record DoctorProfileInput(string Specialization, string LicenseNumber, string? Bio, int ConsultationDurationMinutes);
+public sealed record DoctorProfileInput(string Specialization, string? LicenseNumber, string? Bio, int ConsultationDurationMinutes,
+    string? DisplayName = null, string? Phone = null);
 public sealed record CreateDoctorProfileCommand(Guid ClinicUserId, DoctorProfileInput Profile);
 public sealed record UpdateDoctorProfileCommand(Guid DoctorProfileId, DoctorProfileInput Profile);
 public sealed record DoctorSearchQuery(string? Search = null, DoctorProfileStatus? Status = null,
     string? Specialization = null, int Page = 1, int PageSize = 20);
 public sealed record DoctorListItem(Guid Id, Guid ClinicUserId, string DisplayName, string Email,
-    string? Phone, string Specialization, string LicenseNumber, DoctorProfileStatus Status, DateTimeOffset CreatedAt);
+    string? Phone, string Specialization, string? LicenseNumber, DoctorProfileStatus Status, DateTimeOffset CreatedAt);
 public sealed record DoctorProfileDetails(Guid Id, Guid ClinicUserId, string DisplayName, string Email,
-    string? Phone, UserStatus AccountStatus, string Specialization, string LicenseNumber, string? Bio,
+    string? Phone, UserStatus AccountStatus, string Specialization, string? LicenseNumber, string? Bio,
     int ConsultationDurationMinutes, DoctorProfileStatus Status, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt,
     bool CanManageSchedule, bool CanManageCompensation);
 public sealed record DoctorCandidate(Guid ClinicUserId, string DisplayName, string Email, string? Phone);

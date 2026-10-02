@@ -7,11 +7,15 @@ import { Treatment, TreatmentApiService } from './treatment-api.service';
 import { treatmentStatus } from './treatment-labels';
 import { TreatmentFinanceSummaryComponent } from '../finance/treatment-finance-summary.component';
 @Component({
+  styleUrl: './treatments.scss',
+
   selector: 'app-treatment-details',
   imports: [RouterLink, DatePipe, TreatmentFinanceSummaryComponent],
-  template: `<a class="back" routerLink="/treatments"
-      >← {{ t('Back to treatments', 'العودة للعلاجات') }}</a
-    >
+  template: `@if (item()) {
+      <a class="back" [routerLink]="['/patients', item()!.patientId]">← {{ t('Back to patient', 'العودة لملف المريض') }}</a>
+    } @else {
+      <a class="back" routerLink="/treatments">← {{ t('Back to treatments', 'العودة للعلاجات') }}</a>
+    }
     @if (message()) {
       <div class="alert success">{{ message() }}</div>
     }
@@ -47,11 +51,11 @@ import { TreatmentFinanceSummaryComponent } from '../finance/treatment-finance-s
             </div>
             <div>
               <dt>{{ t('Created', 'أُنشئ') }}</dt>
-              <dd>{{ item()!.createdAt | date: 'medium' }}</dd>
+              <dd>{{ item()!.createdAt | date: 'dd/MM/yyyy hh:mm a' }}</dd>
             </div>
             <div>
               <dt>{{ t('Completed', 'اكتمل') }}</dt>
-              <dd>{{ (item()!.completedAt | date: 'medium') || '—' }}</dd>
+              <dd>{{ (item()!.completedAt | date: 'dd/MM/yyyy hh:mm a') || '—' }}</dd>
             </div>
           </dl>
         </section>
@@ -62,7 +66,7 @@ import { TreatmentFinanceSummaryComponent } from '../finance/treatment-finance-s
       </div>
       <app-treatment-finance-summary [treatmentId]="id" />
     }`,
-  styleUrl: './treatments.scss',
+
 })
 export class TreatmentDetailsComponent {
   private readonly api = inject(TreatmentApiService);
@@ -127,3 +131,4 @@ export class TreatmentDetailsComponent {
     return this.i18n.language() === 'en' ? en : ar;
   }
 }
+

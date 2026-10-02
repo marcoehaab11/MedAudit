@@ -65,7 +65,7 @@ internal sealed class AppointmentStore(ApplicationDbContext context) : IAppointm
         var total = await appointments.CountAsync(cancellationToken);
         var items = await appointments.OrderBy(x => x.StartAt).Skip((query.Page - 1) * query.PageSize).Take(query.PageSize)
             .Select(x => new AppointmentListItem(x.Id, x.PatientId,
-                context.Patients.Where(p => p.Id == x.PatientId).Select(p => p.FirstName + " " + p.LastName).Single(),
+                context.Patients.Where(p => p.Id == x.PatientId).Select(p => p.FirstName + (p.MiddleName == null ? " " : " " + p.MiddleName + " ") + p.LastName).Single(),
                 x.DoctorProfileId,
                 context.DoctorProfiles.Where(d => d.Id == x.DoctorProfileId)
                     .Select(d => context.ClinicUsers.Where(u => u.Id == d.ClinicUserId).Select(u => u.DisplayName).Single()).Single(),
@@ -92,7 +92,7 @@ internal sealed class AppointmentStore(ApplicationDbContext context) : IAppointm
         var appointments = context.Appointments.AsNoTracking().Where(x => x.Id == appointmentId);
         if (visibleDoctorProfileId.HasValue) appointments = appointments.Where(x => x.DoctorProfileId == visibleDoctorProfileId);
         return appointments.Select(x => new AppointmentDetails(x.Id, x.PatientId,
-            context.Patients.Where(p => p.Id == x.PatientId).Select(p => p.FirstName + " " + p.LastName).Single(),
+            context.Patients.Where(p => p.Id == x.PatientId).Select(p => p.FirstName + (p.MiddleName == null ? " " : " " + p.MiddleName + " ") + p.LastName).Single(),
             x.DoctorProfileId,
             context.DoctorProfiles.Where(d => d.Id == x.DoctorProfileId)
                 .Select(d => context.ClinicUsers.Where(u => u.Id == d.ClinicUserId).Select(u => u.DisplayName).Single()).Single(),

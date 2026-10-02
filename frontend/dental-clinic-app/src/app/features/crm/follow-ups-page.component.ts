@@ -6,6 +6,8 @@ import { CrmApiService, FollowUpList } from './crm-api.service';
 import { clinicDate, followUpStatus, followUpType } from './crm-labels';
 import { followUpFilters } from './crm-ui';
 @Component({
+  styleUrl: './crm.scss',
+
   selector: 'app-follow-ups-page',
   imports: [ReactiveFormsModule, RouterLink],
   template: `<section class="page-head">
@@ -61,7 +63,7 @@ import { followUpFilters } from './crm-ui';
         <div class="state">{{ t('No follow-ups found.', 'لا توجد متابعات.') }}</div>
       } @else {
         <div class="table-scroll">
-          <table>
+          <div class="table-responsive"><table>
             <thead>
               <tr>
                 <th>{{ t('Patient', 'المريض') }}</th>
@@ -90,7 +92,7 @@ import { followUpFilters } from './crm-ui';
                 </tr>
               }
             </tbody>
-          </table>
+          </table></div>
         </div>
         <div class="pager">
           <button [disabled]="page() === 1" (click)="load(page() - 1)">‹</button
@@ -99,7 +101,7 @@ import { followUpFilters } from './crm-ui';
         </div>
       }
     </section>`,
-  styleUrl: './crm.scss',
+
 })
 export class FollowUpsPageComponent {
   private readonly api = inject(CrmApiService);
@@ -163,3 +165,5 @@ export class FollowUpsPageComponent {
     return this.i18n.language() === 'en' ? en : ar;
   }
 }
+
+

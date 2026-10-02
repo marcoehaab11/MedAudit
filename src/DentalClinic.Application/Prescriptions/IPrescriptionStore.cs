@@ -22,6 +22,7 @@ public interface IPrescriptionStore
     Task<PagedResult<PrescriptionListItem>> SearchPrescriptionsAsync(PrescriptionSearch search, Guid? visibleDoctorId, CancellationToken token);
     Task<PrescriptionClinic> GetClinicAsync(CancellationToken token);
     void AddMedication(MedicationCatalogItem item);
+    void RemoveMedication(MedicationCatalogItem item);
     void AddPrescription(Prescription prescription);
     void AddAudit(PlatformAuditLog audit);
     Task SaveChangesAsync(CancellationToken token);
@@ -32,6 +33,7 @@ public interface IMedicationCatalogService
     Task<PagedResult<MedicationCatalogDetails>> SearchAsync(MedicationSearch search, CancellationToken token);
     Task<Guid> CreateAsync(MedicationCatalogInput input, CancellationToken token);
     Task<bool> UpdateAsync(Guid id, MedicationCatalogInput input, CancellationToken token);
+    Task<bool> DeleteAsync(Guid id, CancellationToken token);
 }
 public interface IPrescriptionService
 {

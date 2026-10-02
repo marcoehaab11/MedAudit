@@ -84,3 +84,4 @@ describe('InventoryPageComponent', () => {
     expect(component.errorMessage()).toBe('Insufficient stock balance.');
   });
 });
+

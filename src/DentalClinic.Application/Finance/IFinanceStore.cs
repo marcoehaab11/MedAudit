@@ -20,6 +20,9 @@ public interface IFinanceStore
     Task<IReadOnlyCollection<FinancialCategoryItem>> CategoriesAsync(bool includeInactive, FinancialCategoryType? type, CancellationToken token);
     Task<Revenue?> FindRevenueAsync(Guid id, CancellationToken token);
     Task<Revenue?> FindRevenueByTreatmentAsync(Guid treatmentId, CancellationToken token);
+    Task<Revenue?> FindRevenueByPlanAsync(Guid planId, CancellationToken token);
+    Task<Domain.Treatments.TreatmentPlan?> FindPlanForRevenueAsync(Guid planId, CancellationToken token);
+    Task<Revenue?> FindLatestOutstandingRevenueByPatientAsync(Guid patientId, CancellationToken token);
     Task<RevenueItem?> RevenueAsync(Guid id, CancellationToken token);
     Task<FinanceSummary> DashboardAsync(FinanceRange range, CancellationToken token);
     Task<PagedResult<RevenueItem>> RevenuesAsync(RevenueSearch search, FinanceRange range, CancellationToken token);

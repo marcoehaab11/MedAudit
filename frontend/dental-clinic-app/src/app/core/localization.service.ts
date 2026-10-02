@@ -17,3 +17,4 @@ export class LocalizationService {
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
   }
 }
+

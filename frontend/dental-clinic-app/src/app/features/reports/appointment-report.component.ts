@@ -194,3 +194,4 @@ export class AppointmentReportComponent implements OnInit {
     return this.data.byStatus.map((s) => ({ label: s.status, value: s.count }));
   }
 }
+

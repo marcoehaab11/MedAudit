@@ -7,5 +7,5 @@ public sealed record UpdateTreatmentPlanRequest(string Title, string? Notes, dec
 public sealed record UpdatePlanItemRequest(int? ToothNumber, int Quantity, decimal DiscountAmount, string? Notes, Guid Version);
 public sealed record TreatmentVersionRequest(Guid Version);
 public sealed record CreateTreatmentRequest(Guid PatientId, Guid DoctorProfileId, Guid CatalogItemId, Guid? AppointmentId,
-    Guid? TreatmentPlanItemId, Guid? SourceDentalProcedureId, IReadOnlyCollection<int> ToothNumbers, string? Notes);
+    Guid? TreatmentPlanItemId, Guid? SourceDentalProcedureId, IReadOnlyCollection<int> ToothNumbers, string? Notes, decimal? Price = null);
 public sealed record UpdateTreatmentNotesRequest(string? Notes, Guid Version);

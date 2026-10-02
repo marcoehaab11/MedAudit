@@ -4,6 +4,7 @@ import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angu
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { LocalizationService } from '../../core/localization.service';
+import { DateInputComponent } from '../../shared/date-input/date-input.component';
 import {
   Compensation,
   DoctorApiService,
@@ -13,8 +14,10 @@ import {
 
 type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
 @Component({
+  styleUrl: './doctors.scss',
+
   selector: 'app-doctor-details',
-  imports: [RouterLink, DatePipe, DecimalPipe, ReactiveFormsModule, FormsModule],
+  imports: [RouterLink, DatePipe, DecimalPipe, ReactiveFormsModule, FormsModule, DateInputComponent],
   template: `
     <a class="back" routerLink="/doctors">← {{ t('Back to doctors', 'العودة إلى الأطباء') }}</a>
     @if (loading()) {
@@ -34,7 +37,10 @@ type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
             <a class="button" [routerLink]="['/doctors', id, 'edit']">{{ t('Edit', 'تعديل') }}</a>
           }
           @if (auth.hasPermission('Doctors.Archive') && doctor()!.status !== 3) {
-            <button class="danger" (click)="archive()">{{ t('Archive', 'أرشفة') }}</button>
+            <button class="danger" (click)="archive()">{{ t('Delete / Archive', 'حذف / أرشفة') }}</button>
+          }
+          @if (auth.hasPermission('Doctors.Archive') && doctor()!.status === 3) {
+            <button class="primary" (click)="restore()">{{ t('Restore Doctor', 'استرجاع الطبيب') }}</button>
           }
         </div>
       </section>
@@ -62,7 +68,7 @@ type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
                 </div>
                 <div>
                   <dt>{{ t('License number', 'رقم الترخيص') }}</dt>
-                  <dd class="number">{{ doctor()!.licenseNumber }}</dd>
+                  <dd class="number">{{ doctor()!.licenseNumber || '—' }}</dd>
                 </div>
                 <div>
                   <dt>{{ t('Consultation duration', 'مدة الاستشارة') }}</dt>
@@ -104,7 +110,7 @@ type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
               </div>
               <div>
                 <dt>{{ t('Profile created', 'إنشاء الملف') }}</dt>
-                <dd>{{ doctor()!.createdAt | date: 'medium' }}</dd>
+                <dd>{{ doctor()!.createdAt | date: 'dd/MM/yyyy hh:mm a' }}</dd>
               </div>
             </dl>
             @if (auth.hasPermission('Doctors.Edit') && doctor()!.status !== 3) {
@@ -212,17 +218,17 @@ type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
           @if (doctor()!.canManageCompensation) {
             <div class="detail-grid">
               <section class="panel">
-                <h2>{{ t('Compensation history', 'سجل التعويض') }}</h2>
+                <h2>{{ t('Compensation history', 'سجل المستحقات') }}</h2>
                 @if (!compensations().length) {
-                  <p>{{ t('No compensation rules recorded.', 'لا توجد قواعد تعويض مسجلة.') }}</p>
+                  <p>{{ t('No compensation rules recorded.', 'لا توجد قواعد مستحقات مسجلة.') }}</p>
                 } @else {
                   <div class="history">
                     @for (c of compensations(); track c.id) {
                       <article>
                         <strong>{{ compType(c.compensationType) }}</strong
                         ><span
-                          >{{ c.effectiveFrom }} →
-                          {{ c.effectiveTo || t('Current', 'الحالي') }}</span
+                          >{{ c.effectiveFrom | date: 'dd/MM/yyyy' }} →
+                          {{ (c.effectiveTo | date: 'dd/MM/yyyy') || t('Current', 'الحالي') }}</span
                         ><small>
                           @if (c.fixedAmount) {
                             {{ c.fixedAmount | number: '1.0-2' }}
@@ -241,7 +247,7 @@ type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
                   {{
                     compensations().length
                       ? t('Create successor rule', 'إنشاء قاعدة لاحقة')
-                      : t('Create compensation rule', 'إنشاء قاعدة تعويض')
+                      : t('Create compensation rule', 'إنشاء قاعدة مستحقات')
                   }}
                 </h2>
                 <form class="form" [formGroup]="compForm" (ngSubmit)="saveCompensation()">
@@ -260,10 +266,10 @@ type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
                     }}<input type="number" min="0" max="100" formControlName="percentage" /></label
                   ><label
                     >{{ t('Effective from', 'ساري من')
-                    }}<input type="date" formControlName="effectiveFrom" /></label
+                    }}<app-date-input formControlName="effectiveFrom"></app-date-input></label
                   ><label
                     >{{ t('Effective to (optional)', 'ساري حتى (اختياري)')
-                    }}<input type="date" formControlName="effectiveTo" /></label
+                    }}<app-date-input formControlName="effectiveTo"></app-date-input></label
                   ><button class="primary" [disabled]="compForm.invalid">
                     {{ t('Save new historical rule', 'حفظ قاعدة تاريخية جديدة') }}
                   </button>
@@ -275,7 +281,7 @@ type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
       }
     }
   `,
-  styleUrl: './doctors.scss',
+
 })
 export class DoctorDetailsComponent {
   private api = inject(DoctorApiService);
@@ -294,7 +300,7 @@ export class DoctorDetailsComponent {
     { id: 'profile', en: 'Profile', ar: 'الملف' },
     { id: 'account', en: 'Account', ar: 'الحساب' },
     { id: 'schedule', en: 'Schedule', ar: 'الجدول' },
-    { id: 'compensation', en: 'Compensation', ar: 'التعويض' },
+    { id: 'compensation', en: 'Compensation', ar: 'المستحقات' },
   ];
   readonly compForm = inject(FormBuilder).nonNullable.group({
     compensationType: 1,
@@ -358,15 +364,33 @@ export class DoctorDetailsComponent {
     if (
       !confirm(
         this.t(
-          'Archive this doctor profile? This cannot be reversed.',
-          'أرشفة ملف الطبيب؟ لا يمكن التراجع عن ذلك.',
+          'Are you sure you want to delete/archive this doctor? All past financial records and patient treatment history will remain intact, but new appointments cannot be booked.',
+          'هل أنت متأكد من حذف / أرشفة هذا الطبيب؟ ستبقى جميع السجلات المالية والطبية السابقة محفوظة، ولكن لن يمكن حجز مواعيد جديدة له.',
         ),
       )
     )
       return;
     this.api.archive(this.id).subscribe({
       next: () => {
-        this.success.set(this.t('Doctor archived.', 'تمت أرشفة الطبيب.'));
+        this.success.set(this.t('Doctor archived and removed from active bookings.', 'تمت أرشفة وحذف الطبيب بنجاح ومنع الحجوزات الجديدة له.'));
+        this.load();
+      },
+      error: () => this.failed(),
+    });
+  }
+  restore() {
+    if (
+      !confirm(
+        this.t(
+          'Are you sure you want to restore this doctor? They will become active again and available for appointment bookings.',
+          'هل أنت متأكد من استرجاع هذا الطبيب؟ سيصبح نشطاً مجدداً ومتاحاً لحجز المواعيد.',
+        ),
+      )
+    )
+      return;
+    this.api.restore(this.id).subscribe({
+      next: () => {
+        this.success.set(this.t('Doctor restored successfully and is now active for appointments.', 'تم استرجاع الطبيب بنجاح وأصبح متاحاً للمواعيد.'));
         this.load();
       },
       error: () => this.failed(),
@@ -420,7 +444,7 @@ export class DoctorDetailsComponent {
     request.subscribe({
       next: () => {
         this.success.set(
-          this.t('Historical compensation rule saved.', 'تم حفظ قاعدة التعويض التاريخية.'),
+          this.t('Historical compensation rule saved.', 'تم حفظ قاعدة المستحقات التاريخية.'),
         );
         this.compForm.reset({
           compensationType: 1,
@@ -460,3 +484,4 @@ export class DoctorDetailsComponent {
     return this.i18n.language() === 'en' ? en : ar;
   }
 }
+

@@ -215,3 +215,4 @@ export class RevenueReportComponent implements OnInit {
     return this.data.byCategory.map((c) => ({ label: c.categoryName, value: c.revenue }));
   }
 }
+

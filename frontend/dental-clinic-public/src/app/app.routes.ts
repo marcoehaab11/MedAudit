@@ -15,7 +15,6 @@ export const routes: Routes = [
   },
   {
     path: '',
-    pathMatch: 'full',
-    redirectTo: 'book/demo-clinic',
+    loadComponent: () => import('./features/home/home.component').then((m) => m.HomeComponent),
   },
 ];

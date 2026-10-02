@@ -103,3 +103,4 @@ describe('SettingsPageComponent', () => {
     expect(mockSettingsApi.getSettings).toHaveBeenCalled();
   });
 });
+

@@ -1,5 +1,6 @@
 using System.Globalization;
 using DentalClinic.Application;
+using DentalClinic.Application.Identity;
 using DentalClinic.Infrastructure;
 using DentalClinic.Infrastructure.Identity;
 using DentalClinic.Infrastructure.Persistence;
@@ -17,6 +18,7 @@ builder.Host.UseSerilog((context, configuration) => configuration
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme).AddIdentityCookies();
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -37,9 +39,18 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizeFolder("/", AuthConstants.PlatformAdminPolicy);
 });
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.All;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
 
 await DatabaseSeeder.SeedAsync(app.Services);
+
+app.UseForwardedHeaders();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -57,5 +68,16 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthorization();
+
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("live")
+}).AllowAnonymous();
+
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+}).AllowAnonymous();
+
 app.MapRazorPages();
 app.Run();

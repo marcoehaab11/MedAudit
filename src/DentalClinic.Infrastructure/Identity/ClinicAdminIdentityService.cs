@@ -38,6 +38,22 @@ internal sealed class ClinicAdminIdentityService(
         return user.Id;
     }
 
+    public async Task<Guid> CreateUserWithPasswordAsync(Guid tenantId, string email, string password, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var user = new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true,
+            LockoutEnabled = true
+        };
+        EnsureSucceeded(await userManager.CreateAsync(user, password), "Password");
+        return user.Id;
+    }
+
     public async Task SetPasswordAsync(
         Guid tenantId,
         Guid userId,
@@ -49,9 +65,32 @@ internal sealed class ClinicAdminIdentityService(
         var user = await context.Users.IgnoreQueryFilters()
             .SingleOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId, cancellationToken);
         if (user is null) throw new ValidationException([new ValidationFailure("Token", "Invitation is invalid.")]);
+
+        if (await userManager.HasPasswordAsync(user))
+        {
+            await userManager.RemovePasswordAsync(user);
+        }
+
         EnsureSucceeded(await userManager.AddPasswordAsync(user, password), "Password");
         user.EmailConfirmed = true;
         EnsureSucceeded(await userManager.UpdateAsync(user), "Password");
+
+        var now = DateTimeOffset.UtcNow;
+        var clinicUser = await context.ClinicUsers.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(x => x.Id == userId && x.TenantId == tenantId, cancellationToken);
+        if (clinicUser is not null && clinicUser.Status == Domain.Identity.UserStatus.Invited)
+        {
+            clinicUser.AcceptInvitation(now);
+        }
+
+        var invitation = await context.AdminInvitations.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.UserId == userId && x.TenantId == tenantId && x.Status == Domain.Tenancy.AdminInvitationStatus.Pending, cancellationToken);
+        if (invitation is not null)
+        {
+            invitation.TryAccept(now);
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<bool> CheckPasswordAsync(Guid userId, string password, CancellationToken cancellationToken)

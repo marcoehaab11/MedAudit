@@ -34,8 +34,8 @@ internal static class AppointmentEndpoints
         await service.GetAsync(id, token) is { } item ? Results.Ok(item) : Results.NotFound();
 
     private static Task<IReadOnlyCollection<AvailabilitySlot>> AvailabilityAsync(IAppointmentAvailabilityQuery service,
-        Guid doctorProfileId, DateOnly date, int durationMinutes, CancellationToken token) =>
-        service.GetAsync(new DoctorAvailabilityQuery(doctorProfileId, date, durationMinutes), token);
+        Guid doctorProfileId, DateOnly date, int durationMinutes, bool isEmergency = false, CancellationToken token = default) =>
+        service.GetAsync(new DoctorAvailabilityQuery(doctorProfileId, date, durationMinutes, isEmergency), token);
 
     private static async Task<IResult> CreateAsync(CreateAppointmentRequest request, ICreateAppointment service,
         CancellationToken token)

@@ -72,9 +72,16 @@ export class AppointmentApiService {
   appointment(id: string) {
     return this.http.get<AppointmentDetails>(`/api/appointments/${id}`);
   }
-  availability(doctorProfileId: string, date: string, durationMinutes: number) {
+  availability(doctorProfileId: string, date: string, durationMinutes: number, isEmergency?: boolean) {
+    let params = new HttpParams()
+      .set('doctorProfileId', doctorProfileId)
+      .set('date', date)
+      .set('durationMinutes', durationMinutes.toString());
+    if (isEmergency) {
+      params = params.set('isEmergency', 'true');
+    }
     return this.http.get<AvailabilitySlot[]>('/api/appointments/availability', {
-      params: { doctorProfileId, date, durationMinutes },
+      params,
     });
   }
   create(value: {
@@ -96,3 +103,4 @@ export class AppointmentApiService {
     return this.http.post<void>(`/api/appointments/${id}/cancel`, { reason });
   }
 }
+

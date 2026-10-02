@@ -23,6 +23,11 @@ public sealed class Revenue : TenantOwnedEntity
     public string Currency { get; private set; } = string.Empty; public string Description { get; private set; } = string.Empty;
     public DateTimeOffset OccurredAt { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
+    internal void UpdateAmount(decimal amount, string description)
+    {
+        Amount = FinanceRules.NonNegative(amount, nameof(amount));
+        Description = FinanceRules.Required(description, nameof(description), 500);
+    }
 }
 
 public sealed class Payment : TenantOwnedEntity

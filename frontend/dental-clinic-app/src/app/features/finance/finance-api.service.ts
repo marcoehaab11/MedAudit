@@ -129,7 +129,7 @@ export class FinanceApiService {
   }
   revenues(filters: Record<string, string | number | undefined>) {
     return this.http.get<Page<Revenue>>('/api/finance/revenue', {
-      params: clean({ pageSize: 20, ...filters }),
+      params: clean({ page: 1, pageSize: 20, ...filters }),
     });
   }
   revenue(id: string) {
@@ -137,7 +137,7 @@ export class FinanceApiService {
   }
   payments(filters: Record<string, string | number | undefined>) {
     return this.http.get<Page<Payment>>('/api/finance/payments', {
-      params: clean({ pageSize: 20, ...filters }),
+      params: clean({ page: 1, pageSize: 20, ...filters }),
     });
   }
   createPayment(value: object) {
@@ -145,7 +145,7 @@ export class FinanceApiService {
   }
   expenses(filters: Record<string, string | number | undefined>) {
     return this.http.get<Page<Expense>>('/api/finance/expenses', {
-      params: clean({ pageSize: 20, ...filters }),
+      params: clean({ page: 1, pageSize: 20, ...filters }),
     });
   }
   createExpense(value: object) {
@@ -161,3 +161,4 @@ function clean(values: Record<string, string | number | boolean | undefined>) {
     if (value !== undefined && value !== '') p = p.set(key, value);
   return p;
 }
+

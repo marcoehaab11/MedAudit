@@ -178,3 +178,4 @@ export class SettingsApiService {
     return this.http.put<UserPreference>(`${this.baseUrl}/user-preferences`, payload);
   }
 }
+

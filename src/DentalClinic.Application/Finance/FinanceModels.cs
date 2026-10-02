@@ -37,7 +37,7 @@ public sealed record FinanceNamedAmount(Guid? Id, string Name, decimal Amount);
 public sealed record FinanceDailyAmount(DateOnly Date, decimal Amount);
 public sealed record FinancePatient(Guid Id, string Name, bool IsActive);
 public sealed record FinanceTreatment(Guid Id, Guid PatientId, Guid DoctorProfileId, Guid? TreatmentPlanId,
-    string Name, TreatmentStatus Status, decimal Amount, DateTimeOffset? CompletedAt);
+    string Name, TreatmentStatus Status, decimal Amount, DateTimeOffset? CompletedAt, DateTimeOffset CreatedAt = default);
 public sealed record FinanceDoctorRule(Guid Id, CompensationType Type, decimal? FixedAmount, decimal? Percentage,
     DateOnly EffectiveFrom, DateOnly? EffectiveTo);
 public sealed record CompensationResult(decimal Amount, decimal? Percentage, string Snapshot);
@@ -60,5 +60,9 @@ public interface IFinancialCategoryService
 }
 public interface IPaymentService { Task<Guid> CreateAsync(PaymentInput input, CancellationToken token); }
 public interface IExpenseService { Task<Guid> CreateAsync(ExpenseInput input, CancellationToken token); }
-public interface ITreatmentRevenueCreator { Task EnsureForCompletedTreatmentAsync(Guid treatmentId, CancellationToken token); }
+public interface ITreatmentRevenueCreator
+{
+    Task EnsureForCompletedTreatmentAsync(Guid treatmentId, CancellationToken token);
+    Task EnsureForTreatmentPlanAsync(Guid planId, CancellationToken token);
+}
 public interface IDoctorCompensationCalculator { CompensationResult Calculate(FinanceDoctorRule? rule, decimal treatmentAmount); }

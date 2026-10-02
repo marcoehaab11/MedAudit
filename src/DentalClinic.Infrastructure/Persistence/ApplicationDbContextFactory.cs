@@ -10,8 +10,7 @@ public sealed class ApplicationDbContextFactory : IDesignTimeDbContextFactory<Ap
     public ApplicationDbContext CreateDbContext(string[] args)
     {
         var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
-            ?? throw new InvalidOperationException(
-                "Set ConnectionStrings__Postgres before using EF Core design-time tools.");
+            ?? "Host=localhost;Port=5432;Database=meddentist;Username=postgres;Password=postgres";
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseNpgsql(connectionString)
             .Options;

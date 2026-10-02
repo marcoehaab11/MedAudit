@@ -7,9 +7,9 @@ import { DentalApiService, PatientDentalChart } from './dental-api.service';
 import { DentalChartComponent } from './dental-chart.component';
 
 @Component({
+  styleUrl: './dental.scss',
   selector: 'app-patient-dental',
   imports: [RouterLink, DatePipe, DentalChartComponent],
-  styleUrl: './dental.scss',
   template: ` <a class="back" [routerLink]="['/patients', patientId]"
       >← {{ t('Back to patient', 'العودة إلى المريض') }}</a
     >
@@ -61,7 +61,7 @@ import { DentalChartComponent } from './dental-chart.component';
           <article>
             <div>
               <strong>{{ item.doctorName }}</strong
-              ><small>{{ item.createdAt | date: 'medium' }}</small>
+              ><small>{{ item.createdAt | date: 'dd/MM/yyyy hh:mm a' }}</small>
             </div>
             <span>{{ item.status === 2 ? t('Completed', 'مكتمل') : t('Draft', 'مسودة') }}</span>
           </article>
@@ -111,3 +111,4 @@ export class PatientDentalComponent {
     return this.i18n.language() === 'en' ? en : ar;
   }
 }
+

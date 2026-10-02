@@ -14,6 +14,7 @@ public interface IDoctorProfileCommands
     Task<bool> UpdateAsync(UpdateDoctorProfileCommand command, CancellationToken cancellationToken);
     Task<bool> SetActiveAsync(Guid id, bool active, CancellationToken cancellationToken);
     Task<bool> ArchiveAsync(Guid id, CancellationToken cancellationToken);
+    Task<bool> RestoreAsync(Guid id, CancellationToken cancellationToken);
 }
 public interface IDoctorScheduleService
 {

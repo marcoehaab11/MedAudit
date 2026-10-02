@@ -72,7 +72,7 @@
           <div class="notification-card" [class.unread]="!item.isRead">
             <div class="card-header">
               <span class="type-pill">{{ item.type }}</span>
-              <span class="timestamp">{{ item.createdAt | date: 'short' }}</span>
+              <span class="timestamp">{{ item.createdAt | date: 'dd/MM/yyyy hh:mm a' }}</span>
             </div>
             <h3 class="card-title">{{ item.title }}</h3>
             <p class="card-body">{{ item.body }}</p>
@@ -91,7 +91,7 @@
 
   @if (activeTab() === 'deliveries' && auth.hasPermission('Notifications.Manage')) {
     <div class="table-container">
-      <table class="data-table">
+      <div class="table-responsive">`n<div class="table-responsive"><table class="data-table">
         <thead>
           <tr>
             <th>{{ i18n.language() === 'en' ? 'Channel' : 'القناة' }}</th>
@@ -136,11 +136,14 @@
               </td>
               <td>{{ d.providerName || '-' }}</td>
               <td>{{ d.attemptCount }}</td>
-              <td>{{ d.createdAt | date: 'short' }}</td>
+              <td>{{ d.createdAt | date: 'dd/MM/yyyy hh:mm a' }}</td>
             </tr>
           }
         </tbody>
-      </table>
+      </table></div>`n</div>
     </div>
   }
 </div>
+
+
+

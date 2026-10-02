@@ -199,3 +199,4 @@ export class PrescriptionReportComponent implements OnInit {
     return this.data.byMonth.map((m) => ({ label: m.month, value: m.count, color: '#2563eb' }));
   }
 }
+

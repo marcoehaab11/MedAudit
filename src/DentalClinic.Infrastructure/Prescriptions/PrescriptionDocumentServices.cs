@@ -20,7 +20,11 @@ internal sealed class PrescriptionDocumentService(IPrescriptionQrCodeService qrC
 {
     public Task<PrescriptionDocument> GenerateAsync(PrescriptionDocumentModel model, CancellationToken token)
     {
-        token.ThrowIfCancellationRequested(); var lines = new List<string> { model.Clinic.Name, $"{model.Clinic.Address}, {model.Clinic.City}, {model.Clinic.Country}", $"Phone: {model.Clinic.Phone}", $"Prescription {model.PrescriptionNumber}", $"Issued {model.IssuedAt:yyyy-MM-dd}", $"Patient: {model.PatientName}", $"Doctor: {model.DoctorName} - {model.DoctorSpecialization} ({model.DoctorLicense})", string.Empty };
+        token.ThrowIfCancellationRequested();
+        var docInfo = string.IsNullOrWhiteSpace(model.DoctorLicense)
+            ? $"Doctor: {model.DoctorName} - {model.DoctorSpecialization}"
+            : $"Doctor: {model.DoctorName} - {model.DoctorSpecialization} ({model.DoctorLicense})";
+        var lines = new List<string> { model.Clinic.Name, $"{model.Clinic.Address}, {model.Clinic.City}, {model.Clinic.Country}", $"Phone: {model.Clinic.Phone}", $"Prescription {model.PrescriptionNumber}", $"Issued {model.IssuedAt:yyyy-MM-dd}", $"Patient: {model.PatientName}", docInfo, string.Empty };
         foreach (var item in model.Items.OrderBy(x => x.SortOrder)) lines.Add($"{item.SortOrder}. {item.MedicationName} {item.Strength} | {item.Dose} | {item.Frequency} | {item.Duration} | {item.Route} | {item.Instructions}");
         if (!string.IsNullOrWhiteSpace(model.Notes)) lines.Add($"Notes: {model.Notes}"); lines.Add(string.Empty); lines.Add("Doctor signature: ______________________________"); lines.Add($"Verification: {model.VerificationReference}");
         _ = qrCodes.GenerateSvg(model.VerificationReference); var content = BuildPdf(lines); return Task.FromResult(new PrescriptionDocument(content, "application/pdf", $"{model.PrescriptionNumber}.pdf"));

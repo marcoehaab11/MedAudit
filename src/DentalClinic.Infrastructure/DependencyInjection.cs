@@ -78,6 +78,7 @@ public static class DependencyInjection
         services.AddScoped<IClinicInvitationNotifier, LoggingClinicInvitationNotifier>();
         services.AddSingleton<ISystemClock, SystemClock>();
         services.AddHttpContextAccessor();
+        services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
         services.AddScoped<IPlatformAccessContext, HttpPlatformAccessContext>();
         services.AddScoped<ICurrentUser, HttpCurrentUser>();
 

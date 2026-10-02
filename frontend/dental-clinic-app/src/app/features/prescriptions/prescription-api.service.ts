@@ -7,6 +7,7 @@ export interface Medication {
   genericName?: string;
   strength?: string;
   form?: number;
+  notes?: string;
   isActive: boolean;
 }
 export interface PrescriptionItem {
@@ -81,16 +82,48 @@ export class PrescriptionApiService {
   private readonly http = inject(HttpClient);
   prescriptions(filters: Record<string, string> = {}) {
     return this.http.get<Page<PrescriptionList>>('/api/prescriptions', {
-      params: new HttpParams({ fromObject: { pageSize: '50', ...filters } }),
+      params: new HttpParams({ fromObject: { page: '1', pageSize: '50', ...filters } }),
     });
   }
   prescription(id: string) {
     return this.http.get<Prescription>(`/api/prescriptions/${id}`);
   }
-  medications(search: string) {
-    return this.http.get<Page<Medication>>('/api/medications', {
-      params: { search, pageSize: 20 },
-    });
+  medications(search: string, form?: number, includeInactive = false, page = 1, pageSize = 50) {
+    let params = new HttpParams()
+      .set('search', search || '')
+      .set('includeInactive', String(includeInactive))
+      .set('page', String(page))
+      .set('pageSize', String(pageSize));
+    if (form != null && form !== -1) {
+      params = params.set('form', String(form));
+    }
+    return this.http.get<Page<Medication>>('/api/medications', { params });
+  }
+  createMedication(med: {
+    name: string;
+    genericName?: string;
+    strength?: string;
+    form?: number;
+    notes?: string;
+    isActive?: boolean;
+  }) {
+    return this.http.post<{ id: string }>('/api/medications', med);
+  }
+  updateMedication(
+    id: string,
+    med: {
+      name: string;
+      genericName?: string;
+      strength?: string;
+      form?: number;
+      notes?: string;
+      isActive?: boolean;
+    },
+  ) {
+    return this.http.put<void>(`/api/medications/${id}`, med);
+  }
+  deleteMedication(id: string) {
+    return this.http.delete<void>(`/api/medications/${id}`);
   }
   create(value: {
     patientId: string;
@@ -149,3 +182,4 @@ export class PrescriptionApiService {
     return this.http.get(`/api/prescriptions/${id}/qr`, { responseType: 'text' });
   }
 }
+

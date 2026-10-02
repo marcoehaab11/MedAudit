@@ -310,3 +310,4 @@ function cleanParams(filter?: ReportFilter): HttpParams {
 
   return p;
 }
+

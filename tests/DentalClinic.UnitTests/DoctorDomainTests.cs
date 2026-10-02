@@ -32,6 +32,24 @@ public sealed class DoctorDomainTests
     }
 
     [Fact]
+    public void ArchivedProfileCanBeRestoredToActiveAndUpdated()
+    {
+        var profile = Profile();
+        profile.Archive(Now.AddMinutes(1));
+        Assert.Equal(DoctorProfileStatus.Archived, profile.Status);
+
+        profile.Restore(Now.AddMinutes(2));
+        Assert.Equal(DoctorProfileStatus.Active, profile.Status);
+        Assert.Equal(Now.AddMinutes(2), profile.UpdatedAt);
+
+        // Can now be updated normally
+        profile.Update("Surgery", "LIC-43", "Updated bio", 45, Now.AddMinutes(3));
+        Assert.Equal("Surgery", profile.Specialization);
+        Assert.Equal("LIC-43", profile.LicenseNumber);
+        Assert.Equal(45, profile.ConsultationDurationMinutes);
+    }
+
+    [Fact]
     public void ScheduleRejectsInvalidSlotsAndOverlappingBreaks()
     {
         Assert.Throws<ArgumentException>(() => Schedule(50, []));

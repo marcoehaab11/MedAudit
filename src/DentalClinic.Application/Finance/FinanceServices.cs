@@ -60,14 +60,58 @@ internal sealed class PaymentService(IFinanceStore store, IPermissionService per
     public async Task<Guid> CreateAsync(PaymentInput x, CancellationToken token)
     {
         await permissions.EnsurePermissionAsync(Permissions.FinancePaymentsCreate, token);
-        var revenue = x.RevenueId.HasValue ? await store.FindRevenueAsync(x.RevenueId.Value, token) : x.TreatmentId.HasValue ? await store.FindRevenueByTreatmentAsync(x.TreatmentId.Value, token) : null;
-        if (revenue is null) throw new FinanceNotFoundException("A posted revenue or completed treatment revenue is required.");
+        var revenue = x.RevenueId.HasValue
+            ? await store.FindRevenueAsync(x.RevenueId.Value, token)
+            : x.TreatmentId.HasValue
+                ? await store.FindRevenueByTreatmentAsync(x.TreatmentId.Value, token)
+                : x.PatientId.HasValue
+                    ? await store.FindLatestOutstandingRevenueByPatientAsync(x.PatientId.Value, token)
+                    : null;
+
+        if (revenue is not null && !x.RevenueId.HasValue && !x.TreatmentId.HasValue && x.PatientId.HasValue)
+        {
+            var existingPaid = await store.PaidForRevenueAsync(revenue.Id, token);
+            if (revenue.Amount - existingPaid <= 0)
+            {
+                revenue = null;
+            }
+        }
+
+        if (revenue is null && x.PatientId.HasValue)
+        {
+            var patient = await store.FindPatientAsync(x.PatientId.Value, token);
+            if (patient is not null)
+            {
+                var category = await store.FindCategoryByCodeAsync("GENERAL_REVENUE", FinancialCategoryType.Revenue, token)
+                    ?? await store.FindCategoryByCodeAsync("TREATMENT_REVENUE", FinancialCategoryType.Revenue, token);
+                if (category is null)
+                {
+                    var firstCat = (await store.CategoriesAsync(false, FinancialCategoryType.Revenue, token)).FirstOrDefault();
+                    if (firstCat is not null) category = await store.FindCategoryAsync(firstCat.Id, false, token);
+                }
+                if (category is not null)
+                {
+                    var currency = await store.CurrencyAsync(token);
+                    var now = clock.UtcNow;
+                    var desc = !string.IsNullOrWhiteSpace(x.Notes) ? x.Notes : "General patient payment / سداد كشف أو دفعة مريض";
+                    revenue = new Revenue(tenant.RequireTenantId(), category.Id, patient.Id, null, null, null, x.Amount, currency, desc, now, now);
+                    store.AddRevenue(revenue);
+                    store.AddTransaction(new(revenue.TenantId, FinancialTransactionType.Revenue, revenue.Amount, revenue.Currency, revenue.OccurredAt, FinancialSourceType.Revenue, revenue.Id, revenue.Description, now));
+                    store.AddAudit(new(revenue.TenantId, user.UserId, PlatformAuditAction.RevenueCreated, nameof(Revenue), revenue.Id, now, null));
+                    await store.SaveChangesAsync(token);
+                }
+            }
+        }
+
+        if (revenue is null) throw new FinanceNotFoundException("A posted revenue, completed treatment, or patient revenue is required.");
         if (x.PatientId.HasValue && revenue.PatientId != x.PatientId || x.TreatmentId.HasValue && revenue.TreatmentId != x.TreatmentId) throw new ArgumentException("Payment references do not match the revenue.");
-        var range = await store.ResolveRangeAsync(new(FinancePeriod.Custom, x.PaidDate, x.PaidDate), token);
-        var paidAt = ToUtc(x.PaidDate, x.PaidTime, range.TimeZone);
+        var paidDate = x.PaidDate == default ? DateOnly.FromDateTime(clock.UtcNow.DateTime) : x.PaidDate;
+        var paidTime = x.PaidTime == default ? TimeOnly.FromDateTime(clock.UtcNow.DateTime) : x.PaidTime;
+        var range = await store.ResolveRangeAsync(new(FinancePeriod.Custom, paidDate, paidDate), token);
+        var paidAt = ToUtc(paidDate, paidTime, range.TimeZone);
         await using var transaction = await store.BeginTransactionAsync(token); await store.LockRevenueAsync(revenue.Id, token);
         var paid = await store.PaidForRevenueAsync(revenue.Id, token); var amount = x.Amount;
-        if (amount <= 0 || amount > revenue.Amount - paid) throw new FinanceConflictException("Payment exceeds the outstanding revenue amount.");
+        if (amount <= 0 || amount > revenue.Amount - paid) throw new FinanceConflictException($"Payment exceeds the outstanding revenue amount. (Amount: {amount}, Revenue: {revenue.Amount}, Paid: {paid})");
         var item = new Payment(tenant.RequireTenantId(), revenue.PatientId, revenue.Id, revenue.TreatmentId, amount, revenue.Currency, x.PaymentMethod, x.Reference, x.Notes, paidAt, user.UserId ?? throw new InvalidOperationException("Authenticated user is required."), clock.UtcNow);
         store.AddPayment(item); store.AddTransaction(new(item.TenantId, FinancialTransactionType.Payment, item.Amount, item.Currency, item.PaidAt, FinancialSourceType.Payment, item.Id, "Payment received", item.CreatedAt));
         store.AddAudit(new(item.TenantId, user.UserId, PlatformAuditAction.PaymentCreated, nameof(Payment), item.Id, clock.UtcNow, null)); await store.SaveChangesAsync(token); await transaction.CommitAsync(token); return item.Id;
@@ -90,16 +134,55 @@ internal sealed class TreatmentRevenueCreator(IFinanceStore store, IDoctorCompen
     {
         if (await store.FindRevenueByTreatmentAsync(treatmentId, token) is not null) return;
         var treatment = await store.FindTreatmentAsync(treatmentId, token) ?? throw new FinanceNotFoundException("Treatment was not found.");
-        if (treatment.Status != TreatmentStatus.Completed || treatment.CompletedAt is null) throw new FinanceConflictException("Only completed treatments create revenue.");
-        var category = await store.FindCategoryByCodeAsync("TREATMENT_REVENUE", FinancialCategoryType.Revenue, token) ?? throw new FinanceConflictException("Treatment revenue category is not initialized.");
+        if (treatment.Status == TreatmentStatus.Cancelled) return;
+        var category = await store.FindCategoryByCodeAsync("TREATMENT_REVENUE", FinancialCategoryType.Revenue, token)
+            ?? await store.FindCategoryByCodeAsync("GENERAL_REVENUE", FinancialCategoryType.Revenue, token);
+        if (category is null)
+        {
+            var firstCat = (await store.CategoriesAsync(false, FinancialCategoryType.Revenue, token)).FirstOrDefault();
+            if (firstCat is not null) category = await store.FindCategoryAsync(firstCat.Id, false, token);
+        }
+        if (category is null) throw new FinanceConflictException("Treatment revenue category is not initialized.");
         var currency = await store.CurrencyAsync(token); var now = clock.UtcNow;
-        var revenue = new Revenue(tenant.RequireTenantId(), category.Id, treatment.PatientId, treatment.Id, treatment.TreatmentPlanId, treatment.DoctorProfileId, treatment.Amount, currency, treatment.Name, treatment.CompletedAt.Value, now);
+        var occurredAt = treatment.CompletedAt ?? treatment.CreatedAt;
+        var revenue = new Revenue(tenant.RequireTenantId(), category.Id, treatment.PatientId, treatment.Id, treatment.TreatmentPlanId, treatment.DoctorProfileId, treatment.Amount, currency, treatment.Name, occurredAt, now);
         store.AddRevenue(revenue); store.AddTransaction(new(revenue.TenantId, FinancialTransactionType.Revenue, revenue.Amount, revenue.Currency, revenue.OccurredAt, FinancialSourceType.Revenue, revenue.Id, revenue.Description, now));
         store.AddAudit(new(revenue.TenantId, user.UserId, PlatformAuditAction.RevenueCreated, nameof(Revenue), revenue.Id, now, null));
-        var range = await store.ResolveRangeAsync(new(FinancePeriod.Custom, DateOnly.FromDateTime(treatment.CompletedAt.Value.UtcDateTime), DateOnly.FromDateTime(treatment.CompletedAt.Value.UtcDateTime)), token);
-        var date = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(treatment.CompletedAt.Value, TimeZoneInfo.FindSystemTimeZoneById(range.TimeZone)).DateTime);
+        var range = await store.ResolveRangeAsync(new(FinancePeriod.Custom, DateOnly.FromDateTime(occurredAt.UtcDateTime), DateOnly.FromDateTime(occurredAt.UtcDateTime)), token);
+        var date = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(occurredAt, TimeZoneInfo.FindSystemTimeZoneById(range.TimeZone)).DateTime);
         var result = calculator.Calculate(await store.FindCompensationRuleAsync(treatment.DoctorProfileId, date, token), treatment.Amount);
         store.AddAudit(new(revenue.TenantId, user.UserId, PlatformAuditAction.DoctorCompensationCalculated, nameof(DoctorCompensationCost), treatment.Id, now, null));
-        if (result.Amount > 0) { var cost = new DoctorCompensationCost(revenue.TenantId, treatment.Id, treatment.DoctorProfileId, result.Amount, currency, result.Snapshot, treatment.CompletedAt.Value, now); store.AddDoctorCost(cost); store.AddTransaction(new(cost.TenantId, FinancialTransactionType.DoctorCompensation, cost.Amount, cost.Currency, cost.OccurredAt, FinancialSourceType.DoctorCompensation, cost.Id, "Treatment percentage compensation", now)); store.AddAudit(new(cost.TenantId, user.UserId, PlatformAuditAction.DoctorCompensationRecorded, nameof(DoctorCompensationCost), cost.Id, now, null)); }
+        if (result.Amount > 0) { var cost = new DoctorCompensationCost(revenue.TenantId, treatment.Id, treatment.DoctorProfileId, result.Amount, currency, result.Snapshot, occurredAt, now); store.AddDoctorCost(cost); store.AddTransaction(new(cost.TenantId, FinancialTransactionType.DoctorCompensation, cost.Amount, cost.Currency, cost.OccurredAt, FinancialSourceType.DoctorCompensation, cost.Id, "Treatment percentage compensation", now)); store.AddAudit(new(cost.TenantId, user.UserId, PlatformAuditAction.DoctorCompensationRecorded, nameof(DoctorCompensationCost), cost.Id, now, null)); }
+    }
+
+    public async Task EnsureForTreatmentPlanAsync(Guid planId, CancellationToken token)
+    {
+        var existing = await store.FindRevenueByPlanAsync(planId, token);
+        var plan = await store.FindPlanForRevenueAsync(planId, token);
+        if (plan is null) return;
+        if (existing is not null)
+        {
+            if (existing.Amount != plan.Total)
+            {
+                existing.UpdateAmount(plan.Total, plan.Title);
+                await store.SaveChangesAsync(token);
+            }
+            return;
+        }
+        var category = await store.FindCategoryByCodeAsync("TREATMENT_REVENUE", FinancialCategoryType.Revenue, token)
+            ?? await store.FindCategoryByCodeAsync("GENERAL_REVENUE", FinancialCategoryType.Revenue, token);
+        if (category is null)
+        {
+            var firstCat = (await store.CategoriesAsync(false, FinancialCategoryType.Revenue, token)).FirstOrDefault();
+            if (firstCat is not null) category = await store.FindCategoryAsync(firstCat.Id, false, token);
+        }
+        if (category is null) return;
+        var currency = await store.CurrencyAsync(token);
+        var now = clock.UtcNow;
+        var revenue = new Revenue(tenant.RequireTenantId(), category.Id, plan.PatientId, null, plan.Id, plan.DoctorProfileId, plan.Total, currency, plan.Title, plan.CreatedAt, now);
+        store.AddRevenue(revenue);
+        store.AddTransaction(new(revenue.TenantId, FinancialTransactionType.Revenue, revenue.Amount, revenue.Currency, revenue.OccurredAt, FinancialSourceType.Revenue, revenue.Id, revenue.Description, now));
+        store.AddAudit(new(revenue.TenantId, user.UserId, PlatformAuditAction.RevenueCreated, nameof(Revenue), revenue.Id, now, null));
+        await store.SaveChangesAsync(token);
     }
 }

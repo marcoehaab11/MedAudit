@@ -6,7 +6,7 @@ public sealed class DoctorProfile : TenantOwnedEntity
 {
     private DoctorProfile() { }
 
-    public DoctorProfile(Guid tenantId, Guid clinicUserId, string specialization, string licenseNumber,
+    public DoctorProfile(Guid tenantId, Guid clinicUserId, string specialization, string? licenseNumber,
         string? bio, int consultationDurationMinutes, DateTimeOffset createdAt, bool isPublicBookingEnabled = true)
     {
         if (tenantId == Guid.Empty || clinicUserId == Guid.Empty)
@@ -22,7 +22,7 @@ public sealed class DoctorProfile : TenantOwnedEntity
 
     public Guid ClinicUserId { get; private set; }
     public string Specialization { get; private set; } = string.Empty;
-    public string LicenseNumber { get; private set; } = string.Empty;
+    public string? LicenseNumber { get; private set; }
     public string? Bio { get; private set; }
     public int ConsultationDurationMinutes { get; private set; }
     public bool IsPublicBookingEnabled { get; private set; } = true;
@@ -30,7 +30,7 @@ public sealed class DoctorProfile : TenantOwnedEntity
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
-    public void Update(string specialization, string licenseNumber, string? bio,
+    public void Update(string specialization, string? licenseNumber, string? bio,
         int consultationDurationMinutes, DateTimeOffset updatedAt, bool isPublicBookingEnabled = true)
     {
         EnsureNotArchived();
@@ -49,11 +49,12 @@ public sealed class DoctorProfile : TenantOwnedEntity
     public void Activate(DateTimeOffset updatedAt) { EnsureNotArchived(); Status = DoctorProfileStatus.Active; UpdatedAt = updatedAt; }
     public void Deactivate(DateTimeOffset updatedAt) { EnsureNotArchived(); Status = DoctorProfileStatus.Inactive; UpdatedAt = updatedAt; }
     public void Archive(DateTimeOffset updatedAt) { if (Status == DoctorProfileStatus.Archived) return; Status = DoctorProfileStatus.Archived; UpdatedAt = updatedAt; }
+    public void Restore(DateTimeOffset updatedAt) { if (Status != DoctorProfileStatus.Archived) return; Status = DoctorProfileStatus.Active; UpdatedAt = updatedAt; }
 
-    private void Apply(string specialization, string licenseNumber, string? bio, int duration)
+    private void Apply(string specialization, string? licenseNumber, string? bio, int duration)
     {
         Specialization = DoctorField.Required(specialization, nameof(specialization), 150);
-        LicenseNumber = DoctorField.Required(licenseNumber, nameof(licenseNumber), 100).ToUpperInvariant();
+        LicenseNumber = DoctorField.Optional(licenseNumber, nameof(licenseNumber), 100)?.ToUpperInvariant();
         Bio = DoctorField.Optional(bio, nameof(bio), 2000);
         if (duration is < 5 or > 480) throw new ArgumentOutOfRangeException(nameof(duration));
         ConsultationDurationMinutes = duration;

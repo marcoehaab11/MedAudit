@@ -1,0 +1,35 @@
+@if (dialog.isOpen()) {
+  <div class="confirm-modal-overlay" (click)="dialog.onCancel()">
+    <div class="confirm-modal-box variant-{{ dialog.variant() }}" (click)="$event.stopPropagation()">
+      <div class="confirm-modal-header">
+        <div class="modal-icon-badge">
+          <span class="icon-text">{{ dialog.icon() }}</span>
+        </div>
+        <h3 class="modal-title">{{ dialog.title() }}</h3>
+      </div>
+
+      <div class="confirm-modal-body">
+        <p class="modal-message">{{ dialog.message() }}</p>
+      </div>
+
+      <div class="confirm-modal-actions">
+        <button
+          type="button"
+          class="btn-modal btn-cancel"
+          (click)="dialog.onCancel()"
+        >
+          {{ dialog.cancelText() }}
+        </button>
+
+        <button
+          type="button"
+          class="btn-modal btn-confirm variant-{{ dialog.variant() }}"
+          (click)="dialog.onConfirm()"
+          autofocus
+        >
+          {{ dialog.confirmText() }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

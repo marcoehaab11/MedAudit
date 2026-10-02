@@ -42,7 +42,7 @@ internal sealed class PrescriptionStore(ApplicationDbContext context) : IPrescri
         if (request.Form.HasValue) query = query.Where(x => x.Form == request.Form);
         if (!string.IsNullOrWhiteSpace(request.Search)) { var term = $"%{request.Search.Trim()}%"; query = query.Where(x => EF.Functions.ILike(x.Name, term) || (x.GenericName != null && EF.Functions.ILike(x.GenericName, term)) || (x.Strength != null && EF.Functions.ILike(x.Strength, term))); }
         var total = await query.CountAsync(token); var items = await query.OrderBy(x => x.Name).Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
-            .Select(x => new MedicationCatalogDetails(x.Id, x.Name, x.GenericName, x.Strength, x.Form, x.IsActive)).ToListAsync(token); return new(items, request.Page, request.PageSize, total);
+            .Select(x => new MedicationCatalogDetails(x.Id, x.Name, x.GenericName, x.Strength, x.Form, x.IsActive, x.Notes)).ToListAsync(token); return new(items, request.Page, request.PageSize, total);
     }
     public Task<Prescription?> FindPrescriptionAsync(Guid id, bool tracking, CancellationToken token)
     { var query = tracking ? context.Prescriptions.AsQueryable() : context.Prescriptions.AsNoTracking(); return query.Include(x => x.Items).SingleOrDefaultAsync(x => x.Id == id, token); }
@@ -61,13 +61,14 @@ internal sealed class PrescriptionStore(ApplicationDbContext context) : IPrescri
         if (request.From.HasValue) query = query.Where(x => x.CreatedAt >= new DateTimeOffset(request.From.Value.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero));
         if (request.To.HasValue) query = query.Where(x => x.CreatedAt < new DateTimeOffset(request.To.Value.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero));
         var total = await query.CountAsync(token); var items = await query.OrderByDescending(x => x.CreatedAt).Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
-            .Select(x => new PrescriptionListItem(x.Id, x.PrescriptionNumber, x.PatientId, context.Patients.Where(p => p.Id == x.PatientId).Select(p => p.FirstName + " " + p.LastName).Single(), x.DoctorProfileId,
-                context.DoctorProfiles.Where(d => d.Id == x.DoctorProfileId).SelectMany(d => context.ClinicUsers.Where(u => u.Id == d.ClinicUserId).Select(u => u.DisplayName)).Single(), x.Status, x.CreatedAt, x.IssuedAt)).ToListAsync(token);
+            .Select(x => new PrescriptionListItem(x.Id, x.PrescriptionNumber, x.PatientId, context.Patients.Where(p => p.Id == x.PatientId).Select(p => p.FirstName + " " + p.LastName).FirstOrDefault() ?? string.Empty, x.DoctorProfileId,
+                context.DoctorProfiles.Where(d => d.Id == x.DoctorProfileId).SelectMany(d => context.ClinicUsers.Where(u => u.Id == d.ClinicUserId).Select(u => u.DisplayName)).FirstOrDefault() ?? string.Empty, x.Status, x.CreatedAt, x.IssuedAt)).ToListAsync(token);
         return new(items, request.Page, request.PageSize, total);
     }
     public Task<PrescriptionClinic> GetClinicAsync(CancellationToken token) => context.Tenants.AsNoTracking().Where(x => context.Prescriptions.Any(p => p.TenantId == x.Id))
         .Select(x => new PrescriptionClinic(x.Name, x.LogoReference, x.Address, x.City, x.Country, x.Phone)).SingleAsync(token);
     public void AddMedication(MedicationCatalogItem item) => context.MedicationCatalogItems.Add(item);
+    public void RemoveMedication(MedicationCatalogItem item) => context.MedicationCatalogItems.Remove(item);
     public void AddPrescription(Prescription prescription) => context.Prescriptions.Add(prescription);
     public void AddAudit(PlatformAuditLog audit) => context.PlatformAuditLogs.Add(audit);
     public async Task SaveChangesAsync(CancellationToken token)

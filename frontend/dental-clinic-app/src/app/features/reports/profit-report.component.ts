@@ -86,7 +86,7 @@ import { ProfitReport, ReportFilter, ReportPeriod, ReportsApiService } from './r
 
         <div class="comparison-table-card">
           <h4>Period Comparison Summary / مقارنة الفترات</h4>
-          <table class="data-table">
+          <div class="table-responsive"><table class="data-table">
             <thead>
               <tr>
                 <th>Metric / المؤشر</th>
@@ -135,7 +135,7 @@ import { ProfitReport, ReportFilter, ReportPeriod, ReportsApiService } from './r
                 </td>
               </tr>
             </tbody>
-          </table>
+          </table></div>
         </div>
       </div>
     </div>
@@ -272,3 +272,5 @@ export class ProfitReportComponent implements OnInit {
     });
   }
 }
+
+

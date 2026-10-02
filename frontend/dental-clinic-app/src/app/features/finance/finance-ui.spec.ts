@@ -1,8 +1,12 @@
+import { describe, it, expect } from 'vitest';
 import {
   canViewPatientFinance,
+  categoryTitle,
   dashboardValues,
+  FINANCIAL_CATEGORY_PRESETS,
   financeFilters,
   financePeriods,
+  localizeCategory,
   money,
   paymentError,
   paymentMethod,
@@ -51,4 +55,26 @@ describe('finance UI', () => {
     expect(paymentError(409, false)).toContain('outstanding');
     expect(paymentError(409, true)).toContain('الرصيد');
   });
+  it('localizes financial categories and expense types in Arabic', () => {
+    expect(categoryTitle('RENT', 'ar')).toBe('إيجار العيادة');
+    expect(categoryTitle('MATERIALS', 'ar')).toBe('خامات ومستلزمات طبية');
+    expect(categoryTitle('LAB', 'ar')).toBe('معامل وتركيبات أسنان');
+    expect(categoryTitle('SALARIES', 'ar')).toBe('رواتب الموظفين والتمريض');
+    expect(categoryTitle('DOCTOR_COMPENSATION', 'ar')).toBe('مستحقات وأتعاب الأطباء');
+    expect(categoryTitle('ELECTRICITY', 'ar')).toBe('كهرباء ومرافق');
+    expect(categoryTitle('OTHER_EXPENSE', 'ar')).toBe('مصروفات أخرى');
+    expect(categoryTitle('TREATMENT_REVENUE', 'ar')).toBe('إيرادات العلاج والخدمات');
+    expect(categoryTitle('Rent', 'en')).toBe('Rent');
+    expect(localizeCategory({ name: 'Rent', code: 'RENT' }, 'ar')).toBe('إيجار العيادة');
+    expect(localizeCategory({ name: 'Clinic Rent', code: 'RENT' }, 'en')).toBe('Clinic Rent');
+  });
+  it('provides clinic category presets for expenses and revenues', () => {
+    expect(FINANCIAL_CATEGORY_PRESETS.length).toBeGreaterThan(10);
+    const expensePresets = FINANCIAL_CATEGORY_PRESETS.filter((x) => x.type === 2);
+    expect(expensePresets.some((x) => x.code === 'MATERIALS')).toBe(true);
+    expect(expensePresets.some((x) => x.code === 'LAB')).toBe(true);
+    expect(expensePresets.some((x) => x.code === 'RENT')).toBe(true);
+  });
 });
+
+

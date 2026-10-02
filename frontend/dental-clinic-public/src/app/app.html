@@ -1,11 +1,22 @@
+@if (router.url === '/') {
+  <router-outlet />
+} @else {
 <div class="shell">
   <header>
-    <a href="/" class="brand"><span aria-hidden="true">🦷</span> Dental Clinic Booking</a>
-    <button type="button" (click)="toggleLanguage()">
-      {{ language() === 'en' ? 'العربية' : 'English' }}
-    </button>
+    <a href="/" class="brand">
+      <img src="/planora-logo.jpg" alt="" class="logo-img" /><span>Planora</span>
+    </a>
+    <div class="header-actions">
+      <button type="button" class="lang-toggle" (click)="toggleLanguage()">
+        {{ language() === 'en' ? 'العربية' : 'English' }}
+      </button>
+      <a [href]="getLoginUrl()" class="login-btn">
+        {{ language() === 'en' ? 'Login' : 'دخول' }}
+      </a>
+    </div>
   </header>
   <main>
     <router-outlet />
   </main>
 </div>
+}

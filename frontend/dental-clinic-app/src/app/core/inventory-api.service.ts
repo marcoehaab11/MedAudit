@@ -156,3 +156,4 @@ export class InventoryApiService {
     return this.http.post<{ id: string }>(`${this.baseUrl}/adjust`, payload);
   }
 }
+

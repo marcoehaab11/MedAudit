@@ -1,73 +1,1108 @@
-.finance-nav {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-block: 1rem;
-}
-.finance-nav a {
-  padding: 0.55rem 0.8rem;
-  border: 1px solid var(--border, #d9e0e8);
-  border-radius: 0.5rem;
-}
-.finance-filters,
-.finance-form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.8rem;
-  align-items: end;
-}
-.finance-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.finance-table th,
-.finance-table td {
-  padding: 0.7rem;
-  text-align: start;
-  border-block-end: 1px solid var(--border, #e4e8ee);
-}
+// ──────────────────────────────────────────────────────────────
+//  Finance Feature Styles
+// ──────────────────────────────────────────────────────────────
+
+// ── Dashboard Metrics ──
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
-  gap: 1rem;
-  margin-block: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.15rem;
+  margin-block-end: 1.5rem;
 }
-.metric strong {
-  display: block;
-  font-size: 1.5rem;
-  margin-block-start: 0.35rem;
+
+.metric {
+  background: var(--surface-card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+
+  &:hover {
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+    border-color: #93c5fd;
+  }
+
+  > span {
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    display: block;
+    margin-block-end: 0.35rem;
+  }
+
+  strong {
+    display: block;
+    font-size: 1.75rem;
+    font-weight: 850;
+    letter-spacing: -0.03em;
+    color: #0c2875;
+    line-height: 1.15;
+    margin-block-start: 0.15rem;
+  }
 }
-.amount-negative {
-  color: #a52a2a;
-}
-.finance-actions {
+
+// ── Navigation tabs between finance sub-pages ──
+.finance-nav {
   display: flex;
   gap: 0.5rem;
+  margin-block-end: 1.5rem;
+  border-block-end: 2px solid var(--border);
+  padding-block-end: 0;
+  overflow-x: auto;
+
+  &::-webkit-scrollbar { height: 0; }
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-decoration: none;
+    border: none;
+    border-block-end: 3px solid transparent;
+    margin-block-end: -2px;
+    border-radius: 0;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+
+    &:hover {
+      color: var(--ink);
+      text-decoration: none;
+    }
+
+    &.active,
+    &.router-link-active {
+      color: var(--brand);
+      border-block-end-color: var(--brand);
+    }
+  }
+}
+
+// ── Modern Filters Toolbar ──
+.finance-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   flex-wrap: wrap;
+  padding: 1rem 1.25rem;
+  margin-block-end: 1.25rem;
+  background: #ffffff;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+
+  .filter-search-input {
+    flex: 1;
+    min-inline-size: 220px;
+    max-inline-size: 380px;
+  }
+
+  .filter-date-input {
+    inline-size: auto;
+    min-inline-size: 150px;
+    max-inline-size: 180px;
+    height: 42px;
+    flex-shrink: 0;
+  }
+
+  input, select {
+    height: 42px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0 1rem;
+    font-size: 0.88rem;
+    color: var(--ink);
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: #93c5fd;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: var(--brand-cyan);
+      box-shadow: 0 0 0 3.5px rgba(0, 180, 216, 0.18);
+    }
+  }
+
+  select {
+    inline-size: auto;
+    min-inline-size: 160px;
+    max-inline-size: 220px;
+    padding-inline-end: 2.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  button,
+  .btn-filter {
+    height: 42px;
+    padding: 0 1.5rem;
+    flex-shrink: 0;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--brand-gradient);
+    color: #ffffff;
+    font-weight: 750;
+    font-size: 0.88rem;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(12, 40, 117, 0.25);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover:not(:disabled) {
+      background: var(--brand-gradient-hover);
+      box-shadow: 0 4px 14px rgba(0, 180, 216, 0.35);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+  }
 }
-.finance-form label {
-  display: grid;
-  gap: 0.3rem;
+
+// ── Finance Forms (Expense & Payment Creation) ──
+.finance-form-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-inline-size: 840px;
+  margin: 0 auto;
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--muted);
+    transition: color 0.15s ease;
+
+    &:hover {
+      color: var(--brand);
+      text-decoration: none;
+    }
+  }
 }
-.finance-form .wide {
-  grid-column: 1/-1;
+
+.finance-form {
+  background: #ffffff;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.15rem;
+  }
+
+  .field-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+
+    &.wide {
+      grid-column: 1 / -1;
+    }
+
+    .field-label {
+      font-size: 0.86rem;
+      font-weight: 750;
+      color: var(--ink-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+
+      .req {
+        color: #ef4444;
+      }
+    }
+
+    .form-input,
+    select.form-input {
+      height: 42px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 0 0.85rem;
+      font-size: 0.9rem;
+      color: var(--ink);
+      background: #ffffff;
+      width: 100%;
+      transition: all 0.15s ease;
+
+      &:hover {
+        border-color: #93c5fd;
+      }
+
+      &:focus {
+        outline: none;
+        border-color: var(--brand-cyan);
+        box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.18);
+      }
+    }
+
+    .form-textarea {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      font-family: inherit;
+      color: var(--ink);
+      background: #ffffff;
+      transition: all 0.2s ease;
+
+      &:focus {
+        border-color: var(--brand-cyan);
+        outline: none;
+        box-shadow: 0 0 0 3.5px rgba(0, 180, 216, 0.18);
+      }
+    }
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+    padding-block-start: 1rem;
+    border-block-start: 1px solid var(--border);
+    margin-block-start: 0.5rem;
+
+    .btn-cancel {
+      height: 42px;
+      padding: 0 1.35rem;
+      font-weight: 650;
+      font-size: 0.88rem;
+    }
+
+    .btn-submit {
+      height: 42px;
+      padding: 0 1.75rem;
+      font-weight: 750;
+      font-size: 0.9rem;
+    }
+  }
 }
-.finance-form input,
-.finance-form select,
-.finance-form textarea {
-  padding: 0.65rem;
-  border: 1px solid var(--border, #ccd4dd);
-  border-radius: 0.4rem;
+
+// ── Finance Table ──
+.finance-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 0.91rem;
+
+  thead {
+    background: #f8fafc;
+  }
+
+  th {
+    padding: 0.9rem 1.15rem;
+    text-align: start;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    border-block-end: 1.5px solid var(--border);
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 0.95rem 1.15rem;
+    text-align: start;
+    border-block-end: 1px solid var(--border);
+    color: var(--ink);
+    vertical-align: middle;
+  }
+
+  tbody tr {
+    transition: background 0.12s ease;
+    &:hover { background: #f8fbff; }
+    &:last-child td { border-block-end: none; }
+  }
 }
+
+// ── Amounts ──
+.amount-negative {
+  color: #be123c;
+  font-weight: 800;
+}
+
+.amount-positive {
+  color: #047857;
+  font-weight: 800;
+}
+
+.amount-neutral {
+  color: #0c2875;
+  font-weight: 800;
+}
+
+// ── Finance Actions ──
+.finance-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+// ── Summary row ──
 .summary-row {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.5rem 0;
+  padding: 0.75rem 0;
+  border-block-end: 1px solid var(--border);
+  font-size: 0.92rem;
+
+  span {
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  strong {
+    color: var(--ink);
+    font-weight: 750;
+  }
+
+  &:last-child {
+    border-block-end: none;
+    font-weight: 750;
+    font-size: 1.05rem;
+    padding-block-start: 0.85rem;
+
+    strong {
+      color: #0c2875;
+      font-size: 1.25rem;
+    }
+  }
 }
+
+// ── Pagination ──
 .pagination {
   display: flex;
   justify-content: center;
-  gap: 1rem;
-  margin-block: 1rem;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 1.1rem;
+  border-block-start: 1px solid var(--border);
+
+  span {
+    color: var(--muted);
+    font-size: 0.88rem;
+    font-weight: 700;
+    padding-inline: 0.5rem;
+  }
+
+  button {
+    height: 36px;
+    padding: 0 0.9rem;
+    font-size: 0.88rem;
+    border-radius: var(--radius-sm);
+  }
 }
+
+// ── Panel ──
+.panel {
+  background: var(--surface-card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  margin-block-end: 1.25rem;
+
+  &.table-panel {
+    padding: 0;
+    overflow: hidden;
+  }
+}
+
+// ── Page header ──
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-block-end: 1.5rem;
+  flex-wrap: wrap;
+
+  h1 {
+    margin: 0;
+    font-size: clamp(1.65rem, 4vw, 2.1rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+  }
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 42px;
+  padding: 0 1.25rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-weight: 650;
+  font-size: 0.88rem;
+  background: #ffffff;
+  color: var(--ink-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+
+  &:hover {
+    border-color: var(--brand);
+    color: var(--brand);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(12, 40, 117, 0.08);
+  }
+
+  &.primary {
+    background: var(--brand-gradient);
+    border-color: transparent;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(12, 40, 117, 0.25);
+
+    &:hover:not(:disabled) {
+      background: var(--brand-gradient-hover);
+      box-shadow: 0 6px 18px rgba(0, 180, 216, 0.35);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+  }
+
+  &.sm {
+    height: 34px;
+    padding: 0 0.85rem;
+    font-size: 0.82rem;
+  }
+}
+
+.state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-block-end: 1.25rem;
+  transition: color 0.15s ease;
+
+  &:hover { color: var(--brand); text-decoration: none; }
+}
+
+@media (max-width: 640px) {
+  .finance-filters {
+    flex-direction: column;
+    align-items: stretch;
+
+    input, select, .filter-search-input, .filter-date-input {
+      inline-size: 100%;
+      min-inline-size: unset;
+      max-inline-size: unset;
+    }
+
+    button { inline-size: 100%; justify-content: center; }
+  }
+
+  .metric-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+//  Patient Financial Summary & Payments Ledger
+// ──────────────────────────────────────────────────────────────
+.patient-finance-panel {
+  .title-with-icon {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+
+    .head-icon {
+      font-size: 1.6rem;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .head-sub {
+      margin: 0.15rem 0 0;
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+  }
+
+  .head-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+
+    .btn-record-payment {
+      background: #059669;
+      color: #ffffff;
+      border: none;
+      padding: 0.45rem 1rem;
+      border-radius: 8px;
+      font-size: 0.84rem;
+      font-weight: 750;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(5, 150, 105, 0.25);
+      transition: all 0.15s ease;
+
+      &:hover {
+        background: #047857;
+        transform: translateY(-1px);
+      }
+    }
+
+    .btn-link-finance {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #0284c7;
+      text-decoration: none;
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid #bae6fd;
+      background: #f0f9ff;
+      transition: all 0.15s ease;
+
+      &:hover {
+        background: #e0f2fe;
+        color: #0369a1;
+      }
+    }
+  }
+}
+
+.finance-metric-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.85rem;
+  margin-block-start: 1rem;
+
+  .metric-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: all 0.15s ease;
+
+    .m-label {
+      font-size: 0.78rem;
+      font-weight: 750;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #64748b;
+    }
+
+    .m-value {
+      font-size: 1.45rem;
+      font-weight: 900;
+      color: #0f172a;
+      line-height: 1.15;
+    }
+
+    .m-sub {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      font-weight: 550;
+    }
+
+    &.revenue-card {
+      border-color: #cbd5e1;
+      background: linear-gradient(to bottom, #ffffff, #f8fafc);
+      .m-value { color: #0369a1; }
+    }
+
+    &.paid-card {
+      border-color: #a7f3d0;
+      background: linear-gradient(to bottom, #ffffff, #f0fdf4);
+      .m-value { color: #047857; }
+    }
+
+    &.outstanding-card {
+      border-color: #cbd5e1;
+      &.has-debt {
+        border-color: #fecdd3;
+        background: linear-gradient(to bottom, #ffffff, #fff1f2);
+        .m-value { color: #be123c; }
+        .m-sub { color: #9f1239; font-weight: 700; }
+      }
+    }
+  }
+}
+
+.payments-ledger-section {
+  .section-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-block-end: 0.75rem;
+
+    h3 {
+      font-size: 0.98rem;
+      font-weight: 800;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: #1e293b;
+
+      .count-badge {
+        font-size: 0.72rem;
+        font-weight: 800;
+        background: #e2e8f0;
+        color: #334155;
+        padding: 0.1rem 0.45rem;
+        border-radius: 999px;
+      }
+    }
+  }
+
+  .empty-payments-box {
+    background: #f8fafc;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 1.75rem 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.65rem;
+
+    p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: #64748b;
+      font-weight: 550;
+    }
+  }
+
+  .payments-table {
+    width: 100%;
+    margin-top: 0.25rem;
+
+    .paid-amount-tag {
+      font-size: 0.95rem;
+      font-weight: 850;
+      color: #047857;
+    }
+
+    .method-badge {
+      font-size: 0.72rem;
+      font-weight: 750;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+
+      &.method-1 { background: #dcfce7; color: #166534; }
+      &.method-2 { background: #e0e7ff; color: #3730a3; }
+      &.method-3 { background: #fef3c7; color: #92400e; }
+      &.method-4 { background: #f3e8ff; color: #6b21a8; }
+    }
+
+    .ref-code {
+      font-family: monospace;
+      font-size: 0.82rem;
+      color: #475569;
+      background: #f1f5f9;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+    }
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+//  Modal Dialog Base & Payment Modal Card Styling
+// ──────────────────────────────────────────────────────────────
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  padding: 1rem;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.modal-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22), 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &.modal-payment-card {
+    max-inline-size: 540px;
+    width: 100%;
+    padding: 1.5rem;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-block-end: 1rem;
+    border-block-end: 1px solid #f1f5f9;
+    margin-block-end: 1.25rem;
+
+    .header-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+
+      .modal-badge-icon {
+        font-size: 1.6rem;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      h3 {
+        font-size: 1.15rem;
+        font-weight: 800;
+        margin: 0;
+        color: #0f172a;
+      }
+
+      .modal-sub {
+        margin: 0.15rem 0 0;
+        font-size: 0.8rem;
+        color: #64748b;
+      }
+    }
+
+    .btn-close {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+
+      &:hover {
+        background: #fee2e2;
+        color: #dc2626;
+        border-color: #fca5a5;
+      }
+    }
+  }
+
+  .modal-body-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .field-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+
+      .field-label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        font-size: 0.84rem;
+        font-weight: 700;
+        color: #334155;
+
+        .req {
+          color: #dc2626;
+        }
+
+        .field-hint {
+          font-size: 0.76rem;
+          color: #64748b;
+          font-weight: 550;
+          margin-top: 0.2rem;
+          strong { color: #be123c; font-weight: 800; }
+        }
+      }
+    }
+
+    .form-input,
+    .select-styled,
+    .form-textarea {
+      width: 100%;
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 0.55rem 0.85rem;
+      font-size: 0.88rem;
+      color: #0f172a;
+      transition: all 0.15s ease;
+
+      &:focus {
+        background: #ffffff;
+        border-color: #0284c7;
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+        outline: none;
+      }
+
+      &.invalid {
+        border-color: #f43f5e;
+        background: #fff1f2;
+      }
+    }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .modal-footer-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 0.75rem;
+      border-block-start: 1px solid #f1f5f9;
+      padding-block-start: 1rem;
+      margin-block-start: 0.5rem;
+
+      .btn-cancel {
+        height: 40px;
+        padding: 0 1.25rem;
+        border: 1.5px solid #cbd5e1;
+        background: #ffffff;
+        color: #475569;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.15s ease;
+
+        &:hover {
+          background: #f8fafc;
+        }
+      }
+
+      .btn-save {
+        height: 40px;
+        padding: 0 1.5rem;
+        border: none;
+        background: #0284c7;
+        color: #ffffff;
+        border-radius: 8px;
+        font-weight: 750;
+        font-size: 0.88rem;
+        cursor: pointer;
+        transition: all 0.15s ease;
+
+        &:hover:not(:disabled) {
+          background: #0369a1;
+          transform: translateY(-1px);
+        }
+
+        &:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@media (max-width: 600px) {
+  .modal-card.modal-payment-card {
+    padding: 1.15rem;
+
+    .modal-body-form .form-grid-2 {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+  }
+}
+
+// ── Category Presets & Quick Chips ──
+.category-presets-box {
+  background: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: var(--radius-md);
+  padding: 1rem 1.15rem;
+  margin-block-end: 1.25rem;
+
+  .presets-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-block-end: 0.75rem;
+    font-size: 0.84rem;
+    font-weight: 750;
+    color: var(--ink-secondary);
+  }
+
+  .presets-chips {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 0.5rem;
+    padding-bottom: 0.4rem;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+
+    &::-webkit-scrollbar {
+      height: 5px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 999px;
+    }
+  }
+
+  .chip-preset {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 650;
+    color: #334155;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+
+    &:hover {
+      border-color: #0284c7;
+      background: #f0f9ff;
+      color: #0369a1;
+      transform: translateY(-1px);
+    }
+
+    &.expense {
+      &:hover {
+        border-color: #f43f5e;
+        background: #fff1f2;
+        color: #be123c;
+      }
+    }
+
+    &.active-preset {
+      border-color: #0284c7;
+      background: #e0f2fe;
+      color: #0369a1;
+      font-weight: 750;
+    }
+  }
+}
+
+.type-filter-group {
+  display: flex;
+  gap: 0.4rem;
+  margin-block-end: 1rem;
+  flex-wrap: wrap;
+
+  button {
+    padding: 0.4rem 0.9rem;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+    background: #ffffff;
+    color: var(--muted);
+    font-size: 0.84rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      color: var(--ink);
+      border-color: #93c5fd;
+    }
+
+    &.active {
+      background: #eff6ff;
+      border-color: #3b82f6;
+      color: #1d4ed8;
+    }
+  }
+}
+
+

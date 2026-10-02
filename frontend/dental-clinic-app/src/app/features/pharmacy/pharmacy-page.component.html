@@ -59,7 +59,7 @@
         <h3>{{ loc.language() === 'ar' ? 'نشاط الصرف الحديث' : 'Recent Dispensing Activity' }}</h3>
       </div>
       <div class="card-body">
-        <table class="data-table">
+        <div class="table-responsive">`n<div class="table-responsive"><table class="data-table">
           <thead>
             <tr>
               <th>{{ loc.language() === 'ar' ? 'رقم الصرف' : 'Dispensing #' }}</th>
@@ -76,14 +76,14 @@
               <td>{{ item.prescriptionNumber }}</td>
               <td>{{ item.patientName }}</td>
               <td><span class="badge" [ngClass]="getStatusBadgeClass(item.status)">{{ getStatusText(item.status) }}</span></td>
-              <td>{{ item.dispensedAt | date:'medium' }}</td>
+              <td>{{ item.dispensedAt | date: 'dd/MM/yyyy hh:mm a' }}</td>
               <td><button class="btn btn-sm btn-outline" (click)="viewDispensingDetail(item.id)">{{ loc.language() === 'ar' ? 'التفاصيل' : 'Details' }}</button></td>
             </tr>
             <tr *ngIf="summary()?.recentActivity?.length === 0">
               <td colspan="6" class="text-center text-muted">{{ loc.language() === 'ar' ? 'لا يوجد عمليات صرف حديثة' : 'No recent dispensing activity.' }}</td>
             </tr>
           </tbody>
-        </table>
+        </table></div>`n</div>
       </div>
     </div>
   </div>
@@ -95,7 +95,7 @@
         <h3>{{ loc.language() === 'ar' ? 'الروشتات الجاهزة للصرف' : 'Prescriptions Ready for Dispensing' }}</h3>
       </div>
       <div class="card-body">
-        <table class="data-table">
+        <div class="table-responsive">`n<div class="table-responsive"><table class="data-table">
           <thead>
             <tr>
               <th>{{ loc.language() === 'ar' ? 'رقم الروشتة' : 'Rx #' }}</th>
@@ -111,7 +111,7 @@
               <td><strong>{{ rx.prescriptionNumber }}</strong></td>
               <td>{{ rx.patientName }}</td>
               <td>{{ rx.doctorName }}</td>
-              <td>{{ rx.issuedAt | date:'mediumDate' }}</td>
+              <td>{{ rx.issuedAt | date: 'dd/MM/yyyy' }}</td>
               <td>{{ rx.items.length }} {{ loc.language() === 'ar' ? 'أدوية' : 'items' }}</td>
               <td>
                 <button class="btn btn-sm btn-primary" (click)="openDispenseModal(rx)">
@@ -123,7 +123,7 @@
               <td colspan="6" class="text-center text-muted">{{ loc.language() === 'ar' ? 'لا يوجد روشتات في انتظار الصرف' : 'No prescriptions waiting for dispensing.' }}</td>
             </tr>
           </tbody>
-        </table>
+        </table></div>`n</div>
       </div>
     </div>
   </div>
@@ -135,7 +135,7 @@
         <h3>{{ loc.language() === 'ar' ? 'سجل عمليات الصرف' : 'Dispensing History' }}</h3>
       </div>
       <div class="card-body">
-        <table class="data-table">
+        <div class="table-responsive">`n<div class="table-responsive"><table class="data-table">
           <thead>
             <tr>
               <th>{{ loc.language() === 'ar' ? 'رقم الصرف' : 'Dispensing #' }}</th>
@@ -154,7 +154,7 @@
               <td>{{ disp.patientName }}</td>
               <td><span class="badge" [ngClass]="getStatusBadgeClass(disp.status)">{{ getStatusText(disp.status) }}</span></td>
               <td>{{ disp.dispensedByUserName || 'System' }}</td>
-              <td>{{ disp.dispensedAt | date:'medium' }}</td>
+              <td>{{ disp.dispensedAt | date: 'dd/MM/yyyy hh:mm a' }}</td>
               <td>
                 <button class="btn btn-sm btn-outline" (click)="viewDispensingDetail(disp.id)">
                   {{ loc.language() === 'ar' ? 'التفاصيل' : 'Details' }}
@@ -165,7 +165,7 @@
               <td colspan="7" class="text-center text-muted">{{ loc.language() === 'ar' ? 'لا يوجد سجلات صرف' : 'No dispensing records found.' }}</td>
             </tr>
           </tbody>
-        </table>
+        </table></div>`n</div>
       </div>
     </div>
   </div>
@@ -177,7 +177,7 @@
         <h3>{{ loc.language() === 'ar' ? 'كتالوج الأدوية وربط المخزون' : 'Medication Catalog & Inventory Mapping' }}</h3>
       </div>
       <div class="card-body">
-        <table class="data-table">
+        <div class="table-responsive">`n<div class="table-responsive"><table class="data-table">
           <thead>
             <tr>
               <th>{{ loc.language() === 'ar' ? 'اسم الدواء' : 'Medication Name' }}</th>
@@ -213,7 +213,7 @@
               <td colspan="7" class="text-center text-muted">{{ loc.language() === 'ar' ? 'لا يوجد أدوية في الكتالوج' : 'No medications found in catalog.' }}</td>
             </tr>
           </tbody>
-        </table>
+        </table></div>`n</div>
       </div>
     </div>
   </div>
@@ -277,12 +277,12 @@
           </div>
           <div>
             <p><strong>{{ loc.language() === 'ar' ? 'الحالة' : 'Status' }}:</strong> <span class="badge" [ngClass]="getStatusBadgeClass(selectedDispensingDetail()!.status)">{{ getStatusText(selectedDispensingDetail()!.status) }}</span></p>
-            <p><strong>{{ loc.language() === 'ar' ? 'التاريخ' : 'Date' }}:</strong> {{ selectedDispensingDetail()?.dispensedAt | date:'medium' }}</p>
+            <p><strong>{{ loc.language() === 'ar' ? 'التاريخ' : 'Date' }}:</strong> {{ selectedDispensingDetail()?.dispensedAt | date: 'dd/MM/yyyy hh:mm a' }}</p>
           </div>
         </div>
 
         <h4 class="mt-3">{{ loc.language() === 'ar' ? 'الأدوية المصروفة' : 'Dispensed Items' }}</h4>
-        <table class="data-table mt-2">
+        <div class="table-responsive">`n<div class="table-responsive"><table class="data-table mt-2">
           <thead>
             <tr>
               <th>{{ loc.language() === 'ar' ? 'الدواء' : 'Medication' }}</th>
@@ -297,12 +297,12 @@
               <td>{{ item.quantityDispensed }}</td>
             </tr>
           </tbody>
-        </table>
+        </table></div>`n</div>
 
         <div *ngIf="selectedDispensingDetail()?.reversal" class="alert alert-warning mt-3">
           <strong>{{ loc.language() === 'ar' ? 'تم استرجاع عملية الصرف هذه' : 'Reversed' }}:</strong>
           <p>{{ selectedDispensingDetail()?.reversal?.reason }}</p>
-          <small>{{ loc.language() === 'ar' ? 'بواسطة' : 'By' }}: {{ selectedDispensingDetail()?.reversal?.reversedByUserName || 'System' }} {{ loc.language() === 'ar' ? 'في' : 'on' }} {{ selectedDispensingDetail()?.reversal?.reversedAt | date:'medium' }}</small>
+          <small>{{ loc.language() === 'ar' ? 'بواسطة' : 'By' }}: {{ selectedDispensingDetail()?.reversal?.reversedByUserName || 'System' }} {{ loc.language() === 'ar' ? 'في' : 'on' }} {{ selectedDispensingDetail()?.reversal?.reversedAt | date: 'dd/MM/yyyy hh:mm a' }}</small>
         </div>
       </div>
       <div class="modal-footer">
@@ -378,3 +378,6 @@
     </div>
   </div>
 </div>
+
+
+

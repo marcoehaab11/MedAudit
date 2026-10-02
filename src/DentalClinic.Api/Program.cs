@@ -24,9 +24,15 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApiAuthentication(builder.Configuration);
 builder.Services.AddApiAuthorization();
-builder.Services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.All;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -36,7 +42,7 @@ builder.Services.AddRateLimiter(options =>
             httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 5,
+                PermitLimit = 60,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
@@ -46,7 +52,7 @@ builder.Services.AddRateLimiter(options =>
             httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 10,
+                PermitLimit = 30,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
@@ -56,7 +62,7 @@ builder.Services.AddRateLimiter(options =>
             httpContext.User.FindFirst("tenant_id")?.Value ?? "anonymous",
             _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 20,
+                PermitLimit = 60,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
@@ -64,12 +70,14 @@ builder.Services.AddRateLimiter(options =>
     options.AddFixedWindowLimiter("public-read", opt =>
     {
         opt.Window = TimeSpan.FromMinutes(1);
-        opt.PermitLimit = 100;
+        opt.PermitLimit = 200;
         opt.QueueLimit = 0;
     });
 });
 
 var app = builder.Build();
+
+app.UseForwardedHeaders();
 
 await DentalClinic.Infrastructure.Persistence.DatabaseSeeder.SeedAsync(app.Services);
 

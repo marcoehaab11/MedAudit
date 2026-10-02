@@ -51,3 +51,4 @@ describe('treatment labels', () => {
     expect(treatmentActions(4)).toEqual([]);
   });
 });
+

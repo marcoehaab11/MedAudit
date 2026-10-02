@@ -10,13 +10,14 @@ import {
 } from '../../core/settings-api.service';
 import { LocalizationService } from '../../core/localization.service';
 import { AuthService } from '../../core/auth.service';
+import { PhoneInputComponent } from '../../shared/phone-input/phone-input.component';
 
 @Component({
+  styleUrl: './settings-page.component.scss',
   selector: 'app-settings-page',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PhoneInputComponent],
   templateUrl: './settings-page.component.html',
-  styleUrls: ['./settings-page.component.scss']
 })
 export class SettingsPageComponent implements OnInit {
   private api = inject(SettingsApiService);
@@ -186,14 +187,39 @@ export class SettingsPageComponent implements OnInit {
     this.loading.set(true);
     this.errorMessage.set(null);
 
-    this.api.updateBranding({
-      ...this.brandingForm(),
+    const brandingPayload = {
+      primaryColor: this.brandingForm().primaryColor,
+      secondaryColor: this.brandingForm().secondaryColor,
+      accentColor: this.brandingForm().accentColor,
+      defaultLanguage: this.brandingForm().defaultLanguage,
+      supportedLanguages: this.brandingForm().supportedLanguages,
+      rtlEnabled: this.brandingForm().rtlEnabled,
       version: s.version
-    }).subscribe({
+    };
+
+    const timezoneCurrencyPayload = {
+      timeZone: this.brandingForm().timeZone || 'Africa/Cairo',
+      currency: this.brandingForm().currency || 'EGP',
+      currencySymbol: this.brandingForm().currencySymbol || (this.brandingForm().currency === 'EGP' ? 'ج.م' : this.brandingForm().currency),
+      decimalPrecision: this.brandingForm().decimalPrecision || 2,
+      symbolPosition: this.brandingForm().symbolPosition || 'After',
+      version: s.version
+    };
+
+    this.api.updateBranding(brandingPayload).subscribe({
       next: (res) => {
-        this.settings.set(res);
-        this.successMessage.set('Branding settings updated successfully.');
-        this.loading.set(false);
+        this.api.updateTimezoneCurrency({
+          ...timezoneCurrencyPayload,
+          version: res.version
+        }).subscribe({
+          next: (finalRes) => {
+            this.settings.set(finalRes);
+            this.initForms(finalRes);
+            this.successMessage.set(this.loc.language() === 'ar' ? 'تم حفظ إعدادات الهوية والعملة بنجاح.' : 'Branding and currency settings updated successfully.');
+            this.loading.set(false);
+          },
+          error: (err) => this.handleError(err)
+        });
       },
       error: (err) => this.handleError(err)
     });
@@ -313,3 +339,4 @@ export class SettingsPageComponent implements OnInit {
     }
   }
 }
+

@@ -234,3 +234,4 @@ export class PharmacyApiService {
     return this.http.get<PatientPharmacyHistoryItem[]>(`${this.baseUrl}/patients/${patientId}/history`);
   }
 }
+

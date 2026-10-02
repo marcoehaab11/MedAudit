@@ -34,8 +34,8 @@ internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock cl
     public Task<FinanceTreatment?> FindTreatmentAsync(Guid id, CancellationToken token)
     {
         var tracked = context.ChangeTracker.Entries<Domain.Treatments.Treatment>().Select(x => x.Entity).SingleOrDefault(x => x.Id == id);
-        if (tracked is not null) return Task.FromResult<FinanceTreatment?>(new(tracked.Id, tracked.PatientId, tracked.DoctorProfileId, tracked.TreatmentPlanId, tracked.TreatmentName, tracked.Status, tracked.Price, tracked.CompletedAt));
-        return context.Treatments.AsNoTracking().Where(x => x.Id == id).Select(x => new FinanceTreatment(x.Id, x.PatientId, x.DoctorProfileId, x.TreatmentPlanId, x.TreatmentName, x.Status, x.Price, x.CompletedAt)).SingleOrDefaultAsync(token);
+        if (tracked is not null) return Task.FromResult<FinanceTreatment?>(new(tracked.Id, tracked.PatientId, tracked.DoctorProfileId, tracked.TreatmentPlanId, tracked.TreatmentName, tracked.Status, tracked.Price, tracked.CompletedAt, tracked.CreatedAt));
+        return context.Treatments.AsNoTracking().Where(x => x.Id == id).Select(x => new FinanceTreatment(x.Id, x.PatientId, x.DoctorProfileId, x.TreatmentPlanId, x.TreatmentName, x.Status, x.Price, x.CompletedAt, x.CreatedAt)).SingleOrDefaultAsync(token);
     }
     public Task<FinanceDoctorRule?> FindCompensationRuleAsync(Guid doctorId, DateOnly treatmentDate, CancellationToken token) => context.DoctorCompensations.AsNoTracking().Where(x => x.DoctorProfileId == doctorId && x.EffectiveFrom <= treatmentDate && (!x.EffectiveTo.HasValue || x.EffectiveTo >= treatmentDate)).OrderByDescending(x => x.EffectiveFrom).Select(x => new FinanceDoctorRule(x.Id, x.CompensationType, x.FixedAmount, x.Percentage, x.EffectiveFrom, x.EffectiveTo)).FirstOrDefaultAsync(token);
     public Task<FinancialCategory?> FindCategoryAsync(Guid id, bool tracking, CancellationToken token) => (tracking ? context.FinancialCategories.AsQueryable() : context.FinancialCategories.AsNoTracking()).SingleOrDefaultAsync(x => x.Id == id, token);
@@ -49,6 +49,18 @@ internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock cl
     { var q = context.FinancialCategories.AsNoTracking(); if (!includeInactive) q = q.Where(x => x.IsActive); if (type.HasValue) q = q.Where(x => x.Type == type); return await q.OrderBy(x => x.Type).ThenBy(x => x.Name).Select(x => new FinancialCategoryItem(x.Id, x.Name, x.Code, x.Type, x.ParentId, context.FinancialCategories.Where(p => p.Id == x.ParentId).Select(p => p.Name).FirstOrDefault(), x.IsActive, x.CreatedAt, x.UpdatedAt, x.Version)).ToListAsync(token); }
     public Task<Revenue?> FindRevenueAsync(Guid id, CancellationToken token) => context.Revenues.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, token);
     public Task<Revenue?> FindRevenueByTreatmentAsync(Guid treatmentId, CancellationToken token) => context.Revenues.AsNoTracking().SingleOrDefaultAsync(x => x.TreatmentId == treatmentId, token);
+    public Task<Revenue?> FindRevenueByPlanAsync(Guid planId, CancellationToken token) => context.Revenues.SingleOrDefaultAsync(x => x.TreatmentPlanId == planId, token);
+    public Task<Domain.Treatments.TreatmentPlan?> FindPlanForRevenueAsync(Guid planId, CancellationToken token) => context.TreatmentPlans.SingleOrDefaultAsync(x => x.Id == planId, token);
+    public async Task<Revenue?> FindLatestOutstandingRevenueByPatientAsync(Guid patientId, CancellationToken token)
+    {
+        var revenues = await context.Revenues.Where(r => r.PatientId == patientId).OrderByDescending(r => r.OccurredAt).ToListAsync(token);
+        foreach (var r in revenues)
+        {
+            var paid = await context.Payments.Where(p => p.RevenueId == r.Id).SumAsync(p => (decimal?)p.Amount, token) ?? 0;
+            if (r.Amount > paid) return r;
+        }
+        return revenues.FirstOrDefault();
+    }
     public Task<RevenueItem?> RevenueAsync(Guid id, CancellationToken token) => RevenueProjection(context.Revenues.AsNoTracking().Where(x => x.Id == id)).SingleOrDefaultAsync(token);
 
     public async Task<FinanceSummary> DashboardAsync(FinanceRange range, CancellationToken token)
@@ -90,7 +102,56 @@ internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock cl
     public async Task<PagedResult<ExpenseItem>> ExpensesAsync(ExpenseSearch x, FinanceRange range, CancellationToken token)
     { var q = context.Expenses.AsNoTracking().Where(e => e.ExpenseDate >= range.From && e.ExpenseDate < range.To); if (x.CategoryId.HasValue) q = q.Where(e => e.CategoryId == x.CategoryId); var total = await q.CountAsync(token); var items = await q.OrderByDescending(e => e.ExpenseDate).Skip((x.Page - 1) * x.PageSize).Take(x.PageSize).Select(e => new ExpenseItem(e.Id, e.CategoryId, context.FinancialCategories.Where(c => c.Id == e.CategoryId).Select(c => c.Name).Single(), e.Amount, e.Currency, e.Description, e.VendorName, e.Reference, e.ExpenseDate, e.CreatedAt)).ToListAsync(token); return new(items, x.Page, x.PageSize, total); }
     public async Task<PatientBalance?> PatientBalanceAsync(Guid patientId, CancellationToken token)
-    { if (!await context.Patients.AnyAsync(x => x.Id == patientId, token)) return null; var revenue = await context.Revenues.Where(x => x.PatientId == patientId).SumAsync(x => (decimal?)x.Amount, token) ?? 0; var paid = await context.Payments.Where(x => x.PatientId == patientId).SumAsync(x => (decimal?)x.Amount, token) ?? 0; return new(patientId, revenue, paid, revenue - paid, await CurrencyAsync(token)); }
+    {
+        if (!await context.Patients.AnyAsync(x => x.Id == patientId, token)) return null;
+
+        var unbilledPlans = await context.TreatmentPlans
+            .Where(p => p.PatientId == patientId && p.Total > 0 && !context.Revenues.Any(r => r.TreatmentPlanId == p.Id))
+            .ToListAsync(token);
+        if (unbilledPlans.Count > 0)
+        {
+            var category = await context.FinancialCategories.FirstOrDefaultAsync(c => c.Code == "TREATMENT_REVENUE" && c.Type == FinancialCategoryType.Revenue && c.IsActive, token)
+                ?? await context.FinancialCategories.FirstOrDefaultAsync(c => c.Type == FinancialCategoryType.Revenue && c.IsActive, token);
+            if (category is not null)
+            {
+                var currency = await CurrencyAsync(token);
+                var now = clock.UtcNow;
+                foreach (var plan in unbilledPlans)
+                {
+                    var rev = new Revenue(currentTenant.RequireTenantId(), category.Id, plan.PatientId, null, plan.Id, plan.DoctorProfileId, plan.Total, currency, plan.Title, plan.CreatedAt, now);
+                    context.Revenues.Add(rev);
+                    context.FinancialTransactions.Add(new(rev.TenantId, FinancialTransactionType.Revenue, rev.Amount, rev.Currency, rev.OccurredAt, FinancialSourceType.Revenue, rev.Id, rev.Description, now));
+                }
+                await context.SaveChangesAsync(token);
+            }
+        }
+
+        var unbilledTreatments = await context.Treatments
+            .Where(t => t.PatientId == patientId && t.Price > 0 && t.Status != Domain.Treatments.TreatmentStatus.Cancelled && !context.Revenues.Any(r => r.TreatmentId == t.Id))
+            .ToListAsync(token);
+        if (unbilledTreatments.Count > 0)
+        {
+            var category = await context.FinancialCategories.FirstOrDefaultAsync(c => c.Code == "TREATMENT_REVENUE" && c.Type == FinancialCategoryType.Revenue && c.IsActive, token)
+                ?? await context.FinancialCategories.FirstOrDefaultAsync(c => c.Type == FinancialCategoryType.Revenue && c.IsActive, token);
+            if (category is not null)
+            {
+                var currency = await CurrencyAsync(token);
+                var now = clock.UtcNow;
+                foreach (var tr in unbilledTreatments)
+                {
+                    var occAt = tr.CompletedAt ?? tr.CreatedAt;
+                    var rev = new Revenue(currentTenant.RequireTenantId(), category.Id, tr.PatientId, tr.Id, tr.TreatmentPlanId, tr.DoctorProfileId, tr.Price, currency, tr.TreatmentName, occAt, now);
+                    context.Revenues.Add(rev);
+                    context.FinancialTransactions.Add(new(rev.TenantId, FinancialTransactionType.Revenue, rev.Amount, rev.Currency, rev.OccurredAt, FinancialSourceType.Revenue, rev.Id, rev.Description, now));
+                }
+                await context.SaveChangesAsync(token);
+            }
+        }
+
+        var revenue = await context.Revenues.Where(x => x.PatientId == patientId).SumAsync(x => (decimal?)x.Amount, token) ?? 0;
+        var paid = await context.Payments.Where(x => x.PatientId == patientId).SumAsync(x => (decimal?)x.Amount, token) ?? 0;
+        return new(patientId, revenue, paid, revenue - paid, await CurrencyAsync(token));
+    }
     public async Task<decimal> PaidForRevenueAsync(Guid revenueId, CancellationToken token) => await context.Payments.Where(x => x.RevenueId == revenueId).SumAsync(x => (decimal?)x.Amount, token) ?? 0;
     public async Task<IFinanceTransaction> BeginTransactionAsync(CancellationToken token) => new FinanceTransaction(await context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, token));
     public async Task LockRevenueAsync(Guid revenueId, CancellationToken token) { _ = await context.Revenues.FromSqlInterpolated($"SELECT * FROM revenues WHERE \"Id\" = {revenueId} FOR UPDATE").AsNoTracking().SingleOrDefaultAsync(token) ?? throw new FinanceNotFoundException("Revenue was not found."); }

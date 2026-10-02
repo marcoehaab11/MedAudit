@@ -48,10 +48,10 @@ services:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/health/ready || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health/live HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\n\\r\\n' >&3 && timeout 2 grep -q 'Healthy' <&3"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
     restart: unless-stopped
 
   platform-admin:
@@ -63,10 +63,10 @@ services:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/health/ready || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health/live HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\n\\r\\n' >&3 && timeout 2 grep -q 'Healthy' <&3"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
     restart: unless-stopped
 
   worker:
@@ -82,7 +82,7 @@ services:
   clinic-app:
     build: frontend/dental-clinic-app
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:80/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:80/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -91,7 +91,7 @@ services:
   public-app:
     build: frontend/dental-clinic-public
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:80/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:80/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -109,11 +109,21 @@ services:
       - clinic-app
       - public-app
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:80/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:80/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    profiles: ["tunnel"]
+    depends_on:
+      - reverse-proxy
 
 volumes:
   postgres-data:

@@ -12,56 +12,141 @@ interface InvitationPreview {
 }
 
 @Component({
+  styleUrl: './auth.scss',
+
   selector: 'app-accept-invitation',
   imports: [ReactiveFormsModule, RouterLink],
   template: `
-    <section class="auth-card">
-      <p class="eyebrow">{{ i18n.language() === 'en' ? 'Account invitation' : 'دعوة حساب' }}</p>
-      <h1>{{ i18n.language() === 'en' ? 'Activate your account' : 'فعّل حسابك' }}</h1>
-      @if (loading()) {
-        <div class="loading" role="status">
-          {{ text('Validating invitation…', 'جارٍ التحقق من الدعوة…') }}
-        </div>
-      } @else if (success()) {
-        <div class="alert success" role="status">
-          {{
-            text(
-              'Account activated. Redirecting to login…',
-              'تم تفعيل الحساب. جارٍ الانتقال لتسجيل الدخول…'
-            )
-          }}
-        </div>
-        <a routerLink="/login">{{ text('Continue to login', 'المتابعة لتسجيل الدخول') }}</a>
-      } @else if (preview()?.status === 1) {
-        <p>{{ preview()?.email }} · {{ preview()?.role }}</p>
-        @if (error()) {
-          <div class="alert error" role="alert">{{ error() }}</div>
-        }
-        <form [formGroup]="form" (ngSubmit)="accept()">
-          <label
-            >{{ text('Password', 'كلمة المرور') }}
-            <input type="password" formControlName="password" autocomplete="new-password" />
-            <small>{{ text('At least 12 characters.', '12 حرفاً على الأقل.') }}</small>
-          </label>
-          <label
-            >{{ text('Confirm password', 'تأكيد كلمة المرور') }}
-            <input type="password" formControlName="confirmPassword" autocomplete="new-password" />
-          </label>
-          <button class="primary" type="submit" [disabled]="submitting() || form.invalid">
-            {{
-              submitting()
-                ? text('Activating…', 'جارٍ التفعيل…')
-                : text('Activate account', 'تفعيل الحساب')
-            }}
-          </button>
-        </form>
-      } @else {
-        <div class="alert error" role="alert">{{ stateMessage() }}</div>
-        <a routerLink="/login">{{ text('Return to login', 'العودة لتسجيل الدخول') }}</a>
-      }
-    </section>
+    <div class="auth-wrapper">
+      <div class="auth-layout single-card-layout">
+        <main class="auth-card-wrapper">
+          <section class="auth-card">
+            <div class="card-header">
+              <div class="clinic-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span>{{ text('Account Invitation', 'دعوة انضمام للعيادة') }}</span>
+              </div>
+              <h1>{{ text('Activate your account', 'تفعيل حسابك في العيادة') }}</h1>
+              <p class="subtitle">
+                {{
+                  text(
+                    'Set your password to activate your clinic account and access patient records.',
+                    'قم بتعيين كلمة المرور لتفعيل حسابك والبدء في استخدام النظام.'
+                  )
+                }}
+              </p>
+            </div>
+
+            @if (loading()) {
+              <div class="loading-state" role="status">
+                <span class="spinner brand-spinner" aria-hidden="true"></span>
+                <span>{{ text('Validating invitation…', 'جارٍ التحقق من صلاحية الدعوة…') }}</span>
+              </div>
+            } @else if (success()) {
+              <div class="alert success" role="status">
+                <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                  <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                <span>
+                  {{
+                    text(
+                      'Account activated successfully! Redirecting to login…',
+                      'تم تفعيل الحساب بنجاح! جارٍ الانتقال لصفحة تسجيل الدخول…'
+                    )
+                  }}
+                </span>
+              </div>
+              <a class="primary submit-btn" routerLink="/login">{{ text('Continue to login', 'المتابعة لتسجيل الدخول') }}</a>
+            } @else if (preview()?.status === 1) {
+              <div class="invitation-summary-badge">
+                <div class="user-avatar">
+                  {{ preview()?.email?.charAt(0)?.toUpperCase() || 'U' }}
+                </div>
+                <div>
+                  <strong>{{ preview()?.email }}</strong>
+                  <span>{{ text('Role: ', 'الدور: ') }}{{ preview()?.role }}</span>
+                </div>
+              </div>
+
+              @if (error()) {
+                <div class="alert error" role="alert">
+                  <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span>{{ error() }}</span>
+                </div>
+              }
+
+              <form [formGroup]="form" (ngSubmit)="accept()" novalidate>
+                <div class="form-field">
+                  <label for="inv-password">{{ text('Password', 'كلمة المرور الجديدة') }}</label>
+                  <div class="input-with-icon">
+                    <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    <input
+                      id="inv-password"
+                      type="password"
+                      formControlName="password"
+                      autocomplete="new-password"
+                      [placeholder]="text('At least 12 characters', '12 حرفاً أو رقماً على الأقل')"
+                    />
+                  </div>
+                  <small class="helper-text">{{ text('Must be at least 12 characters.', 'يجب أن تتكون من 12 حرفاً على الأقل.') }}</small>
+                </div>
+
+                <div class="form-field">
+                  <label for="inv-confirm">{{ text('Confirm password', 'تأكيد كلمة المرور') }}</label>
+                  <div class="input-with-icon">
+                    <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                    <input
+                      id="inv-confirm"
+                      type="password"
+                      formControlName="confirmPassword"
+                      autocomplete="new-password"
+                      [placeholder]="text('Re-enter password', 'أعد إدخال كلمة المرور')"
+                    />
+                  </div>
+                </div>
+
+                <button class="primary submit-btn" type="submit" [disabled]="submitting() || form.invalid">
+                  @if (submitting()) {
+                    <span class="spinner" aria-hidden="true"></span>
+                    <span>{{ text('Activating account…', 'جارٍ التفعيل…') }}</span>
+                  } @else {
+                    <span>{{ text('Activate Account', 'تفعيل الحساب والبدء') }}</span>
+                  }
+                </button>
+              </form>
+            } @else {
+              <div class="alert error" role="alert">
+                <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span>{{ stateMessage() }}</span>
+              </div>
+              <a class="primary submit-btn" routerLink="/login">{{ text('Return to login', 'العودة لتسجيل الدخول') }}</a>
+            }
+          </section>
+        </main>
+      </div>
+    </div>
   `,
-  styleUrl: './auth.scss',
+
 })
 export class AcceptInvitationComponent {
   readonly i18n = inject(LocalizationService);
@@ -129,3 +214,4 @@ export class AcceptInvitationComponent {
     return this.i18n.language() === 'en' ? en : ar;
   }
 }
+

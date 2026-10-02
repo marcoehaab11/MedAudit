@@ -3,6 +3,7 @@ using DentalClinic.Application.Doctors;
 using DentalClinic.Application.Identity;
 using DentalClinic.Application.Tenants.Models;
 using DentalClinic.Domain.Doctors;
+using DentalClinic.Domain.Identity;
 using DentalClinic.Domain.Platform;
 using Microsoft.EntityFrameworkCore;
 
@@ -69,6 +70,8 @@ internal sealed class DoctorStore(ApplicationDbContext context) :
         context.ClinicUsers.AnyAsync(x => x.Id == clinicUserId &&
             context.UserRoleAssignments.Any(a => a.UserId == clinicUserId &&
                 context.TenantRoles.Any(r => r.Id == a.RoleId && r.NormalizedName == "DOCTOR")), cancellationToken);
+    public Task<ClinicUser?> FindClinicUserAsync(Guid clinicUserId, CancellationToken cancellationToken) =>
+        context.ClinicUsers.SingleOrDefaultAsync(x => x.Id == clinicUserId, cancellationToken);
     public Task<bool> ProfileExistsForUserAsync(Guid clinicUserId, CancellationToken cancellationToken) =>
         context.DoctorProfiles.AnyAsync(x => x.ClinicUserId == clinicUserId, cancellationToken);
     public Task<bool> LicenseExistsAsync(string licenseNumber, Guid? excludingId, CancellationToken cancellationToken) =>

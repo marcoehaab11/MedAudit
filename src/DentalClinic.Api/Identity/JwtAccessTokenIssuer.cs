@@ -19,7 +19,7 @@ internal sealed class JwtAccessTokenIssuer(IConfiguration configuration) : IAcce
         var issuer = Required("Authentication:Jwt:Issuer");
         var audience = Required("Authentication:Jwt:Audience");
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Required("Authentication:Jwt:SigningKey")));
-        var expiresAt = DateTimeOffset.UtcNow.AddHours(1);
+        var expiresAt = DateTimeOffset.UtcNow.AddHours(12);
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, userId.ToString("D")),

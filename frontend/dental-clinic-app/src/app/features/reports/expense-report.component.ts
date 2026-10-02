@@ -197,3 +197,4 @@ export class ExpenseReportComponent implements OnInit {
     return this.data.byMonth.map((m) => ({ label: m.month, value: m.amount, color: '#f59e0b' }));
   }
 }
+

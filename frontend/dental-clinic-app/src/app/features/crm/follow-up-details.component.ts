@@ -7,6 +7,8 @@ import { CrmApiService, CrmUser, FollowUp } from './crm-api.service';
 import { clinicDate, followUpActions, followUpStatus, followUpType } from './crm-labels';
 import { isCrmConflict } from './crm-ui';
 @Component({
+  styleUrl: './crm.scss',
+
   selector: 'app-follow-up-details',
   imports: [FormsModule, RouterLink],
   template: `<a class="back" routerLink="/crm/follow-ups"
@@ -92,7 +94,7 @@ import { isCrmConflict } from './crm-ui';
         </div>
       </section>
     }`,
-  styleUrl: './crm.scss',
+
 })
 export class FollowUpDetailsComponent {
   private readonly api = inject(CrmApiService);
@@ -189,3 +191,4 @@ export class FollowUpDetailsComponent {
     return this.i18n.language() === 'en' ? en : ar;
   }
 }
+

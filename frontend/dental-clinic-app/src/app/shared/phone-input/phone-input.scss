@@ -1,0 +1,27 @@
+.phone-input-wrapper {
+  width: 100%;
+  
+  .iti {
+    width: 100%;
+  }
+
+  .iti__flag-container {
+    right: auto;
+  }
+
+  input.form-control {
+    width: 100%;
+    text-align: left !important;
+    direction: ltr !important;
+  }
+}
+
+:host.ng-invalid.ng-touched .form-control,
+:host.invalid .form-control {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+:host.ng-invalid.ng-touched .iti,
+:host.invalid .iti {
+  border-radius: inherit;
+}

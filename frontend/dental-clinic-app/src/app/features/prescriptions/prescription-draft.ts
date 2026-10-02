@@ -44,3 +44,4 @@ export const isCompleteDraftItem = (item: DraftPrescriptionItem) =>
   );
 
 export const isPrescriptionReadOnly = (status: number) => status !== 1;
+

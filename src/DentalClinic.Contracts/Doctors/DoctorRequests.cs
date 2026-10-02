@@ -1,8 +1,8 @@
 namespace DentalClinic.Contracts.Doctors;
 
-public sealed record DoctorProfileRequest(Guid ClinicUserId, string Specialization, string LicenseNumber,
+public sealed record DoctorProfileRequest(Guid ClinicUserId, string Specialization, string? LicenseNumber,
     string? Bio, int ConsultationDurationMinutes);
-public sealed record UpdateDoctorProfileRequest(string Specialization, string LicenseNumber,
+public sealed record UpdateDoctorProfileRequest(string? DisplayName, string? Phone, string Specialization, string? LicenseNumber,
     string? Bio, int ConsultationDurationMinutes);
 public sealed record ScheduleBreakRequest(TimeOnly StartTime, TimeOnly EndTime);
 public sealed record SchedulePeriodRequest(int DayOfWeek, TimeOnly StartTime, TimeOnly EndTime,

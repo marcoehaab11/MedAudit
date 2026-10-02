@@ -8,9 +8,12 @@ import { LocalizationService } from '../../core/localization.service';
 import { TreatmentApiService, TreatmentPlanList } from './treatment-api.service';
 import { planStatus } from './treatment-labels';
 
+import { PatientSelectComponent } from '../../shared/patient-select.component';
+
 @Component({
+  styleUrl: './treatments.scss',
   selector: 'app-treatment-plans-page',
-  imports: [RouterLink, DatePipe, ReactiveFormsModule],
+  imports: [RouterLink, DatePipe, ReactiveFormsModule, PatientSelectComponent],
   template: ` <section class="page-head">
       <div>
         <p class="eyebrow">{{ t('Clinical planning', 'التخطيط العلاجي') }}</p>
@@ -23,14 +26,16 @@ import { planStatus } from './treatment-labels';
       }
     </section>
     <section class="panel filters" [formGroup]="filters">
-      <input formControlName="patientId" [placeholder]="t('Patient ID', 'رقم المريض')" /><select
-        formControlName="status"
-      >
+      <div class="patient-filter-box">
+        <app-patient-select formControlName="patientId" [placeholder]="t('Filter by patient (name or phone)…', 'تصفية حسب المريض (الاسم أو الهاتف)…')" />
+      </div>
+      <select formControlName="status">
         <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
         @for (x of statuses; track x) {
           <option [value]="x">{{ status(x) }}</option>
-        }</select
-      ><button (click)="load()">{{ t('Filter', 'تصفية') }}</button>
+        }
+      </select>
+      <button (click)="load()">{{ t('Filter', 'تصفية') }}</button>
     </section>
     @if (error()) {
       <div class="alert error">{{ error() }}</div>
@@ -45,7 +50,7 @@ import { planStatus } from './treatment-labels';
         </div>
       } @else {
         <div class="table-scroll">
-          <table>
+          <div class="table-responsive"><table>
             <thead>
               <tr>
                 <th>{{ t('Plan', 'الخطة') }}</th>
@@ -68,15 +73,15 @@ import { planStatus } from './treatment-labels';
                     <span class="badge status-{{ x.status }}">{{ status(x.status) }}</span>
                   </td>
                   <td>{{ x.total }}</td>
-                  <td>{{ x.createdAt | date: 'mediumDate' }}</td>
+                  <td>{{ x.createdAt | date: 'dd/MM/yyyy' }}</td>
                 </tr>
               }
             </tbody>
-          </table>
+          </table></div>
         </div>
       }
     </section>`,
-  styleUrl: './treatments.scss',
+
 })
 export class TreatmentPlansPageComponent {
   private readonly api = inject(TreatmentApiService);
@@ -113,3 +118,5 @@ export class TreatmentPlansPageComponent {
     return this.i18n.language() === 'en' ? en : ar;
   }
 }
+
+

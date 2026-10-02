@@ -24,7 +24,7 @@ describe('AppointmentsPageComponent', () => {
     const fixture = TestBed.createComponent(AppointmentsPageComponent);
     const http = TestBed.inject(HttpTestingController);
     const component = fixture.componentInstance;
-    const date = component.dateControl.value;
+    const date = component.selectedDate();
     http
       .expectOne((r) => r.url === '/api/doctors')
       .flush({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 0 });
@@ -82,3 +82,4 @@ describe('AppointmentsPageComponent', () => {
     expect(document.documentElement.dir).toBe('rtl');
   });
 });
+

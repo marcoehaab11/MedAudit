@@ -6,11 +6,11 @@ import { LocalizationService } from '../../core/localization.service';
 import { AuthService } from '../../core/auth.service';
 
 @Component({
+  styleUrl: './inventory-page.component.scss',
   selector: 'app-inventory-page',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './inventory-page.component.html',
-  styleUrls: ['./inventory-page.component.scss']
 })
 export class InventoryPageComponent implements OnInit {
   private api = inject(InventoryApiService);
@@ -83,7 +83,7 @@ export class InventoryPageComponent implements OnInit {
         this.loading.set(false);
       },
       error: (err) => {
-        this.errorMessage.set(err?.error?.error || 'Failed to load inventory items.');
+        this.errorMessage.set(err?.error?.error || (this.loc.language() === 'ar' ? 'تعذر تحميل أصناف المخزون.' : 'Failed to load inventory items.'));
         this.loading.set(false);
       }
     });
@@ -97,7 +97,7 @@ export class InventoryPageComponent implements OnInit {
         this.loading.set(false);
       },
       error: (err) => {
-        this.errorMessage.set(err?.error?.error || 'Failed to load stock movements.');
+        this.errorMessage.set(err?.error?.error || (this.loc.language() === 'ar' ? 'تعذر تحميل سجل الحركات.' : 'Failed to load stock movements.'));
         this.loading.set(false);
       }
     });
@@ -108,25 +108,28 @@ export class InventoryPageComponent implements OnInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
 
-    if (tab === 'items') this.loadItems();
-    if (tab === 'movements') this.loadMovements();
+    if (tab === 'movements') {
+      this.loadMovements();
+    } else if (tab === 'items') {
+      this.loadItems();
+    }
   }
 
   openReceiveModal(item: InventoryItem) {
     this.targetItem.set(item);
     this.movementQty.set(1);
-    this.movementCost.set(item.currentCost);
+    this.movementCost.set(item.currentCost || 0);
     this.movementSupplierId.set(item.supplierId || '');
-    this.movementRef.set(`PO-${Date.now().toString().slice(-6)}`);
+    this.movementRef.set('');
     this.movementNotes.set('');
-    this.movementPostExpense.set(false);
+    this.movementPostExpense.set(true);
     this.showMovementModal.set('receive');
   }
 
   openIssueModal(item: InventoryItem) {
     this.targetItem.set(item);
     this.movementQty.set(1);
-    this.movementRef.set(`USAGE-${Date.now().toString().slice(-6)}`);
+    this.movementRef.set('');
     this.movementNotes.set('');
     this.showMovementModal.set('issue');
   }
@@ -135,7 +138,7 @@ export class InventoryPageComponent implements OnInit {
     this.targetItem.set(item);
     this.movementQty.set(1);
     this.movementAdjustType.set(4);
-    this.movementRef.set(`ADJ-${Date.now().toString().slice(-6)}`);
+    this.movementRef.set('');
     this.movementNotes.set('');
     this.showMovementModal.set('adjust');
   }
@@ -147,12 +150,13 @@ export class InventoryPageComponent implements OnInit {
 
   submitMovement() {
     const item = this.targetItem();
-    const mode = this.showMovementModal();
-    if (!item || !mode) return;
+    if (!item) return;
 
     this.loading.set(true);
     this.errorMessage.set(null);
     this.successMessage.set(null);
+
+    const mode = this.showMovementModal();
 
     if (mode === 'receive') {
       this.api.receiveStock({
@@ -165,12 +169,12 @@ export class InventoryPageComponent implements OnInit {
         postExpenseToFinance: this.movementPostExpense()
       }).subscribe({
         next: () => {
-          this.successMessage.set('Stock received successfully.');
+          this.successMessage.set(this.loc.language() === 'ar' ? 'تم توريد واستلام المخزون بنجاح.' : 'Stock received successfully.');
           this.closeMovementModal();
           this.loadAllData();
         },
         error: (err) => {
-          this.errorMessage.set(err?.error?.error || 'Failed to receive stock.');
+          this.errorMessage.set(err?.error?.error || (this.loc.language() === 'ar' ? 'فشل في توريد المخزون.' : 'Failed to receive stock.'));
           this.loading.set(false);
         }
       });
@@ -182,13 +186,12 @@ export class InventoryPageComponent implements OnInit {
         notes: this.movementNotes()
       }).subscribe({
         next: () => {
-          this.successMessage.set('Stock issued successfully.');
+          this.successMessage.set(this.loc.language() === 'ar' ? 'تم صرف المخزون بنجاح.' : 'Stock issued successfully.');
           this.closeMovementModal();
           this.loadAllData();
         },
         error: (err) => {
-          // Handles 409 Conflict cleanly
-          this.errorMessage.set(err?.status === 409 ? (err.error?.error || 'Insufficient stock balance.') : 'Failed to issue stock.');
+          this.errorMessage.set(err?.status === 409 ? (err.error?.error || (this.loc.language() === 'ar' ? 'رصيد المخزون غير كافٍ.' : 'Insufficient stock balance.')) : (this.loc.language() === 'ar' ? 'فشل في صرف المخزون.' : 'Failed to issue stock.'));
           this.loading.set(false);
         }
       });
@@ -201,12 +204,12 @@ export class InventoryPageComponent implements OnInit {
         notes: this.movementNotes()
       }).subscribe({
         next: () => {
-          this.successMessage.set('Stock adjusted successfully.');
+          this.successMessage.set(this.loc.language() === 'ar' ? 'تم تعديل جرد المخزون بنجاح.' : 'Stock adjusted successfully.');
           this.closeMovementModal();
           this.loadAllData();
         },
         error: (err) => {
-          this.errorMessage.set(err?.status === 409 ? (err.error?.error || 'Insufficient stock for adjustment.') : 'Failed to adjust stock.');
+          this.errorMessage.set(err?.status === 409 ? (err.error?.error || (this.loc.language() === 'ar' ? 'رصيد المخزون لا يسمح بالتخفيض.' : 'Insufficient stock for adjustment.')) : (this.loc.language() === 'ar' ? 'فشل في تعديل المخزون.' : 'Failed to adjust stock.'));
           this.loading.set(false);
         }
       });
@@ -214,14 +217,16 @@ export class InventoryPageComponent implements OnInit {
   }
 
   getMovementTypeName(type: number): string {
+    const isAr = this.loc.language() === 'ar';
     switch (type) {
-      case 1: return 'Opening Balance';
-      case 2: return 'Receipt';
-      case 3: return 'Issue';
-      case 4: return 'Adjustment (+)';
-      case 5: return 'Adjustment (-)';
-      case 6: return 'Return';
-      default: return 'Movement';
+      case 1: return isAr ? 'رصيد افتتاحي' : 'Opening Balance';
+      case 2: return isAr ? 'توريد / استلام' : 'Receipt';
+      case 3: return isAr ? 'صرف عيادة' : 'Issue';
+      case 4: return isAr ? 'تسوية بالزيادة (+)' : 'Adjustment (+)';
+      case 5: return isAr ? 'تسوية بالنقص (-)' : 'Adjustment (-)';
+      case 6: return isAr ? 'مرتجع' : 'Return';
+      default: return isAr ? 'حركة مخزون' : 'Movement';
     }
   }
 }
+

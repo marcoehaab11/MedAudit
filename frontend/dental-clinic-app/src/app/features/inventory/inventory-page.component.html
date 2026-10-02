@@ -1,8 +1,8 @@
-﻿<div class="inventory-container" [attr.dir]="loc.direction()">
+<div class="inventory-container" [attr.dir]="loc.direction()">
   <div class="page-header">
     <div>
-      <h1>{{ loc.language() === 'ar' ? 'ط¥ط¯ط§ط±ط© ط§ظ„ظ…ط®ط²ظˆظ† ظˆط§ظ„ظ…ظˆط§ط¯' : 'Inventory & Materials Management' }}</h1>
-      <p class="subtitle">{{ loc.language() === 'ar' ? 'طھطھط¨ط¹ ط§ظ„ظ…ظˆط§ط¯ ط§ظ„ط·ط¨ظٹط©طŒ ط§ظ„ظ…ظˆط±ط¯ظٹظ†طŒ ظˆط¥ط¯ط®ط§ظ„/ط¥ط®ط±ط§ط¬ ط§ظ„ظ…ط®ط²ظˆظ†' : 'Track clinical supplies, suppliers, stock movements, and valuation' }}</p>
+      <h1>{{ loc.language() === 'ar' ? 'إدارة المخزون والمواد الطبية' : 'Inventory & Materials Management' }}</h1>
+      <p class="subtitle">{{ loc.language() === 'ar' ? 'تتبع المستلزمات الطبية، الموردين، حركات الإدخال والصرف، وتقييم المخزون' : 'Track clinical supplies, suppliers, stock movements, and valuation' }}</p>
     </div>
   </div>
 
@@ -10,19 +10,19 @@
   @if (summary()) {
     <div class="summary-cards">
       <div class="card card-valuation">
-        <span class="card-label">{{ loc.language() === 'ar' ? 'ط¥ط¬ظ…ط§ظ„ظٹ ظ‚ظٹظ…ط© ط§ظ„ظ…ط®ط²ظˆظ†' : 'Total Stock Valuation' }}</span>
+        <span class="card-label">{{ loc.language() === 'ar' ? 'إجمالي قيمة المخزون' : 'Total Stock Valuation' }}</span>
         <span class="card-value">{{ summary()!.totalStockValuation | currency:'EGP':'symbol':'1.2-2' }}</span>
       </div>
       <div class="card">
-        <span class="card-label">{{ loc.language() === 'ar' ? 'ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ط£طµظ†ط§ظپ' : 'Total Items' }}</span>
+        <span class="card-label">{{ loc.language() === 'ar' ? 'إجمالي الأصناف' : 'Total Items' }}</span>
         <span class="card-value">{{ summary()!.totalItems }}</span>
       </div>
       <div class="card card-warning" [class.active]="summary()!.lowStockCount > 0">
-        <span class="card-label">{{ loc.language() === 'ar' ? 'ط£طµظ†ط§ظپ ظ…ظ†ط®ظپط¶ط©' : 'Low Stock Items' }}</span>
+        <span class="card-label">{{ loc.language() === 'ar' ? 'أصناف قاربت على النفاد' : 'Low Stock Items' }}</span>
         <span class="card-value">{{ summary()!.lowStockCount }}</span>
       </div>
       <div class="card card-danger" [class.active]="summary()!.outOfStockCount > 0">
-        <span class="card-label">{{ loc.language() === 'ar' ? 'ط£طµظ†ط§ظپ ظ…ظ†طھظ‡ظٹط©' : 'Out of Stock' }}</span>
+        <span class="card-label">{{ loc.language() === 'ar' ? 'أصناف نفدت تماماً' : 'Out of Stock' }}</span>
         <span class="card-value">{{ summary()!.outOfStockCount }}</span>
       </div>
     </div>
@@ -43,16 +43,16 @@
   <!-- Tab Navigation -->
   <div class="tabs-header">
     <button class="tab-btn" [class.active]="activeTab() === 'items'" (click)="setTab('items')">
-      {{ loc.language() === 'ar' ? 'ط§ظ„ط£طµظ†ط§ظپ ظˆط§ظ„ظ…ط®ط²ظˆظ†' : 'Items & Stock' }}
+      {{ loc.language() === 'ar' ? 'الأصناف والمخزون' : 'Items & Stock' }}
     </button>
     <button class="tab-btn" [class.active]="activeTab() === 'categories'" (click)="setTab('categories')">
-      {{ loc.language() === 'ar' ? 'ط§ظ„طھطµظ†ظٹظپط§طھ' : 'Categories' }}
+      {{ loc.language() === 'ar' ? 'التصنيفات' : 'Categories' }}
     </button>
     <button class="tab-btn" [class.active]="activeTab() === 'suppliers'" (click)="setTab('suppliers')">
-      {{ loc.language() === 'ar' ? 'ط§ظ„ظ…ظˆط±ط¯ظٹظ†' : 'Suppliers' }}
+      {{ loc.language() === 'ar' ? 'الموردين' : 'Suppliers' }}
     </button>
     <button class="tab-btn" [class.active]="activeTab() === 'movements'" (click)="setTab('movements')">
-      {{ loc.language() === 'ar' ? 'ط³ط¬ظ„ ط§ظ„ط­ط±ظƒط§طھ' : 'Movement History' }}
+      {{ loc.language() === 'ar' ? 'سجل الحركات' : 'Movement History' }}
     </button>
   </div>
 
@@ -63,14 +63,14 @@
         <div class="search-box">
           <input
             type="text"
-            [placeholder]="loc.language() === 'ar' ? 'ط¨ط­ط« ط¨ط§ط³ظ… ط§ظ„طµظ†ظپ ط£ظˆ SKU...' : 'Search item name or SKU...'"
+            [placeholder]="loc.language() === 'ar' ? 'بحث باسم الصنف أو الكود (SKU)...' : 'Search item name or SKU...'"
             [ngModel]="searchQuery()"
             (ngModelChange)="searchQuery.set($event); loadItems()"
           />
         </div>
         <div class="filter-box">
           <select [ngModel]="selectedCategory()" (ngModelChange)="selectedCategory.set($event); loadItems()">
-            <option value="">{{ loc.language() === 'ar' ? 'ط¬ظ…ظٹط¹ ط§ظ„طھطµظ†ظٹظپط§طھ' : 'All Categories' }}</option>
+            <option value="">{{ loc.language() === 'ar' ? 'جميع التصنيفات' : 'All Categories' }}</option>
             @for (cat of categories(); track cat.id) {
               <option [value]="cat.id">{{ loc.language() === 'ar' && cat.arabicName ? cat.arabicName : cat.name }}</option>
             }
@@ -81,31 +81,31 @@
               [ngModel]="lowStockFilter()"
               (ngModelChange)="lowStockFilter.set($event); loadItems()"
             />
-            {{ loc.language() === 'ar' ? 'ط§ظ„ظ…ط®ط²ظˆظ† ط§ظ„ظ…ظ†ط®ظپط¶ ظپظ‚ط·' : 'Low Stock Only' }}
+            {{ loc.language() === 'ar' ? 'المخزون المنخفض فقط' : 'Low Stock Only' }}
           </label>
         </div>
       </div>
 
       @if (loading()) {
-        <div class="loading-state">{{ loc.language() === 'ar' ? 'ط¬ط§ط±ظٹ ط§ظ„طھط­ظ…ظٹظ„...' : 'Loading items...' }}</div>
+        <div class="loading-state">{{ loc.language() === 'ar' ? 'جاري التحميل...' : 'Loading items...' }}</div>
       } @else if (items().length === 0) {
         <div class="empty-state">
-          <p>{{ loc.language() === 'ar' ? 'ظ„ط§ طھظˆط¬ط¯ ط£طµظ†ط§ظپ ظ…ط®ط²ظˆظ† ظ…ط·ط§ط¨ظ‚ط©.' : 'No inventory items found.' }}</p>
+          <p>{{ loc.language() === 'ar' ? 'لا توجد أصناف مخزون مطابقة للبحث.' : 'No inventory items found.' }}</p>
         </div>
       } @else {
         <div class="table-responsive">
           <table class="data-table">
             <thead>
               <tr>
-                <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط±ظ…ط² SKU' : 'SKU' }}</th>
-                <th>{{ loc.language() === 'ar' ? 'ط§ط³ظ… ط§ظ„طµظ†ظپ' : 'Item Name' }}</th>
-                <th>{{ loc.language() === 'ar' ? 'ط§ظ„طھطµظ†ظٹظپ' : 'Category' }}</th>
-                <th>{{ loc.language() === 'ar' ? 'ط§ظ„ظƒظ…ظٹط© ط§ظ„ط­ط§ظ„ظٹط©' : 'Current Stock' }}</th>
-                <th>{{ loc.language() === 'ar' ? 'ط§ظ„ظˆط­ط¯ط©' : 'Unit' }}</th>
-                <th>{{ loc.language() === 'ar' ? 'ط§ظ„طھظƒظ„ظپط©' : 'Cost' }}</th>
-                <th>{{ loc.language() === 'ar' ? 'ط§ظ„ظ‚ظٹظ…ط© ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹط©' : 'Total Value' }}</th>
-                <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط­ط§ظ„ط©' : 'Status' }}</th>
-                <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط¥ط¬ط±ط§ط،ط§طھ' : 'Actions' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'كود الصنف (SKU)' : 'SKU' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'اسم الصنف' : 'Item Name' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'التصنيف' : 'Category' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'الرصيد الحالي' : 'Current Stock' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'الوحدة' : 'Unit' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'سعر الوحدة' : 'Cost' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'إجمالي القيمة' : 'Total Value' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'الحالة' : 'Status' }}</th>
+                <th>{{ loc.language() === 'ar' ? 'الإجراءات' : 'Actions' }}</th>
               </tr>
             </thead>
             <tbody>
@@ -115,7 +115,7 @@
                   <td>
                     <strong>{{ loc.language() === 'ar' && item.arabicName ? item.arabicName : item.name }}</strong>
                     @if (item.supplierName) {
-                      <div class="sub-text">{{ loc.language() === 'ar' ? 'ط§ظ„ظ…ظˆط±ط¯: ' : 'Supplier: ' }}{{ item.supplierName }}</div>
+                      <div class="sub-text">{{ loc.language() === 'ar' ? 'المورد: ' : 'Supplier: ' }}{{ item.supplierName }}</div>
                     }
                   </td>
                   <td>{{ item.categoryName }}</td>
@@ -127,27 +127,27 @@
                   <td>{{ item.totalValue | currency:'EGP':'symbol':'1.2-2' }}</td>
                   <td>
                     @if (item.isOutOfStock) {
-                      <span class="badge badge-danger">{{ loc.language() === 'ar' ? 'ظ…ظ†طھظ‡ظٹ' : 'Out of Stock' }}</span>
+                      <span class="badge badge-danger">{{ loc.language() === 'ar' ? 'منتهي' : 'Out of Stock' }}</span>
                     } @else if (item.isLowStock) {
-                      <span class="badge badge-warning">{{ loc.language() === 'ar' ? 'ظ…ظ†ط®ظپط¶' : 'Low Stock' }}</span>
+                      <span class="badge badge-warning">{{ loc.language() === 'ar' ? 'منخفض' : 'Low Stock' }}</span>
                     } @else {
-                      <span class="badge badge-success">{{ loc.language() === 'ar' ? 'ظ…طھظˆظپط±' : 'In Stock' }}</span>
+                      <span class="badge badge-success">{{ loc.language() === 'ar' ? 'متوفر' : 'In Stock' }}</span>
                     }
                   </td>
                   <td class="actions-cell">
                     @if (auth.hasPermission('Inventory.Receive')) {
                       <button class="btn btn-sm btn-outline-success" (click)="openReceiveModal(item)">
-                        {{ loc.language() === 'ar' ? 'طھظˆط±ظٹط¯ +' : 'Receive +' }}
+                        {{ loc.language() === 'ar' ? 'توريد +' : 'Receive +' }}
                       </button>
                     }
                     @if (auth.hasPermission('Inventory.Issue')) {
                       <button class="btn btn-sm btn-outline-primary" [disabled]="item.isOutOfStock" (click)="openIssueModal(item)">
-                        {{ loc.language() === 'ar' ? 'طµط±ظپ -' : 'Issue -' }}
+                        {{ loc.language() === 'ar' ? 'صرف -' : 'Issue -' }}
                       </button>
                     }
                     @if (auth.hasPermission('Inventory.Adjust')) {
                       <button class="btn btn-sm btn-outline-secondary" (click)="openAdjustModal(item)">
-                        {{ loc.language() === 'ar' ? 'طھط¹ط¯ظٹظ„' : 'Adjust' }}
+                        {{ loc.language() === 'ar' ? 'تسوية' : 'Adjust' }}
                       </button>
                     }
                   </td>
@@ -167,10 +167,10 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط§ط³ظ…' : 'Name' }}</th>
-              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط§ط³ظ… ط¨ط§ظ„ط¹ط±ط¨ظٹط©' : 'Arabic Name' }}</th>
-              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ظˆطµظپ' : 'Description' }}</th>
-              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط­ط§ظ„ط©' : 'Status' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'الاسم' : 'Name' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'الاسم بالعربية' : 'Arabic Name' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'الوصف' : 'Description' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'الحالة' : 'Status' }}</th>
             </tr>
           </thead>
           <tbody>
@@ -181,7 +181,7 @@
                 <td>{{ cat.description || '-' }}</td>
                 <td>
                   <span class="badge" [class.badge-success]="cat.isActive" [class.badge-secondary]="!cat.isActive">
-                    {{ cat.isActive ? (loc.language() === 'ar' ? 'ظ†ط´ط·' : 'Active') : (loc.language() === 'ar' ? 'ط؛ظٹط± ظ†ط´ط·' : 'Inactive') }}
+                    {{ cat.isActive ? (loc.language() === 'ar' ? 'نشط' : 'Active') : (loc.language() === 'ar' ? 'غير نشط' : 'Inactive') }}
                   </span>
                 </td>
               </tr>
@@ -199,11 +199,11 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>{{ loc.language() === 'ar' ? 'ط§ط³ظ… ط§ظ„ظ…ظˆط±ط¯' : 'Supplier Name' }}</th>
-              <th>{{ loc.language() === 'ar' ? 'ظ…ط³ط¤ظˆظ„ ط§ظ„طھظˆط§طµظ„' : 'Contact Person' }}</th>
-              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ظ‡ط§طھظپ' : 'Phone' }}</th>
-              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط¨ط±ظٹط¯ ط§ظ„ط¥ظ„ظƒطھط±ظˆظ†ظٹ' : 'Email' }}</th>
-              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط­ط§ظ„ط©' : 'Status' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'اسم المورد' : 'Supplier Name' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'مسؤول التواصل' : 'Contact Person' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'الهاتف' : 'Phone' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'البريد الإلكتروني' : 'Email' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'الحالة' : 'Status' }}</th>
             </tr>
           </thead>
           <tbody>
@@ -215,7 +215,7 @@
                 <td>{{ sup.email || '-' }}</td>
                 <td>
                   <span class="badge" [class.badge-success]="sup.isActive" [class.badge-secondary]="!sup.isActive">
-                    {{ sup.isActive ? (loc.language() === 'ar' ? 'ظ†ط´ط·' : 'Active') : (loc.language() === 'ar' ? 'ط؛ظٹط± ظ†ط´ط·' : 'Inactive') }}
+                    {{ sup.isActive ? (loc.language() === 'ar' ? 'نشط' : 'Active') : (loc.language() === 'ar' ? 'غير نشط' : 'Inactive') }}
                   </span>
                 </td>
               </tr>
@@ -233,20 +233,20 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>{{ loc.language() === 'ar' ? 'ط§ظ„طھط§ط±ظٹط®' : 'Date & Time' }}</th>
-              <th>{{ loc.language() === 'ar' ? 'ظ†ظˆط¹ ط§ظ„ط­ط±ظƒط©' : 'Movement Type' }}</th>
-              <th>{{ loc.language() === 'ar' ? 'ط§ظ„طµظ†ظپ' : 'Item' }}</th>
-              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ظƒظ…ظٹط©' : 'Quantity' }}</th>
-              <th>{{ loc.language() === 'ar' ? 'طھظƒظ„ظپط© ط§ظ„ظˆط­ط¯ط©' : 'Unit Cost' }}</th>
-              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹ' : 'Total' }}</th>
-              <th>{{ loc.language() === 'ar' ? 'ط§ظ„ظ…ط±ط¬ط¹' : 'Reference' }}</th>
-              <th>{{ loc.language() === 'ar' ? 'ظ…ظ„ط§ط­ط¸ط§طھ' : 'Notes' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'التاريخ والوقت' : 'Date & Time' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'نوع الحركة' : 'Movement Type' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'الصنف' : 'Item' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'الكمية' : 'Quantity' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'تكلفة الوحدة' : 'Unit Cost' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'الإجمالي' : 'Total' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'المرجع' : 'Reference' }}</th>
+              <th>{{ loc.language() === 'ar' ? 'ملاحظات' : 'Notes' }}</th>
             </tr>
           </thead>
           <tbody>
             @for (m of movements(); track m.id) {
               <tr>
-                <td>{{ m.occurredAt | date:'medium' }}</td>
+                <td>{{ m.occurredAt | date: 'dd/MM/yyyy hh:mm a' }}</td>
                 <td>
                   <span class="badge"
                         [class.badge-success]="m.movementType === 2 || m.movementType === 4"
@@ -276,43 +276,43 @@
         <div class="modal-header">
           <h3>
             @if (showMovementModal() === 'receive') {
-              {{ loc.language() === 'ar' ? 'طھظˆط±ظٹط¯ ظ…ط®ط²ظˆظ† ط¬ط¯ظٹط¯' : 'Receive Stock' }}
+              {{ loc.language() === 'ar' ? 'توريد واستلام مخزون جديد' : 'Receive Stock' }}
             } @else if (showMovementModal() === 'issue') {
-              {{ loc.language() === 'ar' ? 'طµط±ظپ ظ…ط®ط²ظˆظ†' : 'Issue Stock' }}
+              {{ loc.language() === 'ar' ? 'صرف مخزون للعيادة' : 'Issue Stock' }}
             } @else {
-              {{ loc.language() === 'ar' ? 'طھط¹ط¯ظٹظ„ ط¬ط±ط¯ ط§ظ„ظ…ط®ط²ظˆظ†' : 'Adjust Stock' }}
+              {{ loc.language() === 'ar' ? 'تسوية وجرد المخزون' : 'Adjust Stock' }}
             }
           </h3>
-          <button class="btn-close" (click)="closeMovementModal()">أ—</button>
+          <button class="btn-close" (click)="closeMovementModal()">×</button>
         </div>
 
         <div class="modal-body">
-          <p><strong>{{ targetItem()?.name }}</strong> ({{ loc.language() === 'ar' ? 'ط§ظ„ط±طµظٹط¯ ط§ظ„ط­ط§ظ„ظٹ: ' : 'Current Stock: ' }} <strong>{{ targetItem()?.currentStock }}</strong> {{ targetItem()?.unitOfMeasure }})</p>
+          <p><strong>{{ targetItem()?.name }}</strong> ({{ loc.language() === 'ar' ? 'الرصيد الحالي: ' : 'Current Stock: ' }} <strong>{{ targetItem()?.currentStock }}</strong> {{ targetItem()?.unitOfMeasure }})</p>
 
           @if (showMovementModal() === 'adjust') {
             <div class="form-group">
-              <label>{{ loc.language() === 'ar' ? 'ط§طھط¬ط§ظ‡ ط§ظ„طھط¹ط¯ظٹظ„' : 'Adjustment Direction' }}</label>
+              <label>{{ loc.language() === 'ar' ? 'نوع التسوية' : 'Adjustment Direction' }}</label>
               <select [ngModel]="movementAdjustType()" (ngModelChange)="movementAdjustType.set($event)">
-                <option [value]="4">{{ loc.language() === 'ar' ? 'ط²ظٹط§ط¯ط© ظ…ط®ط²ظˆظ† (+)' : 'Adjustment Increase (+)' }}</option>
-                <option [value]="5">{{ loc.language() === 'ar' ? 'طھط®ظپظٹط¶ ظ…ط®ط²ظˆظ† (-)' : 'Adjustment Decrease (-)' }}</option>
+                <option [value]="4">{{ loc.language() === 'ar' ? 'تسوية بالزيادة (+)' : 'Adjustment Increase (+)' }}</option>
+                <option [value]="5">{{ loc.language() === 'ar' ? 'تسوية بالنقص (-)' : 'Adjustment Decrease (-)' }}</option>
               </select>
             </div>
           }
 
           <div class="form-group">
-            <label>{{ loc.language() === 'ar' ? 'ط§ظ„ظƒظ…ظٹط©' : 'Quantity' }}</label>
+            <label>{{ loc.language() === 'ar' ? 'الكمية' : 'Quantity' }}</label>
             <input type="number" min="0.01" step="1" [ngModel]="movementQty()" (ngModelChange)="movementQty.set($event)" />
           </div>
 
           @if (showMovementModal() === 'receive') {
             <div class="form-group">
-              <label>{{ loc.language() === 'ar' ? 'طھظƒظ„ظپط© ط§ظ„ظˆط­ط¯ط© (ط¬.ظ…)' : 'Unit Cost (EGP)' }}</label>
+              <label>{{ loc.language() === 'ar' ? 'سعر شراء الوحدة (ج.م)' : 'Unit Cost (EGP)' }}</label>
               <input type="number" min="0" step="0.5" [ngModel]="movementCost()" (ngModelChange)="movementCost.set($event)" />
             </div>
             <div class="form-group">
-              <label>{{ loc.language() === 'ar' ? 'ط§ظ„ظ…ظˆط±ط¯' : 'Supplier' }}</label>
+              <label>{{ loc.language() === 'ar' ? 'المورد' : 'Supplier' }}</label>
               <select [ngModel]="movementSupplierId()" (ngModelChange)="movementSupplierId.set($event)">
-                <option value="">{{ loc.language() === 'ar' ? '-- ط§ط®طھظٹط§ط± ظ…ظˆط±ط¯ --' : '-- Select Supplier --' }}</option>
+                <option value="">{{ loc.language() === 'ar' ? '-- اختيار المورد --' : '-- Select Supplier --' }}</option>
                 @for (sup of suppliers(); track sup.id) {
                   <option [value]="sup.id">{{ sup.name }}</option>
                 }
@@ -321,26 +321,26 @@
             <div class="form-group checkbox-group">
               <label>
                 <input type="checkbox" [ngModel]="movementPostExpense()" (ngModelChange)="movementPostExpense.set($event)" />
-                {{ loc.language() === 'ar' ? 'طھط³ط¬ظٹظ„ ظ…طµط±ظˆظپ طھظ„ظ‚ط§ط¦ظٹ ظپظٹ ط§ظ„ظ…ط§ظ„ظٹط©' : 'Post expense to Finance module' }}
+                {{ loc.language() === 'ar' ? 'تسجيل مصروف تلقائي في موديول المالية' : 'Post expense to Finance module' }}
               </label>
             </div>
           }
 
           <div class="form-group">
-            <label>{{ loc.language() === 'ar' ? 'ط§ظ„ظ…ط±ط¬ط¹ / ط§ظ„ط±ظ‚ظ… ط§ظ„ظ…ط±ط¬ط¹ظٹ' : 'Reference / PO Number' }}</label>
+            <label>{{ loc.language() === 'ar' ? 'الرقم المرجعي / الفاتورة' : 'Reference / PO Number' }}</label>
             <input type="text" [ngModel]="movementRef()" (ngModelChange)="movementRef.set($event)" />
           </div>
 
           <div class="form-group">
-            <label>{{ loc.language() === 'ar' ? 'ظ…ظ„ط§ط­ط¸ط§طھ' : 'Notes' }}</label>
+            <label>{{ loc.language() === 'ar' ? 'ملاحظات' : 'Notes' }}</label>
             <textarea rows="2" [ngModel]="movementNotes()" (ngModelChange)="movementNotes.set($event)"></textarea>
           </div>
         </div>
 
         <div class="modal-footer">
-          <button class="btn btn-secondary" (click)="closeMovementModal()">{{ loc.language() === 'ar' ? 'ط¥ظ„ط؛ط§ط،' : 'Cancel' }}</button>
+          <button class="btn btn-secondary" (click)="closeMovementModal()">{{ loc.language() === 'ar' ? 'إلغاء' : 'Cancel' }}</button>
           <button class="btn btn-primary" (click)="submitMovement()" [disabled]="loading()">
-            {{ loc.language() === 'ar' ? 'طھط§ظƒظٹط¯ ظˆطھط£ظƒظٹط¯ ط§ظ„ط­ط±ظƒط©' : 'Confirm Movement' }}
+            {{ loc.language() === 'ar' ? 'تأكيد وحفظ الحركة' : 'Confirm Movement' }}
           </button>
         </div>
       </div>

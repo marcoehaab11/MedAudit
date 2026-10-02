@@ -14,6 +14,12 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'dashboard',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/dashboard/dashboard-page.component').then((x) => x.DashboardPageComponent),
+  },
+  {
     path: 'users',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -98,6 +104,12 @@ export const routes: Routes = [
       import('./features/dental/examination.component').then((x) => x.ExaminationComponent),
   },
   {
+    path: 'appointments/:appointmentId/visit',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/dental/examination.component').then((x) => x.ExaminationComponent),
+  },
+  {
     path: 'patients/:id/dental',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -144,12 +156,38 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'treatment-catalog',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/treatments/treatment-catalog-page.component').then(
+        (x) => x.TreatmentCatalogPageComponent,
+      ),
+  },
+  {
+    path: 'treatments/catalog',
+    redirectTo: 'treatment-catalog',
+    pathMatch: 'full',
+  },
+  {
     path: 'treatments/:id',
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/treatments/treatment-details.component').then(
         (x) => x.TreatmentDetailsComponent,
       ),
+  },
+  {
+    path: 'medications-catalog',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/prescriptions/medication-catalog-page.component').then(
+        (x) => x.MedicationCatalogPageComponent,
+      ),
+  },
+  {
+    path: 'medications',
+    redirectTo: 'medications-catalog',
+    pathMatch: 'full',
   },
   {
     path: 'prescriptions',
@@ -344,14 +382,6 @@ export const routes: Routes = [
       ),
   },
   {
-    path: 'pharmacy',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/pharmacy/pharmacy-page.component').then(
-        (x) => x.PharmacyPageComponent,
-      ),
-  },
-  {
     path: 'settings',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -359,6 +389,7 @@ export const routes: Routes = [
         (x) => x.SettingsPageComponent,
       ),
   },
-  { path: '', pathMatch: 'full', redirectTo: 'patients' },
-  { path: '**', redirectTo: 'patients' },
+  { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+  { path: '**', redirectTo: 'dashboard' },
 ];
+

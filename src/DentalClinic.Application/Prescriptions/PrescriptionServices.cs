@@ -15,6 +15,8 @@ internal sealed class MedicationCatalogService(IPrescriptionStore store, IPermis
     { await permissions.EnsurePermissionAsync(Permissions.SettingsEdit, token); var item = new MedicationCatalogItem(tenant.RequireTenantId(), input.Name, input.GenericName, input.Strength, input.Form, input.Notes, clock.UtcNow); store.AddMedication(item); Audit(PlatformAuditAction.MedicationCatalogCreated, item.Id); await store.SaveChangesAsync(token); return item.Id; }
     public async Task<bool> UpdateAsync(Guid id, MedicationCatalogInput input, CancellationToken token)
     { await permissions.EnsurePermissionAsync(Permissions.SettingsEdit, token); var item = await store.FindMedicationAsync(id, true, token); if (item is null) return false; item.Update(input.Name, input.GenericName, input.Strength, input.Form, input.Notes, input.IsActive, clock.UtcNow); Audit(PlatformAuditAction.MedicationCatalogUpdated, id); await store.SaveChangesAsync(token); return true; }
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken token)
+    { await permissions.EnsurePermissionAsync(Permissions.SettingsEdit, token); var item = await store.FindMedicationAsync(id, true, token); if (item is null) return false; item.Update(item.Name, item.GenericName, item.Strength, item.Form, item.Notes, false, clock.UtcNow); Audit(PlatformAuditAction.MedicationCatalogUpdated, id); await store.SaveChangesAsync(token); return true; }
     private void Audit(PlatformAuditAction action, Guid id) => store.AddAudit(new(tenant.RequireTenantId(), user.UserId, action, "MedicationCatalogItem", id, clock.UtcNow, null));
     private static void Validate(int page, int size) { if (page < 1 || size is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(page)); }
 }

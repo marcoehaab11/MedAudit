@@ -1,22 +1,130 @@
 @page "/admin/clinics/{id:guid}/edit"
 @model DentalClinic.PlatformAdmin.Pages.Admin.Clinics.EditModel
-@{ ViewData["Title"] = "Edit clinic"; }
-<div class="page-heading"><div><p class="eyebrow">Tenant management</p><h1>Edit clinic</h1></div></div>
-<form method="post" class="panel form-panel" data-loading-form>
-    <input asp-for="Input.Id" type="hidden" />
-    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-    <div class="form-grid">
-        <div><label asp-for="Input.Name" class="form-label"></label><input asp-for="Input.Name" class="form-control" /><span asp-validation-for="Input.Name" class="text-danger"></span></div>
-        <div><label asp-for="Input.Slug" class="form-label"></label><input asp-for="Input.Slug" class="form-control" /><span asp-validation-for="Input.Slug" class="text-danger"></span></div>
-        <div><label asp-for="Input.Phone" class="form-label"></label><input asp-for="Input.Phone" class="form-control" /><span asp-validation-for="Input.Phone" class="text-danger"></span></div>
-        <div><label asp-for="Input.Email" class="form-label"></label><input asp-for="Input.Email" class="form-control" /><span asp-validation-for="Input.Email" class="text-danger"></span></div>
-        <div class="full"><label asp-for="Input.Address" class="form-label"></label><input asp-for="Input.Address" class="form-control" /><span asp-validation-for="Input.Address" class="text-danger"></span></div>
-        <div><label asp-for="Input.City" class="form-label"></label><input asp-for="Input.City" class="form-control" /><span asp-validation-for="Input.City" class="text-danger"></span></div>
-        <div><label asp-for="Input.Country" class="form-label"></label><input asp-for="Input.Country" class="form-control" /><span asp-validation-for="Input.Country" class="text-danger"></span></div>
-        <div><label asp-for="Input.TimeZone" class="form-label"></label><input asp-for="Input.TimeZone" class="form-control" /><span asp-validation-for="Input.TimeZone" class="text-danger"></span></div>
-        <div><label asp-for="Input.Currency" class="form-label"></label><input asp-for="Input.Currency" class="form-control text-uppercase" /><span asp-validation-for="Input.Currency" class="text-danger"></span></div>
-        <div><label asp-for="Input.LogoReference" class="form-label">Logo reference</label><input asp-for="Input.LogoReference" class="form-control" /><span asp-validation-for="Input.LogoReference" class="text-danger"></span></div>
+@{
+    ViewData["Title"] = $"Edit {Model.Input.Name}";
+}
+
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 pb-2 border-bottom">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1 small">
+                <li class="breadcrumb-item"><a asp-page="/Index" class="text-decoration-none text-slate-500">Overview</a></li>
+                <li class="breadcrumb-item"><a asp-page="/Admin/Clinics/Index" class="text-decoration-none text-slate-500">Clinics</a></li>
+                <li class="breadcrumb-item"><a asp-page="/Admin/Clinics/Details" asp-route-id="@Model.Input.Id" class="text-decoration-none text-slate-500">@Model.Input.Name</a></li>
+                <li class="breadcrumb-item active text-slate-800 fw-semibold" aria-current="page">Edit</li>
+            </ol>
+        </nav>
+        <h1 class="h2 fw-bold text-slate-900 mb-0">Edit Clinic Profile</h1>
+        <p class="text-slate-500 mb-0">Modify configuration, contact information, and localization settings for @Model.Input.Name.</p>
     </div>
-    <div class="form-actions"><a class="btn btn-outline-secondary" asp-page="Details" asp-route-id="@Model.Input.Id">Cancel</a><button class="btn btn-primary" type="submit"><span class="default-label">Save changes</span><span class="loading-label">Saving…</span></button></div>
+    <div>
+        <a class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" asp-page="Details" asp-route-id="@Model.Input.Id">
+            <i class="bi bi-arrow-left"></i> Back to Details
+        </a>
+    </div>
+</div>
+
+<form method="post" data-loading-form>
+    <input asp-for="Input.Id" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4" role="alert"></div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <!-- 1. Brand & Identity -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 px-4 border-bottom">
+                    <h5 class="fw-bold mb-0 text-slate-900 d-flex align-items-center gap-2">
+                        <i class="bi bi-building text-emerald-600"></i> Clinic Brand & Identity
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-7">
+                            <label asp-for="Input.Name" class="form-label fw-semibold text-slate-700">Clinic Name <span class="text-danger">*</span></label>
+                            <input asp-for="Input.Name" class="form-control form-control-lg" />
+                            <span asp-validation-for="Input.Name" class="text-danger small"></span>
+                        </div>
+                        <div class="col-12 col-md-5">
+                            <label asp-for="Input.Slug" class="form-label fw-semibold text-slate-700">Tenant Slug <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-slate-500">@@</span>
+                                <input asp-for="Input.Slug" class="form-control font-monospace" />
+                            </div>
+                            <span asp-validation-for="Input.Slug" class="text-danger small"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Input.LogoReference" class="form-label fw-semibold text-slate-700">Logo URL / Reference</label>
+                            <input asp-for="Input.LogoReference" class="form-control" />
+                            <span asp-validation-for="Input.LogoReference" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Contact & Location -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 px-4 border-bottom">
+                    <h5 class="fw-bold mb-0 text-slate-900 d-flex align-items-center gap-2">
+                        <i class="bi bi-geo-alt text-emerald-600"></i> Contact & Location
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label asp-for="Input.Email" class="form-label fw-semibold text-slate-700">Clinic Email <span class="text-danger">*</span></label>
+                            <input asp-for="Input.Email" class="form-control" />
+                            <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label asp-for="Input.Phone" class="form-label fw-semibold text-slate-700">Phone Number <span class="text-danger">*</span></label>
+                            <input asp-for="Input.Phone" class="form-control" />
+                            <span asp-validation-for="Input.Phone" class="text-danger small"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Input.Address" class="form-label fw-semibold text-slate-700">Street Address <span class="text-danger">*</span></label>
+                            <input asp-for="Input.Address" class="form-control" />
+                            <span asp-validation-for="Input.Address" class="text-danger small"></span>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label asp-for="Input.City" class="form-label fw-semibold text-slate-700">City <span class="text-danger">*</span></label>
+                            <input asp-for="Input.City" class="form-control" />
+                            <span asp-validation-for="Input.City" class="text-danger small"></span>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label asp-for="Input.Country" class="form-label fw-semibold text-slate-700">Country <span class="text-danger">*</span></label>
+                            <input asp-for="Input.Country" class="form-control" />
+                            <span asp-validation-for="Input.Country" class="text-danger small"></span>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label asp-for="Input.TimeZone" class="form-label fw-semibold text-slate-700">Timezone <span class="text-danger">*</span></label>
+                            <input asp-for="Input.TimeZone" class="form-control font-monospace" />
+                            <span asp-validation-for="Input.TimeZone" class="text-danger small"></span>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label asp-for="Input.Currency" class="form-label fw-semibold text-slate-700">Billing Currency <span class="text-danger">*</span></label>
+                            <input asp-for="Input.Currency" class="form-control text-uppercase font-monospace" maxlength="3" />
+                            <span asp-validation-for="Input.Currency" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm border-0 sticky-top" style="top: 80px;">
+                <div class="card-body p-4 d-grid gap-2">
+                    <button class="btn btn-primary btn-lg d-flex align-items-center justify-content-center gap-2" type="submit">
+                        <i class="bi bi-check-lg fs-5"></i>
+                        <span class="default-label">Save Changes</span>
+                        <span class="loading-label d-none">Saving...</span>
+                    </button>
+                    <a class="btn btn-outline-secondary" asp-page="Details" asp-route-id="@Model.Input.Id">Cancel</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </form>
-@section Scripts { <partial name="_ValidationScriptsPartial" /> }
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

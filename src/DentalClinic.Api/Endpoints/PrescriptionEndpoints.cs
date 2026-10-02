@@ -11,10 +11,11 @@ internal static class PrescriptionEndpoints
     public static IEndpointRouteBuilder MapPrescriptionEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var api = endpoints.MapGroup("/api").RequireAuthorization(AuthConstants.TenantMemberPolicy);
-        api.MapGet("/medications", (string? search, MedicationForm? form, bool includeInactive, int page, int pageSize, IMedicationCatalogService s, CancellationToken t) => s.SearchAsync(new(search, form, includeInactive, page == 0 ? 1 : page, pageSize == 0 ? 20 : pageSize), t)).RequireAuthorization(Permissions.PrescriptionsView);
+        api.MapGet("/medications", (string? search, MedicationForm? form, bool? includeInactive, int? page, int? pageSize, IMedicationCatalogService s, CancellationToken t) => s.SearchAsync(new(search, form, includeInactive ?? false, page.GetValueOrDefault(1) == 0 ? 1 : page.GetValueOrDefault(1), pageSize.GetValueOrDefault(20) == 0 ? 20 : pageSize.GetValueOrDefault(20)), t)).RequireAuthorization(Permissions.PrescriptionsView);
         api.MapPost("/medications", CreateMedication).RequireAuthorization(Permissions.SettingsEdit);
         api.MapPut("/medications/{id:guid}", UpdateMedication).RequireAuthorization(Permissions.SettingsEdit);
-        api.MapGet("/prescriptions", (Guid? patientId, Guid? doctorProfileId, PrescriptionStatus? status, DateOnly? from, DateOnly? to, int page, int pageSize, IPrescriptionService s, CancellationToken t) => s.SearchAsync(new(patientId, doctorProfileId, status, from, to, page == 0 ? 1 : page, pageSize == 0 ? 20 : pageSize), t)).RequireAuthorization(Permissions.PrescriptionsView);
+        api.MapDelete("/medications/{id:guid}", DeleteMedication).RequireAuthorization(Permissions.SettingsEdit);
+        api.MapGet("/prescriptions", (Guid? patientId, Guid? doctorProfileId, PrescriptionStatus? status, DateOnly? from, DateOnly? to, int? page, int? pageSize, IPrescriptionService s, CancellationToken t) => s.SearchAsync(new(patientId, doctorProfileId, status, from, to, page.GetValueOrDefault(1) == 0 ? 1 : page.GetValueOrDefault(1), pageSize.GetValueOrDefault(20) == 0 ? 20 : pageSize.GetValueOrDefault(20)), t)).RequireAuthorization(Permissions.PrescriptionsView);
         api.MapGet("/prescriptions/{id:guid}", Get).RequireAuthorization(Permissions.PrescriptionsView);
         api.MapPost("/prescriptions", Create).RequireAuthorization(Permissions.PrescriptionsCreate);
         api.MapPut("/prescriptions/{id:guid}", Update).RequireAuthorization(Permissions.PrescriptionsEdit);
@@ -30,6 +31,7 @@ internal static class PrescriptionEndpoints
     }
     private static async Task<IResult> CreateMedication(MedicationCatalogRequest r, IMedicationCatalogService s, CancellationToken t) { var id = await s.CreateAsync(Medication(r), t); return Results.Created($"/api/medications/{id:D}", new { id }); }
     private static async Task<IResult> UpdateMedication(Guid id, MedicationCatalogRequest r, IMedicationCatalogService s, CancellationToken t) => await s.UpdateAsync(id, Medication(r), t) ? Results.NoContent() : Results.NotFound();
+    private static async Task<IResult> DeleteMedication(Guid id, IMedicationCatalogService s, CancellationToken t) => await s.DeleteAsync(id, t) ? Results.NoContent() : Results.NotFound();
     private static MedicationCatalogInput Medication(MedicationCatalogRequest r) => new(r.Name, r.GenericName, r.Strength, r.Form.HasValue ? (MedicationForm)r.Form : null, r.Notes, r.IsActive);
     private static async Task<IResult> Get(Guid id, IPrescriptionService s, CancellationToken t) => await s.GetAsync(id, t) is { } x ? Results.Ok(x) : Results.NotFound();
     private static async Task<IResult> Create(CreatePrescriptionRequest r, IPrescriptionService s, CancellationToken t) { var id = await s.CreateAsync(new(r.PatientId, r.DoctorProfileId, r.AppointmentId, r.ExaminationId, r.TreatmentId, r.Notes, r.Items.Select(Item).ToArray()), t); return Results.Created($"/api/prescriptions/{id:D}", new { id }); }

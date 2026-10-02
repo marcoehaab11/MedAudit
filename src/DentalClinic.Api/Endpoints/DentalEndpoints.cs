@@ -55,19 +55,19 @@ internal static class DentalEndpoints
         ResultAsync(commands.AddFindingAsync(id, Finding(request), request.Version, token));
     private static Task<IResult> UpdateFindingAsync(Guid id, Guid itemId, DentalRecordRequest request, IExaminationCommands commands, CancellationToken token) =>
         ResultAsync(commands.UpdateFindingAsync(id, itemId, Finding(request), request.Version, token));
-    private static Task<IResult> RemoveFindingAsync(Guid id, Guid itemId, ClinicalRecordVersionRequest request, IExaminationCommands commands, CancellationToken token) =>
+    private static Task<IResult> RemoveFindingAsync(Guid id, Guid itemId, [Microsoft.AspNetCore.Mvc.FromBody] ClinicalRecordVersionRequest request, IExaminationCommands commands, CancellationToken token) =>
         ResultAsync(commands.RemoveFindingAsync(id, itemId, request.Version, token));
     private static Task<IResult> AddProcedureAsync(Guid id, DentalRecordRequest request, IExaminationCommands commands, CancellationToken token) =>
         ResultAsync(commands.AddProcedureAsync(id, Procedure(request), request.Version, token));
     private static Task<IResult> UpdateProcedureAsync(Guid id, Guid itemId, DentalRecordRequest request, IExaminationCommands commands, CancellationToken token) =>
         ResultAsync(commands.UpdateProcedureAsync(id, itemId, Procedure(request), request.Version, token));
-    private static Task<IResult> RemoveProcedureAsync(Guid id, Guid itemId, ClinicalRecordVersionRequest request, IExaminationCommands commands, CancellationToken token) =>
+    private static Task<IResult> RemoveProcedureAsync(Guid id, Guid itemId, [Microsoft.AspNetCore.Mvc.FromBody] ClinicalRecordVersionRequest request, IExaminationCommands commands, CancellationToken token) =>
         ResultAsync(commands.RemoveProcedureAsync(id, itemId, request.Version, token));
     private static Task<IResult> AddEndodonticAsync(Guid id, EndodonticRecordRequest request, IExaminationCommands commands, CancellationToken token) =>
         ResultAsync(commands.AddEndodonticAsync(id, Endodontic(request), request.Version, token));
     private static Task<IResult> UpdateEndodonticAsync(Guid id, Guid itemId, EndodonticRecordRequest request, IExaminationCommands commands, CancellationToken token) =>
         ResultAsync(commands.UpdateEndodonticAsync(id, itemId, Endodontic(request), request.Version, token));
-    private static Task<IResult> RemoveEndodonticAsync(Guid id, Guid itemId, ClinicalRecordVersionRequest request, IExaminationCommands commands, CancellationToken token) =>
+    private static Task<IResult> RemoveEndodonticAsync(Guid id, Guid itemId, [Microsoft.AspNetCore.Mvc.FromBody] ClinicalRecordVersionRequest request, IExaminationCommands commands, CancellationToken token) =>
         ResultAsync(commands.RemoveEndodonticAsync(id, itemId, request.Version, token));
     private static Task<IResult> CompleteAsync(Guid id, ClinicalRecordVersionRequest request, IExaminationCommands commands, CancellationToken token) =>
         ResultAsync(commands.CompleteAsync(id, request.Version, token));

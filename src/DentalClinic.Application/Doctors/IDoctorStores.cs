@@ -1,5 +1,6 @@
 using DentalClinic.Application.Tenants.Models;
 using DentalClinic.Domain.Doctors;
+using DentalClinic.Domain.Identity;
 using DentalClinic.Domain.Platform;
 
 namespace DentalClinic.Application.Doctors;
@@ -12,7 +13,7 @@ public interface IDoctorProfileStore
     Task<DoctorProfile?> FindAsync(Guid id, CancellationToken cancellationToken);
     Task<DoctorProfile?> FindByUserIdAsync(Guid clinicUserId, CancellationToken cancellationToken);
     Task<bool> IsDoctorUserAsync(Guid clinicUserId, CancellationToken cancellationToken);
-    Task<bool> ProfileExistsForUserAsync(Guid clinicUserId, CancellationToken cancellationToken);
+    Task<ClinicUser?> FindClinicUserAsync(Guid clinicUserId, CancellationToken cancellationToken);
     Task<bool> LicenseExistsAsync(string licenseNumber, Guid? excludingId, CancellationToken cancellationToken);
     void Add(DoctorProfile profile);
     void AddAudit(PlatformAuditLog audit);

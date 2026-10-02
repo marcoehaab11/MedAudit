@@ -4,24 +4,34 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
 import { PatientApiService, PatientDetails } from './patient-api.service';
+import { DateInputComponent } from '../../shared/date-input/date-input.component';
 import { PatientDentalSummaryComponent } from '../dental/patient-dental-summary.component';
 import { PatientTreatmentSummaryComponent } from '../treatments/patient-treatment-summary.component';
 import { PatientPrescriptionSummaryComponent } from '../prescriptions/patient-prescription-summary.component';
 import { PatientCrmSummaryComponent } from '../crm/patient-crm-summary.component';
 import { PatientFinanceSummaryComponent } from '../finance/patient-finance-summary.component';
+import { PatientDossierModalComponent } from './patient-dossier-modal.component';
+import { PatientVisitHistorySheetComponent } from './patient-visit-history-sheet.component';
+import { MedicalAlertModalComponent } from '../../shared/medical-alert-modal/medical-alert-modal.component';
+import { TreatmentApiService } from '../treatments/treatment-api.service';
 
 type Tab = 'overview' | 'contact' | 'medical' | 'notes';
 @Component({
   selector: 'app-patient-details',
+  standalone: true,
   imports: [
     RouterLink,
     DatePipe,
     ReactiveFormsModule,
+    DateInputComponent,
     PatientDentalSummaryComponent,
     PatientTreatmentSummaryComponent,
     PatientPrescriptionSummaryComponent,
     PatientCrmSummaryComponent,
     PatientFinanceSummaryComponent,
+    PatientDossierModalComponent,
+    PatientVisitHistorySheetComponent,
+    MedicalAlertModalComponent,
   ],
   template: ` <a class="back" routerLink="/patients"
       >← {{ t('Back to patients', 'العودة إلى المرضى') }}</a
@@ -38,6 +48,45 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
           <p>{{ patient()!.phone }} · {{ patient()!.email || t('No email', 'لا يوجد بريد') }}</p>
         </div>
         <div class="head-actions">
+          @if (hasMedicalAlerts()) {
+            <button
+              type="button"
+              class="stat-pill-btn danger"
+              (click)="openMedicalAlertModal()"
+              [title]="t('Click to review critical medical alerts', 'اضغط لمراجعة التنبيهات الطبية والتحذيرات')"
+            >
+              <span class="pill-icon pulse-alert">🚨</span>
+              <span class="pill-text">{{ totalAlertsCount() }} {{ t('Medical Alerts', 'تنبيهات طبية حرجة') }}</span>
+              <span class="pill-badge-action">⚠️ {{ t('Review', 'مراجعة') }}</span>
+            </button>
+          }
+          <button
+            type="button"
+            class="button"
+            (click)="showVisitHistorySheet.set(true)"
+            style="display: inline-flex; align-items: center; gap: 0.4rem; background: #0284c7; color: #fff; border-color: #0284c7;"
+          >
+            <span>📑</span>
+            <span>{{ t('Past Visits Sheet (5 Stages)', 'ورقة السجل والزيارات (5 مراحل)') }}</span>
+          </button>
+          <button
+            type="button"
+            class="button secondary"
+            (click)="showDossierModal.set(true)"
+            style="display: inline-flex; align-items: center; gap: 0.4rem;"
+          >
+            <span>🗂️</span>
+            <span>{{ t('Full Dossier & PDF', 'الملف الشامل و PDF') }}</span>
+          </button>
+          <span class="badge clinical-lifecycle-badge {{ patientClinicalStatus() }}">
+            @if (patientClinicalStatus() === 'in_treatment') {
+              🩺 {{ t('Under Treatment', 'قيد العلاج') }}
+            } @else if (patientClinicalStatus() === 'completed') {
+              ✓ {{ t('Treatment Completed', 'مكتمل العلاج') }}
+            } @else {
+              ✨ {{ t('New Patient', 'مريض جديد') }}
+            }
+          </span>
           <span class="badge status-{{ patient()!.status }}">{{
             patient()!.status === 1 ? t('Active', 'نشط') : t('Archived', 'مؤرشف')
           }}</span>
@@ -49,6 +98,24 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
           }
         </div>
       </section>
+      @if (showVisitHistorySheet()) {
+        <app-patient-visit-history-sheet [patientId]="id" (close)="showVisitHistorySheet.set(false)" />
+      }
+      @if (showDossierModal()) {
+        <app-patient-dossier-modal [patientId]="id" (close)="showDossierModal.set(false)" />
+      }
+      @if (showMedicalAlertModal() && patient()) {
+        <app-medical-alert-modal
+          [patientName]="patient()!.firstName + ' ' + (patient()!.middleName ? patient()!.middleName + ' ' : '') + patient()!.lastName"
+          [patientNumber]="patient()!.patientNumber"
+          [gender]="patient()!.gender"
+          [phone]="patient()!.phone"
+          [allergies]="patientAllergies()"
+          [conditions]="patientConditions()"
+          [medications]="patientMedications()"
+          (close)="closeMedicalAlertModal()"
+        />
+      }
       @if (success()) {
         <div class="alert success" role="status">{{ success() }}</div>
       }
@@ -67,7 +134,7 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
               <dl>
                 <div>
                   <dt>{{ t('Date of birth', 'تاريخ الميلاد') }}</dt>
-                  <dd>{{ patient()!.dateOfBirth | date: 'mediumDate' }}</dd>
+                  <dd>{{ patient()!.dateOfBirth | date: 'dd/MM/yyyy' }}</dd>
                 </div>
                 <div>
                   <dt>{{ t('Gender', 'النوع') }}</dt>
@@ -92,11 +159,11 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
                 </div>
                 <div>
                   <dt>{{ t('Created', 'تاريخ الإنشاء') }}</dt>
-                  <dd>{{ patient()!.createdAt | date: 'medium' }}</dd>
+                  <dd>{{ patient()!.createdAt | date: 'dd/MM/yyyy hh:mm a' }}</dd>
                 </div>
                 <div>
                   <dt>{{ t('Last updated', 'آخر تحديث') }}</dt>
-                  <dd>{{ patient()!.updatedAt | date: 'medium' }}</dd>
+                  <dd>{{ patient()!.updatedAt | date: 'dd/MM/yyyy hh:mm a' }}</dd>
                 </div>
               </dl>
             </section>
@@ -258,7 +325,7 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
                     <input
                       formControlName="procedure"
                       [placeholder]="t('Procedure', 'اسم العملية')"
-                    /><input type="date" formControlName="procedureDate" /><button class="primary">
+                    /><app-date-input formControlName="procedureDate"></app-date-input><button class="primary">
                       {{ t('Add', 'إضافة') }}
                     </button>
                   </form>
@@ -300,12 +367,18 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
 })
 export class PatientDetailsComponent {
   private readonly api = inject(PatientApiService);
+  private readonly treatmentApi = inject(TreatmentApiService);
   readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id')!;
   readonly i18n = inject(LocalizationService);
   readonly patient = signal<PatientDetails | null>(null);
+  readonly patientClinicalStatus = signal<'new' | 'in_treatment' | 'completed'>('new');
   readonly loading = signal(true);
   readonly error = signal('');
-  readonly success = signal(history.state.success ?? '');
+  readonly success = signal(history.state?.success ?? '');
+  readonly showVisitHistorySheet = signal(false);
+  readonly showDossierModal = signal(false);
+  readonly showMedicalAlertModal = signal(false);
+  private alertModalAutoShown = false;
   readonly tab = signal<Tab>('overview');
   readonly tabs: { id: Tab; en: string; ar: string }[] = [
     { id: 'overview', en: 'Overview', ar: 'نظرة عامة' },
@@ -326,6 +399,47 @@ export class PatientDetailsComponent {
     procedureDate: '',
   });
   readonly notesForm = inject(FormBuilder).nonNullable.group({ medicalNotes: '' });
+
+  hasMedicalAlerts(): boolean {
+    const p = this.patient();
+    if (!p) return false;
+    return (
+      (p.allergies?.length ?? 0) > 0 ||
+      (p.medicalConditions?.length ?? 0) > 0 ||
+      (p.medications?.length ?? 0) > 0
+    );
+  }
+
+  totalAlertsCount(): number {
+    const p = this.patient();
+    if (!p) return 0;
+    return (
+      (p.allergies?.length ?? 0) +
+      (p.medicalConditions?.length ?? 0) +
+      (p.medications?.length ?? 0)
+    );
+  }
+
+  patientAllergies(): string[] {
+    return (this.patient()?.allergies ?? []).map((x) => x.name);
+  }
+
+  patientConditions(): string[] {
+    return (this.patient()?.medicalConditions ?? []).map((x) => x.name);
+  }
+
+  patientMedications(): string[] {
+    return (this.patient()?.medications ?? []).map((x) => x.name + (x.dosage ? ` (${x.dosage})` : ''));
+  }
+
+  openMedicalAlertModal(): void {
+    this.showMedicalAlertModal.set(true);
+  }
+
+  closeMedicalAlertModal(): void {
+    this.showMedicalAlertModal.set(false);
+  }
+
   constructor() {
     this.load();
   }
@@ -335,6 +449,25 @@ export class PatientDetailsComponent {
         this.patient.set(p);
         this.notesForm.setValue({ medicalNotes: p.medicalNotes ?? '' });
         this.loading.set(false);
+
+        if (!this.alertModalAutoShown && this.hasMedicalAlerts()) {
+          this.alertModalAutoShown = true;
+          this.showMedicalAlertModal.set(true);
+        }
+
+        this.treatmentApi.treatments({ patientId: this.id }).subscribe({
+          next: (res) => {
+            const items = res.items || [];
+            if (items.some((t) => t.status === 3 || t.status === 1 || t.status === 2)) {
+              this.patientClinicalStatus.set('in_treatment');
+            } else if (items.some((t) => t.status === 4)) {
+              this.patientClinicalStatus.set('completed');
+            } else {
+              this.patientClinicalStatus.set('new');
+            }
+          },
+          error: () => {},
+        });
       },
       error: () => {
         this.error.set(

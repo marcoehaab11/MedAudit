@@ -257,7 +257,7 @@ public sealed class ApplicationDbContext(
             entity.HasKey(x => x.Id);
             entity.HasAlternateKey(x => new { x.TenantId, x.Id });
             entity.Property(x => x.Specialization).HasMaxLength(150).IsRequired();
-            entity.Property(x => x.LicenseNumber).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.LicenseNumber).HasMaxLength(100).IsRequired(false);
             entity.Property(x => x.Bio).HasMaxLength(2000);
             entity.Property(x => x.Status).HasConversion<int>();
             entity.HasIndex(x => new { x.TenantId, x.ClinicUserId }).IsUnique();
@@ -914,7 +914,6 @@ public sealed class ApplicationDbContext(
         builder.Entity<ApplicationUser>(entity =>
         {
             entity.HasIndex(x => x.TenantId);
-            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
         });
     }

@@ -13,3 +13,4 @@ export function appointmentType(value: number, language: 'en' | 'ar'): string {
       : ['مريض جديد', 'متابعة', 'استشارة', 'علاج', 'طوارئ', 'أخرى'];
   return labels[value - 1] ?? '—';
 }
+

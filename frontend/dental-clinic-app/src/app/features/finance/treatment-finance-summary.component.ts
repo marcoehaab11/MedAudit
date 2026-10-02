@@ -5,6 +5,8 @@ import { LocalizationService } from '../../core/localization.service';
 import { FinanceApiService, Revenue } from './finance-api.service';
 import { money } from './finance-ui';
 @Component({
+  styleUrl: './finance.scss',
+
   selector: 'app-treatment-finance-summary',
   imports: [RouterLink],
   template: `@if (auth.hasPermission('Finance.Revenue.View')) {
@@ -38,7 +40,7 @@ import { money } from './finance-ui';
       }
     </section>
   }`,
-  styleUrl: './finance.scss',
+
 })
 export class TreatmentFinanceSummaryComponent {
   private api = inject(FinanceApiService);
@@ -59,3 +61,4 @@ export class TreatmentFinanceSummaryComponent {
     return this.i18n.language() === 'en' ? e : a;
   }
 }
+

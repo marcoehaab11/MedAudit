@@ -92,3 +92,4 @@ export class NotificationsApiService {
     return this.http.get<NotificationDeliveryDto[]>(`/api/notifications/deliveries?take=${take}`);
   }
 }
+

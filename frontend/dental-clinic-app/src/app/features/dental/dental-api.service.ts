@@ -138,3 +138,4 @@ export class DentalApiService {
     return this.http.post<void>(`/api/examinations/${id}/complete`, { version });
   }
 }
+

@@ -30,3 +30,4 @@ export const planPrice = (
   const subtotal = unitPrice * quantity - itemDiscount;
   return { subtotal, total: subtotal - planDiscount };
 };
+

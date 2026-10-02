@@ -1,60 +1,83 @@
+import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
+import { DateInputComponent } from '../../shared/date-input/date-input.component';
 import { FinanceApiService, Page, Payment, Revenue } from './finance-api.service';
 import { money, paymentError, paymentMethod } from './finance-ui';
 import { FinanceNavComponent } from './finance-dashboard.component';
+
 @Component({
+  styleUrl: './finance.scss',
   selector: 'app-payments-page',
-  imports: [FormsModule, RouterLink, FinanceNavComponent],
-  template: `<section class="page-head">
+  standalone: true,
+  imports: [FormsModule, RouterLink, FinanceNavComponent, DatePipe],
+  template: `
+    <section class="page-head">
       <h1>{{ t('Payments', 'المدفوعات') }}</h1>
-      <a class="button primary" routerLink="/finance/payments/create">{{
-        t('Record payment', 'تسجيل دفعة')
-      }}</a>
+      <a class="button primary" routerLink="/finance/payments/create">
+        + {{ t('Record payment', 'تسجيل دفعة جديدة') }}
+      </a>
     </section>
+
     <app-finance-nav />
+
     <section class="panel finance-filters">
-      <input type="date" [(ngModel)]="from" /><input type="date" [(ngModel)]="to" /><button
-        (click)="load()"
-      >
-        {{ t('Apply', 'تطبيق') }}
+      <input
+        class="filter-date-input"
+        type="date"
+        [(ngModel)]="from"
+        [title]="t('From date', 'من تاريخ')"
+      />
+      <input
+        class="filter-date-input"
+        type="date"
+        [(ngModel)]="to"
+        [title]="t('To date', 'إلى تاريخ')"
+      />
+      <button type="button" class="btn-filter" (click)="load()">
+        🔍 {{ t('Apply Filter', 'تطبيق التصفية') }}
       </button>
     </section>
+
     @if (loading()) {
-      <div class="state">{{ t('Loading…', 'جاري التحميل…') }}</div>
+      <div class="state">{{ t('Loading payments…', 'جاري تحميل المدفوعات…') }}</div>
     } @else {
-      <section class="panel">
-        <table class="finance-table">
+      <section class="panel table-panel">
+        <div class="table-responsive"><table class="finance-table">
           <thead>
             <tr>
-              <th>{{ t('Date', 'التاريخ') }}</th>
+              <th>{{ t('Payment Date', 'تاريخ السداد') }}</th>
               <th>{{ t('Patient', 'المريض') }}</th>
-              <th>{{ t('Amount', 'المبلغ') }}</th>
-              <th>{{ t('Method', 'الطريقة') }}</th>
+              <th>{{ t('Amount Paid', 'المبلغ المدفوع') }}</th>
+              <th>{{ t('Payment Method', 'طريقة الدفع') }}</th>
               <th>{{ t('Reference', 'المرجع') }}</th>
             </tr>
           </thead>
           <tbody>
             @for (x of data()?.items; track x.id) {
               <tr>
-                <td>{{ x.paidAt.slice(0, 10) }}</td>
-                <td>{{ x.patientName || '—' }}</td>
-                <td>{{ format(x.amount, x.currency) }}</td>
-                <td>{{ method(x.paymentMethod) }}</td>
+                <td>{{ x.paidAt | date: 'dd/MM/yyyy' }}</td>
+                <td><strong>{{ x.patientName || '—' }}</strong></td>
+                <td class="amount-positive">{{ format(x.amount, x.currency) }}</td>
+                <td>
+                  <span class="badge status-1">{{ method(x.paymentMethod) }}</span>
+                </td>
                 <td>{{ x.reference || '—' }}</td>
               </tr>
             } @empty {
               <tr>
-                <td colspan="5">{{ t('No payments found.', 'لا توجد مدفوعات.') }}</td>
+                <td colspan="5" style="text-align: center; padding: 3rem 1rem; color: var(--muted);">
+                  {{ t('No payments recorded.', 'لا توجد مدفوعات مسجلة.') }}
+                </td>
               </tr>
             }
           </tbody>
-        </table>
+        </table></div>
       </section>
-    }`,
-  styleUrl: './finance.scss',
+    }
+  `,
 })
 export class PaymentsPageComponent {
   private api = inject(FinanceApiService);
@@ -63,9 +86,11 @@ export class PaymentsPageComponent {
   loading = signal(true);
   from = '';
   to = '';
+
   constructor() {
     this.load();
   }
+
   load() {
     this.api.payments({ from: this.from, to: this.to, page: 1 }).subscribe({
       next: (x) => {
@@ -75,63 +100,118 @@ export class PaymentsPageComponent {
       error: () => this.loading.set(false),
     });
   }
+
   format(v: number, c: string) {
     return money(v, c, this.i18n.language());
   }
+
   method(v: number) {
     return paymentMethod(v, this.i18n.language() === 'ar');
   }
+
   t(e: string, a: string) {
     return this.i18n.language() === 'en' ? e : a;
   }
 }
+
 @Component({
-  selector: 'app-payment-form',
-  imports: [ReactiveFormsModule, RouterLink],
-  template: `<a routerLink="/finance/payments">{{ t('Back to payments', 'العودة للمدفوعات') }}</a>
-    <section class="page-head">
-      <h1>{{ t('Record payment', 'تسجيل دفعة') }}</h1>
-    </section>
-    @if (error()) {
-      <div class="alert error">{{ error() }}</div>
-    }
-    @if (revenue()) {
-      <section class="panel">
-        <div class="summary-row">
-          <span>{{ t('Patient', 'المريض') }}</span
-          ><strong>{{ revenue()!.patientName || '—' }}</strong>
-        </div>
-        <div class="summary-row">
-          <span>{{ t('Outstanding', 'المستحق') }}</span
-          ><strong>{{ format(revenue()!.outstanding, revenue()!.currency) }}</strong>
-        </div>
-      </section>
-    }
-    <form class="panel finance-form" [formGroup]="form" (ngSubmit)="save()">
-      <label class="wide"
-        >{{ t('Revenue ID', 'رقم الإيراد')
-        }}<input formControlName="revenueId" (blur)="loadRevenue()" /></label
-      ><label
-        >{{ t('Amount', 'المبلغ')
-        }}<input type="number" min="0.01" step="0.01" formControlName="amount" /></label
-      ><label
-        >{{ t('Method', 'الطريقة')
-        }}<select formControlName="paymentMethod">
-          <option [value]="1">{{ t('Cash', 'نقدي') }}</option>
-          <option [value]="2">{{ t('Card', 'بطاقة') }}</option>
-          <option [value]="3">{{ t('Bank transfer', 'تحويل بنكي') }}</option>
-          <option [value]="4">{{ t('Other', 'أخرى') }}</option>
-        </select></label
-      ><label>{{ t('Date', 'التاريخ') }}<input type="date" formControlName="paidDate" /></label
-      ><label>{{ t('Time', 'الوقت') }}<input type="time" formControlName="paidTime" /></label
-      ><label>{{ t('Reference', 'المرجع') }}<input formControlName="reference" /></label
-      ><label class="wide"
-        >{{ t('Notes', 'ملاحظات') }}<textarea formControlName="notes"></textarea></label
-      ><button class="primary" [disabled]="form.invalid || saving()">
-        {{ t('Save payment', 'حفظ الدفعة') }}
-      </button>
-    </form>`,
   styleUrl: './finance.scss',
+  selector: 'app-payment-form',
+  standalone: true,
+  imports: [ReactiveFormsModule, RouterLink, DateInputComponent],
+  template: `
+    <div class="finance-form-page">
+      <a class="back-link" routerLink="/finance/payments">
+        ← {{ t('Back to payments', 'العودة للمدفوعات') }}
+      </a>
+
+      <section class="page-head">
+        <h1>{{ t('Record Payment', 'تسجيل دفعة مالية') }}</h1>
+      </section>
+
+      @if (error()) {
+        <div class="alert error" role="alert">{{ error() }}</div>
+      }
+
+      @if (revenue()) {
+        <section class="panel" style="background: linear-gradient(135deg, #f8fafc 0%, #f0f7ff 100%); border: 1.5px solid #bae6fd;">
+          <div class="summary-row">
+            <span>{{ t('Patient', 'المريض') }}:</span>
+            <strong>{{ revenue()!.patientName || '—' }}</strong>
+          </div>
+          <div class="summary-row">
+            <span>{{ t('Outstanding Balance', 'المبلغ المستحق المتبقي') }}:</span>
+            <strong style="color: #0c2875; font-size: 1.25rem;">{{ format(revenue()!.outstanding, revenue()!.currency) }}</strong>
+          </div>
+        </section>
+      }
+
+      <form class="finance-form" [formGroup]="form" (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="field-item wide">
+            <label class="field-label">
+              <span>{{ t('Revenue ID', 'رقم الإيراد المرتبط') }} <strong class="req">*</strong></span>
+            </label>
+            <input class="form-input" formControlName="revenueId" (blur)="loadRevenue()" [placeholder]="t('Enter or paste revenue ID…', 'أدخل رقم الإيراد…')" />
+          </div>
+
+          <div class="field-item">
+            <label class="field-label">
+              <span>{{ t('Payment Amount', 'المبلغ المدفوع') }} <strong class="req">*</strong></span>
+            </label>
+            <input class="form-input" type="number" min="0.01" step="0.01" formControlName="amount" />
+          </div>
+
+          <div class="field-item">
+            <label class="field-label">
+              <span>{{ t('Payment Method', 'طريقة الدفع') }} <strong class="req">*</strong></span>
+            </label>
+            <select class="form-input" formControlName="paymentMethod">
+              <option [value]="1">{{ t('Cash', 'نقدي (كاش)') }}</option>
+              <option [value]="2">{{ t('Card / POS', 'بطاقة بنكية / فيزا') }}</option>
+              <option [value]="3">{{ t('Bank transfer', 'تحويل بنكي') }}</option>
+              <option [value]="4">{{ t('Other', 'طريقة أخرى') }}</option>
+            </select>
+          </div>
+
+          <div class="field-item">
+            <label class="field-label">
+              <span>{{ t('Date', 'التاريخ') }} <strong class="req">*</strong></span>
+            </label>
+            <app-date-input formControlName="paidDate"></app-date-input>
+          </div>
+
+          <div class="field-item">
+            <label class="field-label">
+              <span>{{ t('Time', 'الوقت') }} <strong class="req">*</strong></span>
+            </label>
+            <input class="form-input" type="time" formControlName="paidTime" />
+          </div>
+
+          <div class="field-item wide">
+            <label class="field-label">
+              <span>{{ t('Receipt / Reference Number', 'رقم الإيصال / المرجع') }}</span>
+            </label>
+            <input class="form-input" formControlName="reference" [placeholder]="t('e.g. REC-2026-001', 'مثال: REC-2026-001')" />
+          </div>
+
+          <div class="field-item wide">
+            <label class="field-label">
+              <span>{{ t('Notes', 'ملاحظات') }}</span>
+            </label>
+            <textarea class="form-textarea" rows="2" formControlName="notes" [placeholder]="t('Add any notes…', 'أي ملاحظات إضافية…')"></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <a class="button btn-cancel" routerLink="/finance/payments">{{ t('Cancel', 'إلغاء') }}</a>
+          <button class="button primary btn-submit" [disabled]="form.invalid || saving()">
+            {{ saving() ? t('Saving…', 'جارٍ الحفظ…') : t('Save Payment', 'حفظ وتسجيل الدفعة') }}
+          </button>
+        </div>
+      </form>
+    </div>
+  `,
 })
 export class PaymentFormComponent {
   private api = inject(FinanceApiService);
@@ -140,7 +220,8 @@ export class PaymentFormComponent {
   revenue = signal<Revenue | null>(null);
   error = signal('');
   saving = signal(false);
-  form = inject(FormBuilder).nonNullable.group({
+
+  readonly form = inject(FormBuilder).nonNullable.group({
     revenueId: [
       inject(ActivatedRoute).snapshot.queryParamMap.get('revenueId') || '',
       Validators.required,
@@ -152,9 +233,11 @@ export class PaymentFormComponent {
     reference: '',
     notes: '',
   });
+
   constructor() {
     if (this.form.controls.revenueId.value) this.loadRevenue();
   }
+
   loadRevenue() {
     const id = this.form.controls.revenueId.value;
     if (!id) return;
@@ -171,6 +254,7 @@ export class PaymentFormComponent {
       error: () => this.error.set(this.t('Revenue not found.', 'الإيراد غير موجود.')),
     });
   }
+
   save() {
     if (this.form.invalid || !this.revenue()) return;
     this.saving.set(true);
@@ -189,10 +273,14 @@ export class PaymentFormComponent {
         },
       });
   }
+
   format(v: number, c: string) {
     return money(v, c, this.i18n.language());
   }
+
   t(e: string, a: string) {
     return this.i18n.language() === 'en' ? e : a;
   }
 }
+
+

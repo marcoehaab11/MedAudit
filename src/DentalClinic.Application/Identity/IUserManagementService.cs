@@ -7,6 +7,7 @@ public interface IUserManagementService
 {
     Task<PagedResult<UserListItem>> SearchUsersAsync(UserSearchQuery query, CancellationToken cancellationToken);
     Task<UserDetails?> GetUserAsync(Guid userId, CancellationToken cancellationToken);
+    Task<Guid> CreateUserAsync(CreateUserCommand command, CancellationToken cancellationToken);
     Task<Guid> InviteUserAsync(InviteUserCommand command, CancellationToken cancellationToken);
     Task<bool> UpdateUserAsync(UpdateUserCommand command, CancellationToken cancellationToken);
     Task<bool> SetUserActiveAsync(Guid userId, bool active, CancellationToken cancellationToken);

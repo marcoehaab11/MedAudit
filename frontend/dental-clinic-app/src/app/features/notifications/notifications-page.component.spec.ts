@@ -75,3 +75,4 @@ describe('NotificationsPageComponent', () => {
     expect(component.errorMessage()).toBeTruthy();
   });
 });
+

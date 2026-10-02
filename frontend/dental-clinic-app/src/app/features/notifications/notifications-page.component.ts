@@ -10,11 +10,11 @@ import { LocalizationService } from '../../core/localization.service';
 import { AuthService } from '../../core/auth.service';
 
 @Component({
+  styleUrl: './notifications-page.component.scss',
   selector: 'app-notifications-page',
   standalone: true,
   imports: [CommonModule],
   templateUrl: './notifications-page.component.html',
-  styleUrl: './notifications-page.component.scss',
 })
 export class NotificationsPageComponent implements OnInit {
   readonly i18n = inject(LocalizationService);
@@ -98,3 +98,4 @@ export class NotificationsPageComponent implements OnInit {
     });
   }
 }
+

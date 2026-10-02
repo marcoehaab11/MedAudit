@@ -4,7 +4,7 @@ using DentalClinic.Domain.Prescriptions;
 namespace DentalClinic.Application.Prescriptions;
 
 public sealed record MedicationCatalogInput(string Name, string? GenericName, string? Strength, MedicationForm? Form, string? Notes, bool IsActive = true);
-public sealed record MedicationCatalogDetails(Guid Id, string Name, string? GenericName, string? Strength, MedicationForm? Form, bool IsActive);
+public sealed record MedicationCatalogDetails(Guid Id, string Name, string? GenericName, string? Strength, MedicationForm? Form, bool IsActive, string? Notes = null);
 public sealed record MedicationSearch(string? Search = null, MedicationForm? Form = null, bool IncludeInactive = false, int Page = 1, int PageSize = 20);
 public sealed record PrescriptionItemInput(Guid? MedicationId, string? MedicationName, string? GenericName, string? Strength, MedicationForm? Form,
     string Dose, string Frequency, string Duration, string? Route, string Instructions, int? Quantity, int SortOrder);
@@ -25,11 +25,11 @@ public sealed record PrescriptionListItem(Guid Id, string PrescriptionNumber, Gu
 public sealed record PrescriptionSearch(Guid? PatientId = null, Guid? DoctorProfileId = null, PrescriptionStatus? Status = null,
     DateOnly? From = null, DateOnly? To = null, int Page = 1, int PageSize = 20);
 public sealed record PrescriptionPatient(Guid Id, string Name, bool IsActive);
-public sealed record PrescriptionDoctor(Guid Id, Guid UserId, string Name, string Specialization, string LicenseNumber, bool IsActive);
+public sealed record PrescriptionDoctor(Guid Id, Guid UserId, string Name, string Specialization, string? LicenseNumber, bool IsActive);
 public sealed record PrescriptionAssociation(Guid Id, Guid PatientId, Guid DoctorProfileId);
 public sealed record PrescriptionClinic(string Name, string? LogoReference, string Address, string City, string Country, string Phone);
 public sealed record PrescriptionDocumentModel(PrescriptionClinic Clinic, string PrescriptionNumber, string PatientName, string DoctorName,
-    string DoctorSpecialization, string DoctorLicense, DateTimeOffset IssuedAt, string? Notes, string VerificationReference,
+    string DoctorSpecialization, string? DoctorLicense, DateTimeOffset IssuedAt, string? Notes, string VerificationReference,
     IReadOnlyCollection<PrescriptionItemDetails> Items);
 public sealed record PrescriptionDocument(byte[] Content, string ContentType, string FileName);
 public sealed class PrescriptionNotFoundException(string message) : Exception(message);

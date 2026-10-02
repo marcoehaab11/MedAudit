@@ -2,6 +2,7 @@ using DentalClinic.Application.Identity;
 using DentalClinic.Application.Identity.Models;
 using DentalClinic.Application.Tenants.Models;
 using DentalClinic.Domain.Identity;
+using DentalClinic.Domain.Doctors;
 using DentalClinic.Domain.Platform;
 using DentalClinic.Domain.Tenancy;
 using Microsoft.EntityFrameworkCore;
@@ -241,7 +242,11 @@ internal sealed class IdentityStore(
             .ToListAsync(cancellationToken);
     }
 
+    public Task<bool> DoctorProfileExistsForUserAsync(Guid clinicUserId, CancellationToken cancellationToken) =>
+        context.DoctorProfiles.AnyAsync(x => x.ClinicUserId == clinicUserId, cancellationToken);
+
     public void AddUser(ClinicUser user) => context.ClinicUsers.Add(user);
+    public void AddDoctorProfile(DoctorProfile profile) => context.DoctorProfiles.Add(profile);
     public void AddRole(TenantRole role) => context.TenantRoles.Add(role);
     public void AddRolePermission(RolePermissionGrant permission) => context.RolePermissions.Add(permission);
     public void AddUserRole(UserRoleAssignment assignment) => context.UserRoleAssignments.Add(assignment);

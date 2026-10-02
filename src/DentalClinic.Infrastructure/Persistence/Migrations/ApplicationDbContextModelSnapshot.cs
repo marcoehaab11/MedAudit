@@ -1132,6 +1132,64 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.ToTable("tenant_roles", (string)null);
                 });
 
+            modelBuilder.Entity("DentalClinic.Domain.Identity.UserPreference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DateFormat")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("YYYY-MM-DD");
+
+                    b.Property<string>("DefaultCalendarView")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("timeGridWeek");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)")
+                        .HasDefaultValue("en");
+
+                    b.Property<int>("StartOfWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Theme")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("Light");
+
+                    b.Property<string>("TimeFormat")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("24h");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("user_preferences", (string)null);
+                });
+
             modelBuilder.Entity("DentalClinic.Domain.Identity.UserRoleAssignment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1908,6 +1966,169 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.ToTable("patient_surgeries", (string)null);
                 });
 
+            modelBuilder.Entity("DentalClinic.Domain.Pharmacy.PharmacyDispensing", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("DispensedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DispensedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DispensingNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("PatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PrescriptionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasAlternateKey("TenantId", "Id");
+
+                    b.HasIndex("TenantId", "DispensingNumber")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "PrescriptionId");
+
+                    b.HasIndex("TenantId", "DispensedByUserId", "DispensedAt");
+
+                    b.HasIndex("TenantId", "PatientId", "DispensedAt");
+
+                    b.ToTable("pharmacy_dispensings", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Pharmacy.PharmacyDispensingItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DispensingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InventoryItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PharmacyDispensingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PrescriptionItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("QuantityDispensed")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<Guid>("StockMovementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("TotalCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal?>("UnitCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PharmacyDispensingId");
+
+                    b.HasIndex("TenantId", "DispensingId");
+
+                    b.HasIndex("TenantId", "InventoryItemId");
+
+                    b.HasIndex("TenantId", "PrescriptionItemId");
+
+                    b.ToTable("pharmacy_dispensing_items", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Pharmacy.PharmacyDispensingNumberSequence", b =>
+                {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("LastValue")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("TenantId", "LastValue");
+
+                    b.ToTable("pharmacy_dispensing_number_sequences", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Pharmacy.PharmacyDispensingReversal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DispensingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset>("ReversedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ReversedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StockMovementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "DispensingId")
+                        .IsUnique();
+
+                    b.ToTable("pharmacy_dispensing_reversals", (string)null);
+                });
+
             modelBuilder.Entity("DentalClinic.Domain.Platform.PlatformAuditLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1950,6 +2171,10 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Barcode")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1960,8 +2185,15 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<Guid?>("InventoryItemId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("Manufacturer")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1971,6 +2203,10 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
+
+                    b.Property<decimal?>("ReorderLevel")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("Strength")
                         .HasMaxLength(100)
@@ -1983,6 +2219,8 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Barcode");
 
                     b.HasIndex("TenantId", "GenericName");
 
@@ -2221,6 +2459,107 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.ToTable("admin_invitations", (string)null);
                 });
 
+            modelBuilder.Entity("DentalClinic.Domain.Tenancy.ClinicHoliday", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ArabicName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<TimeOnly?>("EndTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsFullDay")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<TimeOnly?>("StartTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "StartDate", "EndDate");
+
+                    b.ToTable("clinic_holidays", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Tenancy.ClinicHourPeriod", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ClinicHoursId")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeOnly>("EndTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<int>("PeriodType")
+                        .HasColumnType("integer");
+
+                    b.Property<TimeOnly>("StartTime")
+                        .HasColumnType("time without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClinicHoursId");
+
+                    b.ToTable("clinic_hour_periods", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Tenancy.ClinicHours", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsOpen")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "DayOfWeek")
+                        .IsUnique();
+
+                    b.ToTable("clinic_hours", (string)null);
+                });
+
             modelBuilder.Entity("DentalClinic.Domain.Tenancy.Tenant", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2301,6 +2640,40 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AccentColor")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)")
+                        .HasDefaultValue("#f59e0b");
+
+                    b.Property<bool>("AllowNegativeStock")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AllowPartialDispensing")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AllowSameDayBooking")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AppointmentsNotificationEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ArabicAddress")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ArabicDescription")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ArabicName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("CancellationNoticeHours")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Culture")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -2310,6 +2683,104 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)");
+
+                    b.Property<string>("CurrencySymbol")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("$");
+
+                    b.Property<int>("DecimalPrecision")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DefaultAppointmentDurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DefaultInstructionsArabicLanguage")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DefaultInstructionsLanguage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)")
+                        .HasDefaultValue("en");
+
+                    b.Property<string>("DefaultLanguage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)")
+                        .HasDefaultValue("en");
+
+                    b.Property<string>("DefaultPaymentMethod")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("Cash");
+
+                    b.Property<string>("DefaultPrescriptionLanguage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)")
+                        .HasDefaultValue("en");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("EmailNotificationsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("EnableQrCodeOnPrint")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ExpensePrefix")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("EXP-");
+
+                    b.Property<string>("FaviconReference")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("FinancialPeriodStartMonth")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("InAppNotificationsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MaxBookingHorizonDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MinimumBookingNoticeHours")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("PharmacyModuleEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PrescriptionPrefix")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("RX-");
+
+                    b.Property<bool>("PrescriptionsNotificationEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("PrimaryColor")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)")
+                        .HasDefaultValue("#1e40af");
 
                     b.Property<bool>("PublicBookingEnabled")
                         .ValueGeneratedOnAdd()
@@ -2321,10 +2792,73 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(30);
 
+                    b.Property<bool>("PublicBookingNotificationEnabled")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("PublicPriceVisibility")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
+
+                    b.Property<string>("ReceiptPrefix")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("REC-");
+
+                    b.Property<bool>("RequirePharmacistRoleForDispensing")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RequireReasonOnAdjustment")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RequireReversalReason")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RequireSupplierOnReceipt")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("RtlEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SecondaryColor")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)")
+                        .HasDefaultValue("#0284c7");
+
+                    b.Property<string>("SecondaryPhone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("ShowClinicHeaderOnPdf")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowDoctorSignatureOnPdf")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("SmsNotificationsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SupportedLanguages")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("en,ar");
+
+                    b.Property<string>("SymbolPosition")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("Before");
+
+                    b.Property<string>("TaxNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -2333,6 +2867,17 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Website")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("WhatsAppNotificationsEnabled")
+                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 
@@ -3314,6 +3859,13 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("DentalClinic.Domain.Pharmacy.PharmacyDispensingItem", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Pharmacy.PharmacyDispensing", null)
+                        .WithMany("Items")
+                        .HasForeignKey("PharmacyDispensingId");
+                });
+
             modelBuilder.Entity("DentalClinic.Domain.Platform.PlatformAuditLog", b =>
                 {
                     b.HasOne("DentalClinic.Domain.Tenancy.Tenant", null)
@@ -3417,6 +3969,15 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Tenancy.ClinicHourPeriod", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Tenancy.ClinicHours", null)
+                        .WithMany("Periods")
+                        .HasForeignKey("ClinicHoursId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -3609,9 +4170,19 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.Navigation("Breaks");
                 });
 
+            modelBuilder.Entity("DentalClinic.Domain.Pharmacy.PharmacyDispensing", b =>
+                {
+                    b.Navigation("Items");
+                });
+
             modelBuilder.Entity("DentalClinic.Domain.Prescriptions.Prescription", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Tenancy.ClinicHours", b =>
+                {
+                    b.Navigation("Periods");
                 });
 
             modelBuilder.Entity("DentalClinic.Domain.Treatments.Treatment", b =>

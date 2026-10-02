@@ -34,9 +34,13 @@ export const activityType = (value: number, ar = false) =>
 export const followUpActions = (status: number) =>
   status === 1 ? ['start', 'complete', 'cancel'] : status === 2 ? ['complete', 'cancel'] : [];
 export const clinicDate = (value: string, timeZone: string, language = 'en') =>
-  new Intl.DateTimeFormat(language === 'ar' ? 'ar' : 'en', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+  new Intl.DateTimeFormat(language === 'ar' ? 'ar-EG' : 'en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
     timeZone,
   }).format(new Date(value));
 export const crmTimeline = (activities: Activity[], followUps: FollowUpList[]) =>
@@ -45,8 +49,11 @@ export const crmTimeline = (activities: Activity[], followUps: FollowUpList[]) =
       id: x.id,
       occurredAt: x.occurredAt,
       kind: 'activity' as const,
-      label: x.subject || activityType(x.type),
+      label: x.subject,
       detail: x.notes,
+      type: x.type,
+      direction: x.direction,
+      userName: x.userName,
     })),
     ...followUps
       .filter((x) => x.status === 3)
@@ -56,5 +63,9 @@ export const crmTimeline = (activities: Activity[], followUps: FollowUpList[]) =
         kind: 'follow-up' as const,
         label: x.title,
         detail: 'Completed follow-up',
+        type: null,
+        direction: null,
+        userName: x.assignedToName,
       })),
   ].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
+

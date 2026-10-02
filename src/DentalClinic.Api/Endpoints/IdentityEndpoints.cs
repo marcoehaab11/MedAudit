@@ -20,6 +20,7 @@ internal static class IdentityEndpoints
             .RequireAuthorization(AuthConstants.TenantMemberPolicy);
         users.MapGet("/", SearchUsersAsync).RequireAuthorization(Permissions.UsersView);
         users.MapGet("/{id:guid}", GetUserAsync).RequireAuthorization(Permissions.UsersView);
+        users.MapPost("/", CreateUserAsync).RequireAuthorization(Permissions.UsersCreate);
         users.MapPost("/invitations", InviteUserAsync).RequireAuthorization(Permissions.UsersCreate);
         users.MapPut("/{id:guid}", UpdateUserAsync).RequireAuthorization(Permissions.UsersEdit);
         users.MapPost("/{id:guid}/activate", ActivateUserAsync).RequireAuthorization(Permissions.UsersActivate);
@@ -78,6 +79,16 @@ internal static class IdentityEndpoints
         IUserManagementService service,
         CancellationToken cancellationToken) =>
         await service.GetUserAsync(id, cancellationToken) is { } user ? Results.Ok(user) : Results.NotFound();
+
+    private static async Task<IResult> CreateUserAsync(
+        CreateUserRequest request,
+        IUserManagementService service,
+        CancellationToken cancellationToken)
+    {
+        var id = await service.CreateUserAsync(new CreateUserCommand(
+            request.DisplayName, request.Email, request.Password, request.Phone, request.RoleIds), cancellationToken);
+        return Results.Created($"/api/users/{id:D}", new { id });
+    }
 
     private static async Task<IResult> InviteUserAsync(
         InviteUserRequest request,

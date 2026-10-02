@@ -93,3 +93,4 @@ export class SvgLineChartComponent {
     return this.svgPoints.map((p) => `${p.x},${p.y}`).join(' ');
   }
 }
+

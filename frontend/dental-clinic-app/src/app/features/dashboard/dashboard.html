@@ -1,0 +1,546 @@
+<div class="dashboard-page">
+  <!-- Top Welcome & Hero Banner -->
+  <header class="dashboard-hero">
+    <div class="hero-main">
+      <div class="greeting-badge">
+        <span class="live-dot"></span>
+        <span>{{ formattedTodayDate() }}</span>
+      </div>
+      <h1 class="hero-title">
+        {{ t('Welcome back,', 'مرحباً بعودتك،') }}
+        <span class="highlight">{{ displayName() }}</span>
+      </h1>
+      <p class="hero-subtitle">
+        {{
+          t(
+            'Here is the real-time operational overview of your dental practice today.',
+            'إليك ملخص العمليات المباشر ومواعيد العيادة المقررة لليوم.'
+          )
+        }}
+      </p>
+    </div>
+
+    <!-- Quick Action Launchpad -->
+    <div class="hero-actions">
+      @if (auth.hasPermission('Appointments.Create')) {
+        <a class="btn-action btn-primary" routerLink="/appointments/create">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+            <line x1="12" y1="14" x2="12" y2="18"/>
+            <line x1="10" y1="16" x2="14" y2="16"/>
+          </svg>
+          <span>{{ t('Book Appointment', 'حجز موعد جديد') }}</span>
+        </a>
+      }
+      @if (auth.hasPermission('Patients.Create')) {
+        <a class="btn-action btn-secondary" routerLink="/patients/create">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <line x1="19" y1="8" x2="19" y2="14"/>
+            <line x1="16" y1="11" x2="22" y2="11"/>
+          </svg>
+          <span>{{ t('New Patient', 'إضافة مريض') }}</span>
+        </a>
+      }
+    </div>
+  </header>
+
+  <!-- Notifications / Alerts -->
+  @if (error()) {
+    <div class="alert alert-error" role="alert">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span>{{ error() }}</span>
+      <button class="alert-close" type="button" (click)="error.set('')">×</button>
+    </div>
+  }
+  @if (successMessage()) {
+    <div class="alert alert-success" role="alert">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      <span>{{ successMessage() }}</span>
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="dashboard-skeleton">
+      <div class="skeleton-card spotlight-skeleton"></div>
+      <div class="skeleton-grid">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+      </div>
+    </div>
+  } @else {
+
+    <!-- ========================================================================= -->
+    <!--  CLINIC SCHEDULE & APPOINTMENTS (مواعيد العيادة)                           -->
+    <!-- ========================================================================= -->
+    <section class="dashboard-appointments-section">
+
+      <section class="panel calendar-toolbar">
+        <div class="view-toggle">
+          <button type="button" [class.active]="view() === 'day'" (click)="setView('day')">
+            {{ t('Day', 'يوم') }}
+          </button>
+          <button type="button" [class.active]="view() === 'week'" (click)="setView('week')">
+            {{ t('Week', 'أسبوع') }}
+          </button>
+        </div>
+
+        <!-- Quick Day Shortcuts (اليوم / غداً) -->
+        <div class="quick-day-shortcuts">
+          <button type="button" class="btn-shortcut" [class.active]="isToday()" (click)="selectToday()">
+            📅 {{ t('Today', 'اليوم') }}
+          </button>
+          <button type="button" class="btn-shortcut" [class.active]="isTomorrow()" (click)="selectTomorrow()">
+            ☀️ {{ t('Tomorrow', 'غداً') }}
+          </button>
+        </div>
+
+        <div class="date-nav">
+          <button type="button" (click)="move(-1)" aria-label="Previous">‹</button>
+          <input type="date" [value]="selectedDate()" (change)="onDateChange($event)" />
+          <button type="button" (click)="move(1)" aria-label="Next">›</button>
+        </div>
+
+        <select [value]="doctorFilter()" (change)="onDoctorChange($event)">
+          <option value="">{{ t('All doctors', 'كل الأطباء') }}</option>
+          @for (d of doctors(); track d.id) {
+            <option [value]="d.id">{{ d.displayName }}</option>
+          }
+        </select>
+
+        <select [value]="statusFilter()" (change)="onStatusChange($event)">
+          <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
+          @for (s of statuses; track s) {
+            <option [value]="s">{{ statusLabel(s) }}</option>
+          }
+        </select>
+
+        <select [value]="typeFilter()" (change)="onTypeChange($event)">
+          <option value="">{{ t('All types', 'كل الأنواع') }}</option>
+          @for (x of types; track x) {
+            <option [value]="x">{{ typeLabel(x) }}</option>
+          }
+        </select>
+      </section>
+
+      <div class="calendar-layout">
+        <section class="panel calendar" data-testid="appointment-calendar">
+          @if (appointmentsLoading()) {
+            <div class="state">{{ t('Loading schedule…', 'جارٍ تحميل الجدول…') }}</div>
+          } @else if (!result()?.page?.items?.length) {
+            <div class="state">
+              <strong>{{ t('No appointments', 'لا توجد مواعيد') }}</strong>
+              <p>
+                {{ t('There are no appointments in this period.', 'لا توجد مواعيد في هذه الفترة.') }}
+              </p>
+              @if (auth.hasPermission('Appointments.Create')) {
+                <a class="button primary" routerLink="/appointments/create" [queryParams]="{ date: selectedDate() }">
+                  + {{ t('Book for this date', 'حجز موعد لهذا اليوم') }}
+                </a>
+              }
+            </div>
+          } @else {
+            @for (day of days(); track day) {
+              <section class="calendar-day">
+                <h2>{{ dayLabel(day) }}</h2>
+                <div class="appointment-stack">
+                  @if (itemsFor(day).length === 0) {
+                    <div class="empty-day-note">
+                      {{ t('No appointments on this day', 'لا توجد مواعيد في هذا اليوم') }}
+                    </div>
+                  } @else {
+                    @for (item of itemsFor(day); track item.id) {
+                      <button
+                        type="button"
+                        class="appointment-card status-{{ item.status }} type-{{ item.type }}"
+                        (click)="open(item)"
+                      >
+                        <div class="card-time">
+                          <span class="time-range">{{ time(item.startAt, item.timeZone) }} – {{ time(item.endAt, item.timeZone) }}</span>
+                          <span class="duration-tag">{{ item.durationMinutes }} {{ t('min', 'د') }}</span>
+                        </div>
+                        <div class="card-info">
+                          <div class="patient-line">
+                            <strong class="patient-name">{{ item.patientName }}</strong>
+                            <span class="type-badge type-badge-{{ item.type }}">
+                              @if (item.type === 5) { 🚨 }
+                              {{ typeLabel(item.type) }}
+                            </span>
+                          </div>
+                          <div class="doctor-line">
+                            <span class="doctor-name">👨‍⚕️ {{ item.doctorName }}</span>
+                          </div>
+                        </div>
+                        <div class="card-status-col">
+                          <span class="status-badge status-badge-{{ item.status }}">{{ statusLabel(item.status) }}</span>
+                          @if (item.status <= 4 && auth.hasPermission('Examination.View')) {
+                            <a
+                              class="card-visit-link"
+                              [routerLink]="['/appointments', item.id, 'visit']"
+                              (click)="$event.stopPropagation()"
+                              [title]="t('Open Clinical Visit Flow', 'بدء ومتابعة مراحل الزيارة')"
+                            >
+                              🦷 {{ t('Visit Flow', 'مراحل الزيارة') }}
+                            </a>
+                          }
+                        </div>
+                      </button>
+                    }
+                  }
+                </div>
+              </section>
+            }
+          }
+        </section>
+
+        @if (selected()) {
+          <aside class="panel details">
+            <button class="close" type="button" (click)="closeDetails()">×</button>
+            <div class="details-header-badges">
+              <span class="status-badge status-badge-{{ selected()!.status }}">{{ statusLabel(selected()!.status) }}</span>
+              <span class="type-badge type-badge-{{ selected()!.type }}">
+                @if (selected()!.type === 5) { 🚨 }
+                {{ typeLabel(selected()!.type) }}
+              </span>
+            </div>
+            <h2>{{ selected()!.patientName }}</h2>
+            <dl>
+              <div>
+                <dt>{{ t('Doctor', 'الطبيب') }}</dt>
+                <dd>{{ selected()!.doctorName }}</dd>
+              </div>
+              <div>
+                <dt>{{ t('Time', 'الوقت') }}</dt>
+                <dd>
+                  {{ dayLabel(localDate(selected()!.startAt, selected()!.timeZone)) }} ·
+                  {{ time(selected()!.startAt, selected()!.timeZone) }}
+                </dd>
+              </div>
+              <div>
+                <dt>{{ t('Duration', 'المدة') }}</dt>
+                <dd>{{ selected()!.durationMinutes }} {{ t('minutes', 'دقيقة') }}</dd>
+              </div>
+              <div>
+                <dt>{{ t('Type', 'النوع') }}</dt>
+                <dd>
+                  <span class="type-badge type-badge-{{ selected()!.type }}">
+                    @if (selected()!.type === 5) { 🚨 }
+                    {{ typeLabel(selected()!.type) }}
+                  </span>
+                </dd>
+              </div>
+            </dl>
+            @if (selected()!.notes) {
+              <p>{{ selected()!.notes }}</p>
+            }
+            <div class="actions">
+              @if (selected()!.status <= 4 && auth.hasPermission('Examination.View')) {
+                <a class="button primary visit-flow-btn" [routerLink]="['/appointments', selected()!.id, 'visit']">
+                  ✨ 🦷 {{ t('Open Clinical Visit Flow (5 Steps)', 'بدء ومتابعة مراحل الزيارة (5 خطوات)') }}
+                </a>
+              } @else if (selected()!.status === 5 && auth.hasPermission('Examination.View')) {
+                <a class="button" [routerLink]="['/appointments', selected()!.id, 'examination']">
+                  🦷 {{ t('View Completed Examination', 'عرض سجل الفحص والزيارة') }}
+                </a>
+              }
+              @if (auth.hasPermission('TreatmentPlans.Create')) {
+                <a
+                  class="button"
+                  routerLink="/treatment-plans/create"
+                  [queryParams]="{
+                    appointmentId: selected()!.id,
+                    patientId: selected()!.patientId,
+                    doctorProfileId: selected()!.doctorProfileId,
+                  }"
+                >
+                  📋 {{ t('Create treatment plan', 'إنشاء خطة علاج') }}
+                </a>
+              }
+              @if (auth.hasPermission('Prescriptions.Create')) {
+                <a
+                  class="button"
+                  routerLink="/prescriptions/create"
+                  [queryParams]="{
+                    appointmentId: selected()!.id,
+                    patientId: selected()!.patientId,
+                    doctorProfileId: selected()!.doctorProfileId,
+                  }"
+                >
+                  💊 {{ t('Create prescription', 'إنشاء وصفة') }}
+                </a>
+              }
+              @if (selected()!.status === 1 && auth.hasPermission('Appointments.Edit')) {
+                <button (click)="action('confirm')">{{ t('Confirm', 'تأكيد') }}</button>
+              }
+              @if (selected()!.status === 2 && auth.hasPermission('Appointments.CheckIn')) {
+                <button (click)="action('check-in')">{{ t('Check in', 'تسجيل الحضور') }}</button>
+              }
+              @if (selected()!.status === 3 && auth.hasPermission('Appointments.Start')) {
+                <button (click)="action('start')">{{ t('Start', 'بدء') }}</button>
+              }
+              @if ((selected()!.status === 3 || selected()!.status === 4) && auth.hasPermission('Appointments.Complete')) {
+                <button (click)="action('complete')">{{ t('Complete session', 'إنهاء الجلسة') }}</button>
+              }
+              @if (
+                (selected()!.status === 1 || selected()!.status === 2) &&
+                auth.hasPermission('Appointments.MarkNoShow')
+              ) {
+                <button (click)="action('no-show')">{{ t('No-show', 'لم يحضر') }}</button>
+              }
+              @if (selected()!.status <= 3 && auth.hasPermission('Appointments.Cancel')) {
+                <button class="danger" (click)="cancel()">{{ t('Cancel', 'إلغاء') }}</button>
+              }
+            </div>
+            @if (
+              (selected()!.status === 1 || selected()!.status === 2) &&
+              auth.hasPermission('Appointments.Edit')
+            ) {
+              <details>
+                <summary>{{ t('Reschedule', 'إعادة الجدولة') }}</summary>
+                <form [formGroup]="rescheduleForm" (ngSubmit)="reschedule()">
+                  <input
+                    type="date"
+                    formControlName="date"
+                    (change)="loadRescheduleAvailability()"
+                  />
+                  <input
+                    type="number"
+                    min="5"
+                    max="480"
+                    formControlName="durationMinutes"
+                    (change)="loadRescheduleAvailability()"
+                  />
+                  @if (rescheduleLoading()) {
+                    <span>{{ t('Checking availability…', 'جارٍ التحقق من الأوقات…') }}</span>
+                  } @else {
+                    <div class="slots">
+                      @for (slot of rescheduleSlots(); track slot.startAt) {
+                        <button
+                          type="button"
+                          [class.selected]="
+                            rescheduleForm.controls.startTime.value === slot.localStartTime
+                          "
+                          (click)="chooseRescheduleSlot(slot)"
+                        >
+                          {{ slot.localStartTime.slice(0, 5) }}
+                        </button>
+                      }
+                    </div>
+                  }
+                  <button [disabled]="!rescheduleForm.controls.startTime.value">
+                    {{ t('Save new time', 'حفظ الوقت الجديد') }}
+                  </button>
+                </form>
+              </details>
+            }
+          </aside>
+        }
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!--  CLINIC PERFORMANCE STATS & METRICS (مؤشرات العيادة العامة)               -->
+    <!-- ========================================================================= -->
+    <section class="kpi-grid">
+      <!-- Total Patients -->
+      <div class="kpi-card">
+        <div class="kpi-icon-wrap kpi-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">{{ t('Total Registered Patients', 'إجمالي المرضى المسجلين') }}</span>
+          <div class="kpi-number">{{ totalPatientsCount() }}</div>
+          <div class="kpi-footer">
+            <a routerLink="/patients">{{ t('View all patients →', 'عرض كل المرضى ←') }}</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Completed Treatments -->
+      <div class="kpi-card">
+        <div class="kpi-icon-wrap kpi-teal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">{{ t('Completed Treatments', 'العلاجات المنفذة') }}</span>
+          <div class="kpi-number">
+            {{ dashboardReport()?.completedTreatments ?? '—' }}
+          </div>
+          <div class="kpi-footer">
+            <a routerLink="/treatments">{{ t('Treatment records →', 'سجل العلاجات ←') }}</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prescriptions Issued -->
+      <div class="kpi-card">
+        <div class="kpi-icon-wrap kpi-purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2"/>
+            <path d="M7 7h10"/>
+            <path d="M7 12h10"/>
+            <path d="M7 17h6"/>
+          </svg>
+        </div>
+        <div class="kpi-body">
+          <span class="kpi-label">{{ t('Prescriptions Issued', 'الروشتات الصادرة') }}</span>
+          <div class="kpi-number">
+            {{ dashboardReport()?.prescriptionsIssued ?? '—' }}
+          </div>
+          <div class="kpi-footer">
+            <a routerLink="/prescriptions">{{ t('Manage prescriptions →', 'إدارة الروشتات ←') }}</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Month Collections / Revenue -->
+      @if (auth.hasPermission('Reports.Financial') || auth.hasPermission('Finance.View')) {
+        <div class="kpi-card">
+          <div class="kpi-icon-wrap kpi-green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-label">{{ t('Payments Received', 'التحصيلات والمدفوعات') }}</span>
+            <div class="kpi-number">
+              {{ dashboardReport()?.paymentsReceived !== undefined ? (dashboardReport()!.paymentsReceived | number:'1.0-2') + ' ' + (dashboardReport()?.currency ?? 'EGP') : '—' }}
+            </div>
+            <div class="kpi-footer">
+              <a routerLink="/finance">{{ t('Financial Overview →', 'التقرير المالي ←') }}</a>
+            </div>
+          </div>
+        </div>
+      }
+    </section>
+
+    <!-- ========================================================================= -->
+    <!--  LOWER GRID: UPCOMING THIS WEEK & RECENT PATIENTS                         -->
+    <!-- ========================================================================= -->
+    <div class="dashboard-dual-grid">
+      
+      <!-- Upcoming Appointments for the next 7 days -->
+      <div class="dual-card">
+        <div class="dual-card-header">
+          <div class="dual-title-group">
+            <div class="header-icon-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <h3>{{ t('Upcoming This Week', 'المواعيد القادمة هذا الأسبوع') }}</h3>
+          </div>
+          <a class="header-more-link" routerLink="/appointments">
+            {{ t('View all', 'عرض الكل') }}
+          </a>
+        </div>
+
+        <div class="dual-card-body">
+          @if (upcomingAppointments().length === 0) {
+            <div class="empty-compact">
+              <p>{{ t('No upcoming appointments scheduled for this week.', 'لا توجد مواعيد أخرى مجدولة لهذا الأسبوع.') }}</p>
+            </div>
+          } @else {
+            <ul class="compact-list">
+              @for (app of upcomingAppointments(); track app.id) {
+                <li class="compact-item">
+                  <div class="compact-date-badge">
+                    <span class="c-date">{{ formatShortDate(app.startAt) }}</span>
+                    <span class="c-time">{{ formatTime(app.startAt) }}</span>
+                  </div>
+                  <div class="compact-info">
+                    <div class="patient-line" style="display: flex; align-items: center; gap: 0.45rem; flex-wrap: wrap;">
+                      <strong>{{ app.patientName }}</strong>
+                      <span class="type-badge" [ngClass]="'type-badge-' + app.type">
+                        @if (app.type === 5) { 🚨 }
+                        {{ getTypeLabel(app.type) }}
+                      </span>
+                    </div>
+                    <span>👨‍⚕️ {{ app.doctorName }}</span>
+                  </div>
+                  <span class="status-badge" [ngClass]="'status-badge-' + app.status">
+                    {{ getStatusLabel(app.status) }}
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+
+      <!-- Recent Patients registered -->
+      <div class="dual-card">
+        <div class="dual-card-header">
+          <div class="dual-title-group">
+            <div class="header-icon-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+              </svg>
+            </div>
+            <h3>{{ t('Recently Registered Patients', 'المرضى المضافين حديثاً') }}</h3>
+          </div>
+          <a class="header-more-link" routerLink="/patients">
+            {{ t('View all', 'عرض الكل') }}
+          </a>
+        </div>
+
+        <div class="dual-card-body">
+          @if (recentPatients().length === 0) {
+            <div class="empty-compact">
+              <p>{{ t('No patients recorded yet.', 'لا يوجد مرضى مسجلين حتى الآن.') }}</p>
+            </div>
+          } @else {
+            <ul class="compact-list">
+              @for (p of recentPatients(); track p.id) {
+                <li class="compact-item">
+                  <div class="patient-initials-badge">
+                    {{ p.fullName.charAt(0).toUpperCase() }}
+                  </div>
+                  <div class="compact-info">
+                    <a class="patient-name-link" [routerLink]="['/patients', p.id]">
+                      <strong>{{ p.fullName }}</strong>
+                    </a>
+                    <span>{{ p.patientNumber }} · {{ p.phone }}</span>
+                  </div>
+                  <a class="btn-compact-dental" [routerLink]="['/patients', p.id, 'dental']">
+                    {{ t('Dental Chart', 'المخطط') }}
+                  </a>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+
+    </div>
+
+  }
+</div>
+

@@ -95,7 +95,7 @@ export class CrmApiService {
   }
   followUps(filters: Record<string, string>) {
     return this.http.get<Page<FollowUpList>>('/api/crm/follow-ups', {
-      params: new HttpParams({ fromObject: { pageSize: '20', ...filters } }),
+      params: new HttpParams({ fromObject: { page: '1', pageSize: '20', ...filters } }),
     });
   }
   followUp(id: string) {
@@ -133,3 +133,4 @@ export class CrmApiService {
     return this.http.post<{ id: string }>('/api/crm/activities', value);
   }
 }
+

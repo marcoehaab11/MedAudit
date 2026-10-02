@@ -1,30 +1,52 @@
+import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
 import { FinanceApiService, Page, Revenue } from './finance-api.service';
-import { money } from './finance-ui';
+import { categoryTitle, money } from './finance-ui';
 import { FinanceNavComponent } from './finance-dashboard.component';
+
 @Component({
+  styleUrl: './finance.scss',
   selector: 'app-revenue-page',
-  imports: [FormsModule, RouterLink, FinanceNavComponent],
-  template: `<section class="page-head">
+  standalone: true,
+  imports: [FormsModule, RouterLink, FinanceNavComponent, DatePipe],
+  template: `
+    <section class="page-head">
       <h1>{{ t('Revenue', 'الإيرادات') }}</h1>
     </section>
+
     <app-finance-nav />
+
     <section class="panel finance-filters">
-      <input [(ngModel)]="search" [placeholder]="t('Search description', 'بحث في الوصف')" /><input
+      <input
+        class="filter-search-input"
+        [(ngModel)]="search"
+        [placeholder]="t('Search description…', 'بحث في الوصف أو الملاحظات…')"
+      />
+      <input
+        class="filter-date-input"
         type="date"
         [(ngModel)]="from"
-      /><input type="date" [(ngModel)]="to" /><button (click)="page = 1; load()">
-        {{ t('Search', 'بحث') }}
+        [title]="t('From date', 'من تاريخ')"
+      />
+      <input
+        class="filter-date-input"
+        type="date"
+        [(ngModel)]="to"
+        [title]="t('To date', 'إلى تاريخ')"
+      />
+      <button type="button" class="btn-filter" (click)="page = 1; load()">
+        🔍 {{ t('Search', 'بحث وتصفية') }}
       </button>
     </section>
+
     @if (loading()) {
-      <div class="state">{{ t('Loading…', 'جاري التحميل…') }}</div>
+      <div class="state">{{ t('Loading revenue records…', 'جاري تحميل سجلات الإيرادات…') }}</div>
     } @else {
-      <section class="panel">
-        <table class="finance-table">
+      <section class="panel table-panel">
+        <div class="table-responsive"><table class="finance-table">
           <thead>
             <tr>
               <th>{{ t('Date', 'التاريخ') }}</th>
@@ -40,40 +62,43 @@ import { FinanceNavComponent } from './finance-dashboard.component';
           <tbody>
             @for (x of data()?.items; track x.id) {
               <tr>
-                <td>{{ x.occurredAt.slice(0, 10) }}</td>
-                <td>{{ x.patientName || '—' }}</td>
+                <td>{{ x.occurredAt | date: 'dd/MM/yyyy' }}</td>
+                <td><strong>{{ x.patientName || '—' }}</strong></td>
                 <td>{{ x.treatmentName || '—' }}</td>
-                <td>{{ x.categoryName }}</td>
-                <td>{{ format(x.amount, x.currency) }}</td>
-                <td>{{ format(x.paid, x.currency) }}</td>
-                <td>{{ format(x.outstanding, x.currency) }}</td>
+                <td>{{ getCategoryName(x.categoryName) }}</td>
+                <td class="amount-neutral">{{ format(x.amount, x.currency) }}</td>
+                <td class="amount-positive">{{ format(x.paid, x.currency) }}</td>
+                <td [class.amount-negative]="x.outstanding > 0">{{ format(x.outstanding, x.currency) }}</td>
                 <td>
                   @if (x.outstanding > 0) {
                     <a
+                      class="button sm primary"
                       [routerLink]="['/finance/payments/create']"
                       [queryParams]="{ revenueId: x.id }"
-                      >{{ t('Pay', 'دفع') }}</a
                     >
+                      💳 {{ t('Pay', 'تسجيل دفعة') }}
+                    </a>
                   }
                 </td>
               </tr>
             } @empty {
               <tr>
-                <td colspan="8">{{ t('No revenue found.', 'لا توجد إيرادات.') }}</td>
+                <td colspan="8" style="text-align: center; padding: 3rem 1rem; color: var(--muted);">
+                  {{ t('No revenue records found.', 'لا توجد سجلات إيرادات.') }}
+                </td>
               </tr>
             }
           </tbody>
-        </table>
+        </table></div>
+
         <div class="pagination">
-          <button [disabled]="page === 1" (click)="page = page - 1; load()">‹</button
-          ><span>{{ page }} / {{ data()?.totalPages || 1 }}</span
-          ><button [disabled]="page >= (data()?.totalPages || 1)" (click)="page = page + 1; load()">
-            ›
-          </button>
+          <button [disabled]="page === 1" (click)="page = page - 1; load()">‹</button>
+          <span>{{ page }} / {{ data()?.totalPages || 1 }}</span>
+          <button [disabled]="page >= (data()?.totalPages || 1)" (click)="page = page + 1; load()">›</button>
         </div>
       </section>
-    }`,
-  styleUrl: './finance.scss',
+    }
+  `,
 })
 export class RevenuePageComponent {
   private api = inject(FinanceApiService);
@@ -87,9 +112,11 @@ export class RevenuePageComponent {
   to = '';
   patientId = this.route.snapshot.queryParamMap.get('patientId') || '';
   treatmentId = this.route.snapshot.queryParamMap.get('treatmentId') || '';
+
   constructor() {
     this.load();
   }
+
   load() {
     this.loading.set(true);
     this.api
@@ -109,10 +136,18 @@ export class RevenuePageComponent {
         error: () => this.loading.set(false),
       });
   }
+
+  getCategoryName(name: string) {
+    return categoryTitle(name, this.i18n.language());
+  }
+
   format(v: number, c: string) {
     return money(v, c, this.i18n.language());
   }
+
   t(e: string, a: string) {
     return this.i18n.language() === 'en' ? e : a;
   }
 }
+
+

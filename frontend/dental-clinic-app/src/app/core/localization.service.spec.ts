@@ -10,3 +10,4 @@ describe('LocalizationService', () => {
     expect(document.documentElement.dir).toBe('ltr');
   });
 });
+

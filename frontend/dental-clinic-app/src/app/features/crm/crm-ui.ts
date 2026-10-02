@@ -27,3 +27,4 @@ export const validFollowUp = (value: Partial<FollowUpPayload>) =>
     value.title?.trim()
   );
 export const isCrmConflict = (status: number) => status === 409;
+

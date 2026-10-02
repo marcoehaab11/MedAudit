@@ -6,11 +6,15 @@ import { LocalizationService } from '../../core/localization.service';
 import { TreatmentApiService, TreatmentPlan } from './treatment-api.service';
 import { planStatus } from './treatment-labels';
 @Component({
+  styleUrl: './treatments.scss',
+
   selector: 'app-treatment-plan-details',
   imports: [RouterLink, DatePipe],
-  template: `<a class="back" routerLink="/treatment-plans"
-      >← {{ t('Back to plans', 'العودة للخطط') }}</a
-    >
+  template: `@if (plan()) {
+      <a class="back" [routerLink]="['/patients', plan()!.patientId]">← {{ t('Back to patient', 'العودة لملف المريض') }}</a>
+    } @else {
+      <a class="back" routerLink="/treatment-plans">← {{ t('Back to plans', 'العودة للخطط') }}</a>
+    }
     @if (message()) {
       <div class="alert success">{{ message() }}</div>
     }
@@ -27,6 +31,9 @@ import { planStatus } from './treatment-labels';
           <p>{{ plan()!.patientName }} · {{ plan()!.doctorName }}</p>
         </div>
         <div class="head-actions">
+          <a class="button" [routerLink]="['/patients', plan()!.patientId]">
+            {{ t('Patient profile', 'ملف المريض') }}
+          </a>
           @if (plan()!.status === 1 && auth.hasPermission('TreatmentPlans.Edit')) {
             <a class="button" [routerLink]="['/treatment-plans', id, 'edit']">{{
               t('Edit', 'تعديل')
@@ -40,7 +47,7 @@ import { planStatus } from './treatment-labels';
         </div>
       </section>
       <section class="panel">
-        <table>
+        <div class="table-responsive"><table>
           <thead>
             <tr>
               <th>{{ t('Treatment', 'العلاج') }}</th>
@@ -63,7 +70,7 @@ import { planStatus } from './treatment-labels';
               </tr>
             }
           </tbody>
-        </table>
+        </table></div>
         <div class="totals">
           <span>{{ t('Subtotal', 'المجموع') }}: {{ plan()!.subtotal }}</span
           ><span>{{ t('Discount', 'الخصم') }}: {{ plan()!.discountAmount }}</span
@@ -73,10 +80,10 @@ import { planStatus } from './treatment-labels';
       <section class="panel">
         <h2>{{ t('Notes', 'ملاحظات') }}</h2>
         <p>{{ plan()!.notes || '—' }}</p>
-        <small>{{ t('Last updated', 'آخر تحديث') }} {{ plan()!.updatedAt | date: 'medium' }}</small>
+        <small>{{ t('Last updated', 'آخر تحديث') }} {{ plan()!.updatedAt | date: 'dd/MM/yyyy hh:mm a' }}</small>
       </section>
     }`,
-  styleUrl: './treatments.scss',
+
 })
 export class TreatmentPlanDetailsComponent {
   private readonly api = inject(TreatmentApiService);
@@ -157,3 +164,5 @@ export class TreatmentPlanDetailsComponent {
     return this.i18n.language() === 'en' ? en : ar;
   }
 }
+
+

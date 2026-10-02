@@ -3,9 +3,12 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
-import { DoctorApiService, PagedDoctors } from './doctor-api.service';
+import { AuthService } from '../../core/auth.service';
+import { DoctorApiService, PagedDoctors, DoctorListItem } from './doctor-api.service';
 
 @Component({
+  styleUrl: './doctors.scss',
+
   selector: 'app-doctors-page',
   imports: [ReactiveFormsModule, RouterLink, DatePipe],
   template: ` <section class="page-head">
@@ -19,6 +22,9 @@ import { DoctorApiService, PagedDoctors } from './doctor-api.service';
     </section>
     @if (error()) {
       <div class="alert error">{{ error() }}</div>
+    }
+    @if (success()) {
+      <div class="alert success">{{ success() }}</div>
     }
     <form class="panel filters" [formGroup]="filters" (ngSubmit)="load(1)">
       <input
@@ -51,7 +57,7 @@ import { DoctorApiService, PagedDoctors } from './doctor-api.service';
         </div>
       } @else {
         <div class="table-scroll">
-          <table>
+          <div class="table-responsive"><table>
             <thead>
               <tr>
                 <th>{{ t('Doctor', 'الطبيب') }}</th>
@@ -70,18 +76,31 @@ import { DoctorApiService, PagedDoctors } from './doctor-api.service';
                     ><small>{{ d.email }}</small>
                   </td>
                   <td>{{ d.specialization }}</td>
-                  <td class="number">{{ d.licenseNumber }}</td>
+                  <td class="number">{{ d.licenseNumber || '—' }}</td>
                   <td>
                     <span class="badge status-{{ d.status }}">{{ status(d.status) }}</span>
                   </td>
-                  <td>{{ d.createdAt | date: 'mediumDate' }}</td>
+                  <td>{{ d.createdAt | date: 'dd/MM/yyyy' }}</td>
                   <td>
-                    <a [routerLink]="['/doctors', d.id]">{{ t('Manage', 'إدارة') }}</a>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                      <a [routerLink]="['/doctors', d.id]">{{ t('Manage', 'إدارة') }}</a>
+                      @if (auth.hasPermission('Doctors.Archive') && d.status === 3) {
+                        <span>·</span>
+                        <button
+                          type="button"
+                          class="button-link"
+                          style="background: none; border: none; padding: 0; color: #0284c7; cursor: pointer; font-weight: 600; text-decoration: underline; font-family: inherit; font-size: inherit;"
+                          (click)="restore(d)"
+                        >
+                          {{ t('Restore', 'استرجاع') }}
+                        </button>
+                      }
+                    </div>
                   </td>
                 </tr>
               }
             </tbody>
-          </table>
+          </table></div>
         </div>
         <nav class="pagination">
           <button type="button" [disabled]="result()!.page <= 1" (click)="load(result()!.page - 1)">
@@ -97,14 +116,16 @@ import { DoctorApiService, PagedDoctors } from './doctor-api.service';
         </nav>
       }
     </section>`,
-  styleUrl: './doctors.scss',
+
 })
 export class DoctorsPageComponent {
   private api = inject(DoctorApiService);
+  readonly auth = inject(AuthService);
   readonly i18n = inject(LocalizationService);
   readonly result = signal<PagedDoctors | null>(null);
   readonly loading = signal(true);
   readonly error = signal('');
+  readonly success = signal('');
   readonly filters = inject(FormBuilder).nonNullable.group({
     search: '',
     specialization: '',
@@ -134,7 +155,35 @@ export class DoctorsPageComponent {
         ? this.t('Inactive', 'غير نشط')
         : this.t('Archived', 'مؤرشف');
   }
+  restore(d: DoctorListItem) {
+    if (
+      !confirm(
+        this.t(
+          `Are you sure you want to restore ${d.displayName}? They will become active and available for appointments.`,
+          `هل أنت متأكد من استرجاع الطبيب ${d.displayName}؟ سيصبح نشطاً ومتاحاً لحجز المواعيد.`,
+        ),
+      )
+    )
+      return;
+
+    this.api.restore(d.id).subscribe({
+      next: () => {
+        this.success.set(
+          this.t(
+            `Dr. ${d.displayName} restored successfully.`,
+            `تم استرجاع الطبيب ${d.displayName} بنجاح وأصبح متاحاً للمواعيد.`,
+          ),
+        );
+        this.load(this.result()?.page || 1);
+      },
+      error: () => {
+        this.error.set(this.t('Could not restore doctor.', 'تعذر استرجاع الطبيب.'));
+      },
+    });
+  }
   t(en: string, ar: string) {
     return this.i18n.language() === 'en' ? en : ar;
   }
 }
+
+

@@ -45,6 +45,9 @@ export class UserApiService {
   roles() {
     return this.http.get<RoleSummary[]>('/api/roles');
   }
+  createUser(value: { displayName: string; email: string; password: string; phone?: string; roleIds: string[] }) {
+    return this.http.post<{ id: string }>('/api/users', value);
+  }
   invite(value: { displayName: string; email: string; phone?: string; roleIds: string[] }) {
     return this.http.post<{ id: string }>('/api/users/invitations', value);
   }
@@ -58,3 +61,4 @@ export class UserApiService {
     return this.http.put<void>(`/api/users/${id}/roles`, { roleIds });
   }
 }
+

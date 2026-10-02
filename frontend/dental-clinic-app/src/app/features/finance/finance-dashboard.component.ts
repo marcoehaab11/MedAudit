@@ -1,59 +1,86 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
 import { FinanceApiService, FinanceSummary } from './finance-api.service';
-import { financePeriods, money } from './finance-ui';
+import { financePeriods, money, categoryTitle } from './finance-ui';
+
 @Component({
+  styleUrl: './finance.scss',
+  selector: 'app-finance-nav',
+  imports: [RouterLink, RouterLinkActive],
+  template: `<nav class="finance-nav" [attr.aria-label]="t('Finance navigation', 'أقسام المالية')">
+    <a routerLink="/finance" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="active">
+      {{ t('Dashboard', 'لوحة المالية') }}
+    </a>
+    <a routerLink="/finance/revenue" routerLinkActive="active">
+      {{ t('Revenue', 'الإيرادات') }}
+    </a>
+    <a routerLink="/finance/payments" routerLinkActive="active">
+      {{ t('Payments', 'المدفوعات') }}
+    </a>
+    <a routerLink="/finance/expenses" routerLinkActive="active">
+      {{ t('Expenses', 'المصروفات') }}
+    </a>
+    <a routerLink="/finance/categories" routerLinkActive="active">
+      {{ t('Categories', 'التصنيفات') }}
+    </a>
+  </nav>`,
+})
+export class FinanceNavComponent {
+  readonly i18n = inject(LocalizationService);
+  t(en: string, ar: string) {
+    return this.i18n.language() === 'en' ? en : ar;
+  }
+}
+
+@Component({
+  styleUrl: './finance.scss',
   selector: 'app-finance-dashboard',
-  imports: [RouterLink, FormsModule],
+  imports: [FormsModule, FinanceNavComponent],
   template: ` <section class="page-head">
       <div>
         <p class="eyebrow">{{ t('Financial operations', 'العمليات المالية') }}</p>
         <h1>{{ t('Finance dashboard', 'لوحة المالية') }}</h1>
       </div>
     </section>
-    <nav class="finance-nav">
-      <a routerLink="/finance">Dashboard</a><a routerLink="/finance/revenue">Revenue</a
-      ><a routerLink="/finance/payments">Payments</a><a routerLink="/finance/expenses">Expenses</a
-      ><a routerLink="/finance/categories">Categories</a>
-    </nav>
+    <app-finance-nav />
     <section class="panel finance-filters">
-      <label
-        >{{ t('Period', 'الفترة')
-        }}<select [(ngModel)]="period" (change)="load()">
+      <label>
+        {{ t('Period', 'الفترة') }}
+        <select [(ngModel)]="period" (change)="load()">
           @for (p of periods(); track p.value) {
             <option [ngValue]="p.value">{{ p.label }}</option>
           }
-        </select></label
-      >
+        </select>
+      </label>
       @if (period === 5) {
-        <label>{{ t('From', 'من') }}<input type="date" [(ngModel)]="from" /></label
-        ><label>{{ t('To', 'إلى') }}<input type="date" [(ngModel)]="to" /></label
-        ><button (click)="load()">{{ t('Apply', 'تطبيق') }}</button>
+        <label>{{ t('From', 'من') }} <input type="date" [(ngModel)]="from" /></label>
+        <label>{{ t('To', 'إلى') }} <input type="date" [(ngModel)]="to" /></label>
+        <button class="btn-filter" (click)="load()">{{ t('Apply', 'تطبيق') }}</button>
       }
     </section>
     @if (error()) {
-      <div class="alert error">{{ error() }}</div>
+      <div class="alert error" role="alert">{{ error() }}</div>
     }
     @if (loading()) {
-      <div class="state">{{ t('Loading finance…', 'جاري تحميل المالية…') }}</div>
+      <div class="state" role="status">{{ t('Loading finance…', 'جاري تحميل البيانات المالية…') }}</div>
     } @else if (data()) {
       <section class="metric-grid">
         @for (c of cards(); track c.label) {
           <article class="panel metric">
-            <span>{{ c.label }}</span
-            ><strong [class.amount-negative]="c.value < 0">{{ format(c.value) }}</strong>
+            <span>{{ c.label }}</span>
+            <strong [class.amount-negative]="c.value < 0">{{ format(c.value) }}</strong>
           </article>
         }
       </section>
       <div class="detail-grid">
         <section class="panel">
-          <h2>{{ t('Revenue by category', 'الإيراد حسب التصنيف') }}</h2>
+          <h2>{{ t('Revenue by category', 'الإيرادات حسب التصنيف') }}</h2>
           @for (x of data()!.revenueByCategory; track x.name) {
             <div class="summary-row">
-              <span>{{ x.name }}</span
-              ><strong>{{ format(x.amount) }}</strong>
+              <span>{{ getCategoryName(x.name) }}</span>
+              <strong>{{ format(x.amount) }}</strong>
             </div>
           } @empty {
             <p>{{ t('No revenue in this period.', 'لا توجد إيرادات في هذه الفترة.') }}</p>
@@ -63,17 +90,18 @@ import { financePeriods, money } from './finance-ui';
           <h2>{{ t('Expenses by category', 'المصروفات حسب التصنيف') }}</h2>
           @for (x of data()!.expensesByCategory; track x.name) {
             <div class="summary-row">
-              <span>{{ x.name }}</span
-              ><strong>{{ format(x.amount) }}</strong>
+              <span>{{ getCategoryName(x.name) }}</span>
+              <strong>{{ format(x.amount) }}</strong>
             </div>
           } @empty {
             <p>{{ t('No expenses in this period.', 'لا توجد مصروفات في هذه الفترة.') }}</p>
           }
         </section>
       </div>
-      <p>{{ t('Clinic timezone', 'توقيت العيادة') }}: {{ data()!.timeZone }}</p>
+      <p style="color: var(--muted); font-size: 0.85rem; margin-top: 1rem;">
+        {{ t('Clinic timezone', 'النطاق الزمني للعيادة') }}: {{ data()!.timeZone }}
+      </p>
     }`,
-  styleUrl: './finance.scss',
 })
 export class FinanceDashboardComponent {
   private api = inject(FinanceApiService);
@@ -106,29 +134,22 @@ export class FinanceDashboardComponent {
   cards() {
     const x = this.data()!;
     return [
-      { label: this.t('Revenue', 'الإيراد'), value: x.revenue },
+      { label: this.t('Revenue', 'الإيرادات'), value: x.revenue },
       { label: this.t('Payments received', 'المدفوعات المستلمة'), value: x.payments },
       { label: this.t('Outstanding', 'المستحق'), value: x.outstanding },
       { label: this.t('Expenses', 'المصروفات'), value: x.expenses },
-      { label: this.t('Doctor compensation', 'تكلفة الأطباء'), value: x.doctorCompensation },
+      { label: this.t('Doctor compensation', 'مستحقات الأطباء'), value: x.doctorCompensation },
       { label: this.t('Net profit', 'صافي الربح'), value: x.netProfit },
     ];
   }
   format(v: number) {
     return money(v, this.data()!.currency, this.i18n.language());
   }
+  getCategoryName(name: string) {
+    return categoryTitle(name, this.i18n.language());
+  }
   t(en: string, ar: string) {
     return this.i18n.language() === 'en' ? en : ar;
   }
 }
-@Component({
-  selector: 'app-finance-nav',
-  imports: [RouterLink],
-  template: `<nav class="finance-nav">
-    <a routerLink="/finance">Dashboard</a><a routerLink="/finance/revenue">Revenue</a
-    ><a routerLink="/finance/payments">Payments</a><a routerLink="/finance/expenses">Expenses</a
-    ><a routerLink="/finance/categories">Categories</a>
-  </nav>`,
-  styleUrl: './finance.scss',
-})
-export class FinanceNavComponent {}
+

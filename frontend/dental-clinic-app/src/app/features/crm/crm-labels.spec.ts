@@ -58,3 +58,4 @@ describe('CRM presentation rules', () => {
     expect(clinicDate('2026-08-15T08:00:00Z', 'Africa/Cairo', 'en')).toContain('11:00');
   });
 });
+

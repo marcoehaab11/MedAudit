@@ -5,8 +5,8 @@
 .shell {
   min-block-size: 100vh;
   padding: clamp(1rem, 3vw, 2rem);
-  background: linear-gradient(145deg, #0b3b45, #06242c 70%);
-  color: #effcf8;
+  background: linear-gradient(145deg, #071740 0%, #0c2875 100%);
+  color: #f0f6fc;
 }
 header {
   display: flex;
@@ -22,18 +22,16 @@ header {
   color: inherit;
   font-weight: 750;
   text-decoration: none;
+  font-size: 1.35rem;
+  letter-spacing: -0.05em;
+
+  .logo-img {
+    height: 38px;
+    width: auto;
+    object-fit: contain;
+  }
 }
-.brand span {
-  display: grid;
-  place-items: center;
-  inline-size: 2.25rem;
-  block-size: 2.25rem;
-  border-radius: 50%;
-  background: #8df1d5;
-  color: #07342f;
-  font-size: 0.75rem;
-}
-button {
+button, .lang-toggle {
   border: 1px solid rgb(255 255 255 / 25%);
   border-radius: 999px;
   padding-block: 0.55rem;
@@ -41,6 +39,32 @@ button {
   background: transparent;
   color: inherit;
   cursor: pointer;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.login-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: 0.55rem;
+  padding-inline: 1.5rem;
+  background: #00b4d8;
+  color: #ffffff;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.login-btn:hover {
+  background: #0096b4;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 180, 216, 0.4);
 }
 main {
   display: grid;

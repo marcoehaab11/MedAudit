@@ -42,6 +42,56 @@ internal sealed class UserManagementService(
         return await store.GetUserAsync(userId, cancellationToken);
     }
 
+    public async Task<Guid> CreateUserAsync(CreateUserCommand command, CancellationToken cancellationToken)
+    {
+        await permissions.EnsurePermissionAsync(Permissions.UsersCreate, cancellationToken);
+        await permissions.EnsurePermissionAsync(Permissions.UsersManageRoles, cancellationToken);
+        ValidateCreate(command);
+
+        var tenantId = currentTenant.RequireTenantId();
+        var normalizedEmail = command.Email.Trim().ToUpperInvariant();
+        if (await store.EmailExistsAsync(normalizedEmail, cancellationToken))
+        {
+            throw Validation("Email", "An account with this email address already exists.");
+        }
+
+        var roles = await ValidateAssignableRolesAsync(command.RoleIds, cancellationToken);
+        var now = clock.UtcNow;
+        await using var transaction = await store.BeginTransactionAsync(cancellationToken);
+        var userId = await credentials.CreateUserWithPasswordAsync(
+            tenantId, command.Email.Trim().ToLowerInvariant(), command.Password, cancellationToken);
+        var user = new ClinicUser(userId, tenantId, command.DisplayName, command.Phone, UserStatus.Active, now);
+        store.AddUser(user);
+        foreach (var role in roles)
+        {
+            store.AddUserRole(new UserRoleAssignment(tenantId, userId, role.Id, now));
+            AddAudit(PlatformAuditAction.RoleAssigned, nameof(TenantRole), role.Id, now);
+        }
+
+        var isDoctorRole = roles.Any(r => string.Equals(r.NormalizedName, "DOCTOR", StringComparison.OrdinalIgnoreCase) ||
+                                          string.Equals(r.Name, "Doctor", StringComparison.OrdinalIgnoreCase));
+        if (isDoctorRole && !await store.DoctorProfileExistsForUserAsync(userId, cancellationToken))
+        {
+            var licenseSuffix = userId.ToString("N")[..8].ToUpperInvariant();
+            var doctorProfile = new Domain.Doctors.DoctorProfile(
+                tenantId,
+                userId,
+                "General Dentist",
+                $"DOC-{licenseSuffix}",
+                null,
+                30,
+                now,
+                true);
+            store.AddDoctorProfile(doctorProfile);
+            AddAudit(PlatformAuditAction.DoctorProfileCreated, "DoctorProfile", doctorProfile.Id, now);
+        }
+
+        AddAudit(PlatformAuditAction.UserActivated, nameof(ClinicUser), userId, now);
+        await store.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return userId;
+    }
+
     public async Task<Guid> InviteUserAsync(InviteUserCommand command, CancellationToken cancellationToken)
     {
         await permissions.EnsurePermissionAsync(Permissions.UsersCreate, cancellationToken);
@@ -293,6 +343,20 @@ internal sealed class UserManagementService(
     {
         if (currentUser.UserId == userId)
             throw new ForbiddenAccessException("Users cannot change their own status or role assignments.");
+    }
+
+    private static void ValidateCreate(CreateUserCommand command)
+    {
+        var errors = new List<ValidationFailure>();
+        if (string.IsNullOrWhiteSpace(command.DisplayName) || command.DisplayName.Trim().Length > 200)
+            errors.Add(new("DisplayName", "Display name is required and cannot exceed 200 characters."));
+        if (!MailAddress.TryCreate(command.Email, out _) || command.Email.Length > 256)
+            errors.Add(new("Email", "A valid email address is required."));
+        if (string.IsNullOrWhiteSpace(command.Password) || command.Password.Length < 6)
+            errors.Add(new("Password", "Password must be at least 6 characters."));
+        if (command.Phone?.Trim().Length > 50) errors.Add(new("Phone", "Phone cannot exceed 50 characters."));
+        if (command.RoleIds == null || command.RoleIds.Count == 0) errors.Add(new("RoleIds", "At least one role is required."));
+        if (errors.Count > 0) throw new ValidationException(errors);
     }
 
     private static void ValidateInvite(InviteUserCommand command)

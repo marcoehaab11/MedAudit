@@ -14,11 +14,11 @@ import { LocalizationService } from '../../core/localization.service';
 import { AuthService } from '../../core/auth.service';
 
 @Component({
+  styleUrl: './pharmacy-page.component.scss',
   selector: 'app-pharmacy-page',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './pharmacy-page.component.html',
-  styleUrls: ['./pharmacy-page.component.scss']
 })
 export class PharmacyPageComponent implements OnInit {
   private api = inject(PharmacyApiService);
@@ -255,3 +255,4 @@ export class PharmacyPageComponent implements OnInit {
     }
   }
 }
+

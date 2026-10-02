@@ -1,5 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { Observable, map, shareReplay, tap } from 'rxjs';
 
 export interface PatientProfile {
   firstName: string;
@@ -66,39 +67,68 @@ export interface PagedPatients {
   totalPages: number;
 }
 
+import { AuthService } from '../../core/auth.service';
+
 @Injectable({ providedIn: 'root' })
 export class PatientApiService {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
+  private cachedAll$: Observable<PatientListItem[]> | null = null;
+
+  constructor() {
+    this.auth.onAuthReset$.subscribe(() => this.invalidateCache());
+  }
+
+  listAll(force = false): Observable<PatientListItem[]> {
+    if (!this.cachedAll$ || force) {
+      const params = new HttpParams()
+        .set('page', 1)
+        .set('pageSize', 100);
+      this.cachedAll$ = this.http
+        .get<PagedPatients>('/api/patients', { params })
+        .pipe(
+          map((res) => res.items ?? []),
+          shareReplay(1)
+        );
+    }
+    return this.cachedAll$;
+  }
+
+  invalidateCache() {
+    this.cachedAll$ = null;
+  }
 
   patients(filters: {
-    search: string;
-    status: string;
-    gender: string;
-    page: number;
-    sortBy: string;
-    descending: boolean;
+    search?: string;
+    status?: string;
+    gender?: string;
+    page?: number;
+    pageSize?: number;
+    sortBy?: string;
+    descending?: boolean;
   }) {
     let params = new HttpParams()
-      .set('page', filters.page)
-      .set('pageSize', 20)
-      .set('sortBy', filters.sortBy)
-      .set('descending', filters.descending);
+      .set('page', filters.page ?? 1)
+      .set('pageSize', filters.pageSize ?? 50)
+      .set('descending', filters.descending ?? true);
     if (filters.search) params = params.set('search', filters.search);
     if (filters.status) params = params.set('status', filters.status);
     if (filters.gender) params = params.set('gender', filters.gender);
+    if (filters.sortBy) params = params.set('sortBy', filters.sortBy);
     return this.http.get<PagedPatients>('/api/patients', { params });
   }
+
   patient(id: string) {
     return this.http.get<PatientDetails>(`/api/patients/${id}`);
   }
   create(profile: PatientProfile) {
-    return this.http.post<{ id: string }>('/api/patients', profile);
+    return this.http.post<{ id: string }>('/api/patients', profile).pipe(tap(() => this.invalidateCache()));
   }
   update(id: string, profile: PatientProfile) {
-    return this.http.put<void>(`/api/patients/${id}`, profile);
+    return this.http.put<void>(`/api/patients/${id}`, profile).pipe(tap(() => this.invalidateCache()));
   }
   archive(id: string) {
-    return this.http.post<void>(`/api/patients/${id}/archive`, {});
+    return this.http.post<void>(`/api/patients/${id}/archive`, {}).pipe(tap(() => this.invalidateCache()));
   }
   updateMedicalNotes(id: string, medicalNotes: string) {
     return this.http.put<void>(`/api/patients/${id}/medical-notes`, { medicalNotes });
@@ -122,3 +152,4 @@ export class PatientApiService {
     return this.http.delete<void>(`/api/patients/${id}/surgeries/${itemId}`);
   }
 }
+

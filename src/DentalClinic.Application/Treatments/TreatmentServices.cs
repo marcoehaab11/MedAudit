@@ -29,11 +29,18 @@ internal sealed class TreatmentCatalogService(ITreatmentStore store, IPermission
         item.Update(input.Type, input.Name, input.Code, input.Description, input.DefaultPrice, input.IsActive, clock.UtcNow);
         Audit(PlatformAuditAction.TreatmentCatalogUpdated, item.Id); await store.SaveChangesAsync(token); return true;
     }
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken token)
+    {
+        await permissions.EnsurePermissionAsync(Permissions.TreatmentCatalogManage, token);
+        var item = await store.FindCatalogAsync(id, true, token); if (item is null) return false;
+        item.Update(item.Type, item.Name, item.Code, item.Description, item.DefaultPrice, false, clock.UtcNow);
+        Audit(PlatformAuditAction.TreatmentCatalogUpdated, item.Id); await store.SaveChangesAsync(token); return true;
+    }
     private void Audit(PlatformAuditAction action, Guid id) => store.AddAudit(new(tenant.RequireTenantId(), user.UserId, action, "TreatmentCatalogItem", id, clock.UtcNow, null));
 }
 
 internal sealed class TreatmentPlanService(ITreatmentStore store, TreatmentAccess access, IPermissionService permissions,
-    ICurrentTenant tenant, ICurrentUser user, ISystemClock clock) : ITreatmentPlanService
+    ICurrentTenant tenant, ICurrentUser user, ISystemClock clock, ITreatmentRevenueCreator revenueCreator) : ITreatmentPlanService
 {
     public async Task<PagedResult<TreatmentPlanListItem>> SearchAsync(TreatmentPlanSearch query, CancellationToken token)
     { Validate(query.Page, query.PageSize, query.From, query.To); if (query.Status.HasValue && !Enum.IsDefined(query.Status.Value)) throw new ArgumentException("Invalid treatment plan status."); return await store.SearchPlansAsync(query, await access.VisibleDoctorAsync(Permissions.TreatmentPlansView, token), token); }
@@ -48,21 +55,42 @@ internal sealed class TreatmentPlanService(ITreatmentStore store, TreatmentAcces
         var plan = new TreatmentPlan(tenant.RequireTenantId(), command.PatientId, command.DoctorProfileId, command.Title, command.Notes, 0, clock.UtcNow);
         foreach (var input in command.Items) await AddNewItemAsync(plan, input, token);
         plan.Update(command.Title, command.Notes, command.DiscountAmount, plan.Version, clock.UtcNow);
-        store.AddPlan(plan); Audit(PlatformAuditAction.TreatmentPlanCreated, plan.Id); await store.SaveChangesAsync(token); return plan.Id;
+        store.AddPlan(plan); Audit(PlatformAuditAction.TreatmentPlanCreated, plan.Id); await store.SaveChangesAsync(token);
+        if (plan.Total > 0)
+        {
+            await revenueCreator.EnsureForTreatmentPlanAsync(plan.Id, token);
+        }
+        return plan.Id;
     }
-    public async Task<bool> UpdateAsync(UpdateTreatmentPlanCommand command, CancellationToken token) =>
-        await MutateAsync(command.Id, Permissions.TreatmentPlansEdit,
+    public async Task<bool> UpdateAsync(UpdateTreatmentPlanCommand command, CancellationToken token)
+    {
+        var result = await MutateAsync(command.Id, Permissions.TreatmentPlansEdit,
             p => p.Update(command.Title, command.Notes, command.DiscountAmount, command.Version, clock.UtcNow), PlatformAuditAction.TreatmentPlanUpdated, token);
+        if (result) await revenueCreator.EnsureForTreatmentPlanAsync(command.Id, token);
+        return result;
+    }
     public async Task<bool> AddItemAsync(Guid planId, PlanItemInput input, Guid version, CancellationToken token)
     {
         await permissions.EnsurePermissionAsync(Permissions.TreatmentPlansEdit, token); var plan = await FindForWriteAsync(planId, token); if (plan is null) return false;
         if (plan.Version != version) throw new TreatmentConcurrencyException("The treatment plan changed. Reload it before continuing.");
-        var item = await AddNewItemAsync(plan, input, token); Audit(PlatformAuditAction.TreatmentPlanUpdated, item.Id); await store.SaveChangesAsync(token); return true;
+        var item = await AddNewItemAsync(plan, input, token); Audit(PlatformAuditAction.TreatmentPlanUpdated, item.Id); await store.SaveChangesAsync(token);
+        await revenueCreator.EnsureForTreatmentPlanAsync(planId, token);
+        return true;
     }
-    public Task<bool> UpdateItemAsync(UpdatePlanItemCommand c, CancellationToken token) => MutateAsync(c.PlanId, Permissions.TreatmentPlansEdit,
-        p => p.UpdateItem(c.ItemId, c.ToothNumber, c.Quantity, c.DiscountAmount, c.Notes, c.Version, clock.UtcNow), PlatformAuditAction.TreatmentPlanUpdated, token, c.ItemId);
-    public Task<bool> RemoveItemAsync(Guid planId, Guid itemId, Guid version, CancellationToken token) => MutateAsync(planId, Permissions.TreatmentPlansEdit,
-        p => p.RemoveItem(itemId, version, clock.UtcNow), PlatformAuditAction.TreatmentPlanUpdated, token, itemId);
+    public async Task<bool> UpdateItemAsync(UpdatePlanItemCommand c, CancellationToken token)
+    {
+        var result = await MutateAsync(c.PlanId, Permissions.TreatmentPlansEdit,
+            p => p.UpdateItem(c.ItemId, c.ToothNumber, c.Quantity, c.DiscountAmount, c.Notes, c.Version, clock.UtcNow), PlatformAuditAction.TreatmentPlanUpdated, token, c.ItemId);
+        if (result) await revenueCreator.EnsureForTreatmentPlanAsync(c.PlanId, token);
+        return result;
+    }
+    public async Task<bool> RemoveItemAsync(Guid planId, Guid itemId, Guid version, CancellationToken token)
+    {
+        var result = await MutateAsync(planId, Permissions.TreatmentPlansEdit,
+            p => p.RemoveItem(itemId, version, clock.UtcNow), PlatformAuditAction.TreatmentPlanUpdated, token, itemId);
+        if (result) await revenueCreator.EnsureForTreatmentPlanAsync(planId, token);
+        return result;
+    }
     public async Task<bool> TransitionAsync(Guid id, string action, Guid version, CancellationToken token)
     {
         var permission = action switch
@@ -109,13 +137,17 @@ internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess ac
         var catalog = await store.FindCatalogAsync(command.CatalogItemId, false, token);
         if (patient is null || !patient.IsActive || doctor is null || !doctor.IsActive || catalog is null || !catalog.IsActive)
             throw new TreatmentNotFoundException("An active patient, doctor, and catalog item are required.");
-        decimal price = catalog.DefaultPrice; Guid? planId = null; var teeth = command.ToothNumbers.ToList();
+        decimal price = command.Price.HasValue && command.Price.Value > 0
+            ? command.Price.Value
+            : (command.ToothNumbers.Count > 1 ? catalog.DefaultPrice * command.ToothNumbers.Count : catalog.DefaultPrice);
+        Guid? planId = null; var teeth = command.ToothNumbers.ToList();
         if (command.TreatmentPlanItemId.HasValue)
         {
             var source = await store.FindPlanExecutionSourceAsync(command.TreatmentPlanItemId.Value, token) ?? throw new TreatmentNotFoundException("Treatment plan item was not found.");
             if (source.PatientId != command.PatientId || source.DoctorProfileId != command.DoctorProfileId || source.CatalogItemId != command.CatalogItemId || source.PlanStatus is not (TreatmentPlanStatus.Accepted or TreatmentPlanStatus.InProgress))
                 throw new ArgumentException("Treatment plan item does not match this execution.");
-            price = source.Price; planId = source.PlanId; if (teeth.Count == 0 && source.ToothNumber.HasValue) teeth.Add(source.ToothNumber.Value);
+            if (!command.Price.HasValue || command.Price.Value <= 0) price = source.Price;
+            planId = source.PlanId; if (teeth.Count == 0 && source.ToothNumber.HasValue) teeth.Add(source.ToothNumber.Value);
         }
         if (command.AppointmentId.HasValue)
         { var appointment = await store.FindAppointmentAsync(command.AppointmentId.Value, token); if (appointment is null || appointment.PatientId != command.PatientId || appointment.DoctorProfileId != command.DoctorProfileId) throw new ArgumentException("Appointment does not match treatment patient and doctor."); }
@@ -123,7 +155,9 @@ internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess ac
         { var procedure = await store.FindDentalProcedureAsync(command.SourceDentalProcedureId.Value, token); if (procedure is null || procedure.PatientId != command.PatientId || (teeth.Count > 0 && !teeth.Contains(procedure.ToothNumber))) throw new ArgumentException("Dental procedure does not match treatment patient and tooth."); if (teeth.Count == 0) teeth.Add(procedure.ToothNumber); }
         var treatment = new Treatment(tenant.RequireTenantId(), command.PatientId, command.DoctorProfileId, command.AppointmentId,
             planId, command.TreatmentPlanItemId, catalog.Id, command.SourceDentalProcedureId, catalog.Type, catalog.Name, teeth, price, command.Notes, clock.UtcNow);
-        store.AddTreatment(treatment); Audit(PlatformAuditAction.TreatmentCreated, treatment.Id); await store.SaveChangesAsync(token); return treatment.Id;
+        store.AddTreatment(treatment); Audit(PlatformAuditAction.TreatmentCreated, treatment.Id); await store.SaveChangesAsync(token);
+        await revenueCreator.EnsureForCompletedTreatmentAsync(treatment.Id, token);
+        return treatment.Id;
     }
     public async Task<bool> UpdateNotesAsync(Guid id, string? notes, Guid version, CancellationToken token)
     { await permissions.EnsurePermissionAsync(Permissions.TreatmentsEdit, token); var item = await store.FindTreatmentAsync(id, true, token); if (item is null) return false; await access.EnsureDoctorAsync(item.DoctorProfileId, Permissions.TreatmentsEdit, token); item.UpdateNotes(notes, version, clock.UtcNow); Audit(PlatformAuditAction.TreatmentUpdated, id); await store.SaveChangesAsync(token); return true; }
@@ -139,7 +173,9 @@ internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess ac
         await permissions.EnsurePermissionAsync(permission, token); var item = await store.FindTreatmentAsync(id, true, token); if (item is null) return false;
         await access.EnsureDoctorAsync(item.DoctorProfileId, permission, token);
         var audit = action == "start" ? PlatformAuditAction.TreatmentStarted : action == "complete" ? PlatformAuditAction.TreatmentCompleted : PlatformAuditAction.TreatmentCancelled;
-        if (action == "start") item.Start(version, clock.UtcNow); else if (action == "complete") { item.Complete(version, clock.UtcNow); await revenueCreator.EnsureForCompletedTreatmentAsync(id, token); } else item.Cancel(version, clock.UtcNow);
+        if (action == "start") { item.Start(version, clock.UtcNow); await revenueCreator.EnsureForCompletedTreatmentAsync(id, token); }
+        else if (action == "complete") { item.Complete(version, clock.UtcNow); await revenueCreator.EnsureForCompletedTreatmentAsync(id, token); }
+        else item.Cancel(version, clock.UtcNow);
         Audit(audit, id); await store.SaveChangesAsync(token); return true;
     }
     private void Audit(PlatformAuditAction action, Guid id) => store.AddAudit(new(tenant.RequireTenantId(), user.UserId, action, "Treatment", id, clock.UtcNow, null));

@@ -20,6 +20,9 @@ internal static class DoctorEndpoints
         doctors.MapPost("/{id:guid}/activate", ActivateAsync).RequireAuthorization(Permissions.DoctorsEdit);
         doctors.MapPost("/{id:guid}/deactivate", DeactivateAsync).RequireAuthorization(Permissions.DoctorsEdit);
         doctors.MapPost("/{id:guid}/archive", ArchiveAsync).RequireAuthorization(Permissions.DoctorsArchive);
+        doctors.MapDelete("/{id:guid}", ArchiveAsync).RequireAuthorization(Permissions.DoctorsArchive);
+        doctors.MapPost("/{id:guid}/restore", RestoreAsync).RequireAuthorization(Permissions.DoctorsArchive);
+        doctors.MapPost("/{id:guid}/unarchive", RestoreAsync).RequireAuthorization(Permissions.DoctorsArchive);
         doctors.MapGet("/{id:guid}/schedule", GetScheduleAsync).RequireAuthorization(Permissions.DoctorsView);
         doctors.MapPut("/{id:guid}/schedule", SetScheduleAsync).RequireAuthorization(Permissions.DoctorsManageSchedule);
         doctors.MapGet("/{id:guid}/compensation", GetCompensationAsync)
@@ -58,6 +61,8 @@ internal static class DoctorEndpoints
         ? Results.NoContent() : Results.NotFound();
     private static async Task<IResult> ArchiveAsync(Guid id, IDoctorProfileCommands service, CancellationToken token) =>
         await service.ArchiveAsync(id, token) ? Results.NoContent() : Results.NotFound();
+    private static async Task<IResult> RestoreAsync(Guid id, IDoctorProfileCommands service, CancellationToken token) =>
+        await service.RestoreAsync(id, token) ? Results.NoContent() : Results.NotFound();
     private static async Task<IResult> GetScheduleAsync(Guid id, IDoctorScheduleService service,
         CancellationToken token) => await service.GetAsync(id, token) is { } result ? Results.Ok(result) : Results.NotFound();
     private static async Task<IResult> SetScheduleAsync(Guid id, DoctorScheduleRequest request,
@@ -83,7 +88,7 @@ internal static class DoctorEndpoints
     private static DoctorProfileInput ToInput(DoctorProfileRequest x) =>
         new(x.Specialization, x.LicenseNumber, x.Bio, x.ConsultationDurationMinutes);
     private static DoctorProfileInput ToInput(UpdateDoctorProfileRequest x) =>
-        new(x.Specialization, x.LicenseNumber, x.Bio, x.ConsultationDurationMinutes);
+        new(x.Specialization, x.LicenseNumber, x.Bio, x.ConsultationDurationMinutes, x.DisplayName, x.Phone);
     private static DoctorCompensationInput ToInput(DoctorCompensationRequest x) =>
         new((CompensationType)x.CompensationType, x.FixedAmount, x.Percentage, x.EffectiveFrom, x.EffectiveTo);
 }

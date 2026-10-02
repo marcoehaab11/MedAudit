@@ -10,10 +10,10 @@ describe('DentalChartComponent', () => {
   it('renders the permanent FDI chart as visual selectable teeth', () => {
     const fixture = TestBed.createComponent(DentalChartComponent);
     fixture.detectChanges();
-    const teeth = (fixture.nativeElement as HTMLElement).querySelectorAll('button.tooth');
+    const teeth = (fixture.nativeElement as HTMLElement).querySelectorAll('button.planora-tooth');
     expect(teeth.length).toBe(32);
-    expect(teeth[0].querySelector('.tooth-shape')).not.toBeNull();
-    (Array.from(teeth).find((x) => x.textContent?.includes('36')) as HTMLButtonElement).click();
+    expect(teeth[0].querySelector('.tooth-anatomy')).not.toBeNull();
+    (Array.from(teeth).find((x) => x.getAttribute('aria-label')?.includes('36')) as HTMLButtonElement).click();
     expect(fixture.componentInstance.selectedNumber).toBe(36);
   });
 
@@ -35,4 +35,30 @@ describe('DentalChartComponent', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('مخطط الأسنان');
     expect(document.documentElement.dir).toBe('rtl');
   });
+
+  it('supports multi-tooth selection and quick jaw selectors', () => {
+    const fixture = TestBed.createComponent(DentalChartComponent);
+    const component = fixture.componentInstance;
+    component.multiSelect = true;
+    component.selectedTeeth = [21];
+    fixture.detectChanges();
+
+    component.choose(22);
+    expect(component.selectedTeeth).toEqual([21, 22]);
+
+    // Toggling tooth removes it
+    component.choose(21);
+    expect(component.selectedTeeth).toEqual([22]);
+
+    // Quick select upper jaw
+    component.selectAllUpper();
+    expect(component.selectedTeeth.length).toBe(16);
+    expect(component.selectedTeeth).toContain(11);
+    expect(component.selectedTeeth).toContain(28);
+
+    // Clear selection resets to the single active tooth
+    component.clearSelection();
+    expect(component.selectedTeeth.length).toBe(1);
+  });
 });
+

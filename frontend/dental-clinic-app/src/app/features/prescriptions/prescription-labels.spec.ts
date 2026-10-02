@@ -35,3 +35,4 @@ describe('prescription labels', () => {
     expect(prescriptionActions(3)).toEqual([]);
   });
 });
+

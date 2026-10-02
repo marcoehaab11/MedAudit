@@ -211,3 +211,4 @@ export class TreatmentReportComponent implements OnInit {
     }));
   }
 }
+

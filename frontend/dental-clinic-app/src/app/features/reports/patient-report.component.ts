@@ -201,3 +201,4 @@ export class PatientReportComponent implements OnInit {
     }));
   }
 }
+

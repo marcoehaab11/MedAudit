@@ -12,6 +12,17 @@ public sealed class ClinicUser : TenantOwnedEntity
         string displayName,
         string? phone,
         DateTimeOffset createdAt)
+        : this(id, tenantId, displayName, phone, UserStatus.Invited, createdAt)
+    {
+    }
+
+    public ClinicUser(
+        Guid id,
+        Guid tenantId,
+        string displayName,
+        string? phone,
+        UserStatus status,
+        DateTimeOffset createdAt)
     {
         if (id == Guid.Empty || tenantId == Guid.Empty)
         {
@@ -22,7 +33,7 @@ public sealed class ClinicUser : TenantOwnedEntity
         TenantId = tenantId;
         DisplayName = Required(displayName, nameof(displayName), 200);
         Phone = Optional(phone, nameof(phone), 50);
-        Status = UserStatus.Invited;
+        Status = status;
         CreatedAt = createdAt;
         UpdatedAt = createdAt;
     }

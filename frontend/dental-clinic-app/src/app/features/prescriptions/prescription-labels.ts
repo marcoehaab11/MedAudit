@@ -8,3 +8,4 @@ export const medicationForm = (value?: number, ar = false) =>
     : ['', 'Tablet', 'Capsule', 'Syrup', 'Cream', 'Gel', 'Mouthwash', 'Injection', 'Other'])[
     value ?? 0
   ] ?? '—';
+

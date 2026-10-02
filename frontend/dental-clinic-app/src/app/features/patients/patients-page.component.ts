@@ -6,6 +6,8 @@ import { LocalizationService } from '../../core/localization.service';
 import { PagedPatients, PatientApiService } from './patient-api.service';
 
 @Component({
+  styleUrl: './patients.scss',
+
   selector: 'app-patients-page',
   imports: [ReactiveFormsModule, RouterLink, DatePipe],
   template: ` <section class="page-head">
@@ -21,14 +23,12 @@ import { PagedPatients, PatientApiService } from './patient-api.service';
       <div class="alert error" role="alert">{{ error() }}</div>
     }
     <form class="panel filters" [formGroup]="filters" (ngSubmit)="load(1)">
-      <label class="search"
-        ><span class="sr-only">{{ t('Search patients', 'البحث عن المرضى') }}</span
-        ><input
-          formControlName="search"
-          [placeholder]="
-            t('Search name, number, phone, or email', 'ابحث بالاسم أو الرقم أو الهاتف أو البريد')
-          "
-      /></label>
+      <input
+        formControlName="search"
+        [placeholder]="
+          t('Search name, number, phone, or email', 'ابحث بالاسم أو الرقم أو الهاتف أو البريد')
+        "
+      />
       <select formControlName="status" [attr.aria-label]="t('Status', 'الحالة')">
         <option value="">{{ t('Active patients', 'المرضى النشطون') }}</option>
         <option value="2">{{ t('Archived', 'المؤرشفون') }}</option>
@@ -44,7 +44,13 @@ import { PagedPatients, PatientApiService } from './patient-api.service';
         <option value="2">{{ t('Name', 'الاسم') }}</option>
         <option value="3">{{ t('Patient number', 'رقم المريض') }}</option>
       </select>
-      <button>{{ t('Apply', 'تطبيق') }}</button>
+      <button type="submit">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span>{{ t('Apply', 'تطبيق') }}</span>
+      </button>
     </form>
     <section class="panel table-panel">
       @if (loading()) {
@@ -63,7 +69,7 @@ import { PagedPatients, PatientApiService } from './patient-api.service';
         </div>
       } @else {
         <div class="table-scroll">
-          <table>
+          <div class="table-responsive"><table>
             <thead>
               <tr>
                 <th>{{ t('Patient', 'المريض') }}</th>
@@ -92,14 +98,14 @@ import { PagedPatients, PatientApiService } from './patient-api.service';
                       patient.status === 1 ? t('Active', 'نشط') : t('Archived', 'مؤرشف')
                     }}</span>
                   </td>
-                  <td>{{ patient.createdAt | date: 'mediumDate' }}</td>
+                  <td>{{ patient.createdAt | date: 'dd/MM/yyyy' }}</td>
                   <td>
                     <a [routerLink]="['/patients', patient.id]">{{ t('View', 'عرض') }}</a>
                   </td>
                 </tr>
               }
             </tbody>
-          </table>
+          </table></div>
         </div>
         <nav class="pagination">
           <button type="button" [disabled]="result()!.page <= 1" (click)="load(result()!.page - 1)">
@@ -115,7 +121,7 @@ import { PagedPatients, PatientApiService } from './patient-api.service';
         </nav>
       }
     </section>`,
-  styleUrl: './patients.scss',
+
 })
 export class PatientsPageComponent {
   private readonly api = inject(PatientApiService);
@@ -151,3 +157,5 @@ export class PatientsPageComponent {
     return this.i18n.language() === 'en' ? en : ar;
   }
 }
+
+

@@ -3,6 +3,8 @@ import { RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
 import { CrmApiService, CrmDashboard } from './crm-api.service';
 @Component({
+  styleUrl: './crm.scss',
+
   selector: 'app-crm-dashboard',
   imports: [RouterLink],
   template: `<section class="page-head">
@@ -36,7 +38,7 @@ import { CrmApiService, CrmDashboard } from './crm-api.service';
         }}</a>
       </section>
     }`,
-  styleUrl: './crm.scss',
+
 })
 export class CrmDashboardComponent {
   private readonly api = inject(CrmApiService);
@@ -88,3 +90,4 @@ export class CrmDashboardComponent {
     return this.i18n.language() === 'en' ? en : ar;
   }
 }
+

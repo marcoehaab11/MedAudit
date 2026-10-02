@@ -59,3 +59,4 @@ describe('PharmacyPageComponent', () => {
     expect(mockPharmacyApi.getDashboardSummary).toHaveBeenCalled();
   });
 });
+
