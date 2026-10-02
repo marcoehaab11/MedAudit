@@ -79,5 +79,16 @@ export class App implements OnDestroy {
   protected t(en: string, ar: string): string {
     return this.i18n.language() === 'en' ? en : ar;
   }
+
+  protected guideTopic(): string {
+    const path = this.router.url.split('?')[0];
+    if (path.startsWith('/online-booking')) return 'booking';
+    if (path.startsWith('/patients')) return 'patients';
+    if (path.startsWith('/appointments')) return 'appointments';
+    if (path.startsWith('/doctors') || path.startsWith('/settings') || path.startsWith('/users')) return 'settings';
+    if (path.startsWith('/reports') || path.startsWith('/finance')) return 'reports';
+    if (path.startsWith('/treatment') || path.startsWith('/prescriptions')) return 'clinical';
+    return 'start';
+  }
 }
 

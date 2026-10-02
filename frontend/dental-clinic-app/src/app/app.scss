@@ -644,6 +644,23 @@ a.nav-item {
   }
 }
 
+.help-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .45rem .85rem;
+  border-radius: 999px;
+  background: #e9f6f6;
+  color: #0b6875;
+  text-decoration: none;
+  font-size: .84rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.help-link span { display: grid; place-items: center; width: 1.2rem; height: 1.2rem; border: 1.5px solid currentColor; border-radius: 50%; font-weight: 800; }
+.help-link:hover { background: #d5f0ef; }
+
 // ─── PAGE CONTENT ───────────────────────────────────────────────────────────
 .page-content {
   flex: 1;

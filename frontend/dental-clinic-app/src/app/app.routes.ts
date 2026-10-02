@@ -387,6 +387,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/online-booking/online-booking-page.component').then((x) => x.OnlineBookingPageComponent),
   },
   {
+    path: 'guide',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/guide/guide-page.component').then((x) => x.GuidePageComponent),
+  },
+  {
     path: 'settings',
     canActivate: [authGuard],
     loadComponent: () =>

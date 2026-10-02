@@ -1,0 +1,73 @@
+<div class="guide-page">
+  <header class="guide-hero">
+    <div>
+      <span class="eyebrow">PLANORA · {{ t('HELP CENTER', 'دليل الاستخدام') }}</span>
+      <h1>{{ t('How can we help?', 'نقدر نساعدك إزاي؟') }}</h1>
+      <p>{{ t('Short, practical guides for your daily work in the clinic.', 'خطوات قصيرة وواضحة تساعدك في شغلك اليومي داخل العيادة.') }}</p>
+    </div>
+    <div class="hero-mark" aria-hidden="true">?</div>
+  </header>
+
+  <div class="guide-search">
+    <span aria-hidden="true">⌕</span>
+    <input type="search" [ngModel]="query()" (ngModelChange)="query.set($event)"
+      [placeholder]="t('Search topics, tasks or features', 'ابحث عن موضوع أو خطوة أو ميزة')"
+      [attr.aria-label]="t('Search the guide', 'ابحث في الدليل')" />
+  </div>
+
+  <nav class="guide-filters" [attr.aria-label]="t('Guide categories', 'أقسام الدليل')">
+    @for (item of groups; track item.id) {
+      <button type="button" [class.active]="group() === item.id" [attr.aria-pressed]="group() === item.id"
+        (click)="group.set(item.id)">{{ text(item.label) }}</button>
+    }
+  </nav>
+
+  @if (filteredTopics().length) {
+    <div class="guide-layout">
+      <nav class="topic-list" [attr.aria-label]="t('Topics', 'المواضيع')">
+        @for (topic of filteredTopics(); track topic.id) {
+          <button type="button" class="topic-button" [class.selected]="selectedTopic()?.id === topic.id"
+            [attr.aria-current]="selectedTopic()?.id === topic.id ? 'page' : null" (click)="choose(topic)">
+            <span class="topic-icon" aria-hidden="true">{{ topic.icon }}</span>
+            <span><strong>{{ text(topic.title) }}</strong><small>{{ text(topic.summary) }}</small></span>
+            <span class="topic-arrow" aria-hidden="true">›</span>
+          </button>
+        }
+      </nav>
+
+      @if (selectedTopic(); as topic) {
+        <article class="guide-article">
+          <span class="article-category">{{ t('STEP BY STEP', 'خطوة بخطوة') }}</span>
+          <h2>{{ text(topic.title) }}</h2>
+          <p class="article-intro">{{ text(topic.summary) }}</p>
+          <ol class="steps">
+            @for (step of topic.steps; track step.title.en; let index = $index) {
+              <li>
+                <span class="step-number">{{ index + 1 }}</span>
+                <div class="step-content">
+                  <h3>{{ text(step.title) }}</h3>
+                  <p>{{ text(step.detail) }}</p>
+                  @if (step.path && canOpen(step.permission)) {
+                    <a [routerLink]="step.path">{{ t('Open page', 'افتح الصفحة') }} <span aria-hidden="true">↗</span></a>
+                  } @else if (step.permission) {
+                    <small class="restricted">{{ t('Ask your clinic admin for access to this page.', 'اطلب صلاحية فتح الصفحة من مسؤول العيادة.') }}</small>
+                  }
+                </div>
+              </li>
+            }
+          </ol>
+          <div class="article-footer">
+            <span aria-hidden="true">✦</span>
+            <p>{{ t('You can return to this guide any time from the Help button at the top of the app.', 'تقدر ترجع للدليل في أي وقت من زر المساعدة أعلى التطبيق.') }}</p>
+          </div>
+        </article>
+      }
+    </div>
+  } @else {
+    <div class="no-results">
+      <strong>{{ t('No matching guide found', 'مفيش نتيجة مطابقة') }}</strong>
+      <p>{{ t('Try another word or choose All topics.', 'جرّب كلمة تانية أو اختار كل المواضيع.') }}</p>
+      <button type="button" (click)="query.set(''); group.set('all')">{{ t('Show all topics', 'عرض كل المواضيع') }}</button>
+    </div>
+  }
+</div>
