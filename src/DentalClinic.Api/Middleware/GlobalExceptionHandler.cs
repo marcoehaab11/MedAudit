@@ -9,6 +9,7 @@ using DentalClinic.Domain.Prescriptions;
 using DentalClinic.Application.Crm;
 using DentalClinic.Domain.Crm;
 using DentalClinic.Domain.Finance;
+using DentalClinic.Domain.ClinicBusiness;
 using DentalClinic.Contracts.Errors;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
@@ -97,6 +98,8 @@ internal sealed class GlobalExceptionHandler(
                 StatusCodes.Status409Conflict, "Financial conflict", exception.Message, null),
             FinanceNotFoundException => (
                 StatusCodes.Status404NotFound, "Financial record not found", exception.Message, null),
+            ClinicBusinessConflictException => (
+                StatusCodes.Status409Conflict, "Clinic operation conflict", exception.Message, null),
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "Unexpected error",

@@ -124,6 +124,12 @@ public static class Permissions
     public const string PharmacyViewHistory = "Pharmacy.ViewHistory";
     public const string PharmacyViewDashboard = "Pharmacy.ViewDashboard";
     public const string PharmacyReverseDispensing = "Pharmacy.ReverseDispensing";
+    public const string LabView = "Lab.View";
+    public const string LabManage = "Lab.Manage";
+    public const string LabSettle = "Lab.Settle";
+    public const string InsuranceView = "Insurance.View";
+    public const string InsuranceManage = "Insurance.Manage";
+    public const string InsuranceSettle = "Insurance.Settle";
 
     public static IReadOnlySet<string> All { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
@@ -158,6 +164,7 @@ public static class Permissions
         NotificationsView, NotificationsManage, NotificationsTemplates, NotificationsPreferences,
         InventoryView, InventoryManageItems, InventoryManageCategories, InventoryManageSuppliers,
         InventoryReceive, InventoryIssue, InventoryAdjust, InventoryViewCosts,
-        PharmacyView, PharmacyDispense, PharmacyEditCatalog, PharmacyViewHistory, PharmacyViewDashboard, PharmacyReverseDispensing
+        PharmacyView, PharmacyDispense, PharmacyEditCatalog, PharmacyViewHistory, PharmacyViewDashboard, PharmacyReverseDispensing,
+        LabView, LabManage, LabSettle, InsuranceView, InsuranceManage, InsuranceSettle
     };
 }

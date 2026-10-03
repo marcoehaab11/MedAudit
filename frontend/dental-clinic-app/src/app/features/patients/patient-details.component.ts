@@ -14,6 +14,7 @@ import { PatientDossierModalComponent } from './patient-dossier-modal.component'
 import { PatientVisitHistorySheetComponent } from './patient-visit-history-sheet.component';
 import { MedicalAlertModalComponent } from '../../shared/medical-alert-modal/medical-alert-modal.component';
 import { TreatmentApiService } from '../treatments/treatment-api.service';
+import { AuthService } from '../../core/auth.service';
 
 type Tab = 'overview' | 'contact' | 'medical' | 'notes';
 @Component({
@@ -48,6 +49,8 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
           <p>{{ patient()!.phone }} · {{ patient()!.email || t('No email', 'لا يوجد بريد') }}</p>
         </div>
         <div class="head-actions">
+          @if (auth.hasPermission('Lab.View')) { <a class="button secondary" routerLink="/lab" [queryParams]="{ patientId: id }">{{ t('Lab cases', 'طلبات المعمل') }}</a> }
+          @if (auth.hasPermission('Insurance.View')) { <a class="button secondary" routerLink="/insurance" [queryParams]="{ patientId: id }">{{ t('Insurance claims', 'مطالبات التأمين') }}</a> }
           @if (hasMedicalAlerts()) {
             <button
               type="button"
@@ -366,6 +369,7 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
   styleUrl: './patients.scss',
 })
 export class PatientDetailsComponent {
+  readonly auth = inject(AuthService);
   private readonly api = inject(PatientApiService);
   private readonly treatmentApi = inject(TreatmentApiService);
   readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id')!;

@@ -240,9 +240,16 @@
         }
 
         <!-- ── Operations ── -->
-        @if (auth.hasPermission('Inventory.View')) {
+        @if (auth.hasPermission('Inventory.View') || auth.hasPermission('Lab.View') || auth.hasPermission('Insurance.View')) {
           <div class="nav-group">
             <span class="nav-label">{{ t('Operations', 'العمليات') }}</span>
+            @if (auth.hasPermission('Lab.View')) {
+              <a class="nav-item" routerLink="/lab" routerLinkActive="active" (click)="closeMobileSidebar()"><span class="nav-icon" aria-hidden="true">⚗</span><span class="nav-text">{{ t('Dental labs', 'المعامل') }}</span></a>
+            }
+            @if (auth.hasPermission('Insurance.View')) {
+              <a class="nav-item" routerLink="/insurance" routerLinkActive="active" (click)="closeMobileSidebar()"><span class="nav-icon" aria-hidden="true">▣</span><span class="nav-text">{{ t('Insurance', 'التأمينات') }}</span></a>
+            }
+            @if (auth.hasPermission('Inventory.View')) {
             <a class="nav-item" routerLink="/inventory" routerLinkActive="active" (click)="closeMobileSidebar()">
               <span class="nav-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -253,6 +260,7 @@
               </span>
               <span class="nav-text">{{ t('Inventory', 'المخزون') }}</span>
             </a>
+            }
           </div>
         }
 

@@ -87,6 +87,7 @@ export class App implements OnDestroy {
     if (path.startsWith('/appointments')) return 'appointments';
     if (path.startsWith('/doctors') || path.startsWith('/settings') || path.startsWith('/users')) return 'settings';
     if (path.startsWith('/reports') || path.startsWith('/finance')) return 'reports';
+    if (path.startsWith('/lab') || path.startsWith('/insurance')) return 'reports';
     if (path.startsWith('/treatment') || path.startsWith('/prescriptions')) return 'clinical';
     return 'start';
   }

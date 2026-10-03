@@ -1,0 +1,48 @@
+.business-page { display:grid; gap:1.25rem; color:#12302b; }
+.business-head { padding:1.6rem 1.8rem; border-radius:20px; color:white; background:linear-gradient(125deg,#113c37,#176b63 65%,#1b9284); box-shadow:0 16px 35px rgba(14,65,57,.15); }
+.business-head .eyebrow { margin:0 0 .5rem; color:#a7f3d0; font-size:.7rem; font-weight:800; letter-spacing:.16em; }
+.business-head h1 { margin:0; font-size:clamp(1.45rem,2.4vw,2.2rem); color:white; }
+.business-head p:last-child { margin:.45rem 0 0; color:#d9f4e9; }
+.business-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.8rem; }
+.business-stats>div { background:#fff; border:1px solid #dbeae5; border-radius:14px; padding:1rem 1.15rem; box-shadow:0 4px 14px rgba(20,65,51,.04); }
+.business-stats small { display:block; color:#607b72; font-weight:700; }
+.business-stats strong { display:block; margin-top:.3rem; font-size:1.65rem; }
+.business-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1.2rem; }
+.business-card { background:#fff; border:1px solid #dbeae5; border-radius:18px; padding:1.35rem; box-shadow:0 4px 18px rgba(20,65,51,.05); min-width:0; }
+.business-card h2 { font-size:1.1rem; margin:0 0 .85rem; font-weight:800; }
+.business-card p { color:#667e78; font-size:.88rem; margin:.2rem 0 1rem; }
+.business-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; margin-bottom:1rem; }
+.business-fields .wide { grid-column:1/-1; }
+.business-fields label { display:grid; gap:.3rem; font-size:.8rem; font-weight:700; color:#49645c; }
+.business-page input:not([type=checkbox]),.business-page select,.business-page textarea { width:100%; min-height:40px; border:1px solid #cbded5; border-radius:9px; padding:.5rem .65rem; background:white; color:#17392f; font:inherit; font-size:.88rem; }
+.business-page input:focus,.business-page select:focus,.business-page textarea:focus { outline:2px solid #b8e6d2; border-color:#19836d; }
+.business-page input[type=checkbox] { width:16px; height:16px; accent-color:#13856d; }
+.business-primary { border:0; border-radius:9px; padding:.62rem .9rem; background:#117d66; color:white; font-weight:800; cursor:pointer; white-space:nowrap; }
+.business-primary:hover:not(:disabled) { background:#0b6654; }
+.business-primary:disabled { opacity:.5; cursor:not-allowed; }
+.business-row,.business-inline { display:flex; align-items:center; gap:.7rem; flex-wrap:wrap; }
+.business-row { justify-content:space-between; margin-bottom:.8rem; }
+.business-row h2 { margin-bottom:.2rem; }
+.business-inline select,.business-inline input { width:auto !important; min-width:160px; }
+.business-table-wrap { width:100%; overflow-x:auto; }
+.business-table-wrap table { width:100%; border-collapse:collapse; min-width:720px; font-size:.85rem; }
+.business-table-wrap th { text-align:start; background:#f3faf6; color:#4b6d60; font-size:.75rem; text-transform:uppercase; letter-spacing:.04em; }
+.business-table-wrap th,.business-table-wrap td { padding:.75rem .6rem; border-bottom:1px solid #e7f0eb; vertical-align:middle; }
+.business-table-wrap td small { display:block; color:#779087; margin-top:.2rem; }
+.business-table-wrap td select { min-width:140px; }
+.business-table-wrap td input[type=number] { max-width:120px; }
+.business-empty { text-align:center; padding:1.6rem !important; color:#789086; }
+.business-chip { display:inline-block; padding:.25rem .55rem; border-radius:99px; background:#e8f7ef; color:#137658; font-weight:800; font-size:.76rem; }
+.business-link { border:0; background:none; color:#127c69; font-weight:750; cursor:pointer; margin-inline-start:.25rem; }
+.business-summary { display:flex; gap:1.2rem; flex-wrap:wrap; padding:1rem 0; color:#58766b; }
+.business-summary strong { color:#143c30; }
+.statement-tabs { margin:.8rem 0; }
+.statement-tabs button { border:1px solid #cde3d8; background:white; color:#326459; border-radius:9px; padding:.55rem .75rem; cursor:pointer; }
+.statement-tabs button.active { color:white; background:#126e59; border-color:#126e59; }
+.business-alert { border-radius:10px; padding:.8rem 1rem; font-weight:700; }
+.business-alert.error { color:#a42f2f; background:#fff0ef; border:1px solid #f6c6c1; }
+.business-alert.success { color:#126a44; background:#e9f9ed; border:1px solid #bfe8c9; }
+.business-history { border-bottom:1px solid #edf2ee; padding:.45rem 0; margin:0 !important; }
+.business-foot { margin-top:.8rem !important; }
+@media (max-width:900px) { .business-grid { grid-template-columns:1fr; } .business-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:560px) { .business-fields { grid-template-columns:1fr; } .business-stats { grid-template-columns:1fr 1fr; } .business-card { padding:1rem; } }

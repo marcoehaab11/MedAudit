@@ -3,6 +3,7 @@ using System;
 using DentalClinic.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DentalClinic.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261003084151_AddClinicBusinessDocuments")]
+    partial class AddClinicBusinessDocuments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -418,8 +421,6 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "PatientId");
 
-                    b.HasIndex("TenantId", "PatientInsuranceId");
-
                     b.HasIndex("TenantId", "TreatmentId", "PatientInsuranceId")
                         .IsUnique();
 
@@ -476,9 +477,6 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("PaidAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("PaymentId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Reference")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -491,9 +489,6 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "BatchId");
 
                     b.HasIndex("TenantId", "ClaimId");
-
-                    b.HasIndex("TenantId", "PaymentId")
-                        .IsUnique();
 
                     b.ToTable("insurance_settlements", (string)null);
                 });
@@ -569,8 +564,6 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "StatementId");
 
-                    b.HasIndex("TenantId", "TreatmentId");
-
                     b.HasIndex("TenantId", "VendorId", "DueAt");
 
                     b.ToTable("lab_cases", (string)null);
@@ -589,9 +582,6 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("CaseId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("ExpenseId")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTimeOffset>("PaidAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -608,9 +598,6 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId", "CaseId");
-
-                    b.HasIndex("TenantId", "ExpenseId")
-                        .IsUnique();
 
                     b.HasIndex("TenantId", "StatementId");
 
@@ -709,8 +696,6 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId", "PatientId");
-
-                    b.HasIndex("TenantId", "PayerId");
 
                     b.ToTable("patient_insurances", (string)null);
                 });
@@ -1373,6 +1358,8 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasAlternateKey("TenantId", "Id");
+
                     b.HasIndex("TenantId", "CategoryId");
 
                     b.HasIndex("TenantId", "CreatedBy");
@@ -1525,6 +1512,8 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasAlternateKey("TenantId", "Id");
 
                     b.HasIndex("TenantId", "CreatedBy");
 
@@ -4062,149 +4051,6 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.HasOne("DentalClinic.Domain.Tenancy.Tenant", null)
                         .WithMany()
                         .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("DentalClinic.Domain.ClinicBusiness.InsuranceBatch", b =>
-                {
-                    b.HasOne("DentalClinic.Domain.ClinicBusiness.InsurancePayer", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "PayerId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("DentalClinic.Domain.ClinicBusiness.InsuranceClaim", b =>
-                {
-                    b.HasOne("DentalClinic.Domain.ClinicBusiness.InsuranceBatch", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "BatchId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("DentalClinic.Domain.Patients.Patient", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "PatientId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("DentalClinic.Domain.ClinicBusiness.PatientInsurance", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "PatientInsuranceId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("DentalClinic.Domain.Treatments.Treatment", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "TreatmentId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("DentalClinic.Domain.ClinicBusiness.InsuranceSettlement", b =>
-                {
-                    b.HasOne("DentalClinic.Domain.ClinicBusiness.InsuranceBatch", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "BatchId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("DentalClinic.Domain.ClinicBusiness.InsuranceClaim", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "ClaimId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("DentalClinic.Domain.Finance.Payment", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "PaymentId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("DentalClinic.Domain.ClinicBusiness.LabCase", b =>
-                {
-                    b.HasOne("DentalClinic.Domain.Patients.Patient", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "PatientId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("DentalClinic.Domain.ClinicBusiness.LabStatement", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "StatementId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("DentalClinic.Domain.Treatments.Treatment", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "TreatmentId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("DentalClinic.Domain.ClinicBusiness.LabVendor", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "VendorId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("DentalClinic.Domain.ClinicBusiness.LabSettlement", b =>
-                {
-                    b.HasOne("DentalClinic.Domain.ClinicBusiness.LabCase", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "CaseId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("DentalClinic.Domain.Finance.Expense", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "ExpenseId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("DentalClinic.Domain.ClinicBusiness.LabStatement", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "StatementId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("DentalClinic.Domain.ClinicBusiness.LabStatement", b =>
-                {
-                    b.HasOne("DentalClinic.Domain.ClinicBusiness.LabVendor", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "VendorId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("DentalClinic.Domain.ClinicBusiness.PatientInsurance", b =>
-                {
-                    b.HasOne("DentalClinic.Domain.Patients.Patient", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "PatientId")
-                        .HasPrincipalKey("TenantId", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("DentalClinic.Domain.ClinicBusiness.InsurancePayer", null)
-                        .WithMany()
-                        .HasForeignKey("TenantId", "PayerId")
-                        .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

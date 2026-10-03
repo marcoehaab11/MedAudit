@@ -254,6 +254,16 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'lab',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/clinic-business/lab-page.component').then(x => x.LabPageComponent),
+  },
+  {
+    path: 'insurance',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/clinic-business/insurance-page.component').then(x => x.InsurancePageComponent),
+  },
+  {
     path: 'finance/revenue',
     canActivate: [authGuard],
     loadComponent: () =>
