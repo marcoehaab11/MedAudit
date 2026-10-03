@@ -7,11 +7,12 @@ import { AuthService } from '../../core/auth.service';
 import { DoctorApiService } from '../doctors/doctor-api.service';
 import { RoleSummary, UserApiService, UserDetails } from './user-api.service';
 import { PhoneInputComponent } from '../../shared/phone-input/phone-input.component';
+import { PermissionMatrixComponent } from './permission-matrix.component';
 
 @Component({
   styleUrl: './users.scss',
   selector: 'app-user-details',
-  imports: [ReactiveFormsModule, RouterLink, DatePipe, PhoneInputComponent],
+  imports: [ReactiveFormsModule, RouterLink, DatePipe, PhoneInputComponent, PermissionMatrixComponent],
   template: `
     <a class="back" routerLink="/users">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="inline-size: 1rem; block-size: 1rem;">
@@ -82,7 +83,7 @@ import { PhoneInputComponent } from '../../shared/phone-input/phone-input.compon
           <form [formGroup]="profile" (ngSubmit)="saveProfile()" class="form-vertical">
             <label>
               <span>{{ text('Full Name', 'الاسم الكامل') }} <strong class="req">*</strong></span>
-              <input formControlName="displayName" [class.invalid]="profile.controls.displayName.invalid && profile.controls.displayName.touched" />
+              <input formControlName="displayName" [readonly]="!auth.hasPermission('Users.Edit')" [class.invalid]="profile.controls.displayName.invalid && profile.controls.displayName.touched" />
               @if (profile.controls.displayName.invalid && profile.controls.displayName.touched) {
                 <span class="field-error">{{ text('Name is required.', 'الاسم مطلوب.') }}</span>
               }
@@ -92,6 +93,7 @@ import { PhoneInputComponent } from '../../shared/phone-input/phone-input.compon
               <span>{{ text('Phone Number', 'رقم الهاتف') }}</span>
               <app-phone-input
                 formControlName="phone"
+                [disabled]="!auth.hasPermission('Users.Edit')"
                 [class.invalid]="profile.controls.phone.touched && profile.controls.phone.invalid"
               ></app-phone-input>
               @if (profile.controls.phone.touched && profile.controls.phone.errors?.['invalidPhone']) {
@@ -106,16 +108,16 @@ import { PhoneInputComponent } from '../../shared/phone-input/phone-input.compon
               <input [value]="user()!.email" disabled style="background: var(--surface); color: var(--muted); cursor: not-allowed;" />
             </label>
 
-            <div class="form-actions-inline">
+            @if (auth.hasPermission('Users.Edit')) { <div class="form-actions-inline">
               <button class="button primary" [disabled]="profile.invalid || saving()">
                 {{ saving() ? text('Saving…', 'جارٍ الحفظ…') : text('Save Profile', 'حفظ التعديلات') }}
               </button>
-            </div>
+            </div> }
           </form>
         </section>
 
         <!-- Roles and Permissions -->
-        <section class="panel">
+        @if (auth.hasPermission('Users.ManageRoles') && id !== auth.userId()) { <section class="panel">
           <div class="panel-head-icon">
             <div class="icon-circle">🛡️</div>
             <div>
@@ -156,10 +158,19 @@ import { PhoneInputComponent } from '../../shared/phone-input/phone-input.compon
               {{ saving() ? text('Updating…', 'جارٍ التحديث…') : text('Update Roles', 'تحديث الأدوار والصلاحيات') }}
             </button>
           </div>
-        </section>
+        </section> }
+
+        @if (auth.hasPermission('Users.ManageRoles') && id !== auth.userId()) {
+          <section class="panel">
+            <div class="panel-head-icon"><div class="icon-circle">🔐</div><div><h2>{{ text('Access by module', 'صلاحيات كل موديول') }}</h2><p class="panel-desc">{{ text('Customize this user’s effective permissions, or use the assigned roles.', 'خصص الصلاحيات الفعلية لهذا المستخدم أو استخدم صلاحيات الأدوار المسندة.') }}</p></div></div>
+            <label class="permission-mode"><input type="checkbox" [checked]="customPermissions() !== null" (change)="toggleCustomPermissions()" />{{ text('Custom permissions', 'صلاحيات مخصصة') }}</label>
+            @if (customPermissions() !== null) { <app-permission-matrix [catalog]="permissionCatalog()" [selected]="customPermissions()!" [arabic]="i18n.language() === 'ar'" (selectedChange)="customPermissions.set($event)" /> }
+            <div class="form-actions-inline"><button class="button primary" type="button" [disabled]="saving()" (click)="savePermissions()">{{ text('Save permissions', 'حفظ الصلاحيات') }}</button></div>
+          </section>
+        }
 
         <!-- Danger / Account Status Zone -->
-        <section class="panel danger-zone">
+        @if (id !== auth.userId() && (auth.hasPermission('Users.Activate') || auth.hasPermission('Users.Deactivate'))) { <section class="panel danger-zone">
           <div class="danger-head">
             <div class="danger-icon">⚠️</div>
             <div>
@@ -176,21 +187,21 @@ import { PhoneInputComponent } from '../../shared/phone-input/phone-input.compon
           </div>
 
           <div class="danger-actions">
-            @if (user()!.status === 2) {
+            @if (user()!.status === 2 && auth.hasPermission('Users.Deactivate')) {
               <button type="button" class="button danger" (click)="changeStatus(false)">
                 {{ text('Deactivate Account', 'إلغاء تنشيط الحساب') }}
               </button>
-            } @else if (user()!.status === 3) {
+            } @else if (user()!.status === 3 && auth.hasPermission('Users.Activate')) {
               <button type="button" class="button primary" (click)="changeStatus(true)">
                 {{ text('Activate Account', 'إعادة تنشيط الحساب') }}
               </button>
-            } @else {
+            } @else if (auth.hasPermission('Users.Deactivate')) {
               <button type="button" class="button danger" (click)="changeStatus(false)">
                 {{ text('Cancel Invitation', 'إلغاء الدعوة') }}
               </button>
             }
           </div>
-        </section>
+        </section> }
       </div>
     }
   `,
@@ -198,12 +209,14 @@ import { PhoneInputComponent } from '../../shared/phone-input/phone-input.compon
 export class UserDetailsComponent {
   private readonly api = inject(UserApiService);
   private readonly doctorApi = inject(DoctorApiService);
-  private readonly auth = inject(AuthService);
-  private readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id')!;
+  readonly auth = inject(AuthService);
+  readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id')!;
   readonly i18n = inject(LocalizationService);
   readonly user = signal<UserDetails | null>(null);
   readonly roles = signal<RoleSummary[]>([]);
   readonly selectedRoles = signal(new Set<string>());
+  readonly permissionCatalog = signal<string[]>([]);
+  readonly customPermissions = signal<string[] | null>(null);
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly error = signal('');
@@ -216,6 +229,7 @@ export class UserDetailsComponent {
 
   constructor() {
     this.api.roles().subscribe((value) => this.roles.set(value));
+    if (this.auth.hasPermission('Users.ManageRoles')) this.api.permissionCatalog().subscribe({ next: value => this.permissionCatalog.set(value) });
     this.load();
   }
 
@@ -225,6 +239,7 @@ export class UserDetailsComponent {
         this.user.set(user);
         this.profile.setValue({ displayName: user.displayName, phone: user.phone ?? '' });
         this.selectedRoles.set(new Set(user.roles.map((x) => x.id)));
+        this.customPermissions.set(user.customPermissions);
         this.loading.set(false);
       },
       error: () => {
@@ -272,6 +287,18 @@ export class UserDetailsComponent {
         },
         error: () => this.failed(),
       });
+  }
+
+  toggleCustomPermissions(): void {
+    this.customPermissions.set(this.customPermissions() === null ? [...(this.user()?.effectivePermissions || [])] : null);
+  }
+
+  savePermissions(): void {
+    this.saving.set(true);
+    this.api.setPermissions(this.id, this.customPermissions()).subscribe({
+      next: () => { this.done(this.text('Permissions updated.', 'تم تحديث الصلاحيات.')); this.load(); },
+      error: () => this.failed(),
+    });
   }
 
   changeStatus(active: boolean): void {

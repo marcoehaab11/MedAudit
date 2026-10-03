@@ -130,6 +130,7 @@ public static class Permissions
     public const string InsuranceView = "Insurance.View";
     public const string InsuranceManage = "Insurance.Manage";
     public const string InsuranceSettle = "Insurance.Settle";
+    public const string BackupCreate = "Backup.Create";
 
     public static IReadOnlySet<string> All { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
@@ -165,6 +166,6 @@ public static class Permissions
         InventoryView, InventoryManageItems, InventoryManageCategories, InventoryManageSuppliers,
         InventoryReceive, InventoryIssue, InventoryAdjust, InventoryViewCosts,
         PharmacyView, PharmacyDispense, PharmacyEditCatalog, PharmacyViewHistory, PharmacyViewDashboard, PharmacyReverseDispensing,
-        LabView, LabManage, LabSettle, InsuranceView, InsuranceManage, InsuranceSettle
+        LabView, LabManage, LabSettle, InsuranceView, InsuranceManage, InsuranceSettle, BackupCreate
     };
 }

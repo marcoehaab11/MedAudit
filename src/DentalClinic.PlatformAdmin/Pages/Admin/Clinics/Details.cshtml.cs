@@ -13,12 +13,23 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using QRCoder;
 using System.Text;
+using System.Security.Cryptography;
+using System.Text.Json;
+using DentalClinic.Infrastructure.Services;
 
 namespace DentalClinic.PlatformAdmin.Pages.Admin.Clinics;
 
 [Authorize(Policy = AuthConstants.PlatformAdminPolicy)]
-public sealed class DetailsModel(IClinicManagementService clinics, IPlatformUserInspectionService users, ApplicationDbContext db) : PageModel
+[RequestFormLimits(MultipartBodyLengthLimit = 2_147_483_647)]
+[RequestSizeLimit(2_147_483_647)]
+public sealed partial class DetailsModel(IClinicManagementService clinics, IPlatformUserInspectionService users, ApplicationDbContext db, ClinicBackupService backups, ILogger<DetailsModel> logger) : PageModel
 {
+    [LoggerMessage(EventId = 510, Level = LogLevel.Warning, Message = "Platform administrator exported backup for clinic {ClinicId}")]
+    private partial void BackupExported(Guid clinicId);
+    [LoggerMessage(EventId = 511, Level = LogLevel.Warning, Message = "Platform administrator restored clinic {ClinicId} from backup created {BackupCreatedAt} with modules {Modules}")]
+    private partial void BackupRestored(Guid clinicId, DateTimeOffset backupCreatedAt, string modules);
+    [LoggerMessage(EventId = 512, Level = LogLevel.Warning, Message = "Clinic {ClinicId} restore rejected")]
+    private partial void RestoreRejected(Exception exception, Guid clinicId);
     public sealed record UsageStats(int Patients, int Appointments, int OnlineBookings, int BookingInquiries,
         int PageVisits, int FailedNotifications, int UncontactedLeads, DateTimeOffset? LastActivity);
     public UsageStats Usage { get; private set; } = new(0, 0, 0, 0, 0, 0, 0, null);
@@ -29,6 +40,8 @@ public sealed class DetailsModel(IClinicManagementService clinics, IPlatformUser
     public string ClinicAppUrl { get; private set; } = string.Empty;
     public string BookingQrDataUri { get; private set; } = string.Empty;
     [TempData] public string? SuccessMessage { get; set; }
+    [TempData] public string? BackupErrorMessage { get; set; }
+    public IReadOnlyList<BackupModule> BackupModules => ClinicBackupService.Modules;
 
     public async Task<IActionResult> OnGetAsync(Guid id, int userPage = 1, CancellationToken cancellationToken = default)
     {
@@ -85,6 +98,57 @@ public sealed class DetailsModel(IClinicManagementService clinics, IPlatformUser
     {
         if (!await clinics.SetUserActiveAsync(id, userId, active, cancellationToken)) return NotFound();
         SuccessMessage = active ? "User access restored." : "User access disabled immediately.";
+        return RedirectToPage(new { id });
+    }
+
+    public async Task<IActionResult> OnPostBackupAsync(Guid id, string password, CancellationToken cancellationToken)
+    {
+        if (!await db.Tenants.AnyAsync(x => x.Id == id, cancellationToken)) return NotFound();
+        try
+        {
+            var backup = await backups.ExportAsync(id, ["all"], password, cancellationToken);
+            BackupExported(id);
+            return File(backup.Stream, "application/octet-stream", backup.Name);
+        }
+        catch (ArgumentException ex)
+        {
+            BackupErrorMessage = ex.Message;
+            return RedirectToPage(new { id });
+        }
+    }
+
+    public async Task<IActionResult> OnPostPreviewRestoreAsync(Guid id, IFormFile file, string password, CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0) return BadRequest(new { error = "Select a backup file." });
+        try
+        {
+            var manifest = await backups.InspectAsync(file.OpenReadStream(), password, id, cancellationToken);
+            return new JsonResult(new { manifest.ClinicName, manifest.CreatedAt, manifest.Modules, tables = manifest.Tables.Length, rows = manifest.Tables.Sum(x => x.Rows) });
+        }
+        catch (Exception ex) when (ex is InvalidDataException or CryptographicException or ArgumentException or InvalidOperationException or JsonException or EndOfStreamException or FormatException)
+        {
+            return BadRequest(new { error = "Backup file is invalid, damaged, or does not match this clinic and database version." });
+        }
+    }
+
+    public async Task<IActionResult> OnPostRestoreAsync(Guid id, IFormFile file, string password, bool safetyCopyDownloaded, CancellationToken cancellationToken)
+    {
+        if (!safetyCopyDownloaded || file is null || file.Length == 0)
+        {
+            BackupErrorMessage = "Download a current full backup and select a restore file first.";
+            return RedirectToPage(new { id });
+        }
+        try
+        {
+            var manifest = await backups.RestoreAsync(file.OpenReadStream(), password, id, cancellationToken);
+            BackupRestored(id, manifest.CreatedAt, string.Join(",", manifest.Modules));
+            SuccessMessage = $"Clinic restored from {manifest.CreatedAt:u}.";
+        }
+        catch (Exception ex) when (ex is InvalidDataException or CryptographicException or ArgumentException or InvalidOperationException or JsonException or EndOfStreamException or FormatException or Npgsql.PostgresException)
+        {
+            RestoreRejected(ex, id);
+            BackupErrorMessage = ex is InvalidOperationException ? ex.Message : "Restore failed validation or could not complete. No clinic data was changed.";
+        }
         return RedirectToPage(new { id });
     }
 }

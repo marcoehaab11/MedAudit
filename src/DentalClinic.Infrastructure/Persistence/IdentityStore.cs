@@ -125,9 +125,12 @@ internal sealed class IdentityStore(
                            orderby role.Name
                            select new RoleSummary(role.Id, role.Name, role.Description, role.IsSystemRole))
             .ToListAsync(cancellationToken);
+        var custom = await context.UserPermissionProfiles.AsNoTracking()
+            .Where(x => x.UserId == userId).Select(x => x.Permissions).SingleOrDefaultAsync(cancellationToken);
+        var effective = await GetEffectivePermissionsAsync(userId, cancellationToken);
         return new UserDetails(
             row.Id, row.DisplayName, row.Email, row.Phone, row.Status,
-            roles, row.CreatedAt, row.UpdatedAt);
+            roles, row.CreatedAt, row.UpdatedAt, custom, effective);
     }
 
     public Task<ClinicUser?> FindUserAsync(Guid userId, CancellationToken cancellationToken) =>
@@ -169,9 +172,13 @@ internal sealed class IdentityStore(
 
     public async Task<IReadOnlyCollection<string>> GetEffectivePermissionsAsync(
         Guid userId,
-        CancellationToken cancellationToken) =>
-        await EffectivePermissionsQuery(context.UserRoleAssignments, context.RolePermissions, userId)
+        CancellationToken cancellationToken)
+    {
+        var profile = await context.UserPermissionProfiles.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.UserId == userId, cancellationToken);
+        return profile is not null ? profile.Permissions : await EffectivePermissionsQuery(context.UserRoleAssignments, context.RolePermissions, userId)
             .ToListAsync(cancellationToken);
+    }
 
     public async Task<IReadOnlyCollection<string>> GetRolePermissionsAsync(
         Guid roleId,
@@ -188,6 +195,12 @@ internal sealed class IdentityStore(
         Guid userId,
         CancellationToken cancellationToken) =>
         await context.UserRoleAssignments.Where(x => x.UserId == userId).ToListAsync(cancellationToken);
+
+    public Task<UserPermissionProfile?> GetUserPermissionProfileAsync(Guid userId, CancellationToken cancellationToken) =>
+        context.UserPermissionProfiles.SingleOrDefaultAsync(x => x.UserId == userId, cancellationToken);
+
+    public void AddUserPermissionProfile(UserPermissionProfile profile) => context.UserPermissionProfiles.Add(profile);
+    public void RemoveUserPermissionProfile(UserPermissionProfile profile) => context.UserPermissionProfiles.Remove(profile);
 
     public async Task<InvitationAccount?> FindInvitationAsync(
         string tokenHash,
@@ -239,7 +252,9 @@ internal sealed class IdentityStore(
             .Where(x => x.TenantId == tenantId);
         var rolePermissions = context.RolePermissions.IgnoreQueryFilters()
             .Where(x => x.TenantId == tenantId);
-        return await EffectivePermissionsQuery(assignments, rolePermissions, userId)
+        var profile = await context.UserPermissionProfiles.IgnoreQueryFilters().AsNoTracking()
+            .SingleOrDefaultAsync(x => x.TenantId == tenantId && x.UserId == userId, cancellationToken);
+        return profile is not null ? profile.Permissions : await EffectivePermissionsQuery(assignments, rolePermissions, userId)
             .ToListAsync(cancellationToken);
     }
 

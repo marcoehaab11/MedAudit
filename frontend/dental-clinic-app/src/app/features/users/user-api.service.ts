@@ -19,7 +19,10 @@ export interface UserListItem {
 export interface UserDetails extends Omit<UserListItem, 'roles'> {
   roles: RoleSummary[];
   updatedAt: string;
+  customPermissions: string[] | null;
+  effectivePermissions: string[];
 }
+export interface RoleDetails extends RoleSummary { permissions: string[] }
 export interface PagedUsers {
   items: UserListItem[];
   page: number;
@@ -45,7 +48,9 @@ export class UserApiService {
   roles() {
     return this.http.get<RoleSummary[]>('/api/roles');
   }
-  createUser(value: { displayName: string; email: string; password: string; phone?: string; roleIds: string[] }) {
+  role(id: string) { return this.http.get<RoleDetails>(`/api/roles/${id}`); }
+  permissionCatalog() { return this.http.get<string[]>('/api/roles/permission-catalog'); }
+  createUser(value: { displayName: string; email: string; password: string; phone?: string; roleIds: string[]; permissions?: string[] | null }) {
     return this.http.post<{ id: string }>('/api/users', value);
   }
   invite(value: { displayName: string; email: string; phone?: string; roleIds: string[] }) {
@@ -59,6 +64,9 @@ export class UserApiService {
   }
   assignRoles(id: string, roleIds: string[]) {
     return this.http.put<void>(`/api/users/${id}/roles`, { roleIds });
+  }
+  setPermissions(id: string, permissions: string[] | null) {
+    return this.http.put<void>(`/api/users/${id}/permissions`, { permissions });
   }
 }
 

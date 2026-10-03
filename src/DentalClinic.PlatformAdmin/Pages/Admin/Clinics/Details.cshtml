@@ -114,6 +114,10 @@
         <div>@Model.SuccessMessage</div>
     </div>
 }
+@if (!string.IsNullOrWhiteSpace(Model.BackupErrorMessage))
+{
+    <div class="alert alert-danger" role="alert">@Model.BackupErrorMessage</div>
+}
 
 <!-- Administrator Login & Access Handover Card -->
 <div class="card shadow-sm border-0 mb-4 bg-emerald-subtle border-emerald-subtle">
@@ -288,6 +292,28 @@
 </div>
 
 <div class="card shadow-sm border-0 mt-4 mb-4">
+    <div class="card-header bg-white py-3 px-4"><h5 class="fw-bold mb-0">Backup &amp; restore · @Model.Clinic.Name</h5></div>
+    <div class="card-body p-4">
+        <p class="text-muted">Download an encrypted full copy of this clinic. Keep the file and its password outside the server. Only platform administrators can restore it.</p>
+        <form method="post" asp-page-handler="Backup" class="row g-2 align-items-end mb-4">
+            <input type="hidden" name="id" value="@Model.Clinic.Id" />
+            <div class="col-md-8"><label class="form-label" for="backup-password">Backup password · at least 12 characters</label><input id="backup-password" class="form-control" type="password" name="password" minlength="12" required autocomplete="new-password" /></div>
+            <div class="col-md-4"><button class="btn btn-outline-primary w-100" type="submit">Download full backup</button></div>
+        </form>
+        <form id="restore-form" method="post" enctype="multipart/form-data" asp-page-handler="Restore" data-preview-url="@Url.Page("/Admin/Clinics/Details", "PreviewRestore", new { id = Model.Clinic.Id })" onsubmit="return confirm('Replace this clinic’s selected data with the inspected backup? This action cannot be undone without your downloaded safety copy.');">
+            <input type="hidden" name="id" value="@Model.Clinic.Id" />
+            <div class="row g-2">
+                <div class="col-md-6"><label class="form-label" for="restore-file">Encrypted backup file</label><input id="restore-file" class="form-control" type="file" name="file" accept=".plnbak" required /></div>
+                <div class="col-md-6"><label class="form-label" for="restore-password">Backup password</label><input id="restore-password" class="form-control" type="password" name="password" required /></div>
+            </div>
+            <div id="restore-preview" class="alert alert-secondary my-3" aria-live="polite">Select a backup and preview its clinic, date, modules and row count before restoring.</div>
+            <label class="form-check mb-3"><input class="form-check-input" type="checkbox" name="safetyCopyDownloaded" value="true" required /><span class="form-check-label">I downloaded a current full backup of this clinic as a safety copy.</span></label>
+            <div class="d-flex gap-2"><button id="preview-restore" class="btn btn-outline-secondary" type="button">Preview restore</button><button id="confirm-restore" class="btn btn-danger" type="submit" disabled>Restore clinic data</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mt-4 mb-4">
     <div class="card-header bg-white py-3 px-4 border-bottom"><h5 class="fw-bold mb-0">Clinic users &amp; individual access</h5></div>
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
@@ -324,6 +350,24 @@
 
 @section Scripts {
     <script>
+        (() => {
+            const form = document.getElementById('restore-form');
+            const preview = document.getElementById('restore-preview');
+            const restore = document.getElementById('confirm-restore');
+            for (const id of ['restore-file', 'restore-password']) document.getElementById(id).addEventListener('change', () => { restore.disabled = true; preview.textContent = 'Preview this file before restoring.'; });
+            document.getElementById('preview-restore').addEventListener('click', async () => {
+                restore.disabled = true;
+                if (!form.querySelector('[name="file"]').files.length) { preview.textContent = 'Select a backup file first.'; return; }
+                preview.textContent = 'Checking backup…';
+                try {
+                    const response = await fetch(form.dataset.previewUrl, { method: 'POST', body: new FormData(form), credentials: 'same-origin' });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || 'Backup could not be inspected.');
+                    preview.textContent = `Clinic: ${result.clinicName} · Created: ${new Date(result.createdAt).toLocaleString()} · Modules: ${result.modules.join(', ')} · Tables: ${result.tables} · Rows: ${result.rows}`;
+                    restore.disabled = false;
+                } catch (error) { preview.textContent = error.message; }
+            });
+        })();
         function copyCredentials(email, password) {
             const text = `Clinic Portal: ${document.getElementById('clinic-portal-link').href}\nEmail: ${email}\nPassword: ${password}`;
             navigator.clipboard.writeText(text).then(() => {

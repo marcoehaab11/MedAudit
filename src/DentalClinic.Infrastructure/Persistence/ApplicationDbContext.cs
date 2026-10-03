@@ -43,6 +43,7 @@ public sealed class ApplicationDbContext(
     public DbSet<TenantRole> TenantRoles => Set<TenantRole>();
     public DbSet<RolePermissionGrant> RolePermissions => Set<RolePermissionGrant>();
     public DbSet<UserRoleAssignment> UserRoleAssignments => Set<UserRoleAssignment>();
+    public DbSet<UserPermissionProfile> UserPermissionProfiles => Set<UserPermissionProfile>();
     public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<PatientAllergy> PatientAllergies => Set<PatientAllergy>();
     public DbSet<PatientMedicalCondition> PatientMedicalConditions => Set<PatientMedicalCondition>();
@@ -187,6 +188,17 @@ public sealed class ApplicationDbContext(
             entity.HasIndex(x => new { x.TenantId, x.UserId, x.RoleId }).IsUnique();
             entity.HasOne<ClinicUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<TenantRole>().WithMany().HasForeignKey(x => x.RoleId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<UserPermissionProfile>(entity =>
+        {
+            entity.ToTable("user_permission_profiles");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Permissions).HasColumnType("text[]").IsRequired();
+            entity.HasIndex(x => new { x.TenantId, x.UserId }).IsUnique();
+            entity.HasOne<ClinicUser>().WithMany().HasForeignKey(x => new { x.TenantId, x.UserId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Cascade);
             entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
         });
 

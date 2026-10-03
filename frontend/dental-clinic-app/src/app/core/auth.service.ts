@@ -26,6 +26,13 @@ export class AuthService {
     return this.permissions().includes(permission);
   }
 
+  refreshPermissions() {
+    return this.http.get<string[]>('/api/auth/permissions').pipe(tap(value => {
+      localStorage.setItem('permissions', JSON.stringify(value));
+      this.permissions.set(value);
+    }));
+  }
+
   setDisplayName(name: string): void {
     if (!name) return;
     localStorage.setItem('display_name', name);

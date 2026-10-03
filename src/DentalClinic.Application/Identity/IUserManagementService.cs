@@ -12,6 +12,7 @@ public interface IUserManagementService
     Task<bool> UpdateUserAsync(UpdateUserCommand command, CancellationToken cancellationToken);
     Task<bool> SetUserActiveAsync(Guid userId, bool active, CancellationToken cancellationToken);
     Task<bool> AssignRolesAsync(AssignUserRolesCommand command, CancellationToken cancellationToken);
+    Task<bool> SetUserPermissionsAsync(SetUserPermissionsCommand command, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<RoleSummary>> GetRolesAsync(CancellationToken cancellationToken);
     Task<RoleDetails?> GetRoleAsync(Guid roleId, CancellationToken cancellationToken);
     Task<Guid> CreateRoleAsync(CreateRoleCommand command, CancellationToken cancellationToken);

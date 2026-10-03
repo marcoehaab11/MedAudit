@@ -23,6 +23,7 @@ export class App implements OnDestroy {
   protected readonly displayName = this.auth.displayName;
 
   constructor() {
+    if (this.auth.authenticated()) this.auth.refreshPermissions().subscribe({ error: () => {} });
     this.navSub = this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe(() => {

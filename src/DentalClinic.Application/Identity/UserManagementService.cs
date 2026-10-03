@@ -56,6 +56,7 @@ internal sealed class UserManagementService(
         }
 
         var roles = await ValidateAssignableRolesAsync(command.RoleIds, cancellationToken);
+        if (command.Permissions is not null) await EnsurePermissionsAssignableAsync(command.Permissions, cancellationToken);
         var now = clock.UtcNow;
         await using var transaction = await store.BeginTransactionAsync(cancellationToken);
         var userId = await credentials.CreateUserWithPasswordAsync(
@@ -67,6 +68,8 @@ internal sealed class UserManagementService(
             store.AddUserRole(new UserRoleAssignment(tenantId, userId, role.Id, now));
             AddAudit(PlatformAuditAction.RoleAssigned, nameof(TenantRole), role.Id, now);
         }
+        if (command.Permissions is not null)
+            store.AddUserPermissionProfile(new UserPermissionProfile(tenantId, userId, command.Permissions));
 
         var isDoctorRole = roles.Any(r => string.Equals(r.NormalizedName, "DOCTOR", StringComparison.OrdinalIgnoreCase) ||
                                           string.Equals(r.Name, "Doctor", StringComparison.OrdinalIgnoreCase));
@@ -106,6 +109,7 @@ internal sealed class UserManagementService(
         }
 
         var roles = await ValidateAssignableRolesAsync(command.RoleIds, cancellationToken);
+        if (command.Permissions is not null) await EnsurePermissionsAssignableAsync(command.Permissions, cancellationToken);
         var now = clock.UtcNow;
         await using var transaction = await store.BeginTransactionAsync(cancellationToken);
         var userId = await credentials.CreateInvitedUserAsync(
@@ -117,6 +121,8 @@ internal sealed class UserManagementService(
             store.AddUserRole(new UserRoleAssignment(tenantId, userId, role.Id, now));
             AddAudit(PlatformAuditAction.RoleAssigned, nameof(TenantRole), role.Id, now);
         }
+        if (command.Permissions is not null)
+            store.AddUserPermissionProfile(new UserPermissionProfile(tenantId, userId, command.Permissions));
 
         var token = tokenGenerator.Generate();
         var invitation = new AdminInvitation(
@@ -215,6 +221,25 @@ internal sealed class UserManagementService(
             AddAudit(PlatformAuditAction.RoleAssigned, nameof(TenantRole), role.Id, now);
         }
 
+        await store.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> SetUserPermissionsAsync(SetUserPermissionsCommand command, CancellationToken cancellationToken)
+    {
+        await permissions.EnsurePermissionAsync(Permissions.UsersManageRoles, cancellationToken);
+        EnsureNotSelf(command.UserId);
+        if (await store.FindUserAsync(command.UserId, cancellationToken) is null) return false;
+        if (command.Permissions is not null) await EnsurePermissionsAssignableAsync(command.Permissions, cancellationToken);
+        var profile = await store.GetUserPermissionProfileAsync(command.UserId, cancellationToken);
+        if (command.Permissions is null)
+        {
+            if (profile is not null) store.RemoveUserPermissionProfile(profile);
+        }
+        else if (profile is null)
+            store.AddUserPermissionProfile(new UserPermissionProfile(currentTenant.RequireTenantId(), command.UserId, command.Permissions));
+        else profile.SetPermissions(command.Permissions);
+        AddAudit(PlatformAuditAction.PermissionsChanged, nameof(ClinicUser), command.UserId, clock.UtcNow);
         await store.SaveChangesAsync(cancellationToken);
         return true;
     }

@@ -63,7 +63,7 @@
         <!-- ── Clinical ── -->
         <div class="nav-group">
           <span class="nav-label">{{ t('Clinical', 'الاستشارات') }}</span>
-          <a class="nav-item" routerLink="/patients" routerLinkActive="active" (click)="closeMobileSidebar()">
+          @if (auth.hasPermission('Patients.View')) { <a class="nav-item" routerLink="/patients" routerLinkActive="active" (click)="closeMobileSidebar()">
             <span class="nav-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
@@ -71,7 +71,7 @@
               </svg>
             </span>
             <span class="nav-text">{{ t('Patients', 'المرضى') }}</span>
-          </a>
+          </a> }
 
           @if (auth.hasPermission('Doctors.View')) {
             <a class="nav-item" routerLink="/doctors" routerLinkActive="active" (click)="closeMobileSidebar()">
@@ -101,7 +101,7 @@
         </div>
 
         <!-- ── Treatment ── -->
-        @if (auth.hasPermission('TreatmentPlans.View') || auth.hasPermission('Treatments.View') || auth.hasPermission('Prescriptions.View')) {
+        @if (auth.hasPermission('TreatmentPlans.View') || auth.hasPermission('Treatments.View') || auth.hasPermission('TreatmentCatalog.View') || auth.hasPermission('Prescriptions.View')) {
           <div class="nav-group">
             <span class="nav-label">{{ t('Treatment', 'العلاج') }}</span>
 
@@ -128,14 +128,14 @@
               </a>
             }
 
-            <a class="nav-item" routerLink="/treatment-catalog" routerLinkActive="active" (click)="closeMobileSidebar()">
+            @if (auth.hasPermission('TreatmentCatalog.View')) { <a class="nav-item" routerLink="/treatment-catalog" routerLinkActive="active" (click)="closeMobileSidebar()">
               <span class="nav-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 2C6.5 2 4 6.5 4 10c0 4 2 7 3.5 10 .8 1.6 1.8 2 2.5 2 .8 0 1.2-.5 2-2 .8 1.5 1.2 2 2 2 .7 0 1.7-.4 2.5-2 1.5-3 3.5-6 3.5-10 0-3.5-2.5-8-8-8z"/>
                 </svg>
               </span>
               <span class="nav-text">{{ t('Treatment Catalog', 'أنواع العلاجات والأسعار') }}</span>
-            </a>
+            </a> }
 
             @if (auth.hasPermission('Prescriptions.View')) {
               <a class="nav-item" routerLink="/prescriptions" routerLinkActive="active" (click)="closeMobileSidebar()">
@@ -163,10 +163,10 @@
         }
 
         <!-- ── Finance ── -->
-        @if (auth.hasPermission('Finance.View')) {
+        @if (auth.hasPermission('Finance.View') || auth.hasPermission('Finance.Revenue.View') || auth.hasPermission('Finance.Payments.View') || auth.hasPermission('Finance.Expenses.View')) {
           <div class="nav-group">
             <span class="nav-label">{{ t('Finance', 'المالية') }}</span>
-            <a class="nav-item" routerLink="/finance" [routerLinkActiveOptions]="{exact: true}" routerLinkActive="active" (click)="closeMobileSidebar()">
+            @if (auth.hasPermission('Finance.View')) { <a class="nav-item" routerLink="/finance" [routerLinkActiveOptions]="{exact: true}" routerLinkActive="active" (click)="closeMobileSidebar()">
               <span class="nav-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="12" y1="1" x2="12" y2="23"/>
@@ -174,8 +174,8 @@
                 </svg>
               </span>
               <span class="nav-text">{{ t('Overview', 'نظرة عامة') }}</span>
-            </a>
-            <a class="nav-item" routerLink="/finance/revenue" routerLinkActive="active" (click)="closeMobileSidebar()">
+            </a> }
+            @if (auth.hasPermission('Finance.Revenue.View')) { <a class="nav-item" routerLink="/finance/revenue" routerLinkActive="active" (click)="closeMobileSidebar()">
               <span class="nav-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
@@ -183,16 +183,16 @@
                 </svg>
               </span>
               <span class="nav-text">{{ t('Revenue', 'الإيرادات') }}</span>
-            </a>
-            <a class="nav-item" routerLink="/finance/payments" routerLinkActive="active" (click)="closeMobileSidebar()">
+            </a> }
+            @if (auth.hasPermission('Finance.Payments.View')) { <a class="nav-item" routerLink="/finance/payments" routerLinkActive="active" (click)="closeMobileSidebar()">
               <span class="nav-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
                 </svg>
               </span>
               <span class="nav-text">{{ t('Payments', 'المدفوعات') }}</span>
-            </a>
-            <a class="nav-item" routerLink="/finance/expenses" routerLinkActive="active" (click)="closeMobileSidebar()">
+            </a> }
+            @if (auth.hasPermission('Finance.Expenses.View')) { <a class="nav-item" routerLink="/finance/expenses" routerLinkActive="active" (click)="closeMobileSidebar()">
               <span class="nav-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z"/>
@@ -200,7 +200,7 @@
                 </svg>
               </span>
               <span class="nav-text">{{ t('Expenses', 'المصروفات') }}</span>
-            </a>
+            </a> }
           </div>
         }
 
@@ -267,7 +267,7 @@
         <!-- ── System ── -->
         <div class="nav-group">
           <span class="nav-label">{{ t('System', 'النظام') }}</span>
-          <a class="nav-item" routerLink="/users" routerLinkActive="active" (click)="closeMobileSidebar()">
+          @if (auth.hasPermission('Users.View')) { <a class="nav-item" routerLink="/users" routerLinkActive="active" (click)="closeMobileSidebar()">
             <span class="nav-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
@@ -277,7 +277,7 @@
               </svg>
             </span>
             <span class="nav-text">{{ t('Users', 'المستخدمون') }}</span>
-          </a>
+          </a> }
 
           @if (auth.hasPermission('Notifications.View')) {
             <a class="nav-item" routerLink="/notifications" routerLinkActive="active" (click)="closeMobileSidebar()">
@@ -291,17 +291,17 @@
             </a>
           }
 
-          <a class="nav-item" routerLink="/online-booking" routerLinkActive="active" (click)="closeMobileSidebar()">
+          @if (auth.hasPermission('Settings.PublicBooking')) { <a class="nav-item" routerLink="/online-booking" routerLinkActive="active" (click)="closeMobileSidebar()">
             <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/><path d="M17 17l3 3"/></svg></span>
             <span class="nav-text">{{ t('Online booking', 'الحجز الإلكتروني') }}</span>
-          </a>
+          </a> }
 
           <a class="nav-item" routerLink="/guide" routerLinkActive="active" (click)="closeMobileSidebar()">
             <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.5 9a2.5 2.5 0 1 1 4.3 1.7c-1.1 1-1.8 1.4-1.8 3.3"/><path d="M12 17h.01"/></svg></span>
             <span class="nav-text">{{ t('Guide & help', 'الدليل والمساعدة') }}</span>
           </a>
 
-          <a class="nav-item" routerLink="/settings" routerLinkActive="active" (click)="closeMobileSidebar()">
+          @if (auth.hasPermission('Settings.View')) { <a class="nav-item" routerLink="/settings" routerLinkActive="active" (click)="closeMobileSidebar()">
             <span class="nav-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
@@ -309,7 +309,8 @@
               </svg>
             </span>
             <span class="nav-text">{{ t('Settings', 'الإعدادات') }}</span>
-          </a>
+          </a> }
+          @if (auth.hasPermission('Backup.Create')) { <a class="nav-item" routerLink="/backup" routerLinkActive="active" (click)="closeMobileSidebar()"><span class="nav-icon" aria-hidden="true">⇩</span><span class="nav-text">{{ t('Backup', 'نسخة احتياطية') }}</span></a> }
         </div>
 
       </nav>
@@ -369,9 +370,9 @@
         <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMobileSidebar()">
           <span class="mobile-nav-icon">⌂</span><span>{{ t('Home', 'الرئيسية') }}</span>
         </a>
-        <a routerLink="/patients" routerLinkActive="active" (click)="closeMobileSidebar()">
+        @if (auth.hasPermission('Patients.View')) { <a routerLink="/patients" routerLinkActive="active" (click)="closeMobileSidebar()">
           <span class="mobile-nav-icon">♙</span><span>{{ t('Patients', 'المرضى') }}</span>
-        </a>
+        </a> }
         @if (auth.hasPermission('Appointments.View')) {
           <a routerLink="/appointments" routerLinkActive="active" (click)="closeMobileSidebar()">
             <span class="mobile-nav-icon">□</span><span>{{ t('Appointments', 'المواعيد') }}</span>

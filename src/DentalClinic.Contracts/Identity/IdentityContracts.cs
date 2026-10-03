@@ -8,14 +8,17 @@ public sealed record CreateUserRequest(
     string Email,
     string Password,
     string? Phone,
-    IReadOnlyCollection<Guid> RoleIds);
+    IReadOnlyCollection<Guid> RoleIds,
+    IReadOnlyCollection<string>? Permissions = null);
 public sealed record InviteUserRequest(
     string DisplayName,
     string Email,
     string? Phone,
-    IReadOnlyCollection<Guid> RoleIds);
+    IReadOnlyCollection<Guid> RoleIds,
+    IReadOnlyCollection<string>? Permissions = null);
 public sealed record UpdateUserRequest(string DisplayName, string? Phone);
 public sealed record AssignUserRolesRequest(IReadOnlyCollection<Guid> RoleIds);
+public sealed record SetUserPermissionsRequest(IReadOnlyCollection<string>? Permissions);
 public sealed record CreateRoleRequest(
     string Name,
     string Description,

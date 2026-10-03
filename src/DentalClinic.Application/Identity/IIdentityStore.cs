@@ -24,6 +24,9 @@ public interface IIdentityStore
     Task<IReadOnlyCollection<string>> GetRolePermissionsAsync(Guid roleId, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<RolePermissionGrant>> GetRolePermissionEntitiesAsync(Guid roleId, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<UserRoleAssignment>> GetUserRoleAssignmentsAsync(Guid userId, CancellationToken cancellationToken);
+    Task<UserPermissionProfile?> GetUserPermissionProfileAsync(Guid userId, CancellationToken cancellationToken);
+    void AddUserPermissionProfile(UserPermissionProfile profile);
+    void RemoveUserPermissionProfile(UserPermissionProfile profile);
     Task<InvitationAccount?> FindInvitationAsync(string tokenHash, CancellationToken cancellationToken);
     Task<AdminInvitation?> FindPendingInvitationForUserAsync(Guid userId, CancellationToken cancellationToken);
     Task<LoginAccount?> FindLoginAccountAsync(string normalizedEmail, CancellationToken cancellationToken);

@@ -5,11 +5,13 @@ import { DatePipe } from '@angular/common';
 import { LocalizationService } from '../../core/localization.service';
 import { PagedUsers, RoleSummary, UserApiService, UserListItem } from './user-api.service';
 import { PhoneInputComponent } from '../../shared/phone-input/phone-input.component';
+import { PermissionMatrixComponent } from './permission-matrix.component';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   styleUrl: './users.scss',
   selector: 'app-users-page',
-  imports: [FormsModule, ReactiveFormsModule, RouterLink, DatePipe, PhoneInputComponent],
+  imports: [FormsModule, ReactiveFormsModule, RouterLink, DatePipe, PhoneInputComponent, PermissionMatrixComponent],
   template: `
     <section class="page-head">
       <div class="head-info">
@@ -24,7 +26,7 @@ import { PhoneInputComponent } from '../../shared/phone-input/phone-input.compon
           }}
         </p>
       </div>
-      <button class="button primary add-user-btn" type="button" (click)="openAddModal()">
+      @if (auth.hasPermission('Users.Create') && auth.hasPermission('Users.ManageRoles')) { <button class="button primary add-user-btn" type="button" (click)="openAddModal()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
           <circle cx="9" cy="7" r="4"/>
@@ -32,7 +34,7 @@ import { PhoneInputComponent } from '../../shared/phone-input/phone-input.compon
           <line x1="22" y1="11" x2="16" y2="11"/>
         </svg>
         <span>+ {{ text('Add user', 'إضافة مستخدم') }}</span>
-      </button>
+      </button> }
     </section>
 
     @if (success()) {
@@ -170,9 +172,9 @@ import { PhoneInputComponent } from '../../shared/phone-input/phone-input.compon
               )
             }}
           </p>
-          <button type="button" class="button primary" (click)="openAddModal()">
+          @if (auth.hasPermission('Users.Create') && auth.hasPermission('Users.ManageRoles')) { <button type="button" class="button primary" (click)="openAddModal()">
             + {{ text('Add user', 'إضافة مستخدم') }}
-          </button>
+          </button> }
         </div>
       } @else {
         <div class="table-scroll">
@@ -302,6 +304,7 @@ import { PhoneInputComponent } from '../../shared/phone-input/phone-input.compon
                   <span>{{ text('Role & Access', 'الدور ومستوى الصلاحيات') }} <strong class="req">*</strong></span>
                   <select
                     formControlName="roleId"
+                    (change)="onRoleChanged()"
                     [class.invalid]="userForm.controls.roleId.touched && userForm.controls.roleId.invalid"
                   >
                     <option value="">{{ text('Choose role…', 'اختر الدور…') }}</option>
@@ -360,6 +363,12 @@ import { PhoneInputComponent } from '../../shared/phone-input/phone-input.compon
                 </label>
               </div>
 
+              <label class="permission-mode"><input type="checkbox" [checked]="customizePermissions()" (change)="toggleCustomization()" />{{ text('Customize access to each module for this user', 'تخصيص صلاحيات كل موديول لهذا المستخدم') }}</label>
+              @if (customizePermissions()) {
+                <p>{{ text('The choices below replace the role access for this user. Select view, edit and sensitive actions as needed.', 'الاختيارات دي هتبقى صلاحيات المستخدم الفعلية بدل صلاحيات الدور. حدد العرض والتعديل والعمليات الحساسة حسب الحاجة.') }}</p>
+                <app-permission-matrix [catalog]="permissionCatalog()" [selected]="selectedPermissions()" [arabic]="i18n.language() === 'ar'" (selectedChange)="selectedPermissions.set($event)" />
+              }
+
               <div class="doctor-note-strip">
                 <span class="note-icon">✨</span>
                 <span>{{ text('If "Doctor" is selected, their doctor profile & scheduling will be activated automatically.', 'عند اختيار دور "طبيب"، يتم تلقائياً إنشاء ملف الطبيب وتفعيله في المواعيد والمخطط السني.') }}</span>
@@ -380,9 +389,13 @@ import { PhoneInputComponent } from '../../shared/phone-input/phone-input.compon
 })
 export class UsersPageComponent {
   private readonly api = inject(UserApiService);
+  readonly auth = inject(AuthService);
   readonly i18n = inject(LocalizationService);
   readonly result = signal<PagedUsers | null>(null);
   readonly roles = signal<RoleSummary[]>([]);
+  readonly permissionCatalog = signal<string[]>([]);
+  readonly customizePermissions = signal(false);
+  readonly selectedPermissions = signal<string[]>([]);
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly showAddUser = signal(false);
@@ -421,6 +434,7 @@ export class UsersPageComponent {
     this.api.roles().subscribe((value) => {
       this.roles.set(value);
     });
+    this.api.permissionCatalog().subscribe({ next: value => this.permissionCatalog.set(value) });
     this.load(1);
   }
 
@@ -459,11 +473,24 @@ export class UsersPageComponent {
       roleId: this.roles().length ? this.roles()[0].id : '',
     });
     this.showPassword.set(false);
+    this.customizePermissions.set(false);
+    this.selectedPermissions.set([]);
     this.showAddUser.set(true);
   }
 
   closeAddModal(): void {
     this.showAddUser.set(false);
+  }
+
+  toggleCustomization(): void {
+    this.customizePermissions.set(!this.customizePermissions());
+    if (this.customizePermissions()) this.onRoleChanged();
+  }
+
+  onRoleChanged(): void {
+    if (!this.customizePermissions()) return;
+    const roleId = this.userForm.controls.roleId.value;
+    if (roleId) this.api.role(roleId).subscribe({ next: role => this.selectedPermissions.set(role.permissions), error: () => this.modalError.set(this.text('Could not load role permissions.', 'تعذر تحميل صلاحيات الدور.')) });
   }
 
   createUser(): void {
@@ -483,6 +510,7 @@ export class UsersPageComponent {
         password: value.password,
         phone: value.phone || undefined,
         roleIds: [value.roleId],
+        permissions: this.customizePermissions() ? this.selectedPermissions() : null,
       })
       .subscribe({
         next: () => {

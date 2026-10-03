@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth.guard';
+import { permissionGuard } from './core/permission.guard';
 
 export const routes: Routes = [
   {
@@ -15,43 +16,43 @@ export const routes: Routes = [
   },
   {
     path: 'dashboard',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/dashboard/dashboard-page.component').then((x) => x.DashboardPageComponent),
   },
   {
     path: 'users',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/users/users-page.component').then((x) => x.UsersPageComponent),
   },
   {
     path: 'users/:id',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/users/user-details.component').then((x) => x.UserDetailsComponent),
   },
   {
     path: 'patients',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/patients/patients-page.component').then((x) => x.PatientsPageComponent),
   },
   {
     path: 'patients/create',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/patients/patient-form.component').then((x) => x.PatientFormComponent),
   },
   {
     path: 'patients/:id/edit',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/patients/patient-form.component').then((x) => x.PatientFormComponent),
   },
   {
     path: 'patients/:id',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/patients/patient-details.component').then(
         (x) => x.PatientDetailsComponent,
@@ -59,31 +60,31 @@ export const routes: Routes = [
   },
   {
     path: 'doctors',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/doctors/doctors-page.component').then((x) => x.DoctorsPageComponent),
   },
   {
     path: 'doctors/create',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/doctors/doctor-form.component').then((x) => x.DoctorFormComponent),
   },
   {
     path: 'doctors/:id/edit',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/doctors/doctor-form.component').then((x) => x.DoctorFormComponent),
   },
   {
     path: 'doctors/:id',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/doctors/doctor-details.component').then((x) => x.DoctorDetailsComponent),
   },
   {
     path: 'appointments',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/appointments/appointments-page.component').then(
         (x) => x.AppointmentsPageComponent,
@@ -91,7 +92,7 @@ export const routes: Routes = [
   },
   {
     path: 'appointments/create',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/appointments/appointment-create.component').then(
         (x) => x.AppointmentCreateComponent,
@@ -99,25 +100,25 @@ export const routes: Routes = [
   },
   {
     path: 'appointments/:appointmentId/examination',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/dental/examination.component').then((x) => x.ExaminationComponent),
   },
   {
     path: 'appointments/:appointmentId/visit',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/dental/examination.component').then((x) => x.ExaminationComponent),
   },
   {
     path: 'patients/:id/dental',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/dental/patient-dental.component').then((x) => x.PatientDentalComponent),
   },
   {
     path: 'treatment-plans',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/treatments/treatment-plans-page.component').then(
         (x) => x.TreatmentPlansPageComponent,
@@ -125,7 +126,7 @@ export const routes: Routes = [
   },
   {
     path: 'treatment-plans/create',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/treatments/treatment-plan-form.component').then(
         (x) => x.TreatmentPlanFormComponent,
@@ -133,7 +134,7 @@ export const routes: Routes = [
   },
   {
     path: 'treatment-plans/:id/edit',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/treatments/treatment-plan-form.component').then(
         (x) => x.TreatmentPlanFormComponent,
@@ -141,7 +142,7 @@ export const routes: Routes = [
   },
   {
     path: 'treatment-plans/:id',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/treatments/treatment-plan-details.component').then(
         (x) => x.TreatmentPlanDetailsComponent,
@@ -149,7 +150,7 @@ export const routes: Routes = [
   },
   {
     path: 'treatments',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/treatments/treatments-page.component').then(
         (x) => x.TreatmentsPageComponent,
@@ -157,7 +158,7 @@ export const routes: Routes = [
   },
   {
     path: 'treatment-catalog',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/treatments/treatment-catalog-page.component').then(
         (x) => x.TreatmentCatalogPageComponent,
@@ -170,7 +171,7 @@ export const routes: Routes = [
   },
   {
     path: 'treatments/:id',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/treatments/treatment-details.component').then(
         (x) => x.TreatmentDetailsComponent,
@@ -178,7 +179,7 @@ export const routes: Routes = [
   },
   {
     path: 'medications-catalog',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/prescriptions/medication-catalog-page.component').then(
         (x) => x.MedicationCatalogPageComponent,
@@ -191,7 +192,7 @@ export const routes: Routes = [
   },
   {
     path: 'prescriptions',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/prescriptions/prescriptions-page.component').then(
         (x) => x.PrescriptionsPageComponent,
@@ -199,7 +200,7 @@ export const routes: Routes = [
   },
   {
     path: 'prescriptions/create',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/prescriptions/prescription-form.component').then(
         (x) => x.PrescriptionFormComponent,
@@ -207,7 +208,7 @@ export const routes: Routes = [
   },
   {
     path: 'prescriptions/:id/edit',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/prescriptions/prescription-form.component').then(
         (x) => x.PrescriptionFormComponent,
@@ -215,7 +216,7 @@ export const routes: Routes = [
   },
   {
     path: 'prescriptions/:id',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/prescriptions/prescription-details.component').then(
         (x) => x.PrescriptionDetailsComponent,
@@ -223,31 +224,31 @@ export const routes: Routes = [
   },
   {
     path: 'crm',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/crm/crm-dashboard.component').then((x) => x.CrmDashboardComponent),
   },
   {
     path: 'crm/follow-ups',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/crm/follow-ups-page.component').then((x) => x.FollowUpsPageComponent),
   },
   {
     path: 'crm/follow-ups/create',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/crm/follow-up-form.component').then((x) => x.FollowUpFormComponent),
   },
   {
     path: 'crm/follow-ups/:id',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/crm/follow-up-details.component').then((x) => x.FollowUpDetailsComponent),
   },
   {
     path: 'finance',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/finance/finance-dashboard.component').then(
         (x) => x.FinanceDashboardComponent,
@@ -255,53 +256,53 @@ export const routes: Routes = [
   },
   {
     path: 'lab',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () => import('./features/clinic-business/lab-page.component').then(x => x.LabPageComponent),
   },
   {
     path: 'insurance',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () => import('./features/clinic-business/insurance-page.component').then(x => x.InsurancePageComponent),
   },
   {
     path: 'finance/revenue',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/finance/revenue-page.component').then((x) => x.RevenuePageComponent),
   },
   {
     path: 'finance/payments',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/finance/payments-page.component').then((x) => x.PaymentsPageComponent),
   },
   {
     path: 'finance/payments/create',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/finance/payments-page.component').then((x) => x.PaymentFormComponent),
   },
   {
     path: 'finance/expenses',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/finance/expenses-page.component').then((x) => x.ExpensesPageComponent),
   },
   {
     path: 'finance/expenses/create',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/finance/expenses-page.component').then((x) => x.ExpenseFormComponent),
   },
   {
     path: 'finance/categories',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/finance/categories-page.component').then((x) => x.CategoriesPageComponent),
   },
   {
     path: 'reports',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/reports/reports-dashboard.component').then(
         (x) => x.ReportsDashboardComponent,
@@ -309,7 +310,7 @@ export const routes: Routes = [
   },
   {
     path: 'reports/financial',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/reports/financial-report.component').then(
         (x) => x.FinancialReportComponent,
@@ -317,31 +318,31 @@ export const routes: Routes = [
   },
   {
     path: 'reports/revenue',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/reports/revenue-report.component').then((x) => x.RevenueReportComponent),
   },
   {
     path: 'reports/expenses',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/reports/expense-report.component').then((x) => x.ExpenseReportComponent),
   },
   {
     path: 'reports/profit',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/reports/profit-report.component').then((x) => x.ProfitReportComponent),
   },
   {
     path: 'reports/patients',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/reports/patient-report.component').then((x) => x.PatientReportComponent),
   },
   {
     path: 'reports/appointments',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/reports/appointment-report.component').then(
         (x) => x.AppointmentReportComponent,
@@ -349,13 +350,13 @@ export const routes: Routes = [
   },
   {
     path: 'reports/doctors',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/reports/doctor-report.component').then((x) => x.DoctorReportComponent),
   },
   {
     path: 'reports/treatments',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/reports/treatment-report.component').then(
         (x) => x.TreatmentReportComponent,
@@ -363,7 +364,7 @@ export const routes: Routes = [
   },
   {
     path: 'reports/prescriptions',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/reports/prescription-report.component').then(
         (x) => x.PrescriptionReportComponent,
@@ -371,13 +372,13 @@ export const routes: Routes = [
   },
   {
     path: 'reports/crm',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/reports/crm-report.component').then((x) => x.CrmReportComponent),
   },
   {
     path: 'notifications',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/notifications/notifications-page.component').then(
         (x) => x.NotificationsPageComponent,
@@ -385,7 +386,7 @@ export const routes: Routes = [
   },
   {
     path: 'inventory',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/inventory/inventory-page.component').then(
         (x) => x.InventoryPageComponent,
@@ -393,22 +394,24 @@ export const routes: Routes = [
   },
   {
     path: 'online-booking',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () => import('./features/online-booking/online-booking-page.component').then((x) => x.OnlineBookingPageComponent),
   },
   {
     path: 'guide',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () => import('./features/guide/guide-page.component').then((x) => x.GuidePageComponent),
   },
   {
     path: 'settings',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/settings/settings-page.component').then(
         (x) => x.SettingsPageComponent,
       ),
   },
+  { path: 'backup', canActivate: [authGuard, permissionGuard], loadComponent: () => import('./features/backup/backup-page.component').then(x => x.BackupPageComponent) },
+  { path: 'access-denied', canActivate: [authGuard], loadComponent: () => import('./core/access-denied.component').then(x => x.AccessDeniedComponent) },
   { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
   { path: '**', redirectTo: 'dashboard' },
 ];

@@ -27,7 +27,9 @@ public sealed record UserDetails(
     UserStatus Status,
     IReadOnlyCollection<RoleSummary> Roles,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    IReadOnlyCollection<string>? CustomPermissions = null,
+    IReadOnlyCollection<string>? EffectivePermissions = null);
 
 public sealed record RoleSummary(Guid Id, string Name, string Description, bool IsSystemRole);
 public sealed record RoleDetails(

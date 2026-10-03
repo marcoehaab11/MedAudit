@@ -4,6 +4,7 @@ using DentalClinic.Contracts.Identity;
 using DentalClinic.Infrastructure.Identity;
 using DentalClinic.Application.Tenants.Models;
 using DentalClinic.Domain.Identity;
+using DentalClinic.Application.Common.Interfaces;
 
 namespace DentalClinic.Api.Endpoints;
 
@@ -15,6 +16,9 @@ internal static class IdentityEndpoints
         auth.MapPost("/login", LoginAsync).RequireRateLimiting("auth-login");
         auth.MapPost("/invitations/inspect", InspectInvitationAsync).RequireRateLimiting("public-read");
         auth.MapPost("/invitations/accept", AcceptInvitationAsync).RequireRateLimiting("auth-login");
+        endpoints.MapGet("/api/auth/permissions", async (IIdentityStore store, ICurrentTenant tenant, ICurrentUser user, CancellationToken token) =>
+            await store.GetEffectivePermissionsForUserAsync(tenant.RequireTenantId(), user.UserId!.Value, token))
+            .RequireAuthorization(AuthConstants.TenantMemberPolicy);
 
         var users = endpoints.MapGroup("/api/users")
             .RequireAuthorization(AuthConstants.TenantMemberPolicy);
@@ -26,10 +30,12 @@ internal static class IdentityEndpoints
         users.MapPost("/{id:guid}/activate", ActivateUserAsync).RequireAuthorization(Permissions.UsersActivate);
         users.MapPost("/{id:guid}/deactivate", DeactivateUserAsync).RequireAuthorization(Permissions.UsersDeactivate);
         users.MapPut("/{id:guid}/roles", AssignRolesAsync).RequireAuthorization(Permissions.UsersManageRoles);
+        users.MapPut("/{id:guid}/permissions", SetUserPermissionsAsync).RequireAuthorization(Permissions.UsersManageRoles);
 
         var roles = endpoints.MapGroup("/api/roles")
             .RequireAuthorization(AuthConstants.TenantMemberPolicy);
         roles.MapGet("/", GetRolesAsync).RequireAuthorization(Permissions.UsersView);
+        roles.MapGet("/permission-catalog", () => Permissions.All.Order(StringComparer.Ordinal).ToArray()).RequireAuthorization(Permissions.UsersManageRoles);
         roles.MapGet("/{id:guid}", GetRoleAsync).RequireAuthorization(Permissions.UsersView);
         roles.MapPost("/", CreateRoleAsync).RequireAuthorization(Permissions.UsersManageRoles);
         roles.MapPut("/{id:guid}", UpdateRoleAsync).RequireAuthorization(Permissions.UsersManageRoles);
@@ -86,7 +92,7 @@ internal static class IdentityEndpoints
         CancellationToken cancellationToken)
     {
         var id = await service.CreateUserAsync(new CreateUserCommand(
-            request.DisplayName, request.Email, request.Password, request.Phone, request.RoleIds), cancellationToken);
+            request.DisplayName, request.Email, request.Password, request.Phone, request.RoleIds, request.Permissions), cancellationToken);
         return Results.Created($"/api/users/{id:D}", new { id });
     }
 
@@ -96,7 +102,7 @@ internal static class IdentityEndpoints
         CancellationToken cancellationToken)
     {
         var id = await service.InviteUserAsync(new InviteUserCommand(
-            request.DisplayName, request.Email, request.Phone, request.RoleIds), cancellationToken);
+            request.DisplayName, request.Email, request.Phone, request.RoleIds, request.Permissions), cancellationToken);
         return Results.Created($"/api/users/{id:D}", new { id });
     }
 
@@ -131,6 +137,14 @@ internal static class IdentityEndpoints
         IUserManagementService service,
         CancellationToken cancellationToken) =>
         await service.AssignRolesAsync(new AssignUserRolesCommand(id, request.RoleIds), cancellationToken)
+            ? Results.NoContent() : Results.NotFound();
+
+    private static async Task<IResult> SetUserPermissionsAsync(
+        Guid id,
+        SetUserPermissionsRequest request,
+        IUserManagementService service,
+        CancellationToken cancellationToken) =>
+        await service.SetUserPermissionsAsync(new SetUserPermissionsCommand(id, request.Permissions), cancellationToken)
             ? Results.NoContent() : Results.NotFound();
 
     private static async Task<IReadOnlyCollection<RoleSummary>> GetRolesAsync(
