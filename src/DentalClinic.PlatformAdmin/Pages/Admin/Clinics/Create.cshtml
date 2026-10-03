@@ -140,15 +140,16 @@
                     </div>
 
                     <div class="mb-3">
-                        <label asp-for="Input.AdminPassword" class="form-label fw-semibold text-slate-800">Initial Password <span class="text-danger">*</span></label>
+                        <label asp-for="Input.AdminPassword" class="form-label fw-semibold text-slate-800">Initial password for a new account (optional)</label>
                         <div class="input-group">
-                            <input asp-for="Input.AdminPassword" class="form-control font-monospace bg-white" type="text" id="adminPasswordInput" />
+                            <input asp-for="Input.AdminPassword" class="form-control font-monospace bg-white" type="password" id="adminPasswordInput" autocomplete="new-password" />
                             <button type="button" class="btn btn-outline-secondary" onclick="generatePassword()" title="Generate Random Password">
                                 <i class="bi bi-shuffle"></i>
                             </button>
                         </div>
                         <span asp-validation-for="Input.AdminPassword" class="text-danger small"></span>
-                        <div class="form-text small text-slate-600">The clinic admin can sign in immediately or change this password later.</div>
+                        <div class="form-text">Existing accounts keep their password and receive an invitation to the new clinic.</div>
+                        <div class="form-text small text-slate-600">Leave blank to let a new administrator set a password from the invitation.</div>
                     </div>
                 </div>
             </div>
@@ -192,8 +193,10 @@
         function generatePassword() {
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@@#$%';
             let pass = '';
-            for (let i = 0; i < 12; i++) {
-                pass += chars.charAt(Math.floor(Math.random() * chars.length));
+            const random = new Uint32Array(16);
+            crypto.getRandomValues(random);
+            for (const value of random) {
+                pass += chars.charAt(value % chars.length);
             }
             document.getElementById('adminPasswordInput').value = pass;
         }

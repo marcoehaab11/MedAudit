@@ -9,7 +9,12 @@ export interface LoginResponse {
   displayName: string;
   roles: string[];
   permissions: string[];
+  tenantId: string;
+  tenantName: string;
+  clinics: ClinicAccessSummary[];
 }
+
+export interface ClinicAccessSummary { tenantId: string; name: string; accessible: boolean }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -21,6 +26,9 @@ export class AuthService {
   readonly permissions = signal<string[]>(this.readPermissions());
   readonly userId = signal<string>(localStorage.getItem('user_id') ?? '');
   readonly displayName = signal<string>(localStorage.getItem('display_name') ?? 'User');
+  readonly tenantId = signal<string>(localStorage.getItem('tenant_id') ?? '');
+  readonly tenantName = signal<string>(localStorage.getItem('tenant_name') ?? '');
+  readonly clinics = signal<ClinicAccessSummary[]>(this.readClinics());
 
   hasPermission(permission: string): boolean {
     return this.permissions().includes(permission);
@@ -33,6 +41,13 @@ export class AuthService {
     }));
   }
 
+  refreshClinics() {
+    return this.http.get<ClinicAccessSummary[]>('/api/auth/clinics').pipe(tap(value => {
+      localStorage.setItem('clinics', JSON.stringify(value));
+      this.clinics.set(value);
+    }));
+  }
+
   setDisplayName(name: string): void {
     if (!name) return;
     localStorage.setItem('display_name', name);
@@ -40,19 +55,34 @@ export class AuthService {
   }
 
   login(email: string, password: string) {
-    return this.http.post<LoginResponse>('/api/auth/login', { email, password }).pipe(
-      tap((result) => {
-        localStorage.setItem('access_token', result.accessToken);
-        localStorage.setItem('user_id', result.userId);
-        localStorage.setItem('display_name', result.displayName);
-        localStorage.setItem('permissions', JSON.stringify(result.permissions));
-        this.userId.set(result.userId);
-        this.displayName.set(result.displayName);
-        this.permissions.set(result.permissions);
-        this.authenticated.set(true);
-        this.authReset$.next();
-      }),
+    return this.http.post<LoginResponse>('/api/auth/login', { email, password, preferredTenantId: localStorage.getItem('last_tenant_id') }).pipe(
+      tap((result) => this.applySession(result)),
     );
+  }
+
+  switchClinic(tenantId: string) {
+    return this.http.post<LoginResponse>('/api/auth/switch-clinic', { tenantId }).pipe(
+      tap(result => this.applySession(result)),
+    );
+  }
+
+  private applySession(result: LoginResponse): void {
+    localStorage.setItem('access_token', result.accessToken);
+    localStorage.setItem('user_id', result.userId);
+    localStorage.setItem('display_name', result.displayName);
+    localStorage.setItem('permissions', JSON.stringify(result.permissions));
+    localStorage.setItem('tenant_id', result.tenantId);
+    localStorage.setItem('last_tenant_id', result.tenantId);
+    localStorage.setItem('tenant_name', result.tenantName);
+    localStorage.setItem('clinics', JSON.stringify(result.clinics));
+    this.userId.set(result.userId);
+    this.displayName.set(result.displayName);
+    this.permissions.set(result.permissions);
+    this.tenantId.set(result.tenantId);
+    this.tenantName.set(result.tenantName);
+    this.clinics.set(result.clinics);
+    this.authenticated.set(true);
+    this.authReset$.next();
   }
 
   logout(): void {
@@ -60,9 +90,15 @@ export class AuthService {
     localStorage.removeItem('user_id');
     localStorage.removeItem('display_name');
     localStorage.removeItem('permissions');
+    localStorage.removeItem('tenant_id');
+    localStorage.removeItem('tenant_name');
+    localStorage.removeItem('clinics');
     this.userId.set('');
     this.displayName.set('User');
     this.permissions.set([]);
+    this.tenantId.set('');
+    this.tenantName.set('');
+    this.clinics.set([]);
     this.authenticated.set(false);
     this.authReset$.next();
   }
@@ -73,6 +109,11 @@ export class AuthService {
     } catch {
       return [];
     }
+  }
+
+  private readClinics(): ClinicAccessSummary[] {
+    try { return JSON.parse(localStorage.getItem('clinics') ?? '[]') as ClinicAccessSummary[]; }
+    catch { return []; }
   }
 }
 

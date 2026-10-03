@@ -52,7 +52,7 @@ internal sealed class UserManagementService(
         var normalizedEmail = command.Email.Trim().ToUpperInvariant();
         if (await store.EmailExistsAsync(normalizedEmail, cancellationToken))
         {
-            throw Validation("Email", "An account with this email address already exists.");
+            throw Validation("Email", "This email already has a Planora account. Invite it to this clinic instead.");
         }
 
         var roles = await ValidateAssignableRolesAsync(command.RoleIds, cancellationToken);
@@ -103,7 +103,7 @@ internal sealed class UserManagementService(
 
         var tenantId = currentTenant.RequireTenantId();
         var normalizedEmail = command.Email.Trim().ToUpperInvariant();
-        if (await store.EmailExistsAsync(normalizedEmail, cancellationToken))
+        if (await store.ClinicEmailExistsAsync(normalizedEmail, cancellationToken))
         {
             throw Validation("Email", "The invitation could not be created for this email.");
         }
@@ -112,9 +112,10 @@ internal sealed class UserManagementService(
         if (command.Permissions is not null) await EnsurePermissionsAssignableAsync(command.Permissions, cancellationToken);
         var now = clock.UtcNow;
         await using var transaction = await store.BeginTransactionAsync(cancellationToken);
-        var userId = await credentials.CreateInvitedUserAsync(
+        var account = await credentials.CreateInvitedUserAsync(
             tenantId, command.Email.Trim().ToLowerInvariant(), cancellationToken);
-        var user = new ClinicUser(userId, tenantId, command.DisplayName, command.Phone, now);
+        var userId = account.MembershipId;
+        var user = new ClinicUser(userId, tenantId, command.DisplayName, command.Phone, now, account.IdentityUserId);
         store.AddUser(user);
         foreach (var role in roles)
         {

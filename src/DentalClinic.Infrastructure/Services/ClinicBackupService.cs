@@ -69,7 +69,10 @@ public sealed class ClinicBackupService(ApplicationDbContext db)
                     writer.NewLine = "\n";
                     using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                     long rows = 0;
-                    await using var command = new NpgsqlCommand($"SELECT to_jsonb(t)::text FROM {Quote(table.Name)} t WHERE \"TenantId\" = @tenant", (NpgsqlConnection)db.Database.GetDbConnection(), (NpgsqlTransaction)transaction.GetDbTransaction());
+                    var exportSql = table.Name == "AspNetUsers"
+                        ? "SELECT to_jsonb(t)::text FROM \"AspNetUsers\" t WHERE EXISTS (SELECT 1 FROM clinic_users m WHERE m.\"IdentityUserId\" = t.\"Id\" AND m.\"TenantId\" = @tenant)"
+                        : $"SELECT to_jsonb(t)::text FROM {Quote(table.Name)} t WHERE \"TenantId\" = @tenant";
+                    await using var command = new NpgsqlCommand(exportSql, (NpgsqlConnection)db.Database.GetDbConnection(), (NpgsqlTransaction)transaction.GetDbTransaction());
                     command.Parameters.AddWithValue("tenant", tenantId);
                     await using (var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, token))
                     {
@@ -160,12 +163,12 @@ public sealed class ClinicBackupService(ApplicationDbContext db)
                         if (ready.Length == 0) throw new InvalidDataException("Financial category hierarchy contains a cycle.");
                         foreach (var id in ready)
                         {
-                            await InsertRowAsync(connection, sqlTransaction, table.Name, pending[id].Line, token);
+                            await InsertRowAsync(connection, sqlTransaction, table.Name, pending[id].Line, targetTenantId, token);
                             pending.Remove(id);
                         }
                     }
                 }
-                else { string? line; while ((line = await reader.ReadLineAsync(token)) is not null) await InsertRowAsync(connection, sqlTransaction, table.Name, line, token); }
+                else { string? line; while ((line = await reader.ReadLineAsync(token)) is not null) await InsertRowAsync(connection, sqlTransaction, table.Name, line, targetTenantId, token); }
             }
             if (manifest.Modules.Contains("settings", StringComparer.Ordinal))
             {
@@ -213,6 +216,23 @@ public sealed class ClinicBackupService(ApplicationDbContext db)
         if (!expectedNames.SetEquals(manifest.Tables.Select(x => x.Name)))
             throw new InvalidDataException("Backup is missing one or more tables for its selected modules.");
         long totalBytes = 0;
+        var membershipIdentityIds = new HashSet<Guid>();
+        var archivedIdentityIds = new HashSet<Guid>();
+        if (manifest.Modules.Contains("accounts", StringComparer.Ordinal))
+        {
+            var membershipEntry = zip.GetEntry("tables/clinic_users.jsonl") ?? throw new InvalidDataException("Clinic memberships are missing.");
+            if (membershipEntry.Length > MaxEncryptedBytes) throw new InvalidDataException("Clinic memberships are too large.");
+            await using var membershipStream = membershipEntry.Open();
+            using var membershipReader = new StreamReader(membershipStream, Encoding.UTF8);
+            string? membershipLine;
+            while ((membershipLine = await membershipReader.ReadLineAsync(token)) is not null)
+            {
+                using var membership = JsonDocument.Parse(membershipLine);
+                if (membership.RootElement.GetProperty("TenantId").GetGuid() != targetTenantId)
+                    throw new InvalidDataException("Backup contains a membership from another clinic.");
+                membershipIdentityIds.Add(membership.RootElement.GetProperty("IdentityUserId").GetGuid());
+            }
+        }
         foreach (var table in manifest.Tables)
         {
             if (!catalog.TryGetValue(table.Name, out var expected) || expected.Module != table.Module || !manifest.Modules.Contains(table.Module))
@@ -230,26 +250,31 @@ public sealed class ClinicBackupService(ApplicationDbContext db)
             {
                 hash.AppendData(Encoding.UTF8.GetBytes(line + "\n"));
                 using var json = JsonDocument.Parse(line);
-                if (!json.RootElement.TryGetProperty("TenantId", out var tenant) || tenant.GetGuid() != targetTenantId)
+                if (table.Name != "AspNetUsers" &&
+                    (!json.RootElement.TryGetProperty("TenantId", out var tenant) || tenant.GetGuid() != targetTenantId))
                     throw new InvalidDataException("Backup contains data from another clinic.");
                 if (table.Name == "AspNetUsers" &&
-                    (!json.RootElement.TryGetProperty("IsPlatformAdmin", out var admin) || admin.GetBoolean()))
+                    (!json.RootElement.TryGetProperty("IsPlatformAdmin", out var admin) || admin.GetBoolean() ||
+                     !membershipIdentityIds.Contains(json.RootElement.GetProperty("Id").GetGuid())))
                     throw new InvalidDataException("A clinic backup cannot contain platform administrator accounts.");
+                if (table.Name == "AspNetUsers") archivedIdentityIds.Add(json.RootElement.GetProperty("Id").GetGuid());
                 rows++;
             }
             if (rows != table.Rows || !CryptographicOperations.FixedTimeEquals(hash.GetHashAndReset(), Convert.FromHexString(table.Sha256)))
                 throw new InvalidDataException($"Backup table {table.Name} failed integrity verification.");
         }
+        if (manifest.Modules.Contains("accounts", StringComparer.Ordinal) && !archivedIdentityIds.SetEquals(membershipIdentityIds))
+            throw new InvalidDataException("Backup identities do not match clinic memberships.");
         return manifest;
     }
 
     private sealed record TableInfo(string Name, string Module, string[] Parents);
 
-    private static async Task InsertRowAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, string table, string line, CancellationToken token)
+    private static async Task InsertRowAsync(NpgsqlConnection connection, NpgsqlTransaction transaction, string table, string line, Guid tenantId, CancellationToken token)
     {
         var sql = table == "AspNetUsers"
             ? $"""
-                INSERT INTO {Quote(table)} SELECT * FROM jsonb_populate_record(NULL::{Quote(table)}, @row::jsonb) AS account
+                INSERT INTO {Quote(table)} SELECT * FROM jsonb_populate_record(NULL::{Quote(table)}, jsonb_set(@row::jsonb, ARRAY['TenantId'], to_jsonb(@tenant::uuid))) AS account
                 WHERE account."IsPlatformAdmin" = FALSE
                 ON CONFLICT ("Id") DO UPDATE SET
                     "AccessFailedCount" = EXCLUDED."AccessFailedCount",
@@ -267,13 +292,31 @@ public sealed class ClinicBackupService(ApplicationDbContext db)
                     "SecurityStamp" = EXCLUDED."SecurityStamp",
                     "TwoFactorEnabled" = EXCLUDED."TwoFactorEnabled",
                     "UserName" = EXCLUDED."UserName"
-                WHERE "AspNetUsers"."TenantId" = EXCLUDED."TenantId" AND EXCLUDED."IsPlatformAdmin" = FALSE
+                WHERE EXCLUDED."IsPlatformAdmin" = FALSE AND NOT EXISTS (
+                    SELECT 1 FROM clinic_users member
+                    WHERE member."IdentityUserId" = EXCLUDED."Id" AND member."TenantId" <> @tenant)
                 """
             : $"INSERT INTO {Quote(table)} SELECT * FROM jsonb_populate_record(NULL::{Quote(table)}, @row::jsonb)";
         await using var insert = new NpgsqlCommand(sql, connection, transaction);
         insert.Parameters.Add("row", NpgsqlDbType.Jsonb).Value = line;
+        if (table == "AspNetUsers") insert.Parameters.AddWithValue("tenant", tenantId);
         if (await insert.ExecuteNonQueryAsync(token) != 1)
+        {
+            if (table == "AspNetUsers")
+            {
+                using var json = JsonDocument.Parse(line);
+                await using var check = new NpgsqlCommand("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM "AspNetUsers" identity
+                        WHERE identity."Id" = @id AND identity."IsPlatformAdmin" = FALSE
+                          AND EXISTS (SELECT 1 FROM clinic_users member WHERE member."IdentityUserId" = @id AND member."TenantId" <> @tenant))
+                    """, connection, transaction);
+                check.Parameters.AddWithValue("id", json.RootElement.GetProperty("Id").GetGuid());
+                check.Parameters.AddWithValue("tenant", tenantId);
+                if ((bool)(await check.ExecuteScalarAsync(token))!) return;
+            }
             throw new InvalidDataException("Backup user conflicts with another account or a platform administrator.");
+        }
     }
 
     private TableInfo[] Tables()

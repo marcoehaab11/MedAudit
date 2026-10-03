@@ -15,6 +15,7 @@ public interface IIdentityStore
     Task<UserDetails?> GetUserAsync(Guid userId, CancellationToken cancellationToken);
     Task<ClinicUser?> FindUserAsync(Guid userId, CancellationToken cancellationToken);
     Task<bool> EmailExistsAsync(string normalizedEmail, CancellationToken cancellationToken);
+    Task<bool> ClinicEmailExistsAsync(string normalizedEmail, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<TenantRole>> GetRolesAsync(CancellationToken cancellationToken);
     Task<RoleDetails?> GetRoleDetailsAsync(Guid roleId, CancellationToken cancellationToken);
     Task<TenantRole?> FindRoleAsync(Guid roleId, CancellationToken cancellationToken);
@@ -29,7 +30,9 @@ public interface IIdentityStore
     void RemoveUserPermissionProfile(UserPermissionProfile profile);
     Task<InvitationAccount?> FindInvitationAsync(string tokenHash, CancellationToken cancellationToken);
     Task<AdminInvitation?> FindPendingInvitationForUserAsync(Guid userId, CancellationToken cancellationToken);
-    Task<LoginAccount?> FindLoginAccountAsync(string normalizedEmail, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<LoginAccount>> FindLoginAccountsAsync(string normalizedEmail, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<LoginAccount>> FindMembershipsAsync(Guid identityUserId, CancellationToken cancellationToken);
+    Task<LoginAccount?> FindMembershipAsync(Guid tenantId, Guid membershipId, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<string>> GetRoleNamesForUserAsync(Guid tenantId, Guid userId, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<string>> GetEffectivePermissionsForUserAsync(Guid tenantId, Guid userId, CancellationToken cancellationToken);
     Task<bool> DoctorProfileExistsForUserAsync(Guid clinicUserId, CancellationToken cancellationToken);

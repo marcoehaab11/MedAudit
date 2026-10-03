@@ -14,6 +14,11 @@ internal static class IdentityEndpoints
     {
         var auth = endpoints.MapGroup("/api/auth").AllowAnonymous();
         auth.MapPost("/login", LoginAsync).RequireRateLimiting("auth-login");
+        endpoints.MapPost("/api/auth/switch-clinic", SwitchClinicAsync)
+            .RequireAuthorization(AuthConstants.TenantMemberPolicy).RequireRateLimiting("auth-login");
+        endpoints.MapGet("/api/auth/clinics", async (IAuthenticationService service, ICurrentTenant tenant, ICurrentUser user, CancellationToken token) =>
+            await service.GetClinicsAsync(tenant.RequireTenantId(), user.UserId!.Value, token))
+            .RequireAuthorization(AuthConstants.TenantMemberPolicy);
         auth.MapPost("/invitations/inspect", InspectInvitationAsync).RequireRateLimiting("public-read");
         auth.MapPost("/invitations/accept", AcceptInvitationAsync).RequireRateLimiting("auth-login");
         endpoints.MapGet("/api/auth/permissions", async (IIdentityStore store, ICurrentTenant tenant, ICurrentUser user, CancellationToken token) =>
@@ -49,10 +54,23 @@ internal static class IdentityEndpoints
         IAuthenticationService service,
         CancellationToken cancellationToken)
     {
-        var result = await service.LoginAsync(new LoginCommand(request.Email, request.Password), cancellationToken);
+        var result = await service.LoginAsync(new LoginCommand(request.Email, request.Password, request.PreferredTenantId), cancellationToken);
         return result is null
             ? Results.Json(new { message = "Invalid email or password." }, statusCode: StatusCodes.Status401Unauthorized)
             : Results.Ok(result);
+    }
+
+    private sealed record SwitchClinicRequest(Guid TenantId);
+
+    private static async Task<IResult> SwitchClinicAsync(
+        SwitchClinicRequest request,
+        IAuthenticationService service,
+        ICurrentTenant tenant,
+        ICurrentUser user,
+        CancellationToken cancellationToken)
+    {
+        var result = await service.SwitchClinicAsync(tenant.RequireTenantId(), user.UserId!.Value, request.TenantId, cancellationToken);
+        return result is null ? Results.Forbid() : Results.Ok(result);
     }
 
     private static Task<InvitationPreview> InspectInvitationAsync(

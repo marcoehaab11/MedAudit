@@ -32,7 +32,8 @@ internal sealed class InvitationService(
             Map(status),
             status == AdminInvitationStatus.Pending ? account.Invitation.Email : null,
             status == AdminInvitationStatus.Pending ? account.Invitation.Role : null,
-            status == AdminInvitationStatus.Pending ? account.Invitation.ExpiresAt : null);
+            status == AdminInvitationStatus.Pending ? account.Invitation.ExpiresAt : null,
+            account.HasPassword);
     }
 
     private static InvitationPreviewState Map(AdminInvitationStatus status) => status switch
@@ -54,6 +55,9 @@ internal sealed class InvitationService(
         {
             return false;
         }
+
+        if (!account.HasPassword && command.Password.Length < 12)
+            throw new ValidationException([new ValidationFailure("Password", "Password must be at least 12 characters.")]);
 
         if (!account.Invitation.TryAccept(clock.UtcNow))
         {
@@ -103,7 +107,7 @@ internal sealed class InvitationService(
     {
         var errors = new List<ValidationFailure>();
         if (string.IsNullOrWhiteSpace(command.Token)) errors.Add(new("Token", "Invitation token is required."));
-        if (command.Password.Length < 12) errors.Add(new("Password", "Password must be at least 12 characters."));
+        if (string.IsNullOrEmpty(command.Password)) errors.Add(new("Password", "Password is required."));
         if (!string.Equals(command.Password, command.ConfirmPassword, StringComparison.Ordinal))
             errors.Add(new("ConfirmPassword", "Password confirmation does not match."));
         if (errors.Count > 0) throw new ValidationException(errors);

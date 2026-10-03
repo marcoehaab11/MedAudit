@@ -10,8 +10,11 @@ public sealed record LoginAccount(
     UserStatus UserStatus,
     TenantStatus TenantStatus,
     DateTimeOffset SubscriptionStartsAt,
-    DateTimeOffset SubscriptionExpiresAt);
+    DateTimeOffset SubscriptionExpiresAt,
+    Guid IdentityUserId,
+    string TenantName);
 
 public sealed record InvitationAccount(
     AdminInvitation Invitation,
-    ClinicUser User);
+    ClinicUser User,
+    bool HasPassword);

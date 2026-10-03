@@ -53,7 +53,7 @@ export class UserApiService {
   createUser(value: { displayName: string; email: string; password: string; phone?: string; roleIds: string[]; permissions?: string[] | null }) {
     return this.http.post<{ id: string }>('/api/users', value);
   }
-  invite(value: { displayName: string; email: string; phone?: string; roleIds: string[] }) {
+  invite(value: { displayName: string; email: string; phone?: string; roleIds: string[]; permissions?: string[] | null }) {
     return this.http.post<{ id: string }>('/api/users/invitations', value);
   }
   update(id: string, value: { displayName: string; phone?: string }) {

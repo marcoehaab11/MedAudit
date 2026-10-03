@@ -1,12 +1,8 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
-  const router = inject(Router);
-
-  if (request.url.startsWith('/api/auth/')) return next(request);
+  if (request.url === '/api/auth/login' || request.url.startsWith('/api/auth/invitations/')) return next(request);
   
   const token = localStorage.getItem('access_token');
   const req = token ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : request;
@@ -18,7 +14,10 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
         localStorage.removeItem('user_id');
         localStorage.removeItem('display_name');
         localStorage.removeItem('permissions');
-        void router.navigate(['/login']);
+        localStorage.removeItem('tenant_id');
+        localStorage.removeItem('tenant_name');
+        localStorage.removeItem('clinics');
+        window.location.assign('/login');
       }
       return throwError(() => error);
     })

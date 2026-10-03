@@ -21,9 +21,14 @@ export class App implements OnDestroy {
   protected readonly sidebarCollapsed = signal(false);
   protected readonly mobileSidebarOpen = signal(false);
   protected readonly displayName = this.auth.displayName;
+  protected readonly switchingClinic = signal(false);
+  protected readonly clinicSwitchError = signal('');
 
   constructor() {
-    if (this.auth.authenticated()) this.auth.refreshPermissions().subscribe({ error: () => {} });
+    if (this.auth.authenticated()) {
+      this.auth.refreshPermissions().subscribe({ error: () => {} });
+      this.auth.refreshClinics().subscribe({ error: () => {} });
+    }
     this.navSub = this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe(() => {
@@ -40,6 +45,11 @@ export class App implements OnDestroy {
     if (this.mobileSidebarOpen()) {
       this.closeMobileSidebar();
     }
+  }
+
+  @HostListener('window:storage', ['$event'])
+  protected onSessionChangedInAnotherTab(event: StorageEvent): void {
+    if (event.key === 'tenant_id' || event.key === 'access_token') window.location.reload();
   }
 
   protected toggleSidebar(): void {
@@ -65,6 +75,21 @@ export class App implements OnDestroy {
     this.auth.logout();
     this.mobileSidebarOpen.set(false);
     void this.router.navigate(['/login']);
+  }
+
+  protected switchClinic(event: Event): void {
+    const tenantId = (event.target as HTMLSelectElement).value;
+    if (!tenantId || tenantId === this.auth.tenantId()) return;
+    this.switchingClinic.set(true);
+    this.clinicSwitchError.set('');
+    this.auth.switchClinic(tenantId).subscribe({
+      next: () => window.location.assign('/dashboard'),
+      error: () => {
+        this.switchingClinic.set(false);
+        this.clinicSwitchError.set(this.t('Could not open this clinic.', 'تعذر فتح العيادة.'));
+        (event.target as HTMLSelectElement).value = this.auth.tenantId();
+      },
+    });
   }
 
   protected initials(): string {

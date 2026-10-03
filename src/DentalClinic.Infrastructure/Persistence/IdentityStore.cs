@@ -26,7 +26,7 @@ internal sealed class IdentityStore(
             var search = query.Search.Trim();
             users = users.Where(user =>
                 EF.Functions.ILike(user.DisplayName, $"%{search}%") ||
-                context.Users.Any(identity => identity.Id == user.Id &&
+                context.Users.Any(identity => identity.Id == user.IdentityUserId &&
                     identity.Email != null && EF.Functions.ILike(identity.Email, $"%{search}%")));
         }
 
@@ -46,7 +46,7 @@ internal sealed class IdentityStore(
                 x.Phone,
                 x.Status,
                 x.CreatedAt,
-                Email = context.Users.Where(identity => identity.Id == x.Id)
+                Email = context.Users.Where(identity => identity.Id == x.IdentityUserId)
                     .Select(identity => identity.Email!).Single()
             })
             .ToListAsync(cancellationToken);
@@ -69,7 +69,7 @@ internal sealed class IdentityStore(
             var search = query.Search.Trim();
             users = users.Where(user =>
                 EF.Functions.ILike(user.DisplayName, $"%{search}%") ||
-                context.Users.IgnoreQueryFilters().Any(identity => identity.Id == user.Id &&
+                context.Users.IgnoreQueryFilters().Any(identity => identity.Id == user.IdentityUserId &&
                     identity.Email != null && EF.Functions.ILike(identity.Email, $"%{search}%")));
         }
         if (query.Status.HasValue) users = users.Where(x => x.Status == query.Status.Value);
@@ -87,7 +87,7 @@ internal sealed class IdentityStore(
                 x.Phone,
                 x.Status,
                 x.CreatedAt,
-                Email = context.Users.IgnoreQueryFilters().Where(identity => identity.Id == x.Id)
+                Email = context.Users.IgnoreQueryFilters().Where(identity => identity.Id == x.IdentityUserId)
                     .Select(identity => identity.Email!).Single()
             }).ToListAsync(cancellationToken);
         var ids = rows.Select(x => x.Id).ToArray();
@@ -115,7 +115,7 @@ internal sealed class IdentityStore(
                 x.Status,
                 x.CreatedAt,
                 x.UpdatedAt,
-                Email = context.Users.Where(identity => identity.Id == x.Id)
+                Email = context.Users.Where(identity => identity.Id == x.IdentityUserId)
                     .Select(identity => identity.Email!).Single()
             }).SingleOrDefaultAsync(cancellationToken);
         if (row is null) return null;
@@ -139,6 +139,10 @@ internal sealed class IdentityStore(
     public Task<bool> EmailExistsAsync(string normalizedEmail, CancellationToken cancellationToken) =>
         context.Users.IgnoreQueryFilters().AnyAsync(
             x => x.NormalizedEmail == normalizedEmail, cancellationToken);
+
+    public Task<bool> ClinicEmailExistsAsync(string normalizedEmail, CancellationToken cancellationToken) =>
+        context.ClinicUsers.AnyAsync(member => context.Users.IgnoreQueryFilters().Any(identity =>
+            identity.Id == member.IdentityUserId && identity.NormalizedEmail == normalizedEmail), cancellationToken);
 
     public async Task<IReadOnlyCollection<TenantRole>> GetRolesAsync(CancellationToken cancellationToken) =>
         await context.TenantRoles.AsNoTracking().OrderBy(x => x.Name).ToListAsync(cancellationToken);
@@ -212,7 +216,12 @@ internal sealed class IdentityStore(
         var user = await context.ClinicUsers.IgnoreQueryFilters().SingleOrDefaultAsync(
             x => x.Id == invitation.UserId && x.TenantId == invitation.TenantId,
             cancellationToken);
-        return user is null ? null : new InvitationAccount(invitation, user);
+        if (user is null) return null;
+        var hasPassword = await context.Users.IgnoreQueryFilters().AsNoTracking()
+            .Where(x => x.Id == user.IdentityUserId)
+            .Select(x => x.PasswordHash != null)
+            .SingleAsync(cancellationToken);
+        return new InvitationAccount(invitation, user, hasPassword);
     }
 
     public Task<AdminInvitation?> FindPendingInvitationForUserAsync(
@@ -222,16 +231,32 @@ internal sealed class IdentityStore(
             x => x.UserId == userId && x.Status == AdminInvitationStatus.Pending,
             cancellationToken);
 
-    public async Task<LoginAccount?> FindLoginAccountAsync(
+    public async Task<IReadOnlyCollection<LoginAccount>> FindLoginAccountsAsync(
         string normalizedEmail,
         CancellationToken cancellationToken) =>
         await (from identity in context.Users.IgnoreQueryFilters().AsNoTracking()
-               join user in context.ClinicUsers.IgnoreQueryFilters().AsNoTracking() on identity.Id equals user.Id
+               join user in context.ClinicUsers.IgnoreQueryFilters().AsNoTracking() on identity.Id equals user.IdentityUserId
                join tenant in context.Tenants.AsNoTracking() on user.TenantId equals tenant.Id
-               where identity.NormalizedEmail == normalizedEmail
+               where identity.NormalizedEmail == normalizedEmail && !identity.IsPlatformAdmin
                select new LoginAccount(user.Id, user.TenantId, user.DisplayName, user.Status,
-                   tenant.Status, tenant.SubscriptionStartsAt, tenant.SubscriptionExpiresAt))
-            .SingleOrDefaultAsync(cancellationToken);
+                   tenant.Status, tenant.SubscriptionStartsAt, tenant.SubscriptionExpiresAt, identity.Id, tenant.Name))
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyCollection<LoginAccount>> FindMembershipsAsync(Guid identityUserId, CancellationToken cancellationToken) =>
+        await (from user in context.ClinicUsers.IgnoreQueryFilters().AsNoTracking()
+               join tenant in context.Tenants.AsNoTracking() on user.TenantId equals tenant.Id
+               where user.IdentityUserId == identityUserId
+               select new LoginAccount(user.Id, user.TenantId, user.DisplayName, user.Status,
+                   tenant.Status, tenant.SubscriptionStartsAt, tenant.SubscriptionExpiresAt, identityUserId, tenant.Name))
+            .ToListAsync(cancellationToken);
+
+    public Task<LoginAccount?> FindMembershipAsync(Guid tenantId, Guid membershipId, CancellationToken cancellationToken) =>
+        (from user in context.ClinicUsers.IgnoreQueryFilters().AsNoTracking()
+         join tenant in context.Tenants.AsNoTracking() on user.TenantId equals tenant.Id
+         where user.TenantId == tenantId && user.Id == membershipId
+         select new LoginAccount(user.Id, user.TenantId, user.DisplayName, user.Status,
+             tenant.Status, tenant.SubscriptionStartsAt, tenant.SubscriptionExpiresAt, user.IdentityUserId, tenant.Name))
+        .SingleOrDefaultAsync(cancellationToken);
 
     public async Task<IReadOnlyCollection<string>> GetRoleNamesForUserAsync(
         Guid tenantId,

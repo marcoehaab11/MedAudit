@@ -25,12 +25,13 @@ internal sealed class DoctorStore(ApplicationDbContext context) :
                 context.ClinicUsers.Any(u => u.Id == x.ClinicUserId &&
                     (EF.Functions.ILike(u.DisplayName, term) ||
                      (u.Phone != null && EF.Functions.ILike(u.Phone, term)))) ||
-                context.Users.Any(u => u.Id == x.ClinicUserId && u.Email != null && EF.Functions.ILike(u.Email, term)));
+                context.ClinicUsers.Any(member => member.Id == x.ClinicUserId &&
+                    context.Users.Any(u => u.Id == member.IdentityUserId && u.Email != null && EF.Functions.ILike(u.Email, term))));
         }
         var total = await doctors.CountAsync(cancellationToken);
         var items = await (from doctor in doctors
                            join user in context.ClinicUsers.AsNoTracking() on doctor.ClinicUserId equals user.Id
-                           join identity in context.Users.AsNoTracking() on doctor.ClinicUserId equals identity.Id
+                           join identity in context.Users.AsNoTracking() on user.IdentityUserId equals identity.Id
                            orderby user.DisplayName
                            select new DoctorListItem(doctor.Id, doctor.ClinicUserId, user.DisplayName,
                                identity.Email!, user.Phone, doctor.Specialization, doctor.LicenseNumber,
@@ -43,7 +44,7 @@ internal sealed class DoctorStore(ApplicationDbContext context) :
         bool canManageCompensation, CancellationToken cancellationToken) =>
         await (from doctor in context.DoctorProfiles.AsNoTracking()
                join user in context.ClinicUsers.AsNoTracking() on doctor.ClinicUserId equals user.Id
-               join identity in context.Users.AsNoTracking() on doctor.ClinicUserId equals identity.Id
+               join identity in context.Users.AsNoTracking() on user.IdentityUserId equals identity.Id
                where doctor.Id == id
                select new DoctorProfileDetails(doctor.Id, doctor.ClinicUserId, user.DisplayName,
                    identity.Email!, user.Phone, user.Status, doctor.Specialization, doctor.LicenseNumber,
@@ -52,7 +53,7 @@ internal sealed class DoctorStore(ApplicationDbContext context) :
 
     public async Task<IReadOnlyCollection<DoctorCandidate>> GetCandidatesAsync(CancellationToken cancellationToken) =>
         await (from user in context.ClinicUsers.AsNoTracking()
-               join identity in context.Users.AsNoTracking() on user.Id equals identity.Id
+               join identity in context.Users.AsNoTracking() on user.IdentityUserId equals identity.Id
                where context.UserRoleAssignments.Any(a => a.UserId == user.Id &&
                    context.TenantRoles.Any(r => r.Id == a.RoleId && r.NormalizedName == "DOCTOR")) &&
                    !context.DoctorProfiles.Any(d => d.ClinicUserId == user.Id)

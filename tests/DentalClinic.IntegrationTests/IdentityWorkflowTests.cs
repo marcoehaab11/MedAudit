@@ -9,6 +9,7 @@ using DentalClinic.Domain.Identity;
 using DentalClinic.Domain.Tenancy;
 using DentalClinic.Infrastructure;
 using DentalClinic.Infrastructure.Persistence;
+using DentalClinic.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +22,104 @@ namespace DentalClinic.IntegrationTests;
 public sealed class IdentityWorkflowTests(PlatformPostgresFixture fixture)
 {
     private static readonly DateTimeOffset Now = new(2026, 8, 14, 12, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public async Task OneIdentityCanManageTwoClinicsWithSeparateMembershipAndAccess()
+    {
+        await using var test = await CreateContextAsync();
+        var first = await CreateClinicAsync(test, "multi-first", "owner@multi.example");
+        await AcceptAsync(test, "owner@multi.example");
+        var second = await CreateClinicAsync(test, "multi-second", "owner@multi.example");
+        Assert.True(second.ExistingAdminAccount);
+        Assert.NotEqual(first.AdminUserId, second.AdminUserId);
+        await AcceptAsync(test, "owner@multi.example");
+
+        await using (var scope = test.Provider.CreateAsyncScope())
+        {
+            var details = await scope.ServiceProvider.GetRequiredService<IClinicManagementService>()
+                .GetAsync(second.TenantId, CancellationToken.None);
+            Assert.Equal("owner@multi.example", details!.AdminEmail);
+        }
+
+        await using (var db = CreateDbContext(test.ConnectionString))
+        {
+            var identities = await db.Users.IgnoreQueryFilters().ToListAsync();
+            var identity = Assert.Single(identities);
+            var memberships = await db.ClinicUsers.IgnoreQueryFilters().ToListAsync();
+            Assert.Equal(2, memberships.Count);
+            Assert.All(memberships, member => Assert.Equal(identity.Id, member.IdentityUserId));
+
+            var backup = await new ClinicBackupService(db).ExportAsync(second.TenantId, ["accounts"], "multi-clinic-backup-password", CancellationToken.None);
+            await using var backupStream = backup.Stream;
+            await using var encrypted = new MemoryStream();
+            await backupStream.CopyToAsync(encrypted);
+            encrypted.Position = 0;
+            var manifest = await new ClinicBackupService(db).InspectAsync(encrypted, "multi-clinic-backup-password", second.TenantId, CancellationToken.None);
+            Assert.Equal(1, manifest.Tables.Single(x => x.Name == "AspNetUsers").Rows);
+        }
+
+        test.Tenant.Clear();
+        await using (var scope = test.Provider.CreateAsyncScope())
+        {
+            var auth = scope.ServiceProvider.GetRequiredService<IAuthenticationService>();
+            var login = await auth.LoginAsync(new LoginCommand("owner@multi.example", "A-strong-password-123!"), CancellationToken.None);
+            Assert.NotNull(login);
+            Assert.Equal(2, login.Clinics.Count);
+            var switched = await auth.SwitchClinicAsync(first.TenantId, first.AdminUserId, second.TenantId, CancellationToken.None);
+            Assert.NotNull(switched);
+            Assert.Equal(second.TenantId, switched.TenantId);
+            Assert.Equal(second.AdminUserId, switched.UserId);
+        }
+
+        await using (var scope = test.Provider.CreateAsyncScope())
+            Assert.True(await scope.ServiceProvider.GetRequiredService<IClinicManagementService>()
+                .SetUserActiveAsync(second.TenantId, second.AdminUserId, false, CancellationToken.None));
+        await using (var scope = test.Provider.CreateAsyncScope())
+        {
+            var auth = scope.ServiceProvider.GetRequiredService<IAuthenticationService>();
+            Assert.Null(await auth.SwitchClinicAsync(first.TenantId, first.AdminUserId, second.TenantId, CancellationToken.None));
+            Assert.NotNull(await auth.LoginAsync(new LoginCommand("owner@multi.example", "A-strong-password-123!"), CancellationToken.None));
+        }
+    }
+
+    [Fact]
+    public async Task SharedStaffAccountGetsRolesAndPermissionsFromSelectedClinic()
+    {
+        await using var test = await CreateContextAsync();
+        var first = await CreateClinicAsync(test, "staff-first", "owner@staff-first.example");
+        var second = await CreateClinicAsync(test, "staff-second", "owner@staff-second.example");
+        await AcceptAsync(test, "owner@staff-first.example");
+        await AcceptAsync(test, "owner@staff-second.example");
+
+        async Task<Guid> InviteAsync(CreateClinicResult clinic, string roleName)
+        {
+            test.Tenant.Set(clinic.TenantId);
+            test.User.UserId = clinic.AdminUserId;
+            await using var scope = test.Provider.CreateAsyncScope();
+            var service = scope.ServiceProvider.GetRequiredService<IUserManagementService>();
+            var role = (await service.GetRolesAsync(CancellationToken.None)).Single(x => x.Name == roleName);
+            return await service.InviteUserAsync(new InviteUserCommand(
+                "Shared staff", "shared@staff-multi.example", null, [role.Id]), CancellationToken.None);
+        }
+
+        var firstMembership = await InviteAsync(first, SystemRoleDefinitions.Receptionist);
+        await AcceptAsync(test, "shared@staff-multi.example");
+        var secondMembership = await InviteAsync(second, SystemRoleDefinitions.Doctor);
+        await AcceptAsync(test, "shared@staff-multi.example");
+
+        await using var authScope = test.Provider.CreateAsyncScope();
+        var auth = authScope.ServiceProvider.GetRequiredService<IAuthenticationService>();
+        var firstSession = await auth.SwitchClinicAsync(first.TenantId, firstMembership, first.TenantId, CancellationToken.None);
+        var secondSession = await auth.SwitchClinicAsync(first.TenantId, firstMembership, second.TenantId, CancellationToken.None);
+        Assert.NotNull(firstSession);
+        Assert.NotNull(secondSession);
+        Assert.Equal(secondMembership, secondSession.UserId);
+        Assert.Contains(SystemRoleDefinitions.Receptionist, firstSession.Roles);
+        Assert.DoesNotContain(SystemRoleDefinitions.Doctor, firstSession.Roles);
+        Assert.Contains(SystemRoleDefinitions.Doctor, secondSession.Roles);
+        Assert.DoesNotContain(SystemRoleDefinitions.Receptionist, secondSession.Roles);
+        Assert.NotEqual(string.Join(',', firstSession.Permissions.Order()), string.Join(',', secondSession.Permissions.Order()));
+    }
 
     [Fact]
     public async Task TenantAdminSeesAndChangesOnlyItsOwnTenantUsers()

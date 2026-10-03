@@ -275,7 +275,7 @@ import { AuthService } from '../../core/auth.service';
               </div>
               <div>
                 <h3>{{ text('Add Team Member', 'إضافة مستخدم جديد') }}</h3>
-                <small>{{ text('Account is created active and ready for immediate login.', 'يتم إنشاء الحساب مفعلاً وجاهزاً لتسجيل الدخول فوراً.') }}</small>
+                <small>{{ inviteMode() ? text('An invitation links an existing Planora account or creates a new one.', 'الدعوة تربط حساب Planora موجود أو تنشئ حساباً جديداً.') : text('A new account is created active and ready for login.', 'يتم إنشاء حساب جديد مفعلاً وجاهزاً للدخول.') }}</small>
               </div>
             </div>
             <button type="button" class="close-btn" (click)="closeAddModal()" aria-label="Close">✕</button>
@@ -283,6 +283,10 @@ import { AuthService } from '../../core/auth.service';
 
           <form [formGroup]="userForm" (ngSubmit)="createUser()">
             <div class="modal-body compact-modal-body">
+              <div class="d-flex gap-2 mb-3">
+                <button type="button" class="button" [class.primary]="!inviteMode()" (click)="setInviteMode(false)">{{ text('Create new account', 'إنشاء حساب جديد') }}</button>
+                <button type="button" class="button" [class.primary]="inviteMode()" (click)="setInviteMode(true)">{{ text('Invite existing or new account', 'دعوة حساب موجود أو جديد') }}</button>
+              </div>
               @if (modalError()) {
                 <div class="alert error" style="margin: 0;">{{ modalError() }}</div>
               }
@@ -344,7 +348,7 @@ import { AuthService } from '../../core/auth.service';
                   }
                 </label>
 
-                <label style="grid-column: 1 / -1;">
+                @if (!inviteMode()) { <label style="grid-column: 1 / -1;">
                   <span>{{ text('Password', 'كلمة المرور') }} <strong class="req">*</strong></span>
                   <div class="password-wrapper">
                     <input
@@ -360,7 +364,7 @@ import { AuthService } from '../../core/auth.service';
                   @if (userForm.controls.password.touched && userForm.controls.password.invalid) {
                     <span class="field-error">{{ text('Password must be at least 6 characters.', 'كلمة المرور يجب أن تكون 6 أحرف على الأقل.') }}</span>
                   }
-                </label>
+                </label> }
               </div>
 
               <label class="permission-mode"><input type="checkbox" [checked]="customizePermissions()" (change)="toggleCustomization()" />{{ text('Customize access to each module for this user', 'تخصيص صلاحيات كل موديول لهذا المستخدم') }}</label>
@@ -378,7 +382,7 @@ import { AuthService } from '../../core/auth.service';
             <div class="modal-footer">
               <button type="button" class="button" (click)="closeAddModal()">{{ text('Cancel', 'إلغاء') }}</button>
               <button type="submit" class="button primary submit-btn" [disabled]="userForm.invalid || saving()">
-                {{ saving() ? text('Creating user…', 'جارٍ إضافة وتفعيل المستخدم…') : text('Create & Activate User', 'إضافة وتفعيل الحساب فوراً') }}
+                {{ saving() ? text('Saving…', 'جارٍ الحفظ…') : inviteMode() ? text('Send clinic invitation', 'إرسال دعوة العيادة') : text('Create & Activate User', 'إضافة وتفعيل الحساب فوراً') }}
               </button>
             </div>
           </form>
@@ -400,6 +404,7 @@ export class UsersPageComponent {
   readonly saving = signal(false);
   readonly showAddUser = signal(false);
   readonly showPassword = signal(false);
+  readonly inviteMode = signal(false);
   readonly error = signal('');
   readonly modalError = signal('');
   readonly success = signal('');
@@ -473,6 +478,7 @@ export class UsersPageComponent {
       roleId: this.roles().length ? this.roles()[0].id : '',
     });
     this.showPassword.set(false);
+    this.setInviteMode(false);
     this.customizePermissions.set(false);
     this.selectedPermissions.set([]);
     this.showAddUser.set(true);
@@ -480,6 +486,12 @@ export class UsersPageComponent {
 
   closeAddModal(): void {
     this.showAddUser.set(false);
+  }
+
+  setInviteMode(invite: boolean): void {
+    this.inviteMode.set(invite);
+    this.userForm.controls.password.setValidators(invite ? [] : [Validators.required, Validators.minLength(6)]);
+    this.userForm.controls.password.updateValueAndValidity();
   }
 
   toggleCustomization(): void {
@@ -503,22 +515,22 @@ export class UsersPageComponent {
     this.success.set('');
     const value = this.userForm.getRawValue();
 
-    this.api
-      .createUser({
+    const request = {
         displayName: value.displayName,
         email: value.email,
-        password: value.password,
         phone: value.phone || undefined,
         roleIds: [value.roleId],
         permissions: this.customizePermissions() ? this.selectedPermissions() : null,
-      })
+    };
+    (this.inviteMode() ? this.api.invite(request) : this.api.createUser({ ...request, password: value.password }))
       .subscribe({
         next: () => {
           this.saving.set(false);
           this.showAddUser.set(false);
           this.userForm.reset();
-          this.success.set(
-            this.text(
+          this.success.set(this.inviteMode()
+            ? this.text(`Invitation sent to ${value.email}.`, `تم إرسال الدعوة إلى ${value.email}.`)
+            : this.text(
               `User "${value.displayName}" was added and activated successfully!`,
               `تم إضافة وتفعيل حساب "${value.displayName}" بنجاح، ويمكنه تسجيل الدخول الآن.`,
             ),

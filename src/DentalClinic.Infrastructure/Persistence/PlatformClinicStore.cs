@@ -36,13 +36,15 @@ internal sealed class PlatformClinicStore(
         }
 
         var totalCount = await tenants.CountAsync(cancellationToken);
-        var adminUsers = context.Users.IgnoreQueryFilters().AsNoTracking()
-            .Where(user => user.TenantId.HasValue &&
+        var adminUsers = (from user in context.ClinicUsers.IgnoreQueryFilters().AsNoTracking()
+            join identity in context.Users.IgnoreQueryFilters().AsNoTracking() on user.IdentityUserId equals identity.Id
+            where
                 context.UserRoleAssignments.IgnoreQueryFilters().Any(assignment =>
-                    assignment.UserId == user.Id &&
+                    assignment.TenantId == user.TenantId && assignment.UserId == user.Id &&
                     context.TenantRoles.IgnoreQueryFilters().Any(role =>
-                        role.Id == assignment.RoleId &&
-                        role.NormalizedName == AuthConstants.ClinicAdminRoleNormalized)));
+                        role.TenantId == user.TenantId && role.Id == assignment.RoleId &&
+                        role.NormalizedName == AuthConstants.ClinicAdminRoleNormalized))
+            select new { user.TenantId, identity.Email });
 
         var items = await tenants
             .OrderBy(x => x.Name)
@@ -67,13 +69,15 @@ internal sealed class PlatformClinicStore(
 
     public async Task<ClinicDetails?> GetDetailsAsync(Guid tenantId, CancellationToken cancellationToken)
     {
-        var adminUsers = context.Users.IgnoreQueryFilters().AsNoTracking()
-            .Where(user => user.TenantId == tenantId &&
+        var adminUsers = (from user in context.ClinicUsers.IgnoreQueryFilters().AsNoTracking()
+            join identity in context.Users.IgnoreQueryFilters().AsNoTracking() on user.IdentityUserId equals identity.Id
+            where user.TenantId == tenantId &&
                 context.UserRoleAssignments.IgnoreQueryFilters().Any(assignment =>
-                    assignment.UserId == user.Id &&
+                    assignment.TenantId == tenantId && assignment.UserId == user.Id &&
                     context.TenantRoles.IgnoreQueryFilters().Any(role =>
-                        role.Id == assignment.RoleId &&
-                        role.NormalizedName == AuthConstants.ClinicAdminRoleNormalized)));
+                        role.TenantId == tenantId && role.Id == assignment.RoleId &&
+                        role.NormalizedName == AuthConstants.ClinicAdminRoleNormalized))
+            select identity.Email);
 
         return await context.Tenants.AsNoTracking()
             .Where(x => x.Id == tenantId)
@@ -90,7 +94,7 @@ internal sealed class PlatformClinicStore(
                 tenant.Currency,
                 tenant.LogoReference,
                 tenant.Status,
-                adminUsers.Select(user => user.Email).FirstOrDefault(),
+                adminUsers.FirstOrDefault(),
                 tenant.CreatedAt,
                 tenant.UpdatedAt,
                 tenant.SubscriptionStartsAt,

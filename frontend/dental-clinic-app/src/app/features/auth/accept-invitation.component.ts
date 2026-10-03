@@ -9,6 +9,7 @@ interface InvitationPreview {
   email?: string;
   role?: string;
   expiresAt?: string;
+  usesExistingAccount?: boolean;
 }
 
 @Component({
@@ -31,10 +32,10 @@ interface InvitationPreview {
                 </svg>
                 <span>{{ text('Account Invitation', 'دعوة انضمام للعيادة') }}</span>
               </div>
-              <h1>{{ text('Activate your account', 'تفعيل حسابك في العيادة') }}</h1>
+              <h1>{{ preview()?.usesExistingAccount ? text('Join another clinic', 'الانضمام لعيادة أخرى') : text('Activate your account', 'تفعيل حسابك في العيادة') }}</h1>
               <p class="subtitle">
                 {{
-                  text(
+                  preview()?.usesExistingAccount ? text('Enter your current account password to activate access to this clinic. Your password will stay the same.', 'اكتب كلمة مرور حسابك الحالية لتفعيل دخول العيادة دي. كلمة المرور مش هتتغير.') : text(
                     'Set your password to activate your clinic account and access patient records.',
                     'قم بتعيين كلمة المرور لتفعيل حسابك والبدء في استخدام النظام.'
                   )
@@ -87,7 +88,7 @@ interface InvitationPreview {
 
               <form [formGroup]="form" (ngSubmit)="accept()" novalidate>
                 <div class="form-field">
-                  <label for="inv-password">{{ text('Password', 'كلمة المرور الجديدة') }}</label>
+                  <label for="inv-password">{{ preview()?.usesExistingAccount ? text('Current password', 'كلمة المرور الحالية') : text('New password', 'كلمة المرور الجديدة') }}</label>
                   <div class="input-with-icon">
                     <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
@@ -97,11 +98,11 @@ interface InvitationPreview {
                       id="inv-password"
                       type="password"
                       formControlName="password"
-                      autocomplete="new-password"
-                      [placeholder]="text('At least 12 characters', '12 حرفاً أو رقماً على الأقل')"
+                      [attr.autocomplete]="preview()?.usesExistingAccount ? 'current-password' : 'new-password'"
+                      [placeholder]="preview()?.usesExistingAccount ? text('Your current password', 'كلمة المرور الحالية') : text('At least 12 characters', '12 حرفاً أو رقماً على الأقل')"
                     />
                   </div>
-                  <small class="helper-text">{{ text('Must be at least 12 characters.', 'يجب أن تتكون من 12 حرفاً على الأقل.') }}</small>
+                  @if (!preview()?.usesExistingAccount) { <small class="helper-text">{{ text('Must be at least 12 characters.', 'يجب أن تتكون من 12 حرفاً على الأقل.') }}</small> }
                 </div>
 
                 <div class="form-field">
@@ -169,6 +170,10 @@ export class AcceptInvitationComponent {
       .subscribe({
         next: (value) => {
           this.preview.set(value);
+          if (value.usesExistingAccount) {
+            this.form.controls.password.setValidators([Validators.required]);
+            this.form.controls.password.updateValueAndValidity();
+          }
           this.loading.set(false);
         },
         error: () => {

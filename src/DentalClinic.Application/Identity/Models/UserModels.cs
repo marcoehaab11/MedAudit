@@ -54,7 +54,8 @@ public sealed record InvitationPreview(
     InvitationPreviewState Status,
     string? Email,
     string? Role,
-    DateTimeOffset? ExpiresAt);
+    DateTimeOffset? ExpiresAt,
+    bool UsesExistingAccount = false);
 
 public sealed record LoginResult(
     string AccessToken,
@@ -62,4 +63,9 @@ public sealed record LoginResult(
     Guid UserId,
     string DisplayName,
     IReadOnlyCollection<string> Roles,
-    IReadOnlyCollection<string> Permissions);
+    IReadOnlyCollection<string> Permissions,
+    Guid TenantId,
+    string TenantName,
+    IReadOnlyCollection<ClinicAccessSummary> Clinics);
+
+public sealed record ClinicAccessSummary(Guid TenantId, string Name, bool Accessible);

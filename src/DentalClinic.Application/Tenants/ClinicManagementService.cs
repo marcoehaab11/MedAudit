@@ -75,7 +75,7 @@ internal sealed class ClinicManagementService(
         store.AddTenant(tenant);
         await store.SavePlatformChangesAsync(tenant.Id, cancellationToken);
 
-        var adminUserId = await identityService.CreateAdminAsync(
+        var adminAccount = await identityService.CreateAdminAsync(
             tenant.Id, command.AdminEmail.Trim().ToLowerInvariant(), cancellationToken);
 
         foreach (var initializer in initializers)
@@ -90,17 +90,18 @@ internal sealed class ClinicManagementService(
             SystemRoleDefinitions.ClinicAdmin.ToUpperInvariant(),
             cancellationToken) ?? throw new InvalidOperationException("ClinicAdmin role initialization failed.");
         store.AddClinicUser(new ClinicUser(
-            adminUserId,
+            adminAccount.MembershipId,
             tenant.Id,
             "Clinic Administrator",
             null,
-            now));
-        store.AddUserRole(new UserRoleAssignment(tenant.Id, adminUserId, clinicAdminRole.Id, now));
+            now,
+            adminAccount.IdentityUserId));
+        store.AddUserRole(new UserRoleAssignment(tenant.Id, adminAccount.MembershipId, clinicAdminRole.Id, now));
 
         var token = tokenGenerator.Generate();
         var invitation = new AdminInvitation(
             tenant.Id,
-            adminUserId,
+            adminAccount.MembershipId,
             command.AdminEmail,
             SystemRoleDefinitions.ClinicAdmin,
             InvitationTokenHasher.Hash(token),
@@ -124,7 +125,7 @@ internal sealed class ClinicManagementService(
             cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
-        return new CreateClinicResult(tenant.Id, adminUserId, invitation.Id);
+        return new CreateClinicResult(tenant.Id, adminAccount.MembershipId, invitation.Id, adminAccount.ExistingAccount);
     }
 
     public async Task<bool> UpdateAsync(UpdateClinicCommand command, CancellationToken cancellationToken)

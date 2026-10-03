@@ -2,7 +2,7 @@ namespace DentalClinic.Application.Identity;
 
 public interface IIdentityCredentialService
 {
-    Task<Guid> CreateInvitedUserAsync(Guid tenantId, string email, CancellationToken cancellationToken);
+    Task<IdentityAccountLink> CreateInvitedUserAsync(Guid tenantId, string email, CancellationToken cancellationToken);
     Task<Guid> CreateUserWithPasswordAsync(Guid tenantId, string email, string password, CancellationToken cancellationToken);
     Task SetPasswordAsync(Guid tenantId, Guid userId, string password, CancellationToken cancellationToken);
     Task<bool> CheckPasswordAsync(Guid userId, string password, CancellationToken cancellationToken);

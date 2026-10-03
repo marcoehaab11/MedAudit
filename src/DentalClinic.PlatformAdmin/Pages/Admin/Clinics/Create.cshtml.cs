@@ -45,7 +45,7 @@ public sealed class CreateModel(
                 Input.LogoReference,
                 Input.SubscriptionMonths), cancellationToken);
 
-            if (!string.IsNullOrWhiteSpace(Input.AdminPassword))
+            if (!result.ExistingAdminAccount && !string.IsNullOrWhiteSpace(Input.AdminPassword))
             {
                 await credentials.SetPasswordAsync(
                     result.TenantId,
@@ -54,9 +54,11 @@ public sealed class CreateModel(
                     cancellationToken);
             }
 
-            SuccessMessage = $"Clinic '{Input.Name}' created successfully with administrator credentials configured.";
+            SuccessMessage = result.ExistingAdminAccount
+                ? $"Clinic '{Input.Name}' created. The existing account must accept its new clinic invitation. Its password was not changed."
+                : $"Clinic '{Input.Name}' created. The administrator can accept the invitation to activate access.";
             CreatedAdminEmail = Input.AdminEmail;
-            CreatedAdminPassword = Input.AdminPassword;
+            CreatedAdminPassword = result.ExistingAdminAccount ? null : Input.AdminPassword;
             CreatedClinicSlug = Input.Slug;
 
             return RedirectToPage("Details", new { id = result.TenantId });
@@ -117,9 +119,9 @@ public sealed class CreateModel(
         [Display(Name = "Clinic Admin Email")]
         public string AdminEmail { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Initial password is required"), MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
-        [Display(Name = "Admin Initial Password")]
-        public string AdminPassword { get; set; } = "ClinicAdmin123!";
+        [MinLength(12, ErrorMessage = "Password must be at least 12 characters")]
+        [Display(Name = "Initial password for a new account (optional)")]
+        public string? AdminPassword { get; set; }
 
         [StringLength(500)]
         [Display(Name = "Logo URL / Reference")]

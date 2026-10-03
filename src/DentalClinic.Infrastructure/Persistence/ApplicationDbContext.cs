@@ -142,7 +142,8 @@ public sealed class ApplicationDbContext(
             entity.HasIndex(x => new { x.TenantId, x.Status });
             entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ClinicUser>().WithMany().HasForeignKey(x => new { x.TenantId, x.UserId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<ClinicUser>(entity =>
@@ -152,10 +153,12 @@ public sealed class ApplicationDbContext(
             entity.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
             entity.Property(x => x.Phone).HasMaxLength(50);
             entity.Property(x => x.Status).HasConversion<int>();
+            entity.Property(x => x.IdentityUserId).IsRequired();
             entity.HasIndex(x => new { x.TenantId, x.Status });
+            entity.HasIndex(x => new { x.TenantId, x.IdentityUserId }).IsUnique();
             entity.HasAlternateKey(x => new { x.TenantId, x.Id });
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne<ApplicationUser>().WithOne().HasForeignKey<ClinicUser>(x => x.Id).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.IdentityUserId).OnDelete(DeleteBehavior.Restrict);
             entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
         });
 

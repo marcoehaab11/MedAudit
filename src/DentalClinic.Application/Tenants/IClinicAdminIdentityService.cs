@@ -1,6 +1,8 @@
+using DentalClinic.Application.Identity;
+
 namespace DentalClinic.Application.Tenants;
 
 public interface IClinicAdminIdentityService
 {
-    Task<Guid> CreateAdminAsync(Guid tenantId, string email, CancellationToken cancellationToken);
+    Task<IdentityAccountLink> CreateAdminAsync(Guid tenantId, string email, CancellationToken cancellationToken);
 }

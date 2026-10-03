@@ -1,6 +1,7 @@
 using DentalClinic.Application;
 using DentalClinic.Application.Common.Exceptions;
 using DentalClinic.Application.Common.Interfaces;
+using DentalClinic.Application.Identity;
 using DentalClinic.Application.Platform;
 using DentalClinic.Application.Tenants;
 using DentalClinic.Application.Tenants.Models;
@@ -63,8 +64,11 @@ public sealed class ClinicManagementAuthorizationTests
     private sealed class StubTokenGenerator : IInvitationTokenGenerator { public string Generate() => "token"; }
     private sealed class StubIdentity : IClinicAdminIdentityService
     {
-        public Task<Guid> CreateAdminAsync(Guid tenantId, string email, CancellationToken cancellationToken) =>
-            Task.FromResult(Guid.NewGuid());
+        public Task<IdentityAccountLink> CreateAdminAsync(Guid tenantId, string email, CancellationToken cancellationToken)
+        {
+            var id = Guid.NewGuid();
+            return Task.FromResult(new IdentityAccountLink(id, id, false));
+        }
     }
     private sealed class StubNotifier : IClinicInvitationNotifier
     {

@@ -9,4 +9,4 @@ public sealed record CreateRoleCommand(string Name, string Description, IReadOnl
 public sealed record UpdateRoleCommand(Guid RoleId, string Name, string Description);
 public sealed record UpdateRolePermissionsCommand(Guid RoleId, IReadOnlyCollection<string> Permissions);
 public sealed record AcceptInvitationCommand(string Token, string Password, string ConfirmPassword);
-public sealed record LoginCommand(string Email, string Password);
+public sealed record LoginCommand(string Email, string Password, Guid? PreferredTenantId = null);

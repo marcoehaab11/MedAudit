@@ -345,6 +345,15 @@
             <line x1="4" y1="18" x2="20" y2="18"/>
           </svg>
         </button>
+        <div class="clinic-switcher">
+          <label for="active-clinic">{{ t('Clinic', 'العيادة') }}</label>
+          <select id="active-clinic" [value]="auth.tenantId()" [disabled]="switchingClinic()" (change)="switchClinic($event)">
+            @for (clinic of auth.clinics(); track clinic.tenantId) {
+              <option [value]="clinic.tenantId" [disabled]="!clinic.accessible">{{ clinic.name }}{{ clinic.accessible ? '' : t(' (unavailable)', ' (غير متاحة)') }}</option>
+            }
+          </select>
+          @if (clinicSwitchError()) { <span role="alert">{{ clinicSwitchError() }}</span> }
+        </div>
         <div class="topbar-right">
           <a class="help-link" routerLink="/guide" [queryParams]="{ topic: guideTopic() }" [attr.aria-label]="t('Help for this page', 'مساعدة لهذه الصفحة')">
             <span aria-hidden="true">?</span>{{ t('Help', 'مساعدة') }}

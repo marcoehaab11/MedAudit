@@ -616,6 +616,34 @@ a.nav-item {
   margin-inline-start: auto;
 }
 
+.clinic-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  color: var(--ink-secondary);
+  font-size: 0.82rem;
+  font-weight: 650;
+
+  select {
+    max-width: min(34vw, 260px);
+    min-width: 130px;
+    padding: 0.45rem 0.65rem;
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+  }
+
+  [role='alert'] { color: #b91c1c; }
+}
+
+@media (max-width: 600px) {
+  .clinic-switcher label { display: none; }
+  .clinic-switcher select { max-width: 44vw; min-width: 100px; }
+}
+
 .lang-btn {
   display: inline-flex;
   align-items: center;

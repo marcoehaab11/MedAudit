@@ -11,8 +11,9 @@ public sealed class ClinicUser : TenantOwnedEntity
         Guid tenantId,
         string displayName,
         string? phone,
-        DateTimeOffset createdAt)
-        : this(id, tenantId, displayName, phone, UserStatus.Invited, createdAt)
+        DateTimeOffset createdAt,
+        Guid? identityUserId = null)
+        : this(id, tenantId, displayName, phone, UserStatus.Invited, createdAt, identityUserId)
     {
     }
 
@@ -22,7 +23,8 @@ public sealed class ClinicUser : TenantOwnedEntity
         string displayName,
         string? phone,
         UserStatus status,
-        DateTimeOffset createdAt)
+        DateTimeOffset createdAt,
+        Guid? identityUserId = null)
     {
         if (id == Guid.Empty || tenantId == Guid.Empty)
         {
@@ -31,6 +33,7 @@ public sealed class ClinicUser : TenantOwnedEntity
 
         Id = id;
         TenantId = tenantId;
+        IdentityUserId = identityUserId ?? id;
         DisplayName = Required(displayName, nameof(displayName), 200);
         Phone = Optional(phone, nameof(phone), 50);
         Status = status;
@@ -39,6 +42,7 @@ public sealed class ClinicUser : TenantOwnedEntity
     }
 
     public string DisplayName { get; private set; } = string.Empty;
+    public Guid IdentityUserId { get; private set; }
     public string? Phone { get; private set; }
     public UserStatus Status { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
