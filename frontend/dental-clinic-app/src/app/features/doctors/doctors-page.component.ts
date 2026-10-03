@@ -16,9 +16,9 @@ import { DoctorApiService, PagedDoctors, DoctorListItem } from './doctor-api.ser
         <p class="eyebrow">{{ t('Clinical team', 'الفريق الطبي') }}</p>
         <h1>{{ t('Doctors', 'الأطباء') }}</h1>
       </div>
-      <a class="button primary" routerLink="/doctors/create">{{
+      @if (auth.hasPermission('Doctors.Create')) { <a class="button primary" routerLink="/doctors/create">{{
         t('Create doctor profile', 'إنشاء ملف طبيب')
-      }}</a>
+      }}</a> }
     </section>
     @if (error()) {
       <div class="alert error">{{ error() }}</div>

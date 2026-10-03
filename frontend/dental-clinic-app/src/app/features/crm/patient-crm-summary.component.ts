@@ -2,6 +2,7 @@ import { Component, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
+import { AuthService } from '../../core/auth.service';
 import { DateInputComponent } from '../../shared/date-input/date-input.component';
 import { CrmApiService, PatientCrm } from './crm-api.service';
 import { activityType, clinicDate, crmTimeline } from './crm-labels';
@@ -26,9 +27,9 @@ import { activityType, clinicDate, crmTimeline } from './crm-labels';
             <span class="badge status-3" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">{{ t('Ongoing patient', 'مريض مستمر / متابعة') }}</span>
           }
           <span class="badge status-2">{{ data()!.pendingFollowUps }} {{ t('open follow-ups', 'متابعات مفتوحة') }}</span>
-          <a class="button primary" [routerLink]="['/crm/follow-ups/create']" [queryParams]="{ patientId: patientId() }">
+          @if (auth.hasPermission('CRM.CreateFollowUp')) { <a class="button primary" [routerLink]="['/crm/follow-ups/create']" [queryParams]="{ patientId: patientId() }">
             + {{ t('Create follow-up', 'إنشاء متابعة') }}
-          </a>
+          </a> }
         </div>
       </div>
 
@@ -75,7 +76,7 @@ import { activityType, clinicDate, crmTimeline } from './crm-labels';
         </div>
 
         <!-- Record Communication Form -->
-        <div class="record-box">
+        @if (auth.hasPermission('CRM.CreateActivity')) { <div class="record-box">
           <h3 class="box-title">{{ t('Record communication', 'تسجيل تواصل جديد') }}</h3>
           <form class="activity-form-styled" [formGroup]="form" (ngSubmit)="add()">
             <div class="activity-grid">
@@ -117,13 +118,14 @@ import { activityType, clinicDate, crmTimeline } from './crm-labels';
               </button>
             </div>
           </form>
-        </div>
+        </div> }
       </div>
     </section>
   }`,
 
 })
 export class PatientCrmSummaryComponent {
+  readonly auth = inject(AuthService);
   readonly patientId = input.required<string>();
   private readonly api = inject(CrmApiService);
   readonly i18n = inject(LocalizationService);

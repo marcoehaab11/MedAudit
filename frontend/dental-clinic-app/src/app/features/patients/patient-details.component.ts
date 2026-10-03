@@ -51,7 +51,7 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
         <div class="head-actions">
           @if (auth.hasPermission('Lab.View')) { <a class="button secondary" routerLink="/lab" [queryParams]="{ patientId: id }">{{ t('Lab cases', 'طلبات المعمل') }}</a> }
           @if (auth.hasPermission('Insurance.View')) { <a class="button secondary" routerLink="/insurance" [queryParams]="{ patientId: id }">{{ t('Insurance claims', 'مطالبات التأمين') }}</a> }
-          @if (hasMedicalAlerts()) {
+          @if (auth.hasPermission('Patients.ViewMedicalHistory') && hasMedicalAlerts()) {
             <button
               type="button"
               class="stat-pill-btn danger"
@@ -63,7 +63,7 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
               <span class="pill-badge-action">⚠️ {{ t('Review', 'مراجعة') }}</span>
             </button>
           }
-          <button
+          @if (auth.hasPermission('Patients.ViewMedicalHistory')) { <button
             type="button"
             class="button"
             (click)="showVisitHistorySheet.set(true)"
@@ -71,7 +71,7 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
           >
             <span>📑</span>
             <span>{{ t('Past Visits Sheet (5 Stages)', 'ورقة السجل والزيارات (5 مراحل)') }}</span>
-          </button>
+          </button> }
           <button
             type="button"
             class="button secondary"
@@ -93,9 +93,12 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
           <span class="badge status-{{ patient()!.status }}">{{
             patient()!.status === 1 ? t('Active', 'نشط') : t('Archived', 'مؤرشف')
           }}</span>
-          @if (patient()!.status === 1) {
+          @if (patient()!.status === 1 && auth.hasPermission('Patients.Edit')) {
             <a class="button" [routerLink]="['/patients', id, 'edit']">{{ t('Edit', 'تعديل') }}</a
-            ><button class="danger" type="button" (click)="archive()">
+            >
+          }
+          @if (patient()!.status === 1 && auth.hasPermission('Patients.Archive')) {
+            <button class="danger" type="button" (click)="archive()">
               {{ t('Archive', 'أرشفة') }}
             </button>
           }
@@ -124,9 +127,11 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
       }
       <nav class="tabs" [attr.aria-label]="t('Patient sections', 'أقسام ملف المريض')">
         @for (item of tabs; track item.id) {
+          @if (item.id !== 'medical' || auth.hasPermission('Patients.ViewMedicalHistory')) {
           <button type="button" [class.active]="tab() === item.id" (click)="tab.set(item.id)">
             {{ t(item.en, item.ar) }}
           </button>
+          }
         }
       </nav>
       @switch (tab()) {
@@ -171,11 +176,11 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
               </dl>
             </section>
           </div>
-          <app-patient-dental-summary [patientId]="id" />
-          <app-patient-treatment-summary [patientId]="id" />
-          <app-patient-prescription-summary [patientId]="id" />
-          <app-patient-crm-summary [patientId]="id" />
-          <app-patient-finance-summary [patientId]="id" />
+          @if (auth.hasPermission('Dental.View')) { <app-patient-dental-summary [patientId]="id" /> }
+          @if (auth.hasPermission('Treatments.View')) { <app-patient-treatment-summary [patientId]="id" /> }
+          @if (auth.hasPermission('Prescriptions.View')) { <app-patient-prescription-summary [patientId]="id" /> }
+          @if (auth.hasPermission('CRM.View')) { <app-patient-crm-summary [patientId]="id" /> }
+          @if (auth.hasPermission('Finance.View')) { <app-patient-finance-summary [patientId]="id" /> }
         }
         @case ('contact') {
           <div class="detail-grid">

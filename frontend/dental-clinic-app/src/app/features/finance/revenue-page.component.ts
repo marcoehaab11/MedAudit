@@ -3,6 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
+import { AuthService } from '../../core/auth.service';
 import { FinanceApiService, Page, Revenue } from './finance-api.service';
 import { categoryTitle, money } from './finance-ui';
 import { FinanceNavComponent } from './finance-dashboard.component';
@@ -70,7 +71,7 @@ import { FinanceNavComponent } from './finance-dashboard.component';
                 <td class="amount-positive">{{ format(x.paid, x.currency) }}</td>
                 <td [class.amount-negative]="x.outstanding > 0">{{ format(x.outstanding, x.currency) }}</td>
                 <td>
-                  @if (x.outstanding > 0) {
+                  @if (x.outstanding > 0 && auth.hasPermission('Finance.Payments.Create')) {
                     <a
                       class="button sm primary"
                       [routerLink]="['/finance/payments/create']"
@@ -101,6 +102,7 @@ import { FinanceNavComponent } from './finance-dashboard.component';
   `,
 })
 export class RevenuePageComponent {
+  readonly auth = inject(AuthService);
   private api = inject(FinanceApiService);
   private route = inject(ActivatedRoute);
   i18n = inject(LocalizationService);

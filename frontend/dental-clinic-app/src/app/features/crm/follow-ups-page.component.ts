@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
+import { AuthService } from '../../core/auth.service';
 import { CrmApiService, FollowUpList } from './crm-api.service';
 import { clinicDate, followUpStatus, followUpType } from './crm-labels';
 import { followUpFilters } from './crm-ui';
@@ -15,9 +16,9 @@ import { followUpFilters } from './crm-ui';
         <p class="eyebrow">CRM</p>
         <h1>{{ t('Follow-ups', 'المتابعات') }}</h1>
       </div>
-      <a class="button primary" routerLink="/crm/follow-ups/create">{{
+      @if (auth.hasPermission('CRM.CreateFollowUp')) { <a class="button primary" routerLink="/crm/follow-ups/create">{{
         t('New follow-up', 'متابعة جديدة')
-      }}</a>
+      }}</a> }
     </section>
     <form class="panel filters" [formGroup]="filters" (ngSubmit)="load(1)">
       <input formControlName="search" [placeholder]="t('Search', 'بحث')" /><select
@@ -104,6 +105,7 @@ import { followUpFilters } from './crm-ui';
 
 })
 export class FollowUpsPageComponent {
+  readonly auth = inject(AuthService);
   private readonly api = inject(CrmApiService);
   readonly i18n = inject(LocalizationService);
   readonly items = signal<FollowUpList[]>([]);

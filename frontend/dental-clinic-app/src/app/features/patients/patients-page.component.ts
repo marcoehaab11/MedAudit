@@ -3,6 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
+import { AuthService } from '../../core/auth.service';
 import { PagedPatients, PatientApiService } from './patient-api.service';
 
 @Component({
@@ -15,9 +16,9 @@ import { PagedPatients, PatientApiService } from './patient-api.service';
         <p class="eyebrow">{{ t('Patient registry', 'سجل المرضى') }}</p>
         <h1>{{ t('Patients', 'المرضى') }}</h1>
       </div>
-      <a class="button primary" routerLink="/patients/create">{{
+      @if (auth.hasPermission('Patients.Create')) { <a class="button primary" routerLink="/patients/create">{{
         t('Add patient', 'إضافة مريض')
-      }}</a>
+      }}</a> }
     </section>
     @if (error()) {
       <div class="alert error" role="alert">{{ error() }}</div>
@@ -124,6 +125,7 @@ import { PagedPatients, PatientApiService } from './patient-api.service';
 
 })
 export class PatientsPageComponent {
+  readonly auth = inject(AuthService);
   private readonly api = inject(PatientApiService);
   readonly i18n = inject(LocalizationService);
   readonly result = signal<PagedPatients | null>(null);

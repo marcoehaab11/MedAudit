@@ -3,6 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
+import { AuthService } from '../../core/auth.service';
 import { DateInputComponent } from '../../shared/date-input/date-input.component';
 import { FinanceApiService, Page, Payment, Revenue } from './finance-api.service';
 import { money, paymentError, paymentMethod } from './finance-ui';
@@ -16,9 +17,9 @@ import { FinanceNavComponent } from './finance-dashboard.component';
   template: `
     <section class="page-head">
       <h1>{{ t('Payments', 'المدفوعات') }}</h1>
-      <a class="button primary" routerLink="/finance/payments/create">
+      @if (auth.hasPermission('Finance.Payments.Create')) { <a class="button primary" routerLink="/finance/payments/create">
         + {{ t('Record payment', 'تسجيل دفعة جديدة') }}
-      </a>
+      </a> }
     </section>
 
     <app-finance-nav />
@@ -80,6 +81,7 @@ import { FinanceNavComponent } from './finance-dashboard.component';
   `,
 })
 export class PaymentsPageComponent {
+  readonly auth = inject(AuthService);
   private api = inject(FinanceApiService);
   i18n = inject(LocalizationService);
   data = signal<Page<Payment> | null>(null);

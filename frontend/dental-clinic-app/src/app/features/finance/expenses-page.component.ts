@@ -3,6 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
+import { AuthService } from '../../core/auth.service';
 import { DateInputComponent } from '../../shared/date-input/date-input.component';
 import { Category, Expense, FinanceApiService, Page } from './finance-api.service';
 import { categoryTitle, localizeCategory, money } from './finance-ui';
@@ -19,9 +20,9 @@ import { FinanceNavComponent } from './finance-dashboard.component';
         <p class="eyebrow" style="color: var(--muted); font-weight: 700; font-size: 0.85rem; margin: 0 0 0.25rem;">{{ t('Expenses & Operational Costs', 'المصروفات والتكاليف التشغيلية') }}</p>
         <h1>{{ t('Expenses', 'المصروفات') }}</h1>
       </div>
-      <a class="button primary" routerLink="/finance/expenses/create">
+      @if (auth.hasPermission('Finance.Expenses.Create')) { <a class="button primary" routerLink="/finance/expenses/create">
         + {{ t('New expense', 'تسجيل مصروف جديد') }}
-      </a>
+      </a> }
     </section>
 
     <app-finance-nav />
@@ -63,6 +64,7 @@ import { FinanceNavComponent } from './finance-dashboard.component';
   `,
 })
 export class ExpensesPageComponent {
+  readonly auth = inject(AuthService);
   private api = inject(FinanceApiService);
   i18n = inject(LocalizationService);
   data = signal<Page<Expense> | null>(null);

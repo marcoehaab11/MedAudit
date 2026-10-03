@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
+import { AuthService } from '../../core/auth.service';
 import { CrmApiService, CrmDashboard } from './crm-api.service';
 @Component({
   styleUrl: './crm.scss',
@@ -12,9 +13,9 @@ import { CrmApiService, CrmDashboard } from './crm-api.service';
         <p class="eyebrow">{{ t('Patient relationships', 'علاقات المرضى') }}</p>
         <h1>{{ t('CRM dashboard', 'لوحة إدارة العلاقات') }}</h1>
       </div>
-      <a class="button primary" routerLink="/crm/follow-ups/create">{{
+      @if (auth.hasPermission('CRM.CreateFollowUp')) { <a class="button primary" routerLink="/crm/follow-ups/create">{{
         t('New follow-up', 'متابعة جديدة')
-      }}</a>
+      }}</a> }
     </section>
     @if (error()) {
       <div class="alert error">{{ error() }}</div>
@@ -41,6 +42,7 @@ import { CrmApiService, CrmDashboard } from './crm-api.service';
 
 })
 export class CrmDashboardComponent {
+  readonly auth = inject(AuthService);
   private readonly api = inject(CrmApiService);
   readonly i18n = inject(LocalizationService);
   readonly data = signal<CrmDashboard | null>(null);
