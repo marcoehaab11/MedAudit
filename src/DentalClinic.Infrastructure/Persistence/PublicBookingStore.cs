@@ -25,6 +25,11 @@ internal sealed class PublicBookingStore(ApplicationDbContext context) : IPublic
                             parent.SubscriptionStartsAt <= now && parent.SubscriptionExpiresAt > now
                       select new { Tenant = t, Config = c }).FirstOrDefaultAsync(token);
         if (clinic is null) return null;
+        var clinicId = clinic.Tenant.ParentClinicId ?? clinic.Tenant.Id;
+        var theme = await context.TenantConfigurations.AsNoTracking().IgnoreQueryFilters()
+            .Where(x => x.TenantId == clinicId)
+            .Select(x => new { x.PrimaryColor, x.SecondaryColor, x.AccentColor })
+            .SingleOrDefaultAsync(token);
         var hours = await context.ClinicHours.AsNoTracking().IgnoreQueryFilters()
             .Include(x => x.Periods).Where(x => x.TenantId == clinic.Tenant.Id)
             .OrderBy(x => x.DayOfWeek).ToListAsync(token);
@@ -40,7 +45,9 @@ internal sealed class PublicBookingStore(ApplicationDbContext context) : IPublic
                     .Select(p => new PublicClinicHourPeriodDto(
                         p.StartTime.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture),
                         p.EndTime.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)))
-                    .ToArray())).ToArray());
+                    .ToArray())).ToArray(),
+            theme?.PrimaryColor ?? "#087b68", theme?.SecondaryColor ?? "#0d9488",
+            theme?.AccentColor ?? "#f59e0b");
     }
 
     public async Task<Guid?> FindTenantIdBySlugAsync(string slug, CancellationToken token)

@@ -397,3 +397,13 @@ select.form-control {
 .hours-remove { background: #fff1ef; color: #a33a31; border: 0; border-radius: 7px; padding: .3rem .6rem; cursor: pointer; }
 .hours-add { background: transparent; color: #087650; border: 1px dashed #79b899; border-radius: 7px; padding: .35rem .55rem; cursor: pointer; }
 .hours-add:disabled { opacity: .4; cursor: not-allowed; }
+/* Shared clinic theme controls */
+.theme-presets { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1rem; }
+.theme-preset { display: flex; align-items: center; gap: .55rem; padding: .55rem .8rem; border: 1px solid var(--border); border-radius: .75rem; background: #fff; color: var(--ink); cursor: pointer; }
+.theme-preset.selected { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-light); }
+.theme-preset:disabled { opacity: .55; cursor: default; }
+.theme-swatch { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; color: #fff; }
+.theme-preview { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; padding: 1rem; margin-top: 1rem; border: 1px solid; border-radius: .85rem; background: #fff; }
+.theme-preview > span:first-child { font-weight: 750; margin-inline-end: auto; }
+.theme-preview-button { color: #fff; padding: .45rem .75rem; border-radius: .5rem; font-weight: 700; }
+.theme-preview-accent { width: 1rem; height: 1rem; border-radius: 50%; }

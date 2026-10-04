@@ -1,4 +1,4 @@
-<div class="booking-container">
+<div class="booking-container" [style.--booking-primary]="clinic()?.primaryColor || '#087b68'" [style.--booking-secondary]="clinic()?.secondaryColor || '#0d9488'" [style.--booking-accent]="clinic()?.accentColor || '#f59e0b'">
   @if (loading()) {
     <div class="loading-state">
       <div class="spinner"></div>

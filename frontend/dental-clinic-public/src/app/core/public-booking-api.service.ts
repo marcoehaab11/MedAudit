@@ -21,6 +21,9 @@ export interface PublicClinicDto {
   description?: string | null;
   arabicDescription?: string | null;
   website?: string | null;
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
   hours: PublicClinicHoursDto[];
 }
 

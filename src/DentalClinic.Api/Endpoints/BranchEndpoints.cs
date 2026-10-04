@@ -21,6 +21,7 @@ internal static class BranchEndpoints
     private static readonly JsonSerializerOptions SnapshotJsonOptions = new(JsonSerializerDefaults.Web);
     private sealed record CreateBranchRequest(string Name, string Code, string Phone, string Address, string City, string Country);
     private sealed record SetBranchStatusRequest(bool Active);
+    private sealed record UpdateClinicThemeRequest(string PrimaryColor, string SecondaryColor, string AccentColor);
     private sealed record BranchSummary(Guid Id, string Name, string Slug, string Phone, string Address,
         string City, string Country, bool Active, bool HasAccess, bool IsMain);
     private sealed record BranchTotals(Guid Id, string Name, int Patients, int Appointments,
@@ -31,6 +32,8 @@ internal static class BranchEndpoints
         var branches = endpoints.MapGroup("/api/branches").RequireAuthorization(AuthConstants.TenantMemberPolicy);
         branches.MapGet("/", ListAsync);
         branches.MapGet("/summary", SummaryAsync);
+        branches.MapGet("/theme", GetThemeAsync);
+        branches.MapPut("/theme", UpdateThemeAsync);
         branches.MapPost("/", CreateAsync);
         branches.MapPut("/{branchId:guid}/status", SetStatusAsync);
         branches.MapPost("/{targetBranchId:guid}/staff/{sourceUserId:guid}/transfer", TransferStaffAsync);
@@ -39,6 +42,49 @@ internal static class BranchEndpoints
         branches.MapGet("/patients/{targetPatientId:guid}/transfer-history", GetTransferHistoryAsync)
             .RequireAuthorization(Permissions.PatientsViewMedicalHistory);
         return endpoints;
+    }
+
+    private static async Task<IResult> GetThemeAsync(ApplicationDbContext db, ICurrentTenant currentTenant,
+        ICurrentUser currentUser, CancellationToken token)
+    {
+        var tenantId = currentTenant.RequireTenantId();
+        var tenant = await db.Tenants.AsNoTracking().SingleAsync(x => x.Id == tenantId, token);
+        var clinicId = tenant.ParentClinicId ?? tenant.Id;
+        var config = await db.TenantConfigurations.IgnoreQueryFilters().AsNoTracking()
+            .SingleOrDefaultAsync(x => x.TenantId == clinicId, token);
+        return Results.Ok(new
+        {
+            primaryColor = config?.PrimaryColor ?? "#087b68",
+            secondaryColor = config?.SecondaryColor ?? "#0d9488",
+            accentColor = config?.AccentColor ?? "#f59e0b",
+            canManage = await IsClinicAdminAsync(db, tenantId, currentUser.UserId!.Value, token)
+        });
+    }
+
+    private static async Task<IResult> UpdateThemeAsync(UpdateClinicThemeRequest request,
+        ApplicationDbContext db, IPlatformClinicStore store, ICurrentTenant currentTenant,
+        ICurrentUser currentUser, CancellationToken token)
+    {
+        var tenantId = currentTenant.RequireTenantId();
+        if (!await IsClinicAdminAsync(db, tenantId, currentUser.UserId!.Value, token)) return Results.Forbid();
+        var tenant = await db.Tenants.AsNoTracking().SingleAsync(x => x.Id == tenantId, token);
+        var clinicId = tenant.ParentClinicId ?? tenant.Id;
+        var config = await db.TenantConfigurations.IgnoreQueryFilters()
+            .SingleOrDefaultAsync(x => x.TenantId == clinicId, token);
+        if (config is null) return Results.NotFound();
+        try
+        {
+            config.UpdateBranding(request.PrimaryColor, request.SecondaryColor, request.AccentColor,
+                config.DefaultLanguage, config.SupportedLanguages, config.RtlEnabled, config.Version);
+        }
+        catch (ArgumentException error)
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["colors"] = [error.Message] });
+        }
+        store.AddAudit(new PlatformAuditLog(clinicId, null, PlatformAuditAction.SettingsBrandingUpdated,
+            nameof(TenantConfiguration), config.Id, DateTimeOffset.UtcNow, null));
+        await store.SavePlatformChangesAsync(clinicId, token);
+        return Results.Ok(new { config.PrimaryColor, config.SecondaryColor, config.AccentColor, canManage = true });
     }
 
     private static async Task<IResult> ListAsync(ApplicationDbContext db, ICurrentTenant currentTenant,

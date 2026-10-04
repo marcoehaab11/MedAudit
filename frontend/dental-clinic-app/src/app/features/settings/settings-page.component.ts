@@ -12,6 +12,7 @@ import { LocalizationService } from '../../core/localization.service';
 import { AuthService } from '../../core/auth.service';
 import { PhoneInputComponent } from '../../shared/phone-input/phone-input.component';
 import { ActivatedRoute } from '@angular/router';
+import { ClinicTheme, ClinicThemeService, DEFAULT_CLINIC_THEME } from '../../core/clinic-theme.service';
 
 @Component({
   styleUrl: './settings-page.component.scss',
@@ -25,6 +26,15 @@ export class SettingsPageComponent implements OnInit {
   loc = inject(LocalizationService);
   auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
+  private readonly clinicTheme = inject(ClinicThemeService);
+
+  readonly themePresets = [
+    { name: 'Planora', primaryColor: '#087b68', secondaryColor: '#0d9488', accentColor: '#f59e0b' },
+    { name: 'Ocean', primaryColor: '#075985', secondaryColor: '#0284c7', accentColor: '#f59e0b' },
+    { name: 'Violet', primaryColor: '#6d28d9', secondaryColor: '#8b5cf6', accentColor: '#f59e0b' },
+    { name: 'Rose', primaryColor: '#9d174d', secondaryColor: '#db2777', accentColor: '#f59e0b' },
+  ];
+  themeForm: ClinicTheme = { ...DEFAULT_CLINIC_THEME, canManage: false };
 
   activeTab = signal<'profile' | 'branding' | 'hours' | 'holidays' | 'modules' | 'preferences'>('profile');
   loading = signal<boolean>(false);
@@ -60,6 +70,7 @@ export class SettingsPageComponent implements OnInit {
   loadAllSettings() {
     this.loading.set(true);
     this.errorMessage.set(null);
+    this.clinicTheme.load().subscribe({ next: theme => this.themeForm = { ...theme } });
 
     this.api.getSettings().subscribe({
       next: (s) => {
@@ -86,6 +97,27 @@ export class SettingsPageComponent implements OnInit {
       next: (p) => {
         this.userPreference.set(p);
         this.prefForm.set({ ...p });
+      }
+    });
+  }
+
+  chooseTheme(preset: Pick<ClinicTheme, 'primaryColor' | 'secondaryColor' | 'accentColor'>): void {
+    this.themeForm = { ...this.themeForm, ...preset };
+  }
+
+  saveClinicTheme(): void {
+    this.loading.set(true);
+    this.errorMessage.set(null);
+    this.clinicTheme.save(this.themeForm).subscribe({
+      next: saved => {
+        this.themeForm = saved;
+        this.api.getSettings().subscribe({ next: current => { this.settings.set(current); this.initForms(current); } });
+        this.loading.set(false);
+        this.successMessage.set(this.loc.language() === 'ar' ? 'تم حفظ ثيم العيادة لكل الفروع.' : 'Clinic theme saved for all branches.');
+      },
+      error: error => {
+        this.loading.set(false);
+        this.errorMessage.set(error?.error?.detail || (this.loc.language() === 'ar' ? 'تعذر حفظ ثيم العيادة.' : 'Could not save clinic theme.'));
       }
     });
   }

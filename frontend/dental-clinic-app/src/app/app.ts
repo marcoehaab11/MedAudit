@@ -3,6 +3,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter, Subscription } from 'rxjs';
 import { AuthService } from './core/auth.service';
 import { LocalizationService } from './core/localization.service';
+import { ClinicThemeService } from './core/clinic-theme.service';
 
 import { ConfirmModalComponent } from './shared/confirm-modal.component';
 
@@ -15,8 +16,10 @@ import { ConfirmModalComponent } from './shared/confirm-modal.component';
 export class App implements OnDestroy {
   protected readonly i18n = inject(LocalizationService);
   protected readonly auth = inject(AuthService);
+  private readonly clinicTheme = inject(ClinicThemeService);
   private readonly router = inject(Router);
   private readonly navSub: Subscription;
+  private readonly authSub: Subscription;
 
   protected readonly sidebarCollapsed = signal(false);
   protected readonly mobileSidebarOpen = signal(false);
@@ -25,7 +28,12 @@ export class App implements OnDestroy {
   protected readonly clinicSwitchError = signal('');
 
   constructor() {
+    this.authSub = this.auth.onAuthReset$.subscribe(() => {
+      if (this.auth.authenticated()) this.clinicTheme.load().subscribe({ error: () => this.clinicTheme.reset() });
+      else this.clinicTheme.reset();
+    });
     if (this.auth.authenticated()) {
+      this.clinicTheme.load().subscribe({ error: () => this.clinicTheme.reset() });
       this.auth.refreshPermissions().subscribe({ error: () => {} });
       this.auth.refreshClinics().subscribe({ error: () => {} });
     }
@@ -38,6 +46,7 @@ export class App implements OnDestroy {
 
   ngOnDestroy(): void {
     this.navSub.unsubscribe();
+    this.authSub.unsubscribe();
   }
 
   @HostListener('document:keydown.escape')
@@ -73,6 +82,7 @@ export class App implements OnDestroy {
 
   protected logout(): void {
     this.auth.logout();
+    this.clinicTheme.reset();
     this.mobileSidebarOpen.set(false);
     void this.router.navigate(['/login']);
   }

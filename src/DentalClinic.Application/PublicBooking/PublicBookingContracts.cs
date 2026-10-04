@@ -18,7 +18,10 @@ public sealed record PublicClinicDto(
     string? Description,
     string? ArabicDescription,
     string? Website,
-    IReadOnlyCollection<PublicClinicHoursDto> Hours
+    IReadOnlyCollection<PublicClinicHoursDto> Hours,
+    string PrimaryColor,
+    string SecondaryColor,
+    string AccentColor
 );
 
 public sealed record PublicClinicHoursDto(DayOfWeek DayOfWeek, bool IsOpen,
