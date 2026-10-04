@@ -31,6 +31,15 @@ internal sealed class ClinicAdminIdentityService(
             if (existing.IsPlatformAdmin || await context.ClinicUsers.IgnoreQueryFilters()
                     .AnyAsync(x => x.TenantId == tenantId && x.IdentityUserId == existing.Id, cancellationToken))
                 throw new ValidationException([new ValidationFailure("Email", "This account cannot be invited to this clinic.")]);
+            var target = await context.Tenants.AsNoTracking().SingleAsync(x => x.Id == tenantId, cancellationToken);
+            var clinicId = target.ParentClinicId ?? target.Id;
+            var activeSibling = await (from member in context.ClinicUsers.IgnoreQueryFilters().AsNoTracking()
+                join branch in context.Tenants.AsNoTracking() on member.TenantId equals branch.Id
+                where member.IdentityUserId == existing.Id && member.Status == Domain.Identity.UserStatus.Active &&
+                      (branch.ParentClinicId ?? branch.Id) == clinicId
+                select member.Id).AnyAsync(cancellationToken);
+            if (activeSibling)
+                throw new ValidationException([new ValidationFailure("Email", "This user already works at another branch. Transfer the user instead.")]);
             return new IdentityAccountLink(Guid.NewGuid(), existing.Id, true);
         }
         var user = new ApplicationUser

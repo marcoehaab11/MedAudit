@@ -33,7 +33,7 @@ public class IndexModel(IClinicManagementService clinics, ApplicationDbContext d
         ClinicAppUrl = $"{Request.Scheme}://app.{baseHost}{port}";
         BookingAppUrl = $"{Request.Scheme}://book.{baseHost}{port}";
         ApiHealthUrl = $"{Request.Scheme}://api.{baseHost}{port}/health/ready";
-        var tenants = db.Tenants.AsNoTracking().IgnoreQueryFilters();
+        var tenants = db.Tenants.AsNoTracking().IgnoreQueryFilters().Where(x => x.ParentClinicId == null);
         TotalClinics = await tenants.CountAsync(cancellationToken);
         ActiveClinics = await tenants.CountAsync(x => x.Status == TenantStatus.Active, cancellationToken);
         SuspendedClinics = await tenants.CountAsync(x => x.Status == TenantStatus.Suspended, cancellationToken);

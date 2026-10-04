@@ -4,7 +4,7 @@ import { catchError, map, of } from 'rxjs';
 import { AuthService } from './auth.service';
 
 const routePermissions: Record<string, string> = {
-  'users': 'Users.View', 'users/:id': 'Users.View',
+  'users': 'Users.View', 'users/:id': 'Users.View', 'branches': 'Settings.View',
   'patients': 'Patients.View', 'patients/:id': 'Patients.View', 'patients/create': 'Patients.Create', 'patients/:id/edit': 'Patients.Edit', 'patients/:id/dental': 'Dental.View',
   'doctors': 'Doctors.View', 'doctors/:id': 'Doctors.View', 'doctors/create': 'Doctors.Create', 'doctors/:id/edit': 'Doctors.Edit',
   'appointments': 'Appointments.View', 'appointments/create': 'Appointments.Create',

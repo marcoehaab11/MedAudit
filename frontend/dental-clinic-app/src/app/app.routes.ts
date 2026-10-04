@@ -27,6 +27,11 @@ export const routes: Routes = [
       import('./features/users/users-page.component').then((x) => x.UsersPageComponent),
   },
   {
+    path: 'branches',
+    canActivate: [authGuard, permissionGuard],
+    loadComponent: () => import('./features/branches/branches-page.component').then(x => x.BranchesPageComponent),
+  },
+  {
     path: 'users/:id',
     canActivate: [authGuard, permissionGuard],
     loadComponent: () =>

@@ -35,8 +35,9 @@ internal sealed class AuthenticationService(
         var current = await store.FindMembershipAsync(currentTenantId, membershipId, cancellationToken);
         if (current is null || !IsAccessible(current)) return null;
         var accounts = await store.FindMembershipsAsync(current.IdentityUserId, cancellationToken);
-        var selected = accounts.SingleOrDefault(x => x.TenantId == targetTenantId);
-        return selected is null || !IsAccessible(selected) ? null : await IssueAsync(selected, accounts, cancellationToken);
+        var branches = accounts.Where(x => x.ClinicId == current.ClinicId).ToArray();
+        var selected = branches.SingleOrDefault(x => x.TenantId == targetTenantId);
+        return selected is null || !IsAccessible(selected) ? null : await IssueAsync(selected, branches, cancellationToken);
     }
 
     public async Task<IReadOnlyCollection<ClinicAccessSummary>> GetClinicsAsync(Guid currentTenantId, Guid membershipId, CancellationToken cancellationToken)
@@ -44,6 +45,7 @@ internal sealed class AuthenticationService(
         var current = await store.FindMembershipAsync(currentTenantId, membershipId, cancellationToken);
         if (current is null || !IsAccessible(current)) return [];
         return (await store.FindMembershipsAsync(current.IdentityUserId, cancellationToken))
+            .Where(x => x.ClinicId == current.ClinicId)
             .OrderBy(x => x.TenantName, StringComparer.OrdinalIgnoreCase)
             .Select(x => new ClinicAccessSummary(x.TenantId, x.TenantName, IsAccessible(x))).ToArray();
     }
@@ -64,7 +66,7 @@ internal sealed class AuthenticationService(
             permissions,
             account.TenantId,
             account.TenantName,
-            accounts.OrderBy(x => x.TenantName, StringComparer.OrdinalIgnoreCase)
+            accounts.Where(x => x.ClinicId == account.ClinicId).OrderBy(x => x.TenantName, StringComparer.OrdinalIgnoreCase)
                 .Select(x => new ClinicAccessSummary(x.TenantId, x.TenantName, IsAccessible(x))).ToArray());
     }
 

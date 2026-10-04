@@ -41,6 +41,8 @@ public sealed partial class Tenant : Entity
     }
 
     public string Name { get; private set; } = string.Empty;
+    public Guid? ParentClinicId { get; private set; }
+    public Guid ClinicId => ParentClinicId ?? Id;
     public string Slug { get; private set; } = string.Empty;
     public string Phone { get; private set; } = string.Empty;
     public string Email { get; private set; } = string.Empty;
@@ -56,6 +58,13 @@ public sealed partial class Tenant : Entity
     public DateTimeOffset SubscriptionStartsAt { get; private set; }
     public DateTimeOffset SubscriptionExpiresAt { get; private set; }
     public bool HasActiveSubscription(DateTimeOffset now) => SubscriptionStartsAt <= now && now < SubscriptionExpiresAt;
+
+    public void AttachToClinic(Guid clinicId)
+    {
+        if (clinicId == Guid.Empty || clinicId == Id || ParentClinicId.HasValue)
+            throw new ArgumentException("A branch must belong to another clinic.", nameof(clinicId));
+        ParentClinicId = clinicId;
+    }
 
     public void ExtendSubscription(int months, DateTimeOffset now)
     {

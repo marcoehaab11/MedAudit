@@ -32,10 +32,10 @@ interface InvitationPreview {
                 </svg>
                 <span>{{ text('Account Invitation', 'دعوة انضمام للعيادة') }}</span>
               </div>
-              <h1>{{ preview()?.usesExistingAccount ? text('Join another clinic', 'الانضمام لعيادة أخرى') : text('Activate your account', 'تفعيل حسابك في العيادة') }}</h1>
+              <h1>{{ preview()?.usesExistingAccount ? text('Join a branch', 'الانضمام لفرع') : text('Activate your account', 'تفعيل حسابك في العيادة') }}</h1>
               <p class="subtitle">
                 {{
-                  preview()?.usesExistingAccount ? text('Enter your current account password to activate access to this clinic. Your password will stay the same.', 'اكتب كلمة مرور حسابك الحالية لتفعيل دخول العيادة دي. كلمة المرور مش هتتغير.') : text(
+                  preview()?.usesExistingAccount ? text('Enter your current account password to activate access to this branch. Your password will stay the same.', 'اكتب كلمة مرور حسابك الحالية لتفعيل دخول الفرع ده. كلمة المرور مش هتتغير.') : text(
                     'Set your password to activate your clinic account and access patient records.',
                     'قم بتعيين كلمة المرور لتفعيل حسابك والبدء في استخدام النظام.'
                   )

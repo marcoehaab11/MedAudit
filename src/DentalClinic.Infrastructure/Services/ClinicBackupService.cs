@@ -20,6 +20,7 @@ public sealed record BackupClinicProfile(string Name, string Slug, string Phone,
 public sealed record BackupManifest(int FormatVersion, Guid TenantId, string ClinicName, DateTimeOffset CreatedAt,
     string Migration, string[] Modules, BackupTable[] Tables, BackupClinicProfile Profile);
 public sealed record BackupFile(FileStream Stream, string Name);
+public sealed record ClinicGroupManifest(int FormatVersion, Guid ClinicId, DateTimeOffset CreatedAt, Guid[] BranchIds);
 
 public sealed class ClinicBackupService(ApplicationDbContext db)
 {
@@ -35,6 +36,43 @@ public sealed class ClinicBackupService(ApplicationDbContext db)
     ];
 
     public static IReadOnlyList<BackupModule> Modules => ModuleCatalog;
+
+    public async Task<BackupFile> ExportClinicGroupAsync(Guid clinicId, string password, CancellationToken token)
+    {
+        ValidatePassword(password);
+        if (!await db.Tenants.AnyAsync(x => x.Id == clinicId && x.ParentClinicId == null, token))
+            throw new KeyNotFoundException("Clinic not found.");
+        var branchIds = await db.Tenants.AsNoTracking().Where(x => x.Id == clinicId || x.ParentClinicId == clinicId)
+            .OrderBy(x => x.Id).Select(x => x.Id).ToArrayAsync(token);
+        var zipPath = TempPath();
+        var encryptedPath = TempPath();
+        try
+        {
+            await using (var file = new FileStream(zipPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                ChunkSize, FileOptions.Asynchronous))
+            {
+                using var archive = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true);
+                var manifestEntry = archive.CreateEntry("clinic-group.json", CompressionLevel.Fastest);
+                await using (var manifestStream = manifestEntry.Open())
+                    await JsonSerializer.SerializeAsync(manifestStream,
+                        new ClinicGroupManifest(1, clinicId, DateTimeOffset.UtcNow, branchIds), cancellationToken: token);
+                foreach (var branchId in branchIds)
+                {
+                    var backup = await ExportAsync(branchId, ["all"], password, token);
+                    await using var branchStream = backup.Stream;
+                    var branchEntry = archive.CreateEntry($"branches/{branchId:D}.plnbak", CompressionLevel.NoCompression);
+                    await using var output = branchEntry.Open();
+                    await branchStream.CopyToAsync(output, token);
+                }
+            }
+            await EncryptAsync(zipPath, encryptedPath, password, token);
+            return new BackupFile(new FileStream(encryptedPath, FileMode.Open, FileAccess.Read, FileShare.Read,
+                ChunkSize, FileOptions.Asynchronous | FileOptions.DeleteOnClose),
+                $"planora-clinic-{clinicId:N}-{DateTimeOffset.UtcNow:yyyyMMdd-HHmm}.plnclinic");
+        }
+        catch { if (File.Exists(encryptedPath)) File.Delete(encryptedPath); throw; }
+        finally { if (File.Exists(zipPath)) File.Delete(zipPath); }
+    }
 
     public async Task<BackupFile> ExportAsync(Guid tenantId, IReadOnlyCollection<string> selectedModules, string password, CancellationToken token)
     {
@@ -112,7 +150,59 @@ public sealed class ClinicBackupService(ApplicationDbContext db)
         finally { if (File.Exists(zipPath)) File.Delete(zipPath); }
     }
 
-    public async Task<BackupManifest> RestoreAsync(Stream encrypted, string password, Guid targetTenantId, CancellationToken token)
+    public Task<BackupManifest> RestoreAsync(Stream encrypted, string password, Guid targetTenantId, CancellationToken token) =>
+        RestoreCoreAsync(encrypted, password, targetTenantId, null, token);
+
+    public Task<ClinicGroupManifest> InspectClinicGroupAsync(Stream encrypted, string password,
+        Guid clinicId, CancellationToken token) => ProcessClinicGroupAsync(encrypted, password, clinicId, false, token);
+
+    public Task<ClinicGroupManifest> RestoreClinicGroupAsync(Stream encrypted, string password,
+        Guid clinicId, CancellationToken token) => ProcessClinicGroupAsync(encrypted, password, clinicId, true, token);
+
+    private async Task<ClinicGroupManifest> ProcessClinicGroupAsync(Stream encrypted, string password,
+        Guid clinicId, bool restore, CancellationToken token)
+    {
+        var zipPath = TempPath();
+        try
+        {
+            await DecryptAsync(encrypted, zipPath, password, token);
+            using var archive = ZipFile.OpenRead(zipPath);
+            var groupEntry = archive.GetEntry("clinic-group.json") ?? throw new InvalidDataException("Clinic group manifest is missing.");
+            await using var groupStream = groupEntry.Open();
+            var group = await JsonSerializer.DeserializeAsync<ClinicGroupManifest>(groupStream, cancellationToken: token)
+                ?? throw new InvalidDataException("Clinic group manifest is invalid.");
+            if (group.FormatVersion != 1 || group.ClinicId != clinicId || group.BranchIds is null ||
+                group.BranchIds.Length is < 1 or > 200 ||
+                group.BranchIds.Distinct().Count() != group.BranchIds.Length)
+                throw new InvalidDataException("Clinic group manifest does not match this clinic.");
+            var currentIds = await db.Tenants.AsNoTracking().Where(x => x.Id == clinicId || x.ParentClinicId == clinicId)
+                .Select(x => x.Id).ToArrayAsync(token);
+            if (!currentIds.Contains(clinicId) || !currentIds.ToHashSet().SetEquals(group.BranchIds))
+                throw new InvalidDataException("The clinic's current branch set differs from this backup.");
+            foreach (var branchId in group.BranchIds)
+            {
+                var branchEntry = archive.GetEntry($"branches/{branchId:D}.plnbak")
+                    ?? throw new InvalidDataException("A branch backup is missing.");
+                await using var branchStream = branchEntry.Open();
+                await InspectAsync(branchStream, password, branchId, token);
+            }
+            if (!restore) return group;
+            await db.Database.OpenConnectionAsync(token);
+            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, token);
+            var sqlTransaction = (NpgsqlTransaction)transaction.GetDbTransaction();
+            foreach (var branchId in group.BranchIds)
+            {
+                await using var branchStream = archive.GetEntry($"branches/{branchId:D}.plnbak")!.Open();
+                await RestoreCoreAsync(branchStream, password, branchId, sqlTransaction, token);
+            }
+            await transaction.CommitAsync(token);
+            return group;
+        }
+        finally { if (File.Exists(zipPath)) File.Delete(zipPath); }
+    }
+
+    private async Task<BackupManifest> RestoreCoreAsync(Stream encrypted, string password, Guid targetTenantId,
+        NpgsqlTransaction? sharedTransaction, CancellationToken token)
     {
         var zipPath = TempPath();
         try
@@ -124,9 +214,10 @@ public sealed class ClinicBackupService(ApplicationDbContext db)
             var selected = allTables.Where(x => manifest.Tables.Any(y => y.Name == x.Name)).ToArray();
             if (!await db.Tenants.AnyAsync(x => x.Id == targetTenantId, token)) throw new KeyNotFoundException("Target clinic not found.");
             await db.Database.OpenConnectionAsync(token);
-            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, token);
+            await using var transaction = sharedTransaction is null
+                ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, token) : null;
             var connection = (NpgsqlConnection)db.Database.GetDbConnection();
-            var sqlTransaction = (NpgsqlTransaction)transaction.GetDbTransaction();
+            var sqlTransaction = sharedTransaction ?? (NpgsqlTransaction)transaction!.GetDbTransaction();
             var selectedNames = selected.Select(x => x.Name).ToHashSet(StringComparer.Ordinal);
             foreach (var dependent in allTables.Where(x => !selectedNames.Contains(x.Name) && x.Parents.Any(selectedNames.Contains)))
             {
@@ -191,7 +282,7 @@ public sealed class ClinicBackupService(ApplicationDbContext db)
                 update.Parameters.AddWithValue("tenant", targetTenantId);
                 await update.ExecuteNonQueryAsync(token);
             }
-            await transaction.CommitAsync(token);
+            if (transaction is not null) await transaction.CommitAsync(token);
             return manifest;
         }
         finally { if (File.Exists(zipPath)) File.Delete(zipPath); }

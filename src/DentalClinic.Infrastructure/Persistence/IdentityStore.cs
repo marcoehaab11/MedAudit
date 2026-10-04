@@ -237,25 +237,31 @@ internal sealed class IdentityStore(
         await (from identity in context.Users.IgnoreQueryFilters().AsNoTracking()
                join user in context.ClinicUsers.IgnoreQueryFilters().AsNoTracking() on identity.Id equals user.IdentityUserId
                join tenant in context.Tenants.AsNoTracking() on user.TenantId equals tenant.Id
+               join clinic in context.Tenants.AsNoTracking() on (tenant.ParentClinicId ?? tenant.Id) equals clinic.Id
                where identity.NormalizedEmail == normalizedEmail && !identity.IsPlatformAdmin
                select new LoginAccount(user.Id, user.TenantId, user.DisplayName, user.Status,
-                   tenant.Status, tenant.SubscriptionStartsAt, tenant.SubscriptionExpiresAt, identity.Id, tenant.Name))
+                   tenant.Status == TenantStatus.Active && clinic.Status == TenantStatus.Active ? TenantStatus.Active : TenantStatus.Suspended,
+                   clinic.SubscriptionStartsAt, clinic.SubscriptionExpiresAt, identity.Id, tenant.Name, clinic.Id))
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyCollection<LoginAccount>> FindMembershipsAsync(Guid identityUserId, CancellationToken cancellationToken) =>
         await (from user in context.ClinicUsers.IgnoreQueryFilters().AsNoTracking()
                join tenant in context.Tenants.AsNoTracking() on user.TenantId equals tenant.Id
+               join clinic in context.Tenants.AsNoTracking() on (tenant.ParentClinicId ?? tenant.Id) equals clinic.Id
                where user.IdentityUserId == identityUserId
                select new LoginAccount(user.Id, user.TenantId, user.DisplayName, user.Status,
-                   tenant.Status, tenant.SubscriptionStartsAt, tenant.SubscriptionExpiresAt, identityUserId, tenant.Name))
+                   tenant.Status == TenantStatus.Active && clinic.Status == TenantStatus.Active ? TenantStatus.Active : TenantStatus.Suspended,
+                   clinic.SubscriptionStartsAt, clinic.SubscriptionExpiresAt, identityUserId, tenant.Name, clinic.Id))
             .ToListAsync(cancellationToken);
 
     public Task<LoginAccount?> FindMembershipAsync(Guid tenantId, Guid membershipId, CancellationToken cancellationToken) =>
         (from user in context.ClinicUsers.IgnoreQueryFilters().AsNoTracking()
          join tenant in context.Tenants.AsNoTracking() on user.TenantId equals tenant.Id
+         join clinic in context.Tenants.AsNoTracking() on (tenant.ParentClinicId ?? tenant.Id) equals clinic.Id
          where user.TenantId == tenantId && user.Id == membershipId
          select new LoginAccount(user.Id, user.TenantId, user.DisplayName, user.Status,
-             tenant.Status, tenant.SubscriptionStartsAt, tenant.SubscriptionExpiresAt, user.IdentityUserId, tenant.Name))
+             tenant.Status == TenantStatus.Active && clinic.Status == TenantStatus.Active ? TenantStatus.Active : TenantStatus.Suspended,
+             clinic.SubscriptionStartsAt, clinic.SubscriptionExpiresAt, user.IdentityUserId, tenant.Name, clinic.Id))
         .SingleOrDefaultAsync(cancellationToken);
 
     public async Task<IReadOnlyCollection<string>> GetRoleNamesForUserAsync(

@@ -51,7 +51,7 @@
 </div>
 
 <div class="card shadow-sm border-0 mb-4">
-    <div class="card-header bg-white py-3 px-4"><h2 class="h5 fw-bold mb-0">Clinic activity · last 30 days</h2></div>
+    <div class="card-header bg-white py-3 px-4"><h2 class="h5 fw-bold mb-0">All branches · activity in the last 30 days</h2></div>
     <div class="card-body p-4">
         <div class="row g-3">
             <div class="col-6 col-lg-2"><div class="p-3 bg-light rounded"><small>New patients</small><div class="h3 mb-0">@Model.Usage.Patients</div></div></div>
@@ -63,6 +63,17 @@
         </div>
         <div class="mt-3 small text-muted">Uncontacted booking leads over 2 hours: <strong class="@(Model.Usage.UncontactedLeads > 0 ? "text-warning" : "")">@Model.Usage.UncontactedLeads</strong> · Last appointment recorded: @(Model.Usage.LastActivity?.ToString("dd MMM yyyy HH:mm 'UTC'") ?? "None yet")</div>
     </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white py-3 px-4"><h2 class="h5 fw-bold mb-0">Branches and lifetime totals</h2></div>
+    <div class="table-responsive"><table class="table mb-0 align-middle"><thead><tr><th>Branch</th><th>Status</th><th>Patients</th><th>Appointments</th><th>Revenue</th><th>Payments</th><th>Expenses</th><th>Booking link</th></tr></thead><tbody>
+    @foreach (var branch in Model.Branches)
+    {
+        var branchUrl = Model.BookingUrl.Substring(0, Model.BookingUrl.LastIndexOf('/') + 1) + Uri.EscapeDataString(branch.Slug);
+        <tr><td><strong>@branch.Name</strong><br /><small class="text-muted">@branch.Slug</small></td><td>@branch.Status</td><td>@branch.Patients</td><td>@branch.Appointments</td><td>@branch.Revenue.ToString("N2")</td><td>@branch.Payments.ToString("N2")</td><td>@branch.Expenses.ToString("N2")</td><td><a href="@branchUrl" target="_blank" rel="noopener">Open ↗</a></td></tr>
+    }
+    </tbody><tfoot><tr class="fw-bold"><td>All branches</td><td></td><td>@Model.Branches.Sum(x => x.Patients)</td><td>@Model.Branches.Sum(x => x.Appointments)</td><td>@Model.Branches.Sum(x => x.Revenue).ToString("N2")</td><td>@Model.Branches.Sum(x => x.Payments).ToString("N2")</td><td>@Model.Branches.Sum(x => x.Expenses).ToString("N2")</td><td></td></tr></tfoot></table></div>
 </div>
 
 <div class="card shadow-sm border-0 mb-4 booking-share-card">
@@ -294,7 +305,7 @@
 <div class="card shadow-sm border-0 mt-4 mb-4">
     <div class="card-header bg-white py-3 px-4"><h5 class="fw-bold mb-0">Backup &amp; restore · @Model.Clinic.Name</h5></div>
     <div class="card-body p-4">
-        <p class="text-muted">Download an encrypted full copy of this clinic. Keep the file and its password outside the server. Only platform administrators can restore it.</p>
+        <p class="text-muted">Download an encrypted full copy of this clinic and every branch. Keep the file and its password outside the server. Only platform administrators can restore it.</p>
         <form method="post" asp-page-handler="Backup" class="row g-2 align-items-end mb-4">
             <input type="hidden" name="id" value="@Model.Clinic.Id" />
             <div class="col-md-8"><label class="form-label" for="backup-password">Backup password · at least 12 characters</label><input id="backup-password" class="form-control" type="password" name="password" minlength="12" required autocomplete="new-password" /></div>
@@ -303,7 +314,7 @@
         <form id="restore-form" method="post" enctype="multipart/form-data" asp-page-handler="Restore" data-preview-url="@Url.Page("/Admin/Clinics/Details", "PreviewRestore", new { id = Model.Clinic.Id })" onsubmit="return confirm('Replace this clinic’s selected data with the inspected backup? This action cannot be undone without your downloaded safety copy.');">
             <input type="hidden" name="id" value="@Model.Clinic.Id" />
             <div class="row g-2">
-                <div class="col-md-6"><label class="form-label" for="restore-file">Encrypted backup file</label><input id="restore-file" class="form-control" type="file" name="file" accept=".plnbak" required /></div>
+                <div class="col-md-6"><label class="form-label" for="restore-file">Encrypted backup file</label><input id="restore-file" class="form-control" type="file" name="file" accept=".plnbak,.plnclinic" required /></div>
                 <div class="col-md-6"><label class="form-label" for="restore-password">Backup password</label><input id="restore-password" class="form-control" type="password" name="password" required /></div>
             </div>
             <div id="restore-preview" class="alert alert-secondary my-3" aria-live="polite">Select a backup and preview its clinic, date, modules and row count before restoring.</div>
@@ -363,7 +374,9 @@
                     const response = await fetch(form.dataset.previewUrl, { method: 'POST', body: new FormData(form), credentials: 'same-origin' });
                     const result = await response.json();
                     if (!response.ok) throw new Error(result.error || 'Backup could not be inspected.');
-                    preview.textContent = `Clinic: ${result.clinicName} · Created: ${new Date(result.createdAt).toLocaleString()} · Modules: ${result.modules.join(', ')} · Tables: ${result.tables} · Rows: ${result.rows}`;
+                    preview.textContent = result.branches
+                        ? `Clinic: ${result.clinicName} · Created: ${new Date(result.createdAt).toLocaleString()} · Complete backup of ${result.branches} branch(es)`
+                        : `Clinic: ${result.clinicName} · Created: ${new Date(result.createdAt).toLocaleString()} · Modules: ${result.modules.join(', ')} · Tables: ${result.tables} · Rows: ${result.rows}`;
                     restore.disabled = false;
                 } catch (error) { preview.textContent = error.message; }
             });

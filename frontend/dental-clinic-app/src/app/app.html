@@ -278,6 +278,7 @@
             </span>
             <span class="nav-text">{{ t('Users', 'المستخدمون') }}</span>
           </a> }
+          @if (auth.hasPermission('Settings.View')) { <a class="nav-item" routerLink="/branches" routerLinkActive="active" (click)="closeMobileSidebar()"><span class="nav-icon" aria-hidden="true">⌖</span><span class="nav-text">{{ t('Branches', 'الفروع') }}</span></a> }
 
           @if (auth.hasPermission('Notifications.View')) {
             <a class="nav-item" routerLink="/notifications" routerLinkActive="active" (click)="closeMobileSidebar()">
@@ -346,7 +347,7 @@
           </svg>
         </button>
         <div class="clinic-switcher">
-          <label for="active-clinic">{{ t('Clinic', 'العيادة') }}</label>
+          <label for="active-clinic">{{ t('Branch', 'الفرع') }}</label>
           <select id="active-clinic" [value]="auth.tenantId()" [disabled]="switchingClinic()" (change)="switchClinic($event)">
             @for (clinic of auth.clinics(); track clinic.tenantId) {
               <option [value]="clinic.tenantId" [disabled]="!clinic.accessible">{{ clinic.name }}{{ clinic.accessible ? '' : t(' (unavailable)', ' (غير متاحة)') }}</option>

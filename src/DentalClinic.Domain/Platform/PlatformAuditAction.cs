@@ -127,5 +127,8 @@ public enum PlatformAuditAction
     SettingsHolidayDeleted = 123,
     SettingsModuleConfigUpdated = 124,
     DoctorProfileRestored = 125,
-    SubscriptionExtended = 126
+    SubscriptionExtended = 126,
+    BranchCreated = 127,
+    StaffTransferred = 128,
+    PatientTransferred = 129
 }

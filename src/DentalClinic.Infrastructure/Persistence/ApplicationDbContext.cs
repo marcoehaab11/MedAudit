@@ -45,6 +45,7 @@ public sealed class ApplicationDbContext(
     public DbSet<UserRoleAssignment> UserRoleAssignments => Set<UserRoleAssignment>();
     public DbSet<UserPermissionProfile> UserPermissionProfiles => Set<UserPermissionProfile>();
     public DbSet<Patient> Patients => Set<Patient>();
+    public DbSet<PatientBranchTransfer> PatientBranchTransfers => Set<PatientBranchTransfer>();
     public DbSet<PatientAllergy> PatientAllergies => Set<PatientAllergy>();
     public DbSet<PatientMedicalCondition> PatientMedicalConditions => Set<PatientMedicalCondition>();
     public DbSet<PatientMedication> PatientMedications => Set<PatientMedication>();
@@ -128,6 +129,8 @@ public sealed class ApplicationDbContext(
             entity.Property(x => x.Status).HasConversion<int>();
             entity.HasIndex(x => x.Slug).IsUnique();
             entity.HasIndex(x => x.Status);
+            entity.HasIndex(x => x.ParentClinicId);
+            entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.ParentClinicId).OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<AdminInvitation>(entity =>
@@ -234,6 +237,19 @@ public sealed class ApplicationDbContext(
             entity.HasIndex(x => new { x.TenantId, x.Phone });
             entity.HasIndex(x => new { x.TenantId, x.LastName, x.FirstName });
             entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
+        builder.Entity<PatientBranchTransfer>(entity =>
+        {
+            entity.ToTable("patient_branch_transfers");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ClinicalSnapshotJson).HasColumnType("jsonb").IsRequired();
+            entity.HasIndex(x => new { x.TenantId, x.TargetPatientId }).IsUnique();
+            entity.HasIndex(x => new { x.SourceTenantId, x.SourcePatientId });
+            entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Patient>().WithMany().HasForeignKey(x => new { x.TenantId, x.TargetPatientId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
             entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
         });
 
@@ -1062,10 +1078,10 @@ public sealed class ApplicationDbContext(
         foreach (var entry in ChangeTracker.Entries<ITenantOwned>()
                      .Where(x => x.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
         {
-            var tenantId = currentTenant.IsAvailable
-                ? currentTenant.RequireTenantId()
-                : platformWriteScope?.TenantId
-                    ?? (entry.Entity.TenantId != Guid.Empty ? entry.Entity.TenantId : throw new TenantUnavailableException());
+            var tenantId = platformWriteScope?.TenantId
+                ?? (currentTenant.IsAvailable
+                    ? currentTenant.RequireTenantId()
+                    : entry.Entity.TenantId != Guid.Empty ? entry.Entity.TenantId : throw new TenantUnavailableException());
             var property = entry.Property(nameof(ITenantOwned.TenantId));
 
             if (entry.State == EntityState.Added && (Guid)property.CurrentValue! == Guid.Empty)

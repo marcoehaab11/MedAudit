@@ -2435,6 +2435,44 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.ToTable("patient_allergies", (string)null);
                 });
 
+            modelBuilder.Entity("DentalClinic.Domain.Patients.PatientBranchTransfer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClinicalSnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("SourcePatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SourceTenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TargetPatientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("TransferredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("TransferredBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SourceTenantId", "SourcePatientId");
+
+                    b.HasIndex("TenantId", "TargetPatientId")
+                        .IsUnique();
+
+                    b.ToTable("patient_branch_transfers", (string)null);
+                });
+
             modelBuilder.Entity("DentalClinic.Domain.Patients.PatientMedicalCondition", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3269,6 +3307,9 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<Guid?>("ParentClinicId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Phone")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -3297,6 +3338,8 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ParentClinicId");
 
                     b.HasIndex("Slug")
                         .IsUnique();
@@ -4663,6 +4706,22 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("DentalClinic.Domain.Patients.PatientBranchTransfer", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Patients.Patient", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "TargetPatientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("DentalClinic.Domain.Patients.PatientMedicalCondition", b =>
                 {
                     b.HasOne("DentalClinic.Domain.Patients.Patient", null)
@@ -4823,6 +4882,14 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ClinicHoursId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Tenancy.Tenant", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("ParentClinicId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("DentalClinic.Domain.Treatments.Treatment", b =>

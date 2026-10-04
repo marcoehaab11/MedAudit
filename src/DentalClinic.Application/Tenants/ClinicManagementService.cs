@@ -202,6 +202,7 @@ internal sealed class ClinicManagementService(
         if (months < 1 || months > 120) throw Validation(nameof(months), "Choose between 1 and 120 months.");
         var tenant = await store.FindTenantAsync(tenantId, cancellationToken);
         if (tenant is null) return false;
+        if (tenant.ParentClinicId.HasValue) return false;
         var now = clock.UtcNow;
         tenant.ExtendSubscription(months, now);
         store.AddAudit(Audit(tenantId, PlatformAuditAction.SubscriptionExtended, nameof(Tenant), tenantId, now));

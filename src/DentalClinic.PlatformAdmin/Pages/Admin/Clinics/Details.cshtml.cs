@@ -32,7 +32,10 @@ public sealed partial class DetailsModel(IClinicManagementService clinics, IPlat
     private partial void RestoreRejected(Exception exception, Guid clinicId);
     public sealed record UsageStats(int Patients, int Appointments, int OnlineBookings, int BookingInquiries,
         int PageVisits, int FailedNotifications, int UncontactedLeads, DateTimeOffset? LastActivity);
+    public sealed record BranchStats(Guid Id, string Name, string Slug, TenantStatus Status,
+        int Patients, int Appointments, decimal Revenue, decimal Payments, decimal Expenses);
     public UsageStats Usage { get; private set; } = new(0, 0, 0, 0, 0, 0, 0, null);
+    public IReadOnlyList<BranchStats> Branches { get; private set; } = [];
     public ClinicDetails Clinic { get; private set; } = null!;
     public PagedResult<UserListItem> Users { get; private set; } = null!;
     public DateTimeOffset Now { get; private set; }
@@ -51,15 +54,28 @@ public sealed partial class DetailsModel(IClinicManagementService clinics, IPlat
         Users = await users.SearchAsync(id, new UserSearchQuery(Page: userPage, PageSize: 20), cancellationToken);
         Now = DateTimeOffset.UtcNow;
         var since = Now.AddDays(-30);
-        var appointments = db.Appointments.IgnoreQueryFilters().AsNoTracking().Where(x => x.TenantId == id);
-        var inquiries = db.BookingInquiries.IgnoreQueryFilters().AsNoTracking().Where(x => x.TenantId == id);
+        var branchRows = await db.Tenants.AsNoTracking().Where(x => x.Id == id || x.ParentClinicId == id)
+            .OrderBy(x => x.ParentClinicId != null).ThenBy(x => x.Name)
+            .Select(x => new { x.Id, x.Name, x.Slug, x.Status }).ToArrayAsync(cancellationToken);
+        var branchIds = branchRows.Select(x => x.Id).ToArray();
+        var branchStats = new List<BranchStats>();
+        foreach (var branch in branchRows)
+            branchStats.Add(new BranchStats(branch.Id, branch.Name, branch.Slug, branch.Status,
+                await db.Patients.IgnoreQueryFilters().CountAsync(x => x.TenantId == branch.Id, cancellationToken),
+                await db.Appointments.IgnoreQueryFilters().CountAsync(x => x.TenantId == branch.Id, cancellationToken),
+                await db.Revenues.IgnoreQueryFilters().Where(x => x.TenantId == branch.Id).SumAsync(x => (decimal?)x.Amount, cancellationToken) ?? 0,
+                await db.Payments.IgnoreQueryFilters().Where(x => x.TenantId == branch.Id).SumAsync(x => (decimal?)x.Amount, cancellationToken) ?? 0,
+                await db.Expenses.IgnoreQueryFilters().Where(x => x.TenantId == branch.Id).SumAsync(x => (decimal?)x.Amount, cancellationToken) ?? 0));
+        Branches = branchStats;
+        var appointments = db.Appointments.IgnoreQueryFilters().AsNoTracking().Where(x => branchIds.Contains(x.TenantId));
+        var inquiries = db.BookingInquiries.IgnoreQueryFilters().AsNoTracking().Where(x => branchIds.Contains(x.TenantId));
         Usage = new UsageStats(
-            await db.Patients.IgnoreQueryFilters().CountAsync(x => x.TenantId == id && x.CreatedAt >= since, cancellationToken),
+            await db.Patients.IgnoreQueryFilters().CountAsync(x => branchIds.Contains(x.TenantId) && x.CreatedAt >= since, cancellationToken),
             await appointments.CountAsync(x => x.CreatedAt >= since, cancellationToken),
             await appointments.CountAsync(x => x.CreatedAt >= since && x.BookingReference != null, cancellationToken),
             await inquiries.CountAsync(x => x.CreatedAt >= since, cancellationToken),
-            await db.BookingPageVisits.IgnoreQueryFilters().CountAsync(x => x.TenantId == id && x.CreatedAt >= since, cancellationToken),
-            await db.NotificationDeliveries.IgnoreQueryFilters().CountAsync(x => x.TenantId == id && x.CreatedAt >= since && x.Status == NotificationStatus.Failed, cancellationToken),
+            await db.BookingPageVisits.IgnoreQueryFilters().CountAsync(x => branchIds.Contains(x.TenantId) && x.CreatedAt >= since, cancellationToken),
+            await db.NotificationDeliveries.IgnoreQueryFilters().CountAsync(x => branchIds.Contains(x.TenantId) && x.CreatedAt >= since && x.Status == NotificationStatus.Failed, cancellationToken),
             await inquiries.CountAsync(x => x.Status == "New" && x.CreatedAt < Now.AddHours(-2), cancellationToken)
                 + await appointments.CountAsync(x => x.BookingReference != null && x.PublicBookingContactedAt == null && x.CreatedAt < Now.AddHours(-2), cancellationToken),
             await appointments.MaxAsync(x => (DateTimeOffset?)x.CreatedAt, cancellationToken));
@@ -106,7 +122,10 @@ public sealed partial class DetailsModel(IClinicManagementService clinics, IPlat
         if (!await db.Tenants.AnyAsync(x => x.Id == id, cancellationToken)) return NotFound();
         try
         {
-            var backup = await backups.ExportAsync(id, ["all"], password, cancellationToken);
+            var hasBranches = await db.Tenants.AnyAsync(x => x.ParentClinicId == id, cancellationToken);
+            var backup = hasBranches
+                ? await backups.ExportClinicGroupAsync(id, password, cancellationToken)
+                : await backups.ExportAsync(id, ["all"], password, cancellationToken);
             BackupExported(id);
             return File(backup.Stream, "application/octet-stream", backup.Name);
         }
@@ -122,6 +141,12 @@ public sealed partial class DetailsModel(IClinicManagementService clinics, IPlat
         if (file is null || file.Length == 0) return BadRequest(new { error = "Select a backup file." });
         try
         {
+            if (await db.Tenants.AnyAsync(x => x.ParentClinicId == id, cancellationToken))
+            {
+                var group = await backups.InspectClinicGroupAsync(file.OpenReadStream(), password, id, cancellationToken);
+                var clinicName = await db.Tenants.Where(x => x.Id == id).Select(x => x.Name).SingleAsync(cancellationToken);
+                return new JsonResult(new { clinicName, group.CreatedAt, branches = group.BranchIds.Length });
+            }
             var manifest = await backups.InspectAsync(file.OpenReadStream(), password, id, cancellationToken);
             return new JsonResult(new { manifest.ClinicName, manifest.CreatedAt, manifest.Modules, tables = manifest.Tables.Length, rows = manifest.Tables.Sum(x => x.Rows) });
         }
@@ -140,9 +165,18 @@ public sealed partial class DetailsModel(IClinicManagementService clinics, IPlat
         }
         try
         {
-            var manifest = await backups.RestoreAsync(file.OpenReadStream(), password, id, cancellationToken);
-            BackupRestored(id, manifest.CreatedAt, string.Join(",", manifest.Modules));
-            SuccessMessage = $"Clinic restored from {manifest.CreatedAt:u}.";
+            if (await db.Tenants.AnyAsync(x => x.ParentClinicId == id, cancellationToken))
+            {
+                var group = await backups.RestoreClinicGroupAsync(file.OpenReadStream(), password, id, cancellationToken);
+                BackupRestored(id, group.CreatedAt, "all branches");
+                SuccessMessage = $"Clinic and {group.BranchIds.Length} branch(es) restored from {group.CreatedAt:u}.";
+            }
+            else
+            {
+                var manifest = await backups.RestoreAsync(file.OpenReadStream(), password, id, cancellationToken);
+                BackupRestored(id, manifest.CreatedAt, string.Join(",", manifest.Modules));
+                SuccessMessage = $"Clinic restored from {manifest.CreatedAt:u}.";
+            }
         }
         catch (Exception ex) when (ex is InvalidDataException or CryptographicException or ArgumentException or InvalidOperationException or JsonException or EndOfStreamException or FormatException or Npgsql.PostgresException)
         {

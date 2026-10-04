@@ -19,6 +19,7 @@ interface BackupModule { id: string; name: string }
         <p class="notice">{{ t('Keep the file and its password outside the server. If the file or password is lost, it cannot be restored. Automatic off-server storage is not configured yet.', 'احتفظ بالملف وكلمة المرور خارج السيرفر. فقدان أي منهما يمنع الاسترجاع. التخزين التلقائي خارج السيرفر لم يتم إعداده بعد.') }}</p>
         @if (error) { <p class="error" role="alert">{{ error }}</p> }
         <button class="download" type="button" [disabled]="busy || selected.size === 0 || password.length < 12" (click)="download()">{{ busy ? t('Preparing backup…', 'جارٍ تجهيز النسخة…') : t('Download encrypted backup', 'تحميل النسخة المشفرة') }}</button>
+        @if (canDownloadAllBranches) { <button class="download" type="button" style="margin-inline-start:10px" [disabled]="busy || password.length < 12" (click)="downloadAllBranches()">{{ t('Download all branches', 'تحميل كل الفروع') }}</button> }
       </section>
     </main>
   `,
@@ -33,8 +34,12 @@ export class BackupPageComponent implements OnInit {
   selected = new Set<string>();
   password = '';
   busy = false;
+  canDownloadAllBranches = false;
   error = '';
-  ngOnInit() { this.http.get<BackupModule[]>('/api/backups/modules').subscribe({ next: x => this.modules = x, error: () => this.error = this.t('Could not load backup modules.', 'تعذر تحميل الموديولات.') }); }
+  ngOnInit() {
+    this.http.get<BackupModule[]>('/api/backups/modules').subscribe({ next: x => this.modules = x, error: () => this.error = this.t('Could not load backup modules.', 'تعذر تحميل الموديولات.') });
+    this.http.get<{ branches: unknown[]; canManage: boolean }>('/api/branches').subscribe({ next: x => this.canDownloadAllBranches = x.canManage && x.branches.length > 1 });
+  }
   t(en: string, ar: string) { return this.i18n.language() === 'ar' ? ar : en; }
   name(module: BackupModule) { return this.i18n.language() !== 'ar' ? module.name : ({ patients: 'المرضى وتاريخهم الطبي', appointments: 'المواعيد والحجز الإلكتروني', clinical: 'الأسنان والعلاجات والروشتات', finance: 'المالية', operations: 'المخزون والصيدلية والمعامل والتأمينات', communications: 'المتابعة والإشعارات', settings: 'إعدادات العيادة', accounts: 'المستخدمون والصلاحيات' } as Record<string,string>)[module.id] || module.name; }
   toggle(id: string) { this.selected.has(id) ? this.selected.delete(id) : this.selected.add(id); }
@@ -49,6 +54,17 @@ export class BackupPageComponent implements OnInit {
         setTimeout(() => URL.revokeObjectURL(url), 60_000); this.busy = false;
       },
       error: () => { this.error = this.t('Backup failed. Try again.', 'فشل تجهيز النسخة. حاول مرة أخرى.'); this.busy = false; },
+    });
+  }
+  downloadAllBranches() {
+    this.busy = true; this.error = '';
+    this.http.post('/api/backups/export-clinic', { modules: ['all'], password: this.password }, { responseType: 'blob' }).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob); const link = document.createElement('a');
+        link.href = url; link.download = `planora-all-branches-${new Date().toISOString().slice(0,10)}.plnclinic`; link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 60_000); this.busy = false;
+      },
+      error: () => { this.error = this.t('Clinic backup failed. Try again.', 'فشل تجهيز نسخة العيادة. حاول مرة أخرى.'); this.busy = false; },
     });
   }
 }

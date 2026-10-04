@@ -20,7 +20,7 @@ internal sealed class PlatformClinicStore(
         ClinicSearchQuery query,
         CancellationToken cancellationToken)
     {
-        var tenants = context.Tenants.AsNoTracking();
+        var tenants = context.Tenants.AsNoTracking().Where(x => x.ParentClinicId == null);
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var search = query.Search.Trim();

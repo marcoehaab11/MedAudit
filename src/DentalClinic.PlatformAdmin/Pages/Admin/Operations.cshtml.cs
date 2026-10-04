@@ -25,7 +25,7 @@ public sealed class OperationsModel(ApplicationDbContext db) : PageModel
         Events = await db.PlatformHealthEvents.AsNoTracking().OrderByDescending(x => x.OccurredAt).Take(30).ToListAsync(token);
 
         var tenants = await db.Tenants.IgnoreQueryFilters().AsNoTracking()
-            .Select(x => new { x.Id, x.Name, x.Status, x.SubscriptionExpiresAt })
+            .Select(x => new { x.Id, x.ParentClinicId, x.Name, x.Status, x.SubscriptionExpiresAt })
             .ToListAsync(token);
         var failed = await db.NotificationDeliveries.IgnoreQueryFilters().AsNoTracking()
             .Where(x => x.CreatedAt >= Now.AddHours(-24) && x.Status == NotificationStatus.Failed)
@@ -38,17 +38,22 @@ public sealed class OperationsModel(ApplicationDbContext db) : PageModel
             .GroupBy(x => x.TenantId).Select(x => new { Id = x.Key, Count = x.Count() }).ToDictionaryAsync(x => x.Id, x => x.Count, token);
 
         var issues = new List<ClinicIssue>();
-        foreach (var tenant in tenants)
+        foreach (var tenant in tenants.Where(x => x.ParentClinicId == null))
         {
             if (tenant.Status == TenantStatus.Active && tenant.SubscriptionExpiresAt <= Now)
                 issues.Add(new(tenant.Id, tenant.Name, "Subscription expired; staff access is blocked"));
             if (tenant.Status == TenantStatus.Active && tenant.SubscriptionExpiresAt > Now && tenant.SubscriptionExpiresAt <= Now.AddDays(7))
                 issues.Add(new(tenant.Id, tenant.Name, "Subscription expires within 7 days"));
-            if (failed.TryGetValue(tenant.Id, out var failures))
-                issues.Add(new(tenant.Id, tenant.Name, $"{failures} failed notification(s) in 24 hours"));
-            var leads = oldInquiries.GetValueOrDefault(tenant.Id) + oldBookings.GetValueOrDefault(tenant.Id);
-            if (leads > 0)
-                issues.Add(new(tenant.Id, tenant.Name, $"{leads} booking lead(s) waiting over 2 hours"));
+            foreach (var branch in tenants.Where(x => x.Id == tenant.Id || x.ParentClinicId == tenant.Id))
+            {
+                if (branch.Id != tenant.Id && branch.Status != TenantStatus.Active)
+                    issues.Add(new(tenant.Id, branch.Name, "Branch access is inactive"));
+                if (failed.TryGetValue(branch.Id, out var failures))
+                    issues.Add(new(tenant.Id, branch.Name, $"{failures} failed notification(s) in 24 hours"));
+                var leads = oldInquiries.GetValueOrDefault(branch.Id) + oldBookings.GetValueOrDefault(branch.Id);
+                if (leads > 0)
+                    issues.Add(new(tenant.Id, branch.Name, $"{leads} booking lead(s) waiting over 2 hours"));
+            }
         }
         ClinicIssues = issues.Take(100).ToList();
     }

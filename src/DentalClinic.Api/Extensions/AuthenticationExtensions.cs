@@ -63,9 +63,11 @@ internal static class AuthenticationExtensions
                         var now = DateTimeOffset.UtcNow;
                         var allowed = await (from user in db.ClinicUsers.IgnoreQueryFilters().AsNoTracking()
                                              join tenant in db.Tenants.AsNoTracking() on user.TenantId equals tenant.Id
+                                             join clinic in db.Tenants.AsNoTracking() on (tenant.ParentClinicId ?? tenant.Id) equals clinic.Id
                                              where user.Id == userId && user.TenantId == tenantId &&
                                                    user.Status == UserStatus.Active && tenant.Status == TenantStatus.Active &&
-                                                   tenant.SubscriptionStartsAt <= now && tenant.SubscriptionExpiresAt > now
+                                                   clinic.Status == TenantStatus.Active &&
+                                                   clinic.SubscriptionStartsAt <= now && clinic.SubscriptionExpiresAt > now
                                              select user.Id).AnyAsync(context.HttpContext.RequestAborted);
                         if (!allowed) context.Fail("Clinic subscription or user access is inactive.");
                     }

@@ -275,7 +275,7 @@ import { AuthService } from '../../core/auth.service';
               </div>
               <div>
                 <h3>{{ text('Add Team Member', 'إضافة مستخدم جديد') }}</h3>
-                <small>{{ inviteMode() ? text('An invitation links an existing Planora account or creates a new one.', 'الدعوة تربط حساب Planora موجود أو تنشئ حساباً جديداً.') : text('A new account is created active and ready for login.', 'يتم إنشاء حساب جديد مفعلاً وجاهزاً للدخول.') }}</small>
+                <small>{{ inviteMode() ? text('Invite an account to this branch. Move staff from another branch on the Branches page.', 'ادعُ مستخدمًا لهذا الفرع. نقل موظف من فرع تاني يتم من صفحة الفروع.') : text('A new account is created active and ready for login.', 'يتم إنشاء حساب جديد مفعلاً وجاهزاً للدخول.') }}</small>
               </div>
             </div>
             <button type="button" class="close-btn" (click)="closeAddModal()" aria-label="Close">✕</button>
@@ -285,7 +285,7 @@ import { AuthService } from '../../core/auth.service';
             <div class="modal-body compact-modal-body">
               <div class="d-flex gap-2 mb-3">
                 <button type="button" class="button" [class.primary]="!inviteMode()" (click)="setInviteMode(false)">{{ text('Create new account', 'إنشاء حساب جديد') }}</button>
-                <button type="button" class="button" [class.primary]="inviteMode()" (click)="setInviteMode(true)">{{ text('Invite existing or new account', 'دعوة حساب موجود أو جديد') }}</button>
+                <button type="button" class="button" [class.primary]="inviteMode()" (click)="setInviteMode(true)">{{ text('Invite to this branch', 'دعوة لهذا الفرع') }}</button>
               </div>
               @if (modalError()) {
                 <div class="alert error" style="margin: 0;">{{ modalError() }}</div>

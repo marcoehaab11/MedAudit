@@ -12,7 +12,8 @@ public sealed record LoginAccount(
     DateTimeOffset SubscriptionStartsAt,
     DateTimeOffset SubscriptionExpiresAt,
     Guid IdentityUserId,
-    string TenantName);
+    string TenantName,
+    Guid ClinicId);
 
 public sealed record InvitationAccount(
     AdminInvitation Invitation,

@@ -1,4 +1,5 @@
 import { DatePipe } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -104,6 +105,18 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
           }
         </div>
       </section>
+      @if (transferHistory() && auth.hasPermission('Patients.ViewMedicalHistory')) {
+        <section class="alert" style="background:#eaf7f6;border:1px solid #b8e5e0;color:#174a4a;margin:14px 0;padding:16px;border-radius:12px">
+          <strong>{{ t('Transferred from', 'تم النقل من') }} {{ transferHistory().sourceBranch }}</strong>
+          <p>{{ t('Previous clinical history is read-only. Old visits and payments remain in the original branch.', 'التاريخ الطبي السابق للقراءة فقط. الزيارات والدفعات القديمة باقية في الفرع الأصلي.') }}</p>
+          <details><summary>{{ t('View previous clinical history', 'عرض التاريخ الطبي السابق') }}</summary>
+            @if (transferHistory().medicalNotes) { <p><strong>{{ t('Medical notes', 'ملاحظات طبية') }}:</strong> {{ transferHistory().medicalNotes }}</p> }
+            <p>{{ t('Allergies', 'الحساسية') }}: {{ transferHistory().allergies?.length || 0 }} · {{ t('Past visits', 'الزيارات السابقة') }}: {{ transferHistory().appointments?.length || 0 }} · {{ t('Treatments', 'العلاجات') }}: {{ transferHistory().treatments?.length || 0 }}</p>
+            @for (item of transferHistory().allergies || []; track item.id) { <p>⚠ {{ item.name }} — {{ item.notes }}</p> }
+            @for (item of transferHistory().treatments || []; track item.id) { <p>{{ t('Treatment', 'علاج') }}: {{ item.treatmentName }} — {{ item.notes }}</p> }
+          </details>
+        </section>
+      }
       @if (showVisitHistorySheet()) {
         <app-patient-visit-history-sheet [patientId]="id" (close)="showVisitHistorySheet.set(false)" />
       }
@@ -376,10 +389,12 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
 export class PatientDetailsComponent {
   readonly auth = inject(AuthService);
   private readonly api = inject(PatientApiService);
+  private readonly http = inject(HttpClient);
   private readonly treatmentApi = inject(TreatmentApiService);
   readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id')!;
   readonly i18n = inject(LocalizationService);
   readonly patient = signal<PatientDetails | null>(null);
+  readonly transferHistory = signal<any | null>(null);
   readonly patientClinicalStatus = signal<'new' | 'in_treatment' | 'completed'>('new');
   readonly loading = signal(true);
   readonly error = signal('');
@@ -451,6 +466,9 @@ export class PatientDetailsComponent {
 
   constructor() {
     this.load();
+    if (this.auth.hasPermission('Patients.ViewMedicalHistory')) {
+      this.http.get<any>(`/api/branches/patients/${this.id}/transfer-history`).subscribe({ next: value => this.transferHistory.set(value) });
+    }
   }
   load(): void {
     this.api.patient(this.id).subscribe({

@@ -133,6 +133,7 @@ app.MapNotificationEndpoints();
 app.MapInventoryEndpoints();
 app.MapPharmacyEndpoints();
 app.MapSettingsEndpoints();
+app.MapBranchEndpoints();
 
 app.Run();
 
