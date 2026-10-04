@@ -46,6 +46,7 @@ public sealed class ClinicManagementAuthorizationTests
         services.AddApplication();
         services.AddSingleton<IPlatformClinicStore, StubStore>();
         services.AddSingleton<IClinicAdminIdentityService, StubIdentity>();
+        services.AddSingleton<IIdentityCredentialService, StubCredentials>();
         services.AddSingleton<IInvitationTokenGenerator, StubTokenGenerator>();
         services.AddSingleton<IClinicInvitationNotifier, StubNotifier>();
         services.AddSingleton<IPlatformAccessContext, DeniedAccess>();
@@ -73,6 +74,17 @@ public sealed class ClinicManagementAuthorizationTests
     private sealed class StubNotifier : IClinicInvitationNotifier
     {
         public Task SendAsync(Guid invitationId, string email, string token, DateTimeOffset expiresAt, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+    private sealed class StubCredentials : IIdentityCredentialService
+    {
+        public Task<IdentityAccountLink> CreateInvitedUserAsync(Guid tenantId, string email, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+        public Task<Guid> CreateUserWithPasswordAsync(Guid tenantId, string email, string password, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+        public Task SetPasswordAsync(Guid tenantId, Guid userId, string password, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+        public Task<bool> CheckPasswordAsync(Guid userId, string password, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
     private sealed class StubStore : IPlatformClinicStore
     {

@@ -6,6 +6,8 @@
     ViewData["Title"] = Model.Clinic.Name;
     var adminPassword = TempData["CreatedAdminPassword"] as string;
     var adminEmail = TempData["CreatedAdminEmail"] as string ?? Model.Clinic.AdminEmail;
+    var invitationToken = TempData["CreatedInvitationToken"] as string;
+    var invitationUrl = string.IsNullOrEmpty(invitationToken) ? null : $"{Model.ClinicAppUrl}/accept-invitation?token={Uri.EscapeDataString(invitationToken)}";
 }
 
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 pb-2 border-bottom">
@@ -123,6 +125,14 @@
     <div class="alert alert-success d-flex align-items-center gap-2 shadow-sm" role="alert">
         <i class="bi bi-check-circle-fill fs-5"></i>
         <div>@Model.SuccessMessage</div>
+    </div>
+}
+@if (invitationUrl is not null)
+{
+    <div class="alert alert-info shadow-sm" role="status">
+        <strong>Administrator invitation link</strong>
+        <p class="mb-2">Copy and share this link securely. It is shown only now and expires in 48 hours.</p>
+        <div class="input-group"><input class="form-control" value="@invitationUrl" readonly aria-label="Administrator invitation link" /><button type="button" class="btn btn-outline-primary" onclick="navigator.clipboard.writeText(this.previousElementSibling.value)">Copy link</button></div>
     </div>
 }
 @if (!string.IsNullOrWhiteSpace(Model.BackupErrorMessage))

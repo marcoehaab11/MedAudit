@@ -1,3 +1,4 @@
 namespace DentalClinic.Application.Tenants;
 
-public sealed record CreateClinicResult(Guid TenantId, Guid AdminUserId, Guid InvitationId, bool ExistingAdminAccount = false);
+public sealed record CreateClinicResult(Guid TenantId, Guid AdminUserId, Guid InvitationId,
+    bool ExistingAdminAccount = false, string? InvitationToken = null);

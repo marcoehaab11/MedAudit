@@ -12,4 +12,5 @@ public sealed record CreateClinicCommand(
     string Currency,
     string AdminEmail,
     string? LogoReference,
-    int SubscriptionMonths = 1);
+    int SubscriptionMonths = 1,
+    string? AdminPassword = null);

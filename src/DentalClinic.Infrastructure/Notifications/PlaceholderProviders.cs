@@ -37,37 +37,25 @@ public sealed class EmailNotificationProvider(IConfiguration configuration) : IN
     }
 }
 
-public sealed class SmsNotificationProvider(IConfiguration configuration) : INotificationProvider
+public sealed class SmsNotificationProvider : INotificationProvider
 {
     public NotificationChannel Channel => NotificationChannel.Sms;
-    public string ProviderName => "SmsPlaceholderProvider";
+    public string ProviderName => "SmsNotConnectedProvider";
 
     public Task<NotificationProviderResult> SendAsync(NotificationDispatchContext context, CancellationToken cancellationToken)
     {
-        var apiKey = configuration["Sms:ApiKey"] ?? configuration["SMS_PROVIDER_KEY"];
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            return Task.FromResult(NotificationProviderResult.NotConfigured("SMS provider is not configured."));
-        }
-
-        return Task.FromResult(NotificationProviderResult.Success($"SMS-{Guid.NewGuid():N}"));
+        return Task.FromResult(NotificationProviderResult.NotConfigured("SMS delivery is not connected to a provider."));
     }
 }
 
-public sealed class WhatsAppNotificationProvider(IConfiguration configuration) : INotificationProvider
+public sealed class WhatsAppNotificationProvider : INotificationProvider
 {
     public NotificationChannel Channel => NotificationChannel.WhatsApp;
-    public string ProviderName => "WhatsAppPlaceholderProvider";
+    public string ProviderName => "WhatsAppNotConnectedProvider";
 
     public Task<NotificationProviderResult> SendAsync(NotificationDispatchContext context, CancellationToken cancellationToken)
     {
-        var token = configuration["WhatsApp:Token"] ?? configuration["WHATSAPP_PROVIDER_TOKEN"];
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            return Task.FromResult(NotificationProviderResult.NotConfigured("WhatsApp provider is not configured."));
-        }
-
-        return Task.FromResult(NotificationProviderResult.Success($"WA-{Guid.NewGuid():N}"));
+        return Task.FromResult(NotificationProviderResult.NotConfigured("Automatic WhatsApp delivery is not connected. Use the WhatsApp Web action for manual sending."));
     }
 }
 

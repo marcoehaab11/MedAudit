@@ -19,5 +19,6 @@ internal sealed class CreateClinicCommandValidator : AbstractValidator<CreateCli
         RuleFor(x => x.AdminEmail).NotEmpty().EmailAddress().MaximumLength(256);
         RuleFor(x => x.LogoReference).MaximumLength(500);
         RuleFor(x => x.SubscriptionMonths).InclusiveBetween(1, 120);
+        RuleFor(x => x.AdminPassword).MinimumLength(12).When(x => !string.IsNullOrWhiteSpace(x.AdminPassword));
     }
 }

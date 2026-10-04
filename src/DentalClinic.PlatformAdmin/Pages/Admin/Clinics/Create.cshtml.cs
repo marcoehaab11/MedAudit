@@ -6,19 +6,26 @@ using FluentValidationException = FluentValidation.ValidationException;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace DentalClinic.PlatformAdmin.Pages.Admin.Clinics;
 
 [Authorize(Policy = AuthConstants.PlatformAdminPolicy)]
 public sealed class CreateModel(
     IClinicManagementService clinics,
-    IIdentityCredentialService credentials) : PageModel
+    ILogger<CreateModel> logger) : PageModel
 {
+    private static readonly Action<ILogger, string, Exception?> LogCreateFailed =
+        LoggerMessage.Define<string>(LogLevel.Error, new EventId(4101, "ClinicCreationFailed"),
+            "Could not create clinic. TraceId: {TraceId}");
+
     [BindProperty] public InputModel Input { get; set; } = new();
     [TempData] public string? SuccessMessage { get; set; }
     [TempData] public string? CreatedAdminEmail { get; set; }
     [TempData] public string? CreatedAdminPassword { get; set; }
     [TempData] public string? CreatedClinicSlug { get; set; }
+    [TempData] public string? CreatedInvitationToken { get; set; }
 
     public void OnGet() { }
 
@@ -43,23 +50,18 @@ public sealed class CreateModel(
                 Input.Currency,
                 Input.AdminEmail,
                 Input.LogoReference,
-                Input.SubscriptionMonths), cancellationToken);
-
-            if (!result.ExistingAdminAccount && !string.IsNullOrWhiteSpace(Input.AdminPassword))
-            {
-                await credentials.SetPasswordAsync(
-                    result.TenantId,
-                    result.AdminUserId,
-                    Input.AdminPassword,
-                    cancellationToken);
-            }
+                Input.SubscriptionMonths,
+                Input.AdminPassword), cancellationToken);
 
             SuccessMessage = result.ExistingAdminAccount
-                ? $"Clinic '{Input.Name}' created. The existing account must accept its new clinic invitation. Its password was not changed."
-                : $"Clinic '{Input.Name}' created. The administrator can accept the invitation to activate access.";
+                ? $"Clinic '{Input.Name}' created. Give the administrator the invitation link shown below. Their existing password was not changed."
+                : !string.IsNullOrWhiteSpace(Input.AdminPassword)
+                    ? $"Clinic '{Input.Name}' created. The administrator can sign in with the password you set."
+                    : $"Clinic '{Input.Name}' created. Give the administrator the invitation link shown below to set a password.";
             CreatedAdminEmail = Input.AdminEmail;
             CreatedAdminPassword = result.ExistingAdminAccount ? null : Input.AdminPassword;
             CreatedClinicSlug = Input.Slug;
+            CreatedInvitationToken = result.InvitationToken;
 
             return RedirectToPage("Details", new { id = result.TenantId });
         }
@@ -67,8 +69,33 @@ public sealed class CreateModel(
         {
             foreach (var error in exception.Errors)
             {
-                ModelState.AddModelError($"Input.{error.PropertyName}", error.ErrorMessage);
+                var property = error.PropertyName switch
+                {
+                    "Password" => nameof(Input.AdminPassword),
+                    "Email" when error.ErrorMessage.Contains("account", StringComparison.OrdinalIgnoreCase)
+                        => nameof(Input.AdminEmail),
+                    _ => error.PropertyName
+                };
+                ModelState.AddModelError($"Input.{property}", error.ErrorMessage);
             }
+            return Page();
+        }
+        catch (ArgumentException exception)
+        {
+            ModelState.AddModelError(string.Empty, $"Clinic details are invalid: {exception.Message}");
+            return Page();
+        }
+        catch (DbUpdateException exception) when (exception.InnerException is PostgresException
+            { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "IX_tenants_Slug" })
+        {
+            ModelState.AddModelError("Input.Slug", "This clinic slug is already in use. Choose a different slug.");
+            return Page();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            LogCreateFailed(logger, HttpContext.TraceIdentifier, exception);
+            ModelState.AddModelError(string.Empty,
+                $"Could not create the clinic because of a server error. Reference: {HttpContext.TraceIdentifier}. Please check the server logs or contact support with this reference.");
             return Page();
         }
     }
@@ -83,7 +110,7 @@ public sealed class CreateModel(
         public string Name { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Slug identifier is required"), StringLength(100)]
-        [RegularExpression(@"^[a-z0-9-]+$", ErrorMessage = "Slug may only contain lowercase letters, numbers, and hyphens.")]
+        [RegularExpression(@"^[a-z0-9]+(?:-[a-z0-9]+)*$", ErrorMessage = "Use lowercase English letters and numbers, with single hyphens only between words. Example: pearl-dental.")]
         [Display(Name = "Tenant Slug / Subdomain")]
         public string Slug { get; set; } = string.Empty;
 

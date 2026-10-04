@@ -14,6 +14,7 @@ namespace DentalClinic.Application.Tenants;
 internal sealed class ClinicManagementService(
     IPlatformClinicStore store,
     IClinicAdminIdentityService identityService,
+    IIdentityCredentialService credentials,
     IInvitationTokenGenerator tokenGenerator,
     IClinicInvitationNotifier notifier,
     IEnumerable<ITenantInitializer> initializers,
@@ -117,15 +118,20 @@ internal sealed class ClinicManagementService(
             now));
         await store.SavePlatformChangesAsync(tenant.Id, cancellationToken);
 
-        await notifier.SendAsync(
-            invitation.Id,
-            invitation.Email,
-            token,
-            invitation.ExpiresAt,
-            cancellationToken);
+        if (!adminAccount.ExistingAccount && !string.IsNullOrWhiteSpace(command.AdminPassword))
+            await credentials.SetPasswordAsync(tenant.Id, adminAccount.MembershipId, command.AdminPassword, cancellationToken);
+        else
+            await notifier.SendAsync(
+                invitation.Id,
+                invitation.Email,
+                token,
+                invitation.ExpiresAt,
+                cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
-        return new CreateClinicResult(tenant.Id, adminAccount.MembershipId, invitation.Id, adminAccount.ExistingAccount);
+        return new CreateClinicResult(tenant.Id, adminAccount.MembershipId, invitation.Id,
+            adminAccount.ExistingAccount,
+            adminAccount.ExistingAccount || string.IsNullOrWhiteSpace(command.AdminPassword) ? token : null);
     }
 
     public async Task<bool> UpdateAsync(UpdateClinicCommand command, CancellationToken cancellationToken)
