@@ -42,10 +42,84 @@
         {{ i18n.language() === 'en' ? 'Delivery Logs' : 'سجل التسليم' }}
       </button>
     }
+    @if (auth.hasPermission('Notifications.Preferences') || auth.hasPermission('Notifications.Manage') || auth.hasPermission('Notifications.Templates')) {
+      <button type="button" class="tab-btn" [class.active]="activeTab() === 'settings'" (click)="setTab('settings')">
+        {{ i18n.language() === 'en' ? 'Settings & channels' : 'الإعدادات والقنوات' }}
+      </button>
+    }
   </div>
 
   @if (errorMessage()) {
     <div class="alert alert-error">{{ errorMessage() }}</div>
+  }
+  @if (statusMessage()) {
+    <div class="alert alert-success">{{ statusMessage() }}</div>
+  }
+
+  @if (activeTab() === 'settings') {
+    @if (auth.hasPermission('Notifications.Preferences')) {
+      <section class="settings-panel">
+        <h2>{{ i18n.language() === 'en' ? 'Event notifications' : 'تنبيهات الأحداث' }}</h2>
+        <p class="subtitle">{{ i18n.language() === 'en' ? 'Choose which automatic alerts the clinic receives. Email delivery also requires SMTP.' : 'اختار التنبيهات التلقائية للعيادة. إرسال البريد يحتاج إعداد SMTP كذلك.' }}</p>
+        @for (option of eventOptions; track option.eventType + option.channel) {
+          <label class="preference-row">
+            <span>
+              <strong>{{ i18n.language() === 'en' ? option.en : option.ar }}</strong>
+              <small>{{ option.channel === 4 ? (i18n.language() === 'en' ? 'In-app' : 'داخل التطبيق') : (i18n.language() === 'en' ? 'Email' : 'بريد إلكتروني') }}</small>
+            </span>
+            <input type="checkbox" [checked]="isEnabled(option.eventType, option.channel)"
+              [disabled]="savingEvent() === option.eventType + ':' + option.channel"
+              (change)="setEnabled(option.eventType, option.channel, $any($event.target).checked)" />
+          </label>
+        }
+      </section>
+    }
+    @if (auth.hasPermission('Notifications.Templates')) {
+      <section class="settings-panel template-editor">
+        <h2>{{ i18n.language() === 'en' ? 'In-app message templates' : 'قوالب رسائل التطبيق' }}</h2>
+        <p class="subtitle">{{ i18n.language() === 'en' ? 'An active template replaces the standard alert text for this event.' : 'القالب النشط يستبدل النص الافتراضي لهذا التنبيه.' }}</p>
+        <label>{{ i18n.language() === 'en' ? 'Event' : 'الحدث' }}
+          <select [value]="selectedTemplate()" (change)="selectTemplate($any($event.target).value)">
+            @for (option of eventOptions; track option.eventType + option.channel) {
+              @if (option.channel === 4) {
+                <option [value]="option.eventType">{{ i18n.language() === 'en' ? option.en : option.ar }}</option>
+              }
+            }
+          </select>
+        </label>
+        <label>{{ i18n.language() === 'en' ? 'Title' : 'العنوان' }}
+          <input type="text" [value]="templateSubject()" maxlength="200" (input)="templateSubject.set($any($event.target).value)" />
+        </label>
+        <label>{{ i18n.language() === 'en' ? 'Message' : 'الرسالة' }}
+          <textarea rows="4" maxlength="4000" [value]="templateBody()" (input)="templateBody.set($any($event.target).value)"></textarea>
+        </label>
+        <label class="template-toggle"><input type="checkbox" [checked]="templateActive()" (change)="templateActive.set($any($event.target).checked)" />
+          {{ i18n.language() === 'en' ? 'Active' : 'نشط' }}
+        </label>
+        <button type="button" class="btn btn-primary" [disabled]="savingTemplate()" (click)="saveTemplate()">
+          {{ i18n.language() === 'en' ? 'Save template' : 'حفظ القالب' }}
+        </button>
+      </section>
+    }
+    @if (auth.hasPermission('Notifications.Manage')) {
+      <section class="settings-panel">
+        <div class="settings-heading">
+          <h2>{{ i18n.language() === 'en' ? 'Delivery channels' : 'قنوات الإرسال' }}</h2>
+          <button type="button" class="btn btn-secondary" (click)="sendTest()">
+            {{ i18n.language() === 'en' ? 'Send test to my inbox' : 'جرّب إشعارًا لصندوقي' }}
+          </button>
+        </div>
+        @for (channel of channels(); track channel.channel) {
+          <div class="channel-row">
+            <strong>{{ channel.channel }}</strong>
+            <span class="status-pill" [class.status-3]="channel.ready" [class.status-4]="!channel.ready">
+              {{ channel.ready ? (i18n.language() === 'en' ? 'Ready' : 'جاهز') : (i18n.language() === 'en' ? 'Not connected' : 'غير متصل') }}
+            </span>
+            <small>{{ channel.detail }}</small>
+          </div>
+        }
+      </section>
+    }
   }
 
   @if (activeTab() === 'inbox') {

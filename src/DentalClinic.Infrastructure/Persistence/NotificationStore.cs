@@ -9,7 +9,7 @@ internal sealed class NotificationStore(ApplicationDbContext context) : INotific
     public async Task<NotificationTemplate?> FindTemplateAsync(
         Guid tenantId, string name, NotificationChannel channel, string language, CancellationToken token)
     {
-        return await context.NotificationTemplates.AsNoTracking().IgnoreQueryFilters()
+        return await context.NotificationTemplates.IgnoreQueryFilters()
             .FirstOrDefaultAsync(t => t.TenantId == tenantId &&
                                       t.Name == name &&
                                       t.Channel == channel &&

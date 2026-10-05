@@ -1,4 +1,6 @@
 using DentalClinic.Application.Notifications;
+using DentalClinic.Application.Identity;
+using DentalClinic.Domain.Notifications;
 
 namespace DentalClinic.Api.Endpoints;
 
@@ -60,6 +62,30 @@ internal static class NotificationEndpoints
         {
             var deliveries = await s.GetDeliveriesAsync(take ?? 50, t);
             return Results.Ok(deliveries);
+        });
+
+        group.MapGet("/channels", async (IPermissionService permissions, IConfiguration config, CancellationToken t) =>
+        {
+            await permissions.EnsurePermissionAsync(Permissions.NotificationsManage, t);
+            var emailReady = !string.IsNullOrWhiteSpace(config["Smtp:Host"] ?? config["SMTP_HOST"])
+                && !string.IsNullOrWhiteSpace(config["Smtp:From"] ?? config["SMTP_FROM"]);
+            return Results.Ok(new[] {
+                new { channel = "InApp", ready = true, detail = "Worker delivers notifications to the in-app inbox." },
+                new { channel = "Email", ready = emailReady, detail = emailReady ? "SMTP configured; delivery depends on server response." : "SMTP host and sender are missing." },
+                new { channel = "SMS", ready = false, detail = "No SMS provider is connected." },
+                new { channel = "WhatsApp", ready = false, detail = "Automatic sending is not connected; WhatsApp Web is manual." }
+            });
+        });
+
+        group.MapPost("/test-in-app", async (INotificationService service, IPermissionService permissions,
+            ICurrentUser user, CancellationToken t) =>
+        {
+            await permissions.EnsurePermissionAsync(Permissions.NotificationsManage, t);
+            var userId = user.UserId ?? throw new InvalidOperationException("User ID is required.");
+            var id = await service.EnqueueNotificationAsync(new NotificationRequest(
+                NotificationChannel.InApp, RecipientType.Staff, userId, userId.ToString("D"),
+                "TestNotification", "en", null, null, null, null), t);
+            return Results.Accepted($"/api/notifications/deliveries", new { id });
         });
 
         return endpoints;

@@ -5,12 +5,28 @@ using System.Text;
 using DentalClinic.Domain.Appointments;
 using DentalClinic.Infrastructure.Persistence;
 using DentalClinic.Infrastructure.Notifications;
+using DentalClinic.Application.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace DentalClinic.Api.Endpoints;
 
-internal static class PublicBookingEndpoints
+internal static partial class PublicBookingEndpoints
 {
+    [LoggerMessage(EventId = 4100, Level = LogLevel.Error, Message = "Could not queue public booking alert for {EntityId}")]
+    private static partial void LogAlertFailure(ILogger logger, Guid entityId, Exception exception);
+
+    private static async Task QueueAlertSafelyAsync(ApplicationDbContext db, ILogger logger, Guid tenantId,
+        string eventType, string permission, string title, string body, string entityType, Guid entityId,
+        string key, CancellationToken token)
+    {
+        try { await ClinicAlertDispatcher.EnqueueAsync(db, tenantId, eventType, permission, title, body, entityType, entityId, key, token); }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogAlertFailure(logger, entityId, ex);
+            db.ChangeTracker.Clear();
+        }
+    }
+
     public static IEndpointRouteBuilder MapPublicBookingEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var api = endpoints.MapGroup("/api/public").AllowAnonymous();
@@ -121,16 +137,20 @@ internal static class PublicBookingEndpoints
 
         api.MapPost("/clinics/{slug}/bookings", async (
             string slug, PublicBookingRequest request, IPublicBookingService s, ApplicationDbContext db,
-            HttpContext context, CancellationToken t) =>
+            HttpContext context, ILoggerFactory loggerFactory, CancellationToken t) =>
         {
             try
             {
                 var payload = request with { ClinicSlug = slug };
                 var confirmation = await s.CreateBookingAsync(payload, t);
+                var booking = await db.Appointments.IgnoreQueryFilters().AsNoTracking()
+                    .SingleAsync(x => x.BookingReference == confirmation.BookingReference, t);
+                await QueueAlertSafelyAsync(db, loggerFactory.CreateLogger(nameof(PublicBookingEndpoints)), booking.TenantId, "BookingCreated",
+                    Permissions.AppointmentsView, "New online booking",
+                    $"{confirmation.PatientName} booked an appointment on {confirmation.StartAt:yyyy-MM-dd HH:mm} UTC. Reference: {confirmation.BookingReference}.",
+                    "Appointment", booking.Id, $"booking-created-staff:{booking.Id:N}", t);
                 if (!string.IsNullOrWhiteSpace(payload.PatientEmail))
                 {
-                    var booking = await db.Appointments.IgnoreQueryFilters().AsNoTracking()
-                        .SingleAsync(x => x.BookingReference == confirmation.BookingReference, t);
                     var host = context.Request.Host.Host;
                     var baseHost = host.StartsWith("app.", StringComparison.OrdinalIgnoreCase) ? host[4..]
                         : host.StartsWith("admin.", StringComparison.OrdinalIgnoreCase) ? host[6..]
@@ -167,11 +187,17 @@ internal static class PublicBookingEndpoints
         }).RequireRateLimiting("public-booking");
 
         api.MapPost("/clinics/{slug}/inquiries", async (string slug,
-            PublicBookingInquiryRequest request, IPublicBookingService service, CancellationToken token) =>
+            PublicBookingInquiryRequest request, IPublicBookingService service, ApplicationDbContext db,
+            ILoggerFactory loggerFactory, CancellationToken token) =>
         {
             try
             {
                 var id = await service.CreateInquiryAsync(slug, request, token);
+                var inquiry = await db.BookingInquiries.IgnoreQueryFilters().AsNoTracking().SingleAsync(x => x.Id == id, token);
+                await QueueAlertSafelyAsync(db, loggerFactory.CreateLogger(nameof(PublicBookingEndpoints)), inquiry.TenantId, "BookingInquiry",
+                    Permissions.AppointmentsView, "New booking inquiry",
+                    $"{inquiry.PatientName} requested a call back. Phone: {inquiry.Phone}.",
+                    "BookingInquiry", id, $"booking-inquiry:{id:N}", token);
                 return Results.Accepted($"/api/public/clinics/{slug}/inquiries/{id:D}", new { id });
             }
             catch (PublicBookingNotFoundException ex) { return Results.NotFound(new { title = ex.Message }); }
@@ -218,7 +244,8 @@ internal static class PublicBookingEndpoints
         }).RequireRateLimiting("public-booking");
 
         api.MapPost("/bookings/manage/{managementToken}/cancel", async (string managementToken,
-            CancelManagedBooking request, ApplicationDbContext db, IPublicBookingService service, CancellationToken token) =>
+            CancelManagedBooking request, ApplicationDbContext db, IPublicBookingService service,
+            ILoggerFactory loggerFactory, CancellationToken token) =>
         {
             var booking = await FindManagedBookingAsync(db, managementToken, token);
             if (booking is null) return Results.NotFound();
@@ -230,11 +257,16 @@ internal static class PublicBookingEndpoints
                 return Results.Conflict(new { title = "Please contact the clinic to cancel this close to the appointment." });
             booking.Cancel(string.IsNullOrWhiteSpace(request.Reason) ? "Cancelled by patient" : request.Reason, DateTimeOffset.UtcNow);
             await db.SaveChangesAsync(token);
+            await QueueAlertSafelyAsync(db, loggerFactory.CreateLogger(nameof(PublicBookingEndpoints)), booking.TenantId, "BookingCancelled",
+                Permissions.AppointmentsView, "Online booking cancelled",
+                $"Appointment {booking.BookingReference} was cancelled by the patient.",
+                "Appointment", booking.Id, $"booking-cancelled:{booking.Id:N}", token);
             return Results.Ok(await service.GetBookingByReferenceAsync(booking.BookingReference!, token));
         }).RequireRateLimiting("public-booking");
 
         api.MapPost("/bookings/manage/{managementToken}/reschedule", async (string managementToken,
-            RescheduleManagedBooking request, ApplicationDbContext db, IPublicBookingService service, CancellationToken token) =>
+            RescheduleManagedBooking request, ApplicationDbContext db, IPublicBookingService service,
+            ILoggerFactory loggerFactory, CancellationToken token) =>
         {
             var booking = await FindManagedBookingAsync(db, managementToken, token);
             if (booking is null) return Results.NotFound();
@@ -256,6 +288,10 @@ internal static class PublicBookingEndpoints
                 return Results.Conflict(new { title = "That time is unavailable. Choose another slot." });
             booking.Reschedule(request.StartAt, booking.DurationMinutes, DateTimeOffset.UtcNow);
             await db.SaveChangesAsync(token);
+            await QueueAlertSafelyAsync(db, loggerFactory.CreateLogger(nameof(PublicBookingEndpoints)), booking.TenantId, "BookingRescheduled",
+                Permissions.AppointmentsView, "Online booking rescheduled",
+                $"Appointment {booking.BookingReference} was moved to {booking.StartAt:yyyy-MM-dd HH:mm} UTC.",
+                "Appointment", booking.Id, $"booking-rescheduled:{booking.Id:N}:{booking.StartAt.ToUnixTimeSeconds()}", token);
             return Results.Ok(await service.GetBookingByReferenceAsync(booking.BookingReference!, token));
         }).RequireRateLimiting("public-booking");
 

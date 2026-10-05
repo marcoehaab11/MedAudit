@@ -19,6 +19,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHostedService<Worker>();
 builder.Services.AddHostedService<NotificationOutboxProcessorHost>();
 builder.Services.AddHostedService<BookingReminderHost>();
+builder.Services.AddHostedService<ClinicOperationsAlertHost>();
 
 var host = builder.Build();
 await host.RunAsync();

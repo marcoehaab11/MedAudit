@@ -33,6 +33,12 @@ export interface NotificationPreferenceDto {
   isEnabled: boolean;
 }
 
+export interface NotificationChannelStatusDto {
+  channel: string;
+  ready: boolean;
+  detail: string;
+}
+
 export interface NotificationDeliveryDto {
   id: string;
   channel: number;
@@ -84,8 +90,26 @@ export class NotificationsApiService {
     return this.http.get<NotificationTemplateDto[]>('/api/notifications/templates');
   }
 
+  saveTemplate(name: string, subject: string, body: string, isActive: boolean): Observable<{ id: string }> {
+    return this.http.post<{ id: string }>('/api/notifications/templates', {
+      name, channel: 4, language: 'en', subject, body, isActive,
+    });
+  }
+
   getPreferences(): Observable<NotificationPreferenceDto[]> {
     return this.http.get<NotificationPreferenceDto[]>('/api/notifications/preferences');
+  }
+
+  setPreference(eventType: string, channel: number, isEnabled: boolean): Observable<void> {
+    return this.http.post<void>('/api/notifications/preferences', { eventType, channel, isEnabled });
+  }
+
+  getChannels(): Observable<NotificationChannelStatusDto[]> {
+    return this.http.get<NotificationChannelStatusDto[]>('/api/notifications/channels');
+  }
+
+  testInApp(): Observable<{ id: string }> {
+    return this.http.post<{ id: string }>('/api/notifications/test-in-app', {});
   }
 
   getDeliveries(take = 50): Observable<NotificationDeliveryDto[]> {

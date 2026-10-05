@@ -12,6 +12,16 @@ public static class BookingEmailDispatcher
         CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(email)) return false;
+        var settings = await db.TenantConfigurations.IgnoreQueryFilters().AsNoTracking()
+            .Where(x => x.TenantId == tenantId)
+            .Select(x => new { x.AppointmentsNotificationEnabled, x.EmailNotificationsEnabled })
+            .SingleOrDefaultAsync(token);
+        if (settings is null || !settings.AppointmentsNotificationEnabled || !settings.EmailNotificationsEnabled)
+            return false;
+        var enabled = await db.NotificationPreferences.IgnoreQueryFilters().AsNoTracking()
+            .Where(x => x.TenantId == tenantId && x.EventType == template && x.Channel == NotificationChannel.Email)
+            .Select(x => (bool?)x.IsEnabled).SingleOrDefaultAsync(token);
+        if (enabled == false) return false;
         if (await db.NotificationDeliveries.IgnoreQueryFilters().AnyAsync(x => x.TenantId == tenantId && x.IdempotencyKey == key, token))
             return false;
         var now = DateTimeOffset.UtcNow;
