@@ -5,7 +5,7 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { LocalizationService } from '../../core/localization.service';
-import { DoctorApiService, DoctorListItem } from '../doctors/doctor-api.service';
+import { DoctorApiService, DoctorLookupItem } from '../doctors/doctor-api.service';
 import {
   AppointmentApiService,
   AppointmentDetails,
@@ -13,6 +13,7 @@ import {
   AppointmentSearchResult,
   AvailabilitySlot,
 } from './appointment-api.service';
+import { Subscription } from 'rxjs';
 import { appointmentStatus, appointmentType } from './appointment-labels';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 
@@ -28,7 +29,11 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
         <h1>{{ t('Appointments', 'المواعيد') }}</h1>
       </div>
       @if (auth.hasPermission('Appointments.Create')) {
-        <a class="button primary" routerLink="/appointments/create" [queryParams]="{ date: selectedDate() }">
+        <a
+          class="button primary"
+          routerLink="/appointments/create"
+          [queryParams]="{ date: selectedDate() }"
+        >
           {{ t('New appointment', 'موعد جديد') }}
         </a>
       }
@@ -53,10 +58,20 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 
       <!-- Quick Day Shortcuts (اليوم / غداً) -->
       <div class="quick-day-shortcuts">
-        <button type="button" class="btn-shortcut" [class.active]="isToday()" (click)="selectToday()">
+        <button
+          type="button"
+          class="btn-shortcut"
+          [class.active]="isToday()"
+          (click)="selectToday()"
+        >
           📅 {{ t('Today', 'اليوم') }}
         </button>
-        <button type="button" class="btn-shortcut" [class.active]="isTomorrow()" (click)="selectTomorrow()">
+        <button
+          type="button"
+          class="btn-shortcut"
+          [class.active]="isTomorrow()"
+          (click)="selectTomorrow()"
+        >
           ☀️ {{ t('Tomorrow', 'غداً') }}
         </button>
       </div>
@@ -89,7 +104,7 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
       </select>
     </section>
 
-    <div class="calendar-layout">
+    <div class="calendar-layout" [class.has-details]="selected()">
       <section class="panel calendar" data-testid="appointment-calendar">
         @if (loading()) {
           <div class="state">{{ t('Loading schedule…', 'جارٍ تحميل الجدول…') }}</div>
@@ -100,7 +115,11 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
               {{ t('There are no appointments in this period.', 'لا توجد مواعيد في هذه الفترة.') }}
             </p>
             @if (auth.hasPermission('Appointments.Create')) {
-              <a class="button primary" routerLink="/appointments/create" [queryParams]="{ date: selectedDate() }">
+              <a
+                class="button primary"
+                routerLink="/appointments/create"
+                [queryParams]="{ date: selectedDate() }"
+              >
                 + {{ t('Book for this date', 'حجز موعد لهذا اليوم') }}
               </a>
             }
@@ -109,51 +128,114 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
           @for (day of days(); track day) {
             <section class="calendar-day">
               <h2>{{ dayLabel(day) }}</h2>
-              <div class="appointment-stack">
-                @if (itemsFor(day).length === 0) {
-                  <div class="empty-day-note">
-                    {{ t('No appointments on this day', 'لا توجد مواعيد في هذا اليوم') }}
-                  </div>
-                } @else {
-                  @for (item of itemsFor(day); track item.id) {
-                    <button
-                      type="button"
-                      class="appointment-card status-{{ item.status }} type-{{ item.type }}"
-                      (click)="open(item)"
-                    >
-                      <div class="card-time">
-                        <span class="time-range">{{ time(item.startAt, item.timeZone) }} – {{ time(item.endAt, item.timeZone) }}</span>
-                        <span class="duration-tag">{{ item.durationMinutes }} {{ t('min', 'د') }}</span>
-                      </div>
-                      <div class="card-info">
-                        <div class="patient-line">
-                          <strong class="patient-name">{{ item.patientName }}</strong>
-                          <span class="type-badge type-badge-{{ item.type }}">
-                            @if (item.type === 5) { 🚨 }
-                            {{ typeLabel(item.type) }}
-                          </span>
-                        </div>
-                        <div class="doctor-line">
-                          <span class="doctor-name">👨‍⚕️ {{ item.doctorName }}</span>
-                        </div>
-                      </div>
-                      <div class="card-status-col">
-                        <span class="status-badge status-badge-{{ item.status }}">{{ statusLabel(item.status) }}</span>
-                        @if (item.status <= 4 && auth.hasPermission('Examination.View')) {
-                          <a
-                            class="card-visit-link"
-                            [routerLink]="['/appointments', item.id, 'visit']"
-                            (click)="$event.stopPropagation()"
-                            [title]="t('Open Clinical Visit Flow', 'بدء ومتابعة مراحل الزيارة')"
+              @if (view() === 'day') {
+                <div class="timeline-scroll">
+                  <div
+                    class="timeline"
+                    [style.width.px]="120 + (timelineEnd(day) - timelineStart(day)) * 3"
+                  >
+                    <div class="timeline-hours">
+                      @for (hour of timelineHours(day); track hour) {
+                        <span
+                          [style.inset-inline-start.px]="120 + (hour * 60 - timelineStart(day)) * 3"
+                          >{{ hourLabel(hour) }}</span
+                        >
+                      }
+                    </div>
+                    @for (doctor of dayDoctors(day); track doctor.id) {
+                      <div class="doctor-lane" [style.height.px]="laneHeight(day, doctor.id)">
+                        <strong class="lane-name">{{ doctor.displayName }}</strong>
+                        @for (item of itemsForDoctor(day, doctor.id); track item.id) {
+                          <button
+                            type="button"
+                            class="appointment-card timeline-card status-{{ item.status }}"
+                            [style.inset-inline-start.px]="
+                              120 + (startMinute(item, day) - timelineStart(day)) * 3
+                            "
+                            [style.width.px]="visibleMinutes(item, day) * 3"
+                            [style.top.px]="8 + trackFor(item, day) * 100"
+                            [title]="
+                              item.patientName +
+                              ' · ' +
+                              item.doctorName +
+                              ' · ' +
+                              time(item.startAt, item.timeZone) +
+                              ' – ' +
+                              time(item.endAt, item.timeZone)
+                            "
+                            (click)="open(item)"
                           >
-                            🦷 {{ t('Visit Flow', 'مراحل الزيارة') }}
-                          </a>
+                            <span class="time-range"
+                              >{{ time(item.startAt, item.timeZone) }} –
+                              {{ time(item.endAt, item.timeZone) }}</span
+                            >
+                            <strong>{{ item.patientName }}</strong>
+                            <span>{{ item.doctorName }}</span>
+                            <span class="status-badge status-badge-{{ item.status }}">{{
+                              statusLabel(item.status)
+                            }}</span>
+                          </button>
                         }
                       </div>
-                    </button>
+                    }
+                  </div>
+                </div>
+              } @else {
+                <div class="appointment-stack">
+                  @if (itemsFor(day).length === 0) {
+                    <div class="empty-day-note">
+                      {{ t('No appointments on this day', 'لا توجد مواعيد في هذا اليوم') }}
+                    </div>
+                  } @else {
+                    @for (item of itemsFor(day); track item.id) {
+                      <button
+                        type="button"
+                        class="appointment-card status-{{ item.status }} type-{{ item.type }}"
+                        (click)="open(item)"
+                      >
+                        <div class="card-time">
+                          <span class="time-range"
+                            >{{ time(item.startAt, item.timeZone) }} –
+                            {{ time(item.endAt, item.timeZone) }}</span
+                          >
+                          <span class="duration-tag"
+                            >{{ item.durationMinutes }} {{ t('min', 'د') }}</span
+                          >
+                        </div>
+                        <div class="card-info">
+                          <div class="patient-line">
+                            <strong class="patient-name">{{ item.patientName }}</strong>
+                            <span class="type-badge type-badge-{{ item.type }}">
+                              @if (item.type === 5) {
+                                🚨
+                              }
+                              {{ typeLabel(item.type) }}
+                            </span>
+                          </div>
+                          <div class="doctor-line">
+                            <span class="doctor-name">👨‍⚕️ {{ item.doctorName }}</span>
+                          </div>
+                        </div>
+                        <div class="card-status-col">
+                          <span class="status-badge status-badge-{{ item.status }}">{{
+                            statusLabel(item.status)
+                          }}</span>
+                          @if (item.status <= 4 && auth.hasPermission('Examination.View')) {
+                            <a
+                              class="card-visit-link"
+                              [routerLink]="['/appointments', item.id, 'visit']"
+                              (click)="$event.stopPropagation()"
+                              [title]="t('Open Clinical Visit Flow', 'بدء ومتابعة مراحل الزيارة')"
+                            >
+                              🦷 {{ t('Visit Flow', 'مراحل الزيارة') }}
+                            </a>
+                          }
+                        </div>
+                      </button>
+                    }
                   }
-                }
-              </div>
+                </div>
+              }
             </section>
           }
         }
@@ -163,9 +245,13 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
         <aside class="panel details">
           <button class="close" type="button" (click)="selected.set(null)">×</button>
           <div class="details-header-badges">
-            <span class="status-badge status-badge-{{ selected()!.status }}">{{ statusLabel(selected()!.status) }}</span>
+            <span class="status-badge status-badge-{{ selected()!.status }}">{{
+              statusLabel(selected()!.status)
+            }}</span>
             <span class="type-badge type-badge-{{ selected()!.type }}">
-              @if (selected()!.type === 5) { 🚨 }
+              @if (selected()!.type === 5) {
+                🚨
+              }
               {{ typeLabel(selected()!.type) }}
             </span>
           </div>
@@ -190,7 +276,9 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
               <dt>{{ t('Type', 'النوع') }}</dt>
               <dd>
                 <span class="type-badge type-badge-{{ selected()!.type }}">
-                  @if (selected()!.type === 5) { 🚨 }
+                  @if (selected()!.type === 5) {
+                    🚨
+                  }
                   {{ typeLabel(selected()!.type) }}
                 </span>
               </dd>
@@ -201,8 +289,12 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
           }
           <div class="actions">
             @if (selected()!.status <= 4 && auth.hasPermission('Examination.View')) {
-              <a class="button primary visit-flow-btn" [routerLink]="['/appointments', selected()!.id, 'visit']">
-                ✨ 🦷 {{ t('Open Clinical Visit Flow (5 Steps)', 'بدء ومتابعة مراحل الزيارة (5 خطوات)') }}
+              <a
+                class="button primary visit-flow-btn"
+                [routerLink]="['/appointments', selected()!.id, 'visit']"
+              >
+                ✨ 🦷
+                {{ t('Open Clinical Visit Flow (5 Steps)', 'بدء ومتابعة مراحل الزيارة (5 خطوات)') }}
               </a>
             } @else if (selected()!.status === 5 && auth.hasPermission('Examination.View')) {
               <a class="button" [routerLink]="['/appointments', selected()!.id, 'examination']">
@@ -244,8 +336,13 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
             @if (selected()!.status === 3 && auth.hasPermission('Appointments.Start')) {
               <button (click)="action('start')">{{ t('Start', 'بدء') }}</button>
             }
-            @if ((selected()!.status === 3 || selected()!.status === 4) && auth.hasPermission('Appointments.Complete')) {
-              <button (click)="action('complete')">{{ t('Complete session', 'إنهاء الجلسة') }}</button>
+            @if (
+              (selected()!.status === 3 || selected()!.status === 4) &&
+              auth.hasPermission('Appointments.Complete')
+            ) {
+              <button (click)="action('complete')">
+                {{ t('Complete session', 'إنهاء الجلسة') }}
+              </button>
             }
             @if (
               (selected()!.status === 1 || selected()!.status === 2) &&
@@ -264,11 +361,7 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
             <details>
               <summary>{{ t('Reschedule', 'إعادة الجدولة') }}</summary>
               <form [formGroup]="rescheduleForm" (ngSubmit)="reschedule()">
-                <input
-                  type="date"
-                  formControlName="date"
-                  (change)="loadRescheduleAvailability()"
-                />
+                <input type="date" formControlName="date" (change)="loadRescheduleAvailability()" />
                 <input
                   type="number"
                   min="5"
@@ -305,6 +398,10 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
   `,
 })
 export class AppointmentsPageComponent {
+  private calendarRequest?: Subscription;
+  ngOnDestroy() {
+    this.calendarRequest?.unsubscribe();
+  }
   private readonly api = inject(AppointmentApiService);
   private readonly doctorApi = inject(DoctorApiService);
   protected readonly auth = inject(AuthService);
@@ -321,7 +418,7 @@ export class AppointmentsPageComponent {
   readonly typeFilter = signal<string>('');
 
   readonly result = signal<AppointmentSearchResult | null>(null);
-  readonly doctors = signal<DoctorListItem[]>([]);
+  readonly doctors = signal<DoctorLookupItem[]>([]);
   readonly selected = signal<AppointmentDetails | null>(null);
   readonly loading = signal(true);
   readonly error = signal('');
@@ -368,7 +465,11 @@ export class AppointmentsPageComponent {
     if (qDoctor) {
       this.doctorFilter.set(qDoctor);
     }
-    this.doctorApi.doctors('', '1', '', 1).subscribe((x) => this.doctors.set(x.items));
+    this.doctorApi.listAll().subscribe({
+      next: (items) => this.doctors.set(items),
+      error: () =>
+        this.error.set(this.t('Doctors could not be loaded.', 'تعذر تحميل أسماء الأطباء.')),
+    });
     this.load();
 
     this.route.queryParamMap.subscribe((params) => {
@@ -381,10 +482,12 @@ export class AppointmentsPageComponent {
   }
 
   load() {
+    this.calendarRequest?.unsubscribe();
+    this.selected.set(null);
     this.loading.set(true);
     this.error.set('');
     const days = this.days();
-    this.api
+    this.calendarRequest = this.api
       .appointments({
         from: days[0],
         to: days.at(-1)!,
@@ -453,7 +556,118 @@ export class AppointmentsPageComponent {
 
   itemsFor(day: string) {
     return (
-      this.result()?.page.items.filter((x) => this.localDate(x.startAt, x.timeZone) === day) ?? []
+      this.result()?.page.items.filter(
+        (x) =>
+          this.localDate(x.startAt, x.timeZone) <= day &&
+          this.localDate(x.endAt, x.timeZone) >= day &&
+          (this.localDate(x.endAt, x.timeZone) !== day ||
+            this.minuteOfDay(x.endAt, x.timeZone) > 0),
+      ) ?? []
+    );
+  }
+
+  minuteOfDay(value: string, zone: string) {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: zone || 'UTC',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(new Date(value));
+    return (
+      Number(parts.find((p) => p.type === 'hour')!.value) * 60 +
+      Number(parts.find((p) => p.type === 'minute')!.value)
+    );
+  }
+
+  startMinute(item: AppointmentItem, day: string) {
+    return this.localDate(item.startAt, item.timeZone) < day
+      ? 0
+      : this.minuteOfDay(item.startAt, item.timeZone);
+  }
+
+  visibleMinutes(item: AppointmentItem, day: string) {
+    const end =
+      this.localDate(item.endAt, item.timeZone) > day
+        ? 1440
+        : this.minuteOfDay(item.endAt, item.timeZone);
+    return end - this.startMinute(item, day);
+  }
+
+  timelineStart(day: string) {
+    return (
+      Math.floor(
+        Math.min(8 * 60, ...this.itemsFor(day).map((x) => this.startMinute(x, day))) / 60,
+      ) * 60
+    );
+  }
+
+  timelineEnd(day: string) {
+    return Math.min(
+      1440,
+      Math.ceil(
+        Math.max(
+          18 * 60,
+          ...this.itemsFor(day).map((x) => this.startMinute(x, day) + this.visibleMinutes(x, day)),
+        ) / 60,
+      ) * 60,
+    );
+  }
+
+  timelineHours(day: string) {
+    return Array.from(
+      { length: (this.timelineEnd(day) - this.timelineStart(day)) / 60 },
+      (_, i) => this.timelineStart(day) / 60 + i,
+    );
+  }
+
+  hourLabel(hour: number) {
+    return new Intl.DateTimeFormat(this.i18n.language() === 'ar' ? 'ar-EG' : 'en-GB', {
+      hour: 'numeric',
+      hour12: true,
+    }).format(new Date(2000, 0, 1, hour));
+  }
+
+  dayDoctors(day: string) {
+    const entries = new Map(
+      this.doctors()
+        .filter((d) => !this.doctorFilter() || d.id === this.doctorFilter())
+        .map((d) => [d.id, d]),
+    );
+    for (const item of this.itemsFor(day))
+      entries.set(item.doctorProfileId, {
+        id: item.doctorProfileId,
+        displayName: item.doctorName,
+        specialization: '',
+      });
+    return [...entries.values()];
+  }
+
+  itemsForDoctor(day: string, doctorId: string) {
+    return this.itemsFor(day)
+      .filter((x) => x.doctorProfileId === doctorId)
+      .sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt));
+  }
+
+  trackFor(item: AppointmentItem, day: string) {
+    const ends: number[] = [];
+    for (const entry of this.itemsForDoctor(day, item.doctorProfileId)) {
+      const start = Date.parse(entry.startAt);
+      let track = ends.findIndex((end) => end <= start);
+      if (track < 0) track = ends.length;
+      ends[track] = Date.parse(entry.endAt);
+      if (entry.id === item.id) return track;
+    }
+    return 0;
+  }
+
+  laneHeight(day: string, doctorId: string) {
+    return (
+      Math.max(
+        1,
+        ...this.itemsForDoctor(day, doctorId).map((item) => this.trackFor(item, day) + 1),
+      ) *
+        100 +
+      16
     );
   }
 
@@ -509,7 +723,10 @@ export class AppointmentsPageComponent {
 
     const confirmed = await this.confirmDialog.ask({
       title: this.t('Cancel Appointment', 'إلغاء الموعد'),
-      message: this.t('Are you sure you want to cancel this appointment?', 'هل تريد بالتأكيد إلغاء هذا الموعد الطبي؟'),
+      message: this.t(
+        'Are you sure you want to cancel this appointment?',
+        'هل تريد بالتأكيد إلغاء هذا الموعد الطبي؟',
+      ),
       confirmText: this.t('Yes, Cancel Appointment', 'نعم، إلغاء الموعد'),
       cancelText: this.t('Back', 'تراجع'),
       variant: 'danger',
@@ -608,4 +825,3 @@ export class AppointmentsPageComponent {
     return new Date(y, m - 1, d);
   }
 }
-

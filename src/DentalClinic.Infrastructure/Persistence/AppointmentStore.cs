@@ -71,7 +71,7 @@ internal sealed class AppointmentStore(ApplicationDbContext context) : IAppointm
                     .Select(d => context.ClinicUsers.Where(u => u.Id == d.ClinicUserId).Select(u => u.DisplayName).Single()).Single(),
                 x.Type, x.Status, x.StartAt, x.EndAt, x.DurationMinutes, timeZone))
             .ToListAsync(cancellationToken);
-        return new PagedResult<AppointmentListItem>(items, total, query.Page, query.PageSize);
+        return new PagedResult<AppointmentListItem>(items, query.Page, query.PageSize, total);
     }
 
     public void Add(Appointment appointment) => context.Appointments.Add(appointment);

@@ -44,10 +44,19 @@ public sealed class DoctorWorkflowTests(PlatformPostgresFixture fixture)
                 scope.ServiceProvider, doctorUserId, "ALPHA-002"));
         }
 
+        test.User.UserId = Guid.NewGuid();
+        await using (var scope = test.Provider.CreateAsyncScope())
+        {
+            var queries = scope.ServiceProvider.GetRequiredService<IDoctorProfileQueries>();
+            Assert.Equal(profileId, Assert.Single(await queries.LookupAsync(CancellationToken.None)).Id);
+            await Assert.ThrowsAsync<ForbiddenAccessException>(() => queries.SearchAsync(new DoctorSearchQuery(), CancellationToken.None));
+        }
+
         SetActor(test, beta);
         await using (var scope = test.Provider.CreateAsyncScope())
         {
             var queries = scope.ServiceProvider.GetRequiredService<IDoctorProfileQueries>();
+            Assert.Empty(await queries.LookupAsync(CancellationToken.None));
             Assert.Null(await queries.GetAsync(profileId, CancellationToken.None));
             Assert.Empty((await queries.SearchAsync(new DoctorSearchQuery(), CancellationToken.None)).Items);
             await Assert.ThrowsAsync<ValidationException>(() => CreateProfileAsync(
@@ -120,6 +129,8 @@ public sealed class DoctorWorkflowTests(PlatformPostgresFixture fixture)
         test.User.UserId = Guid.NewGuid();
 
         await using var scope = test.Provider.CreateAsyncScope();
+        Assert.Empty(await scope.ServiceProvider.GetRequiredService<IDoctorProfileQueries>()
+            .LookupAsync(CancellationToken.None));
         await Assert.ThrowsAsync<ForbiddenAccessException>(() => scope.ServiceProvider
             .GetRequiredService<IDoctorProfileQueries>().SearchAsync(new DoctorSearchQuery(), CancellationToken.None));
         await Assert.ThrowsAsync<ForbiddenAccessException>(() => scope.ServiceProvider

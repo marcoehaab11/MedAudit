@@ -7,6 +7,7 @@ namespace DentalClinic.Application.Doctors;
 
 public interface IDoctorProfileStore
 {
+    Task<IReadOnlyCollection<DoctorLookupItem>> LookupAsync(CancellationToken cancellationToken);
     Task<PagedResult<DoctorListItem>> SearchAsync(DoctorSearchQuery query, CancellationToken cancellationToken);
     Task<DoctorProfileDetails?> GetDetailsAsync(Guid id, bool canManageSchedule, bool canManageCompensation, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<DoctorCandidate>> GetCandidatesAsync(CancellationToken cancellationToken);

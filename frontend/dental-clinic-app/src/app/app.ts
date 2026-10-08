@@ -61,6 +61,18 @@ export class App implements OnDestroy {
     if (event.key === 'tenant_id' || event.key === 'access_token') window.location.reload();
   }
 
+  protected onSidebarKeydown(event: KeyboardEvent): void {
+    const nav = event.currentTarget as HTMLElement;
+    const offsets: Record<string, number> = { ArrowDown: 48, ArrowUp: -48, PageDown: nav.clientHeight * .8, PageUp: -nav.clientHeight * .8 };
+    if (event.key in offsets) {
+      event.preventDefault();
+      nav.scrollBy({ top: offsets[event.key] });
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      nav.scrollTo({ top: event.key === 'Home' ? 0 : nav.scrollHeight });
+    }
+  }
+
   protected toggleSidebar(): void {
     this.sidebarCollapsed.update((v) => !v);
   }

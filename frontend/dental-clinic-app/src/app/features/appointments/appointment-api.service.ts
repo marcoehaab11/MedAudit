@@ -1,5 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { forkJoin, map, of, switchMap } from 'rxjs';
 
 export interface AppointmentItem {
   id: string;
@@ -67,12 +68,39 @@ export class AppointmentApiService {
     if (filters.doctorProfileId) params = params.set('doctorProfileId', filters.doctorProfileId);
     if (filters.status) params = params.set('status', filters.status);
     if (filters.type) params = params.set('type', filters.type);
-    return this.http.get<AppointmentSearchResult>('/api/appointments', { params });
+    return this.http
+      .get<AppointmentSearchResult>('/api/appointments', { params })
+      .pipe(
+        switchMap((first) =>
+          first.page.totalPages <= 1
+            ? of(first)
+            : forkJoin(
+                Array.from({ length: first.page.totalPages - 1 }, (_, index) =>
+                  this.http.get<AppointmentSearchResult>('/api/appointments', {
+                    params: params.set('page', index + 2),
+                  }),
+                ),
+              ).pipe(
+                map((rest) => ({
+                  ...first,
+                  page: {
+                    ...first.page,
+                    items: [first, ...rest].flatMap((result) => result.page.items),
+                  },
+                })),
+              ),
+        ),
+      );
   }
   appointment(id: string) {
     return this.http.get<AppointmentDetails>(`/api/appointments/${id}`);
   }
-  availability(doctorProfileId: string, date: string, durationMinutes: number, isEmergency?: boolean) {
+  availability(
+    doctorProfileId: string,
+    date: string,
+    durationMinutes: number,
+    isEmergency?: boolean,
+  ) {
     let params = new HttpParams()
       .set('doctorProfileId', doctorProfileId)
       .set('date', date)
@@ -103,4 +131,3 @@ export class AppointmentApiService {
     return this.http.post<void>(`/api/appointments/${id}/cancel`, { reason });
   }
 }
-

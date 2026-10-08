@@ -12,6 +12,14 @@ namespace DentalClinic.Infrastructure.Persistence;
 internal sealed class DoctorStore(ApplicationDbContext context) :
     IDoctorProfileStore, IDoctorScheduleStore, IDoctorCompensationStore
 {
+    public async Task<IReadOnlyCollection<DoctorLookupItem>> LookupAsync(CancellationToken cancellationToken) =>
+        await (from doctor in context.DoctorProfiles.AsNoTracking()
+               join user in context.ClinicUsers.AsNoTracking() on doctor.ClinicUserId equals user.Id
+               where doctor.Status == DoctorProfileStatus.Active
+               orderby user.DisplayName
+               select new DoctorLookupItem(doctor.Id, user.DisplayName, doctor.Specialization))
+            .ToListAsync(cancellationToken);
+
     public async Task<PagedResult<DoctorListItem>> SearchAsync(DoctorSearchQuery query, CancellationToken cancellationToken)
     {
         var doctors = context.DoctorProfiles.AsNoTracking();

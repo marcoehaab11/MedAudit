@@ -5,6 +5,9 @@ namespace DentalClinic.Application.Doctors;
 
 internal sealed class DoctorProfileQueries(IDoctorProfileStore store, IPermissionService permissions) : IDoctorProfileQueries
 {
+    public Task<IReadOnlyCollection<DoctorLookupItem>> LookupAsync(CancellationToken cancellationToken) =>
+        store.LookupAsync(cancellationToken);
+
     public async Task<PagedResult<DoctorListItem>> SearchAsync(DoctorSearchQuery query, CancellationToken cancellationToken)
     {
         await permissions.EnsurePermissionAsync(Permissions.DoctorsView, cancellationToken);

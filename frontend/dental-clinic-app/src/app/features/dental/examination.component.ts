@@ -4,6 +4,7 @@ import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angu
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { AuthService } from '../../core/auth.service';
 import { parseApiError } from '../../core/error-util';
 import { LocalizationService } from '../../core/localization.service';
 import { AppointmentApiService, AppointmentDetails, AvailabilitySlot } from '../appointments/appointment-api.service';
@@ -346,6 +347,13 @@ export interface PrescribedMedicineRow {
               </a>
             </div>
           </section>
+        } @else if (appointment()!.status === 4 && !auth.hasPermission('Examination.Create')) {
+          <section class="step-card intake-start-gate">
+            <h2>{{ t('Session started', 'الجلسة بدأت') }}</h2>
+            <p>{{ appointment()!.patientName }} · {{ appointment()!.doctorName }}</p>
+            <p>{{ t('The doctor can now open and record the examination.', 'الطبيب يقدر دلوقتي يفتح ويسجل الفحص.') }}</p>
+            <a class="button" routerLink="/appointments">{{ t('Back to appointments', 'العودة للمواعيد') }}</a>
+          </section>
         } @else {
           <!-- Active Start Visit Gate Card -->
           <section class="step-card intake-start-gate">
@@ -374,7 +382,7 @@ export interface PrescribedMedicineRow {
               <button
                 type="button"
                 class="button primary lg btn-checkin-start"
-                [disabled]="startingGate()"
+                [disabled]="startingGate() || !auth.hasPermission('Appointments.Start')"
                 (click)="checkInAndStart()"
               >
                 @if (startingGate()) {
@@ -488,7 +496,7 @@ export interface PrescribedMedicineRow {
                     <span>{{ t('Past Visits Sheet (5 Stages)', 'ورقة السجل والزيارات السابقة (5 مراحل)') }}</span>
                   </button>
                 }
-                @if (appointment() && appointment()!.status === 3) {
+                @if (appointment() && appointment()!.status === 3 && auth.hasPermission('Appointments.Start')) {
                   <button type="button" class="btn-start-session" (click)="startSession()">
                     ▶ {{ t('Start Visit Timer', 'بدء وقت الجلسة الفعلي') }}
                   </button>
@@ -1373,13 +1381,13 @@ export interface PrescribedMedicineRow {
 
                 <div class="invoice-summary-list">
                   <div class="invoice-row">
-                    <span>{{ t('Today Session Procedures Total:', 'إجمالي إجراءات جلسة اليوم:') }}</span>
+                    <span>{{ t('Recorded Treatments Total:', 'إجمالي العلاجات المسجلة:') }}</span>
                     <strong>{{ todayProceduresTotal() }} EGP</strong>
                   </div>
 
                   @if (balance()) {
                     <div class="invoice-row">
-                      <span>{{ t('Previous Patient Outstanding:', 'الرصيد المستحق السابق:') }}</span>
+                      <span>{{ t('Current Patient Outstanding:', 'الرصيد المستحق الحالي:') }}</span>
                       <span>{{ balance()!.outstanding }} EGP</span>
                     </div>
                   }
@@ -1418,6 +1426,9 @@ export interface PrescribedMedicineRow {
                     </label>
                   </div>
 
+                  @if (paymentRecorded() > 0) {
+                    <p role="status">{{ t('Payment recorded:', 'تم تسجيل سداد:') }} {{ paymentRecorded() }} EGP</p>
+                  }
                   @if (paymentAmount > 0) {
                     <button
                       type="button"
@@ -1844,6 +1855,8 @@ export interface PrescribedMedicineRow {
   `,
 })
 export class ExaminationComponent {
+  readonly auth = inject(AuthService);
+  readonly paymentRecorded = signal(0);
   private readonly api = inject(DentalApiService);
   private readonly appointmentApi = inject(AppointmentApiService);
   private readonly treatmentApi = inject(TreatmentApiService);
@@ -2055,8 +2068,7 @@ export class ExaminationComponent {
   });
 
   totalDue = computed(() => {
-    const prev = this.balance()?.outstanding || 0;
-    return prev + this.todayProceduresTotal();
+    return this.balance()?.outstanding ?? 0;
   });
 
   constructor() {
@@ -2120,97 +2132,45 @@ export class ExaminationComponent {
     this.appointmentApi.appointment(this.appointmentId).subscribe({
       next: (app) => {
         this.appointment.set(app);
-        if (app.status === 4) {
-          // InProgress -> create examination directly
+        if (app.status === 4 && this.auth.hasPermission('Examination.Create')) {
           this.create();
-        } else if (app.status === 3) {
-          // CheckedIn -> start appointment then create
-          this.appointmentApi.action(this.appointmentId, 'start').subscribe({
-            next: () => this.create(),
-            error: () => this.create(),
-          });
-        } else if (app.status === 1 || app.status === 2) {
-          // Scheduled or Confirmed -> show intake gate
-          this.loading.set(false);
-        } else if (app.status === 5) {
-          // Completed appointment -> load patient details, treatments, and balance for review
+        } else {
           this.loadPatient(app.patientId);
           this.loadTreatments(app.patientId);
           this.loadBalance(app.patientId);
           this.loading.set(false);
-        } else {
-          this.loading.set(false);
         }
       },
-      error: () => {
-        // Fallback for tests
-        this.create();
-      },
+      error: (error) => this.fail(error),
     });
   }
 
-  checkInAndStart() {
+  async checkInAndStart() {
     const app = this.appointment();
-    if (!app) return;
+    if (!app || this.startingGate()) return;
     this.startingGate.set(true);
-
-    if (app.status === 1) {
-      this.appointmentApi.action(this.appointmentId, 'confirm').subscribe({
-        next: () => {
-          this.appointmentApi.action(this.appointmentId, 'check-in').subscribe({
-            next: () => {
-              this.appointmentApi.action(this.appointmentId, 'start').subscribe({
-                next: () => {
-                  this.startingGate.set(false);
-                  this.create();
-                },
-                error: () => {
-                  this.startingGate.set(false);
-                  this.create();
-                },
-              });
-            },
-            error: () => {
-              this.startingGate.set(false);
-              this.create();
-            },
-          });
-        },
-        error: () => {
-          this.startingGate.set(false);
-          this.create();
-        },
-      });
-    } else if (app.status === 2) {
-      this.appointmentApi.action(this.appointmentId, 'check-in').subscribe({
-        next: () => {
-          this.appointmentApi.action(this.appointmentId, 'start').subscribe({
-            next: () => {
-              this.startingGate.set(false);
-              this.create();
-            },
-            error: () => {
-              this.startingGate.set(false);
-              this.create();
-            },
-          });
-        },
-        error: () => {
-          this.startingGate.set(false);
-          this.create();
-        },
-      });
-    } else {
-      this.appointmentApi.action(this.appointmentId, 'start').subscribe({
-        next: () => {
-          this.startingGate.set(false);
-          this.create();
-        },
-        error: () => {
-          this.startingGate.set(false);
-          this.create();
-        },
-      });
+    this.error.set('');
+    try {
+      if (app.status === 1) {
+        await firstValueFrom(this.appointmentApi.action(this.appointmentId, 'confirm'));
+        this.appointment.update(x => x ? { ...x, status: 2 } : x);
+      }
+      if (app.status <= 2) {
+        await firstValueFrom(this.appointmentApi.action(this.appointmentId, 'check-in'));
+        this.appointment.update(x => x ? { ...x, status: 3 } : x);
+      }
+      if (app.status <= 3) {
+        await firstValueFrom(this.appointmentApi.action(this.appointmentId, 'start'));
+        this.appointment.update(x => x ? { ...x, status: 4 } : x);
+      }
+      this.success.set(this.t('Session started.', 'تم بدء الجلسة.'));
+      if (this.auth.hasPermission('Examination.Create')) this.create();
+      else this.loading.set(false);
+    } catch (error) {
+      this.error.set(parseApiError(error, this.t('Could not start session.', 'تعذر بدء الجلسة.')));
+      this.loading.set(false);
+    } finally {
+      this.startingGate.set(false);
     }
   }
 
@@ -2362,11 +2322,15 @@ export class ExaminationComponent {
   loadBalance(patientId: string) {
     this.financeApi.patientBalance(patientId).subscribe({
       next: (b) => this.balance.set(b),
-      error: () => {},
+      error: (error) => this.error.set(parseApiError(error, this.t('Could not refresh patient balance.', 'تعذر تحديث رصيد المريض.'))),
     });
   }
 
   private create() {
+    if (!this.auth.hasPermission('Examination.Create')) {
+      this.loading.set(false);
+      return;
+    }
     this.api.create(this.appointmentId).subscribe({
       next: (x) =>
         this.api
@@ -2394,7 +2358,7 @@ export class ExaminationComponent {
         this.success.set(this.t('Session started.', 'تم بدء الجلسة.'));
         this.load();
       },
-      error: () => {},
+      error: (error) => this.error.set(parseApiError(error, this.t('Could not start session.', 'تعذر بدء الجلسة.'))),
     });
   }
 
@@ -3038,23 +3002,30 @@ export class ExaminationComponent {
 
   async recordPayment() {
     const e = this.examination();
-    if (!e || this.paymentAmount <= 0) return;
+    if (!e || this.paymentAmount <= 0 || this.recordingPayment()) return;
 
     this.recordingPayment.set(true);
     let amountToPay = this.paymentAmount;
-    const todayDate = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const todayDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const nowTime = new Date().toTimeString().slice(0, 5);
 
     try {
-      // 1. Check for patient's existing unpaid revenues
-      let unpaidList: any[] = [];
-      try {
-        const revRes = await firstValueFrom(this.financeApi.revenues({ patientId: e.patientId, pageSize: 50 }));
-        unpaidList = (revRes?.items ?? []).filter((r: any) => (r.outstanding || 0) > 0);
-      } catch {
-        // If listing revenues fails (e.g. role restrictions), fallback gracefully to direct payment
+      // Read the posted balance before allocating a payment; never invent a charge on failure.
+      const currentBalance = await firstValueFrom(this.financeApi.patientBalance(e.patientId));
+      this.balance.set(currentBalance);
+      if (amountToPay > currentBalance.outstanding) throw new Error(this.t('Payment exceeds the posted patient balance.', 'المبلغ أكبر من المستحق المرحل على المريض.'));
+      const revenuePage = await firstValueFrom(this.financeApi.revenues({ patientId: e.patientId, pageSize: 100, page: 1 }));
+      const revenues = [...revenuePage.items];
+      for (let page = 2; page <= revenuePage.totalPages; page++) {
+        const next = await firstValueFrom(this.financeApi.revenues({ patientId: e.patientId, pageSize: 100, page }));
+        revenues.push(...next.items);
       }
-
+      const unpaidList = revenues.filter(revenue => revenue.outstanding > 0);
+      if (unpaidList.reduce((sum, revenue) => sum + revenue.outstanding, 0) < amountToPay) {
+        throw new Error(this.t('Reload the posted charges before payment.', 'حدّث المستحقات المرحلة قبل السداد.'));
+      }
+      this.paymentRecorded.set(0);
       if (unpaidList.length > 0) {
         for (const r of unpaidList) {
           if (amountToPay <= 0) break;
@@ -3072,21 +3043,8 @@ export class ExaminationComponent {
             }),
           );
           amountToPay -= payForThis;
+          this.paymentRecorded.update(total => total + payForThis);
         }
-      }
-
-      // If any amount remains (or if patient has no specific unpaid revenues), post as patient payment
-      if (amountToPay > 0) {
-        await firstValueFrom(
-          this.financeApi.createPayment({
-            patientId: e.patientId,
-            amount: amountToPay,
-            paymentMethod: Number(this.paymentMethod),
-            paidDate: todayDate,
-            paidTime: nowTime,
-            notes: `سداد دفعة أثناء جلسة الكشف #${this.appointmentId.slice(0, 8)}`,
-          }),
-        );
       }
 
       this.recordingPayment.set(false);
@@ -3094,6 +3052,8 @@ export class ExaminationComponent {
       this.paymentAmount = 0;
       this.loadBalance(e.patientId);
     } catch (err: any) {
+      this.paymentAmount = amountToPay;
+      this.loadBalance(e.patientId);
       this.recordingPayment.set(false);
       const rawError = parseApiError(err, this.t('Could not record payment.', 'تعذر تسجيل الدفعة.'));
       let arabicDesc = rawError;

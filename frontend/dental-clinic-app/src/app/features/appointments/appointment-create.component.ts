@@ -111,7 +111,7 @@ import { DateInputComponent } from "../../shared/date-input/date-input.component
         <legend>3. {{ t('Date and duration', 'التاريخ والمدة') }}</legend>
         <label>
           {{ t('Date', 'التاريخ') }}
-          <input type="date" formControlName="date" />
+          <app-date-input formControlName="date" [isInvalid]="form.controls.date.touched && form.controls.date.invalid"></app-date-input>
         </label>
         <label>
           {{ t('Duration', 'المدة') }}

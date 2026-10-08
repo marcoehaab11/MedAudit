@@ -12,6 +12,7 @@ internal static class DoctorEndpoints
     public static IEndpointRouteBuilder MapDoctorEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var doctors = endpoints.MapGroup("/api/doctors").RequireAuthorization(AuthConstants.TenantMemberPolicy);
+        doctors.MapGet("/lookup", (IDoctorProfileQueries service, CancellationToken token) => service.LookupAsync(token));
         doctors.MapGet("/", SearchAsync).RequireAuthorization(Permissions.DoctorsView);
         doctors.MapGet("/candidates", GetCandidatesAsync).RequireAuthorization(Permissions.DoctorsCreate);
         doctors.MapGet("/{id:guid}", GetAsync).RequireAuthorization(Permissions.DoctorsView);

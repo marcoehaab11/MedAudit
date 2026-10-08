@@ -47,6 +47,8 @@ describe('AppointmentCreateComponent', () => {
     fixture.detectChanges();
 
     expect(component.slots()).toHaveLength(1);
+    const dateParts = (fixture.nativeElement as HTMLElement).querySelectorAll('app-date-input[formControlName="date"] .date-part');
+    expect(Array.from(dateParts).map(part => part.classList.contains('day') ? 'day' : part.classList.contains('month') ? 'month' : 'year')).toEqual(['day', 'month', 'year']);
     expect(
       (fixture.nativeElement as HTMLElement).querySelector('[data-testid="availability-slots"]')
         ?.textContent,
@@ -185,26 +187,9 @@ function flushLookups(http: HttpTestingController): void {
       totalCount: 1,
       totalPages: 1,
     });
-  http
-    .expectOne((r) => r.url === '/api/doctors')
-    .flush({
-      items: [
-        {
-          id: 'd1',
-          clinicUserId: 'u1',
-          displayName: 'Dr Sara',
-          email: 's@example.com',
-          specialization: 'General',
-          licenseNumber: 'L1',
-          status: 1,
-          createdAt: '',
-        },
-      ],
-      page: 1,
-      pageSize: 20,
-      totalCount: 1,
-      totalPages: 1,
-    });
+  http.expectOne((r) => r.url === '/api/doctors/lookup').flush([
+    { id: 'd1', displayName: 'Dr Sara', specialization: 'General' },
+  ]);
 }
 
 function flushOngoingTreatments(http: HttpTestingController): void {

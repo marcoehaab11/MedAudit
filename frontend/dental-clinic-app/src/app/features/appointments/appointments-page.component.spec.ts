@@ -25,9 +25,7 @@ describe('AppointmentsPageComponent', () => {
     const http = TestBed.inject(HttpTestingController);
     const component = fixture.componentInstance;
     const date = component.selectedDate();
-    http
-      .expectOne((r) => r.url === '/api/doctors')
-      .flush({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 0 });
+    http.expectOne((r) => r.url === '/api/doctors/lookup').flush([]);
     http
       .expectOne((r) => r.url === '/api/appointments')
       .flush({
@@ -56,6 +54,13 @@ describe('AppointmentsPageComponent', () => {
       });
     fixture.detectChanges();
 
+    const card = (fixture.nativeElement as HTMLElement).querySelector(
+      '.timeline-card',
+    ) as HTMLElement;
+    expect(card.style.width).toBe('90px');
+    expect(card.style.getPropertyValue('inset-inline-start')).toBe('300px');
+    expect(card.textContent).toContain('Dr Sara');
+
     expect(
       (fixture.nativeElement as HTMLElement).querySelector('.appointment-card')?.textContent,
     ).toContain('Mona Hassan');
@@ -64,9 +69,7 @@ describe('AppointmentsPageComponent', () => {
   it('renders Arabic labels when localization switches to Arabic', () => {
     const fixture = TestBed.createComponent(AppointmentsPageComponent);
     const http = TestBed.inject(HttpTestingController);
-    http
-      .expectOne((r) => r.url === '/api/doctors')
-      .flush({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 0 });
+    http.expectOne((r) => r.url === '/api/doctors/lookup').flush([]);
     http
       .expectOne((r) => r.url === '/api/appointments')
       .flush({
@@ -81,5 +84,38 @@ describe('AppointmentsPageComponent', () => {
     );
     expect(document.documentElement.dir).toBe('rtl');
   });
-});
+  it('cancels the previous day request when navigating', () => {
+    const fixture = TestBed.createComponent(AppointmentsPageComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/doctors/lookup').flush([]);
+    const oldRequest = http.expectOne((r) => r.url === '/api/appointments');
+    fixture.componentInstance.move(1);
+    expect(oldRequest.cancelled).toBe(true);
+    http
+      .expectOne((r) => r.url === '/api/appointments')
+      .flush({
+        page: { items: [], page: 1, pageSize: 250, totalCount: 0, totalPages: 0 },
+        timeZone: 'UTC',
+      });
+  });
 
+  it('loads subsequent pages before presenting the calendar', () => {
+    const fixture = TestBed.createComponent(AppointmentsPageComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/doctors/lookup').flush([]);
+    http
+      .expectOne((r) => r.url === '/api/appointments')
+      .flush({
+        page: { items: [], page: 1, pageSize: 250, totalCount: 251, totalPages: 2 },
+        timeZone: 'UTC',
+      });
+    expect(fixture.componentInstance.loading()).toBe(true);
+    http
+      .expectOne((r) => r.url === '/api/appointments' && r.params.get('page') === '2')
+      .flush({
+        page: { items: [], page: 2, pageSize: 250, totalCount: 251, totalPages: 2 },
+        timeZone: 'UTC',
+      });
+    expect(fixture.componentInstance.loading()).toBe(false);
+  });
+});

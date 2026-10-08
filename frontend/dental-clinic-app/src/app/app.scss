@@ -852,3 +852,9 @@ a.nav-item {
   }
 }
 
+
+.sidebar-nav { min-height: 0; scrollbar-width: auto; scrollbar-color: #94a3b8 transparent; }
+.sidebar-nav::-webkit-scrollbar { width: 10px; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: #94a3b8; }
+.sidebar-nav:focus-visible { outline: 2px solid #67e8f9; outline-offset: -3px; }
+.sidebar-nav .nav-item:focus-visible { outline: 2px solid #67e8f9; outline-offset: -2px; }

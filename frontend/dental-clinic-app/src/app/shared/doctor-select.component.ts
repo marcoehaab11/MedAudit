@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { LocalizationService } from '../core/localization.service';
-import { DoctorApiService, DoctorListItem } from '../features/doctors/doctor-api.service';
+import { DoctorApiService, DoctorLookupItem } from '../features/doctors/doctor-api.service';
 
 @Component({
   selector: 'app-doctor-select',
@@ -46,7 +46,9 @@ import { DoctorApiService, DoctorListItem } from '../features/doctors/doctor-api
         border-radius: var(--radius-md);
         background-color: #ffffff;
         cursor: pointer;
-        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        transition:
+          border-color 0.15s ease,
+          box-shadow 0.15s ease;
         user-select: none;
 
         &:hover:not(.disabled) {
@@ -276,7 +278,11 @@ import { DoctorApiService, DoctorListItem } from '../features/doctors/doctor-api
             <input
               #searchInput
               type="text"
-              [placeholder]="i18n.language() === 'ar' ? 'ابحث بالاسم أو التخصص…' : 'Search by name or specialization…'"
+              [placeholder]="
+                i18n.language() === 'ar'
+                  ? 'ابحث بالاسم أو التخصص…'
+                  : 'Search by name or specialization…'
+              "
               [(ngModel)]="searchQuery"
               (input)="onSearchChange()"
               (keydown.escape)="closeDropdown($event)"
@@ -287,7 +293,11 @@ import { DoctorApiService, DoctorListItem } from '../features/doctors/doctor-api
             @if (allowClear && !searchQuery.trim()) {
               <li (click)="selectDoctor(null, $event)" [class.selected]="!selectedDoctor()">
                 <div class="doctor-row">
-                  <span class="doctor-name">{{ i18n.language() === 'ar' ? '— كل الأطباء (بدون تحديد) —' : '— All doctors (no filter) —' }}</span>
+                  <span class="doctor-name">{{
+                    i18n.language() === 'ar'
+                      ? '— كل الأطباء (بدون تحديد) —'
+                      : '— All doctors (no filter) —'
+                  }}</span>
                 </div>
               </li>
             }
@@ -304,7 +314,11 @@ import { DoctorApiService, DoctorListItem } from '../features/doctors/doctor-api
               </li>
             } @empty {
               <div class="empty-results">
-                {{ i18n.language() === 'ar' ? 'لا يوجد طبيب مطابق للبحث' : 'No doctors match your search' }}
+                {{
+                  i18n.language() === 'ar'
+                    ? 'لا يوجد طبيب مطابق للبحث'
+                    : 'No doctors match your search'
+                }}
               </div>
             }
           </ul>
@@ -322,9 +336,9 @@ export class DoctorSelectComponent implements OnInit, ControlValueAccessor {
   readonly i18n = inject(LocalizationService);
   private readonly elementRef = inject(ElementRef);
 
-  readonly allDoctors = signal<DoctorListItem[]>([]);
-  readonly filteredDoctors = signal<DoctorListItem[]>([]);
-  readonly selectedDoctor = signal<DoctorListItem | null>(null);
+  readonly allDoctors = signal<DoctorLookupItem[]>([]);
+  readonly filteredDoctors = signal<DoctorLookupItem[]>([]);
+  readonly selectedDoctor = signal<DoctorLookupItem | null>(null);
   readonly isOpen = signal(false);
 
   searchQuery = '';
@@ -398,7 +412,7 @@ export class DoctorSelectComponent implements OnInit, ControlValueAccessor {
     this.onTouched();
   }
 
-  selectDoctor(d: DoctorListItem | null, event?: Event) {
+  selectDoctor(d: DoctorLookupItem | null, event?: Event) {
     if (event) event.stopPropagation();
     this.selectedDoctor.set(d);
     this.currentValue = d ? d.id : '';
@@ -438,4 +452,3 @@ export class DoctorSelectComponent implements OnInit, ControlValueAccessor {
     this.disabled = isDisabled;
   }
 }
-

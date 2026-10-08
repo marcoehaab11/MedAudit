@@ -193,9 +193,13 @@ describe('ExaminationComponent', () => {
     component.paymentAmount = 500;
     const promise = component.recordPayment();
 
+    http.expectOne('/api/finance/patients/p1/balance').flush({ outstanding: 500 });
+    await Promise.resolve();
+    await Promise.resolve();
+
     // Revenues check
     const revReq = http.expectOne((req) => req.url.includes('/api/finance/revenue'));
-    revReq.flush({ items: [] });
+    revReq.flush({ items: [{ id: 'rev1', outstanding: 500 }], totalPages: 1 });
 
     // Allow async microtasks to advance to next HTTP request
     await Promise.resolve();
@@ -206,10 +210,72 @@ describe('ExaminationComponent', () => {
     payReq.flush({ detail: 'Payment exceeds the outstanding revenue amount.' }, { status: 409, statusText: 'Conflict' });
 
     await promise;
+    flushAuxiliary(http);
 
     expect(component.paymentErrorModal().isOpen).toBe(true);
     expect(component.paymentErrorModal().title).toBeTruthy();
     expect(component.paymentErrorModal().message).toContain('Payment exceeds');
+  });
+
+  it('starts a reception appointment without creating a clinical record', async () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const component = fixture.componentInstance;
+    component.auth.permissions.set(['Examination.View', 'Appointments.Start', 'Appointments.CheckIn']);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush({}, { status: 404, statusText: 'Not Found' });
+    http.expectOne('/api/appointments/a1').flush({ id: 'a1', status: 2, patientId: 'p1' });
+    flushAuxiliary(http);
+    const pending = component.checkInAndStart();
+    http.expectOne('/api/appointments/a1/check-in').flush(null);
+    await Promise.resolve();
+    await Promise.resolve();
+    http.expectOne('/api/appointments/a1/start').flush(null);
+    await pending;
+    expect(component.appointment()?.status).toBe(4);
+    expect(component.examination()).toBeNull();
+    http.expectNone(request => request.url === '/api/appointments/a1/examination' && request.method === 'POST');
+  });
+
+  it('stops the start flow and shows a failed check-in', async () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const component = fixture.componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    flushAuxiliary(http);
+    component.appointment.update(value => value ? { ...value, status: 2 } : value);
+    const pending = component.checkInAndStart();
+    http.expectOne('/api/appointments/a1/check-in').flush({ detail: 'Check-in failed' }, { status: 409, statusText: 'Conflict' });
+    await pending;
+    expect(component.error()).toContain('Check-in failed');
+    http.expectNone('/api/appointments/a1/start');
+  });
+
+  it('uses the posted balance once and refreshes it after a recorded payment', async () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const component = fixture.componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    flushAuxiliary(http);
+    component.balance.set({ patientId: 'p1', totalRevenue: 500, totalPaid: 0, outstanding: 500, currency: 'EGP' });
+    component.executedTreatments.set([{ price: 500 } as any]);
+    expect(component.totalDue()).toBe(500);
+    component.paymentAmount = 200;
+    const pending = component.recordPayment();
+    http.expectOne('/api/finance/patients/p1/balance').flush({ outstanding: 500 });
+    await Promise.resolve();
+    await Promise.resolve();
+    http.expectOne(request => request.url.includes('/api/finance/revenue')).flush({ items: [{ id: 'rev1', outstanding: 500 }], totalPages: 1 });
+    await Promise.resolve();
+    await Promise.resolve();
+    const payment = http.expectOne('/api/finance/payments');
+    expect(payment.request.body.revenueId).toBe('rev1');
+    expect(payment.request.body.amount).toBe(200);
+    payment.flush({ id: 'pay1' });
+    await pending;
+    http.expectOne('/api/finance/patients/p1/balance').flush({ outstanding: 300 });
+    expect(component.totalDue()).toBe(300);
+    expect(component.paymentRecorded()).toBe(200);
+    expect(component.paymentAmount).toBe(0);
   });
 
   it('allows selecting medications from presets and auto-fills dosage and instructions', () => {
