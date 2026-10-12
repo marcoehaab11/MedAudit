@@ -72,7 +72,7 @@ internal static class DentalEndpoints
     private static Task<IResult> CompleteAsync(Guid id, ClinicalRecordVersionRequest request, IExaminationCommands commands, CancellationToken token) =>
         ResultAsync(commands.CompleteAsync(id, request.Version, token));
     private static DentalRecordInput<DentalFindingType> Finding(DentalRecordRequest r) =>
-        new(r.ToothNumber, (DentalFindingType)r.Type, r.Surfaces.Select(x => (ToothSurface)x).ToArray(), r.Notes);
+        new(r.ToothNumber, (DentalFindingType)r.Type, r.Surfaces.Select(x => (ToothSurface)x).ToArray(), r.Notes, r.CariesClass);
     private static DentalRecordInput<DentalProcedureType> Procedure(DentalRecordRequest r) =>
         new(r.ToothNumber, (DentalProcedureType)r.Type, r.Surfaces.Select(x => (ToothSurface)x).ToArray(), r.Notes);
     private static EndodonticInput Endodontic(EndodonticRecordRequest r) => new(r.ToothNumber, r.Notes,

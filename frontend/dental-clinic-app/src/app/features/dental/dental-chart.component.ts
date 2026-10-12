@@ -190,7 +190,7 @@ import { ArtRecord, renderPlanoraTooth } from './planora-dental-art';
           <div class="multi-actions">
             <button type="button" class="btn-multi-chip" (click)="selectAllUpper()">{{ t('All Upper', 'الفك العلوي') }}</button>
             <button type="button" class="btn-multi-chip" (click)="selectAllLower()">{{ t('All Lower', 'الفك السفلي') }}</button>
-            @if (selectedTeeth.length > 1) {
+            @if (selectedTeeth.length > 0) {
               <button type="button" class="btn-multi-chip clear" (click)="clearSelection()">{{ t('Reset', 'إعادة ضبط') }}</button>
             }
           </div>
@@ -204,6 +204,14 @@ import { ArtRecord, renderPlanoraTooth } from './planora-dental-art';
       }
 
       <div class="chart-body">
+        @if (showQuickFindings && selectedTeeth.length) {
+          <div class="chart-quick-findings" role="group" [attr.aria-label]="t('Record a problem', 'تسجيل مشكلة')">
+            <span>{{ t('Apply to selected teeth:', 'تسجيل للأسنان المحددة:') }}</span>
+            @for (type of quickFindingTypes; track type) {
+              <button type="button" [disabled]="savingFinding" (click)="findingSelected.emit(type)">{{ t(findingAppearance[type].en, findingAppearance[type].ar) }}</button>
+            }
+          </div>
+        }
         @if (planoraMode) {
           <div class="planora-chart" role="group" [attr.aria-label]="t('Permanent teeth in Planora view', 'الأسنان الدائمة بعرض Planora')">
             <div class="planora-jaw-label">{{ t('Upper jaw', 'الفك العلوي') }}</div>
@@ -918,9 +926,13 @@ import { ArtRecord, renderPlanoraTooth } from './planora-dental-art';
 })
 export class DentalChartComponent {
   @Input() teeth: ToothChartSummary[] = [];
-  @Input() selectedNumber = 11;
+  @Input() selectedNumber = 0;
   @Output() readonly selectedNumberChange = new EventEmitter<number>();
   @Input() multiSelect = false;
+  @Input() showQuickFindings = false;
+  @Input() savingFinding = false;
+  @Output() readonly findingSelected = new EventEmitter<number>();
+  readonly quickFindingTypes = [2, 3, 4, 5];
   @Input() selectedTeeth: number[] = [];
   @Output() readonly selectedTeethChange = new EventEmitter<number[]>();
 
@@ -944,6 +956,7 @@ export class DentalChartComponent {
   }
 
   choose(number: number) {
+    if (this.savingFinding) return;
     this.searchError = false;
     this.selectedNumber = number;
     this.selectedNumberChange.emit(number);
@@ -952,9 +965,7 @@ export class DentalChartComponent {
       const list = [...this.selectedTeeth];
       const index = list.indexOf(number);
       if (index > -1) {
-        if (list.length > 1) {
-          list.splice(index, 1);
-        }
+        list.splice(index, 1);
       } else {
         list.push(number);
         list.sort((a, b) => a - b);
@@ -965,19 +976,24 @@ export class DentalChartComponent {
   }
 
   selectAllUpper() {
+    if (this.savingFinding) return;
     const upperTeeth = this.upperQuadrants.flatMap((q) => q.teeth);
     this.selectedTeeth = Array.from(new Set([...this.selectedTeeth, ...upperTeeth])).sort((a, b) => a - b);
     this.selectedTeethChange.emit(this.selectedTeeth);
   }
 
   selectAllLower() {
+    if (this.savingFinding) return;
     const lowerTeeth = this.lowerQuadrants.flatMap((q) => q.teeth);
     this.selectedTeeth = Array.from(new Set([...this.selectedTeeth, ...lowerTeeth])).sort((a, b) => a - b);
     this.selectedTeethChange.emit(this.selectedTeeth);
   }
 
   clearSelection() {
-    this.selectedTeeth = [this.selectedNumber];
+    if (this.savingFinding) return;
+    this.selectedTeeth = [];
+    this.selectedNumber = 0;
+    this.selectedNumberChange.emit(0);
     this.selectedTeethChange.emit(this.selectedTeeth);
   }
 

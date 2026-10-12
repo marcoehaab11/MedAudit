@@ -41,7 +41,7 @@ public sealed partial class DentalWorkflowTests(PlatformPostgresFixture fixture)
         var query = scope.ServiceProvider.GetRequiredService<IDentalQueries>();
         var examination = (await query.GetExaminationAsync(id, CancellationToken.None))!;
         Assert.True(await commands.AddFindingAsync(id, new(36, DentalFindingType.Caries,
-            [ToothSurface.Mesial, ToothSurface.Occlusal], "finding detail"), examination.Version, CancellationToken.None));
+            [ToothSurface.Mesial, ToothSurface.Occlusal], "finding detail", CariesClass: 2), examination.Version, CancellationToken.None));
         examination = (await query.GetExaminationAsync(id, CancellationToken.None))!;
         Assert.True(await commands.AddProcedureAsync(id, new(36, DentalProcedureType.Filling,
             [ToothSurface.Mesial, ToothSurface.Occlusal], "procedure detail"), examination.Version, CancellationToken.None));
@@ -51,6 +51,8 @@ public sealed partial class DentalWorkflowTests(PlatformPostgresFixture fixture)
             examination.Version, CancellationToken.None));
         examination = (await query.GetExaminationAsync(id, CancellationToken.None))!;
         Assert.Equal(2, examination.Findings.Single().Surfaces.Count);
+        Assert.Equal(2, examination.Findings.Single().CariesClass);
+        Assert.Equal(appointment.DoctorProfileId, examination.DoctorProfileId);
         Assert.Equal(2, examination.Procedures.Single().Surfaces.Count);
         Assert.Equal(2, examination.EndodonticRecords.Single().Canals.Count);
         Assert.True(await commands.CompleteAsync(id, examination.Version, CancellationToken.None));

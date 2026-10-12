@@ -4,11 +4,11 @@ using DentalClinic.Domain.Dental;
 namespace DentalClinic.Application.Dental;
 
 public sealed record DentalRecordInput<TType>(int ToothNumber, TType Type,
-    IReadOnlyCollection<ToothSurface> Surfaces, string? Notes) where TType : struct, Enum;
+    IReadOnlyCollection<ToothSurface> Surfaces, string? Notes, int? CariesClass = null) where TType : struct, Enum;
 public sealed record EndodonticInput(int ToothNumber, string? Notes, IReadOnlyCollection<EndodonticCanalInput> Canals);
 
 public sealed record DentalFindingDetails(Guid Id, Guid ToothId, int ToothNumber, DentalFindingType Type,
-    IReadOnlyCollection<ToothSurface> Surfaces, string? Notes, DateTimeOffset CreatedAt, Guid CreatedBy);
+    IReadOnlyCollection<ToothSurface> Surfaces, string? Notes, DateTimeOffset CreatedAt, Guid CreatedBy, int? CariesClass = null);
 public sealed record DentalProcedureDetails(Guid Id, Guid ToothId, int ToothNumber, DentalProcedureType Type,
     IReadOnlyCollection<ToothSurface> Surfaces, string? Notes, DateTimeOffset CreatedAt, Guid CreatedBy);
 public sealed record EndodonticCanalDetails(Guid Id, string Name, decimal LengthMm, string? Notes);
@@ -21,7 +21,7 @@ public sealed record ExaminationDetails(Guid Id, Guid PatientId, string PatientN
     DateTimeOffset? CompletedAt, Guid Version, bool CanEdit, bool CanComplete,
     IReadOnlyCollection<DentalFindingDetails> Findings,
     IReadOnlyCollection<DentalProcedureDetails> Procedures,
-    IReadOnlyCollection<EndodonticDetails> EndodonticRecords);
+    IReadOnlyCollection<EndodonticDetails> EndodonticRecords, Guid? DoctorProfileId = null);
 
 public sealed record ToothChartSummary(Guid ToothId, int ToothNumber,
     IReadOnlyCollection<DentalFindingType> Findings, IReadOnlyCollection<DentalProcedureType> Procedures,

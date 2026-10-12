@@ -9,12 +9,12 @@ public sealed class DentalFinding : TenantOwnedEntity
 
     internal DentalFinding(Guid tenantId, Guid examinationId, Guid patientId, int toothNumber,
         DentalFindingType type, IEnumerable<ToothSurface> selectedSurfaces, string? notes,
-        Guid createdBy, DateTimeOffset createdAt)
+        Guid createdBy, DateTimeOffset createdAt, int? cariesClass = null)
     {
         TenantId = tenantId; ExaminationId = examinationId; PatientId = patientId;
         ToothNumber = PermanentToothCatalog.Get(toothNumber).Number;
         ToothId = PermanentToothCatalog.Get(toothNumber).Id;
-        Apply(type, selectedSurfaces, notes);
+        Apply(type, selectedSurfaces, notes, cariesClass);
         CreatedBy = createdBy; CreatedAt = createdAt; UpdatedAt = createdAt;
     }
 
@@ -23,6 +23,7 @@ public sealed class DentalFinding : TenantOwnedEntity
     public Guid ToothId { get; private set; }
     public int ToothNumber { get; private set; }
     public DentalFindingType FindingType { get; private set; }
+    public int? CariesClass { get; private set; }
     public string? Notes { get; private set; }
     public Guid CreatedBy { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
@@ -30,12 +31,16 @@ public sealed class DentalFinding : TenantOwnedEntity
     public IReadOnlyCollection<DentalFindingSurface> Surfaces => surfaces;
 
     internal void Update(DentalFindingType type, IEnumerable<ToothSurface> selectedSurfaces,
-        string? notes, DateTimeOffset updatedAt)
-    { Apply(type, selectedSurfaces, notes); UpdatedAt = updatedAt; }
+        string? notes, DateTimeOffset updatedAt, int? cariesClass = null)
+    { Apply(type, selectedSurfaces, notes, cariesClass); UpdatedAt = updatedAt; }
 
-    private void Apply(DentalFindingType type, IEnumerable<ToothSurface> selectedSurfaces, string? notes)
+    private void Apply(DentalFindingType type, IEnumerable<ToothSurface> selectedSurfaces, string? notes, int? cariesClass)
     {
         if (!Enum.IsDefined(type)) throw new ArgumentOutOfRangeException(nameof(type));
+        if (cariesClass is < 1 or > 6) throw new ArgumentOutOfRangeException(nameof(cariesClass));
+        if (cariesClass.HasValue && type != DentalFindingType.Caries)
+            throw new ArgumentException("Caries classification is only valid for caries.", nameof(cariesClass));
+        CariesClass = cariesClass;
         FindingType = type; Notes = DentalText.Optional(notes, nameof(notes), 2000);
         surfaces.Clear();
         foreach (var surface in DentalRules.ValidateSurfaces(selectedSurfaces))

@@ -30,6 +30,7 @@ export interface DentalFinding {
   toothNumber: number;
   type: number;
   surfaces: number[];
+  cariesClass?: number | null;
   notes?: string;
   createdAt: string;
   createdBy: string;
@@ -60,6 +61,7 @@ export interface ExaminationDetails {
   appointmentId: string;
   appointmentStatus: number;
   doctorUserId: string;
+  doctorProfileId?: string;
   doctorName: string;
   status: number;
   notes?: string;
@@ -77,6 +79,7 @@ export interface DentalRecordRequest {
   toothNumber: number;
   type: number;
   surfaces: number[];
+  cariesClass?: number | null;
   notes?: string;
   version: string;
 }

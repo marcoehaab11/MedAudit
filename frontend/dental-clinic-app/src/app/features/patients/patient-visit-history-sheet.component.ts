@@ -234,6 +234,9 @@ export interface VisitHistoryStageData {
                               <div class="finding-item">
                                 <span class="tooth-pill">#{{ f.toothNumber }}</span>
                                 <span class="finding-name">{{ findingName(f.type) }}</span>
+                                @if (f.type === 2 && f.cariesClass) {
+                                  <span class="finding-notes">Class {{ ['I', 'II', 'III', 'IV', 'V', 'VI'][f.cariesClass - 1] }}</span>
+                                }
                                 @if (f.notes) {
                                   <span class="finding-notes">({{ f.notes }})</span>
                                 }

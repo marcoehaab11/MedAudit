@@ -33,6 +33,41 @@ public sealed class DentalDomainTests
     public void InvalidFdiNumbersAreRejected(int number) =>
         Assert.Throws<ArgumentOutOfRangeException>(() => PermanentToothCatalog.Get(number));
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(6)]
+    public void CariesClassificationIsStoredAndClearedWhenDiagnosisChanges(int classification)
+    {
+        var examination = Create();
+        var finding = examination.AddFinding(36, DentalFindingType.Caries, [], null,
+            Actor, examination.Version, Now, classification);
+        Assert.Equal(classification, finding.CariesClass);
+        examination.UpdateFinding(finding.Id, DentalFindingType.Fracture, [], null, examination.Version, Now);
+        Assert.Null(finding.CariesClass);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(7)]
+    public void InvalidCariesClassificationIsRejected(int classification)
+    {
+        var examination = Create();
+        Assert.Throws<ArgumentOutOfRangeException>(() => examination.AddFinding(36, DentalFindingType.Caries,
+            [], null, Actor, examination.Version, Now, classification));
+    }
+
+    [Fact]
+    public void NonCariesFindingCannotHaveCariesClassification()
+    {
+        var examination = Create();
+        Assert.Throws<ArgumentException>(() => examination.AddFinding(36, DentalFindingType.Missing,
+            [], null, Actor, examination.Version, Now, 2));
+    }
+
     [Fact]
     public void FindingsAndProceduresRemainSeparateAndSupportMultipleSurfaces()
     {

@@ -43,19 +43,154 @@ describe('ExaminationComponent', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Dental Chart');
   }, 15000);
 
-  it('sends the current version and reloads after adding a finding', () => {
+  it('sends the current version and reloads after adding a finding', async () => {
     const fixture = TestBed.createComponent(ExaminationComponent);
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/appointments/a1/examination').flush(examination());
     flushAuxiliary(http);
     fixture.componentInstance.selected = 36;
-    fixture.componentInstance.addFinding();
+    const saving = fixture.componentInstance.addFinding();
     const request = http.expectOne('/api/examinations/e1/findings');
     expect(request.request.body.version).toBe('00000000-0000-0000-0000-000000000001');
     expect(request.request.body.toothNumber).toBe(36);
     request.flush({});
+    await Promise.resolve();
+    await Promise.resolve();
+    http.expectOne('/api/examinations/e1').flush(examination());
+    await saving;
     http.expectOne('/api/appointments/a1/examination').flush(examination());
     flushAuxiliary(http);
+  });
+
+  it('starts with no selected tooth and blocks treatment until selection', () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    flushAuxiliary(http);
+    const c = fixture.componentInstance;
+    expect(c.selected).toBe(0);
+    expect(c.selectedTeeth).toEqual([]);
+    c.selectedCatalogId = 'cat-1';
+    c.recordTreatmentExecution();
+    http.expectNone('/api/treatments');
+    expect(c.error()).toContain('Select teeth');
+  });
+
+  it('saves classification on multiple teeth using the latest examination version', async () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    flushAuxiliary(http);
+    const c = fixture.componentInstance;
+    c.onSelectedTeethChange([24, 25]);
+    c.findingForm.controls.cariesClass.setValue(2);
+    const saving = c.addFinding();
+    const first = http.expectOne('/api/examinations/e1/findings');
+    expect(first.request.body).toMatchObject({ toothNumber: 24, type: 2, cariesClass: 2, surfaces: [] });
+    first.flush(null);
+    await Promise.resolve(); await Promise.resolve();
+    http.expectOne('/api/examinations/e1').flush({ ...examination(), version: 'v2' });
+    await Promise.resolve(); await Promise.resolve();
+    const second = http.expectOne('/api/examinations/e1/findings');
+    expect(second.request.body).toMatchObject({ toothNumber: 25, version: 'v2', cariesClass: 2 });
+    second.flush(null);
+    await Promise.resolve(); await Promise.resolve();
+    http.expectOne('/api/examinations/e1').flush({ ...examination(), version: 'v3' });
+    await saving;
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    flushAuxiliary(http);
+    expect(c.savingFinding()).toBe(false);
+  });
+
+  it('shows classes only for caries and clears class when finding changes', () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    flushAuxiliary(http);
+    const c = fixture.componentInstance;
+    c.setStep(2); flushAuxiliary(http);
+    c.onSelectedTeethChange([36]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[formControlName="cariesClass"]')).toBeTruthy();
+    c.findingForm.controls.cariesClass.setValue(6);
+    c.findingForm.controls.type.setValue(3);
+    fixture.detectChanges();
+    expect(c.findingForm.controls.cariesClass.value).toBeNull();
+    expect(fixture.nativeElement.querySelector('[formControlName="cariesClass"]')).toBeNull();
+  });
+
+  it('records missing through the chart menu without turning it into healthy', async () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    flushAuxiliary(http);
+    const c = fixture.componentInstance;
+    c.setStep(2); flushAuxiliary(http);
+    c.onSelectedTeethChange([36]);
+    fixture.detectChanges();
+    const buttons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('.chart-quick-findings button'));
+    buttons.find(x => x.textContent?.includes('Missing'))!.click();
+    const req = http.expectOne('/api/examinations/e1/findings');
+    expect(req.request.body).toMatchObject({ toothNumber: 36, type: 4, cariesClass: null, surfaces: [] });
+    req.flush(null);
+    await Promise.resolve(); await Promise.resolve();
+    http.expectOne('/api/examinations/e1').flush(examination());
+    await Promise.resolve(); await Promise.resolve();
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    flushAuxiliary(http);
+    c.setStep(3); flushAuxiliary(http);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-dental-chart')).toBeNull();
+  });
+
+  it('resolves doctor profile from appointment and exposes availability failures', () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    flushAuxiliary(http);
+    const c = fixture.componentInstance;
+    c.appointment.set(null);
+    c.loadAvailabilitySlots('2026-10-20');
+    http.expectOne('/api/appointments/a1').flush({ id: 'a1', doctorProfileId: 'doc-1' });
+    const req = http.expectOne(r => r.url === '/api/appointments/availability');
+    expect(req.request.params.get('doctorProfileId')).toBe('doc-1');
+    req.flush({}, { status: 500, statusText: 'Server Error' });
+    expect(c.loadingSlots()).toBe(false);
+    expect(c.bookingError()).toContain('server error');
+  });
+
+  it('uses the current appointment duration for follow-up instead of forcing 30 minutes', () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    flushAuxiliary(http);
+    const c = fixture.componentInstance;
+    c.appointment.set(null);
+    c.loadAvailabilitySlots('2026-10-20');
+    http.expectOne('/api/appointments/a1').flush({ id: 'a1', doctorProfileId: 'doc-1', durationMinutes: 20 });
+    const req = http.expectOne(r => r.url === '/api/appointments/availability');
+    expect(req.request.params.get('durationMinutes')).toBe('20');
+    req.flush([]);
+    c.changeFollowUpDuration(40);
+    const changed = http.expectOne(r => r.url === '/api/appointments/availability');
+    expect(changed.request.params.get('durationMinutes')).toBe('40');
+    changed.flush([]);
+  });
+
+  it('ignores stale slot responses after the follow-up date changes', () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    flushAuxiliary(http);
+    const c = fixture.componentInstance;
+    c.loadAvailabilitySlots('2026-10-20');
+    const old = http.expectOne(r => r.url === '/api/appointments/availability');
+    c.loadAvailabilitySlots('2026-10-21');
+    const current = http.expectOne(r => r.url === '/api/appointments/availability');
+    current.flush([]);
+    old.flush([{ localDate: '2026-10-20', localStartTime: '09:00' }]);
+    expect(c.availableSlots()).toEqual([]);
+    expect(c.suggestedFollowUpDate).toBe('2026-10-21');
   });
 
   it('shows actionable conflict feedback after a stale draft write', () => {
@@ -159,7 +294,8 @@ describe('ExaminationComponent', () => {
     }
 
     expect(component.availableSlots().length).toBeGreaterThanOrEqual(1);
-    expect(component.selectedSlot()).toBeTruthy();
+    expect(component.selectedSlot()).toBeNull();
+    component.selectedSlot.set(component.availableSlots()[0]);
 
     component.suggestedFollowUpNotes = 'Crown fitting';
     component.bookAppointmentNow();

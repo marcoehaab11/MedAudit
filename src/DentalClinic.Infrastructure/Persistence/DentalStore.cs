@@ -47,7 +47,8 @@ internal sealed class DentalStore(ApplicationDbContext context) : IDentalStore
             examination.Status == ExaminationStatus.Draft, examination.Status == ExaminationStatus.Draft,
             examination.Findings.OrderBy(x => x.CreatedAt).Select(Map).ToArray(),
             examination.Procedures.OrderBy(x => x.CreatedAt).Select(Map).ToArray(),
-            examination.EndodonticRecords.OrderBy(x => x.CreatedAt).Select(Map).ToArray());
+            examination.EndodonticRecords.OrderBy(x => x.CreatedAt).Select(Map).ToArray(),
+            (await FindAppointmentAsync(examination.AppointmentId, token))?.DoctorProfileId);
     }
     public async Task<PatientDentalChart?> GetChartAsync(Guid patientId, CancellationToken token)
     {
@@ -87,7 +88,7 @@ internal sealed class DentalStore(ApplicationDbContext context) : IDentalStore
         { throw new DentalConcurrencyException("The clinical record conflicts with a newer change."); }
     }
     private static DentalFindingDetails Map(DentalFinding x) => new(x.Id, x.ToothId, x.ToothNumber, x.FindingType,
-        x.Surfaces.Select(s => s.Surface).ToArray(), x.Notes, x.CreatedAt, x.CreatedBy);
+        x.Surfaces.Select(s => s.Surface).ToArray(), x.Notes, x.CreatedAt, x.CreatedBy, x.CariesClass);
     private static DentalProcedureDetails Map(DentalProcedure x) => new(x.Id, x.ToothId, x.ToothNumber, x.ProcedureType,
         x.Surfaces.Select(s => s.Surface).ToArray(), x.Notes, x.CreatedAt, x.CreatedBy);
     private static EndodonticDetails Map(EndodonticRecord x) => new(x.Id, x.ToothId, x.ToothNumber, x.Notes,

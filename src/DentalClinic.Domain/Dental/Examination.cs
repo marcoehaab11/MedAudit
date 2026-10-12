@@ -38,11 +38,11 @@ public sealed class Examination : TenantOwnedEntity
     { EnsureEditable(expectedVersion); Notes = DentalText.Optional(notes, nameof(notes), 4000); Touch(now); }
 
     public DentalFinding AddFinding(int toothNumber, DentalFindingType type, IEnumerable<ToothSurface> surfaces,
-        string? notes, Guid actorId, Guid expectedVersion, DateTimeOffset now)
-    { EnsureEditable(expectedVersion); var item = new DentalFinding(TenantId, Id, PatientId, toothNumber, type, surfaces, notes, actorId, now); findings.Add(item); Touch(now); return item; }
+        string? notes, Guid actorId, Guid expectedVersion, DateTimeOffset now, int? cariesClass = null)
+    { EnsureEditable(expectedVersion); var item = new DentalFinding(TenantId, Id, PatientId, toothNumber, type, surfaces, notes, actorId, now, cariesClass); findings.Add(item); Touch(now); return item; }
     public void UpdateFinding(Guid id, DentalFindingType type, IEnumerable<ToothSurface> surfaces,
-        string? notes, Guid expectedVersion, DateTimeOffset now)
-    { EnsureEditable(expectedVersion); Find(findings, id).Update(type, surfaces, notes, now); Touch(now); }
+        string? notes, Guid expectedVersion, DateTimeOffset now, int? cariesClass = null)
+    { EnsureEditable(expectedVersion); Find(findings, id).Update(type, surfaces, notes, now, cariesClass); Touch(now); }
     public void RemoveFinding(Guid id, Guid expectedVersion, DateTimeOffset now)
     { EnsureEditable(expectedVersion); findings.Remove(Find(findings, id)); Touch(now); }
 

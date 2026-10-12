@@ -64,9 +64,9 @@ internal sealed class ExaminationCommands(
     public Task<bool> UpdateNotesAsync(Guid id, string? notes, Guid version, CancellationToken token) =>
         MutateAsync(id, Permissions.ExaminationEdit, (e, now) => { e.UpdateNotes(notes, version, now); return null; }, PlatformAuditAction.ExaminationNotesUpdated, token);
     public Task<bool> AddFindingAsync(Guid id, DentalRecordInput<DentalFindingType> input, Guid version, CancellationToken token) =>
-        MutateAsync(id, Permissions.DentalEdit, (e, now) => e.AddFinding(input.ToothNumber, input.Type, input.Surfaces, input.Notes, Actor(), version, now).Id, PlatformAuditAction.FindingAdded, token);
+        MutateAsync(id, Permissions.DentalEdit, (e, now) => e.AddFinding(input.ToothNumber, input.Type, input.Surfaces, input.Notes, Actor(), version, now, input.CariesClass).Id, PlatformAuditAction.FindingAdded, token);
     public Task<bool> UpdateFindingAsync(Guid id, Guid itemId, DentalRecordInput<DentalFindingType> input, Guid version, CancellationToken token) =>
-        MutateAsync(id, Permissions.DentalEdit, (e, now) => { e.UpdateFinding(itemId, input.Type, input.Surfaces, input.Notes, version, now); return null; }, PlatformAuditAction.FindingUpdated, token, itemId);
+        MutateAsync(id, Permissions.DentalEdit, (e, now) => { e.UpdateFinding(itemId, input.Type, input.Surfaces, input.Notes, version, now, input.CariesClass); return null; }, PlatformAuditAction.FindingUpdated, token, itemId);
     public Task<bool> RemoveFindingAsync(Guid id, Guid itemId, Guid version, CancellationToken token) =>
         MutateAsync(id, Permissions.DentalEdit, (e, now) => { e.RemoveFinding(itemId, version, now); return null; }, PlatformAuditAction.FindingRemoved, token, itemId);
     public Task<bool> AddProcedureAsync(Guid id, DentalRecordInput<DentalProcedureType> input, Guid version, CancellationToken token) =>

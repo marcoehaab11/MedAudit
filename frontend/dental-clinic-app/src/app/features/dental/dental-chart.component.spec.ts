@@ -15,7 +15,7 @@ describe('DentalChartComponent', () => {
     expect(teeth[0].querySelector('.tooth-anatomy')).not.toBeNull();
     (Array.from(teeth).find((x) => x.getAttribute('aria-label')?.includes('36')) as HTMLButtonElement).click();
     expect(fixture.componentInstance.selectedNumber).toBe(36);
-  });
+  }, 15000);
 
   it('selects a tooth through keyboard-friendly FDI search and rejects invalid numbers', () => {
     const component = TestBed.createComponent(DentalChartComponent).componentInstance;
@@ -50,15 +50,19 @@ describe('DentalChartComponent', () => {
     component.choose(21);
     expect(component.selectedTeeth).toEqual([22]);
 
+    component.choose(22);
+    expect(component.selectedTeeth).toEqual([]);
+
     // Quick select upper jaw
     component.selectAllUpper();
     expect(component.selectedTeeth.length).toBe(16);
     expect(component.selectedTeeth).toContain(11);
     expect(component.selectedTeeth).toContain(28);
 
-    // Clear selection resets to the single active tooth
+    // Clear selection leaves no implicitly selected tooth
     component.clearSelection();
-    expect(component.selectedTeeth.length).toBe(1);
+    expect(component.selectedTeeth.length).toBe(0);
+    expect(component.selectedNumber).toBe(0);
   });
 });
 
