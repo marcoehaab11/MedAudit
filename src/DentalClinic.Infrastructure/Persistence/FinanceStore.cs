@@ -12,6 +12,33 @@ namespace DentalClinic.Infrastructure.Persistence;
 
 internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock clock, ICurrentTenant currentTenant) : IFinanceStore
 {
+    public async Task<DoctorDues?> MyDuesAsync(Guid userId, CancellationToken token)
+    {
+        var doctorId = await context.DoctorProfiles.AsNoTracking().Where(x => x.ClinicUserId == userId)
+            .Select(x => (Guid?)x.Id).SingleOrDefaultAsync(token);
+        if (!doctorId.HasValue) return null;
+        var costs = context.DoctorCompensationCosts.AsNoTracking().Where(x => x.DoctorProfileId == doctorId.Value);
+        var balances = await costs.GroupBy(x => x.Currency)
+            .Select(g => new DoctorDuesCurrency(g.Key, g.Sum(x => x.Amount), g.Count())).ToArrayAsync(token);
+        var currency = await CurrencyAsync(token);
+        return new DoctorDues(balances.FirstOrDefault(x => x.Currency == currency)?.Total ?? 0,
+            currency, balances.Sum(x => x.TreatmentCount), balances);
+    }
+    public async Task<IReadOnlyCollection<BillingQueueItem>> BillingQueueAsync(CancellationToken token)
+    {
+        return await (from revenue in context.Revenues.AsNoTracking()
+                      join patient in context.Patients.AsNoTracking() on revenue.PatientId equals (Guid?)patient.Id
+                      let completedAt = context.Treatments.Where(t => t.Status == DentalClinic.Domain.Treatments.TreatmentStatus.Completed &&
+                          (t.Id == revenue.TreatmentId || revenue.TreatmentPlanId.HasValue && t.TreatmentPlanId == revenue.TreatmentPlanId))
+                          .Max(t => (DateTimeOffset?)t.CompletedAt)
+                      where completedAt.HasValue
+                      let paid = context.Payments.Where(p => p.RevenueId == revenue.Id).Sum(p => (decimal?)p.Amount) ?? 0
+                      where revenue.Amount > paid
+                      orderby completedAt descending
+                      select new BillingQueueItem(revenue.Id, patient.Id, patient.FirstName + " " + patient.LastName,
+                          revenue.Description, revenue.Amount - paid, revenue.Currency, null, completedAt.Value, patient.PatientNumber))
+                     .Take(100).ToListAsync(token);
+    }
     public async Task<FinanceRange> ResolveRangeAsync(FinanceDateFilter filter, CancellationToken token)
     {
         var config = await context.TenantConfigurations.AsNoTracking().Select(x => new { x.TimeZone, x.Currency }).SingleAsync(token);

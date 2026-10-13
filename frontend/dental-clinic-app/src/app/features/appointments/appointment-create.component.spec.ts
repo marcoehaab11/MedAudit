@@ -18,6 +18,19 @@ describe('AppointmentCreateComponent', () => {
     http.verify();
   });
 
+  it('defaults to 60 minutes and follows the selected doctor preference', () => {
+    const fixture = TestBed.createComponent(AppointmentCreateComponent);
+    const http = TestBed.inject(HttpTestingController);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+    flushLookups(http);
+    expect(component.form.controls.durationMinutes.value).toBe(60);
+    component.form.controls.doctorProfileId.setValue('d1');
+    expect(component.form.controls.durationMinutes.value).toBe(45);
+    component.form.controls.doctorProfileId.setValue('');
+    expect(component.form.controls.durationMinutes.value).toBe(60);
+  });
+
   it('uses server availability in the creation flow', () => {
     const fixture = TestBed.createComponent(AppointmentCreateComponent);
     const http = TestBed.inject(HttpTestingController);
@@ -188,7 +201,7 @@ function flushLookups(http: HttpTestingController): void {
       totalPages: 1,
     });
   http.expectOne((r) => r.url === '/api/doctors/lookup').flush([
-    { id: 'd1', displayName: 'Dr Sara', specialization: 'General' },
+    { id: 'd1', displayName: 'Dr Sara', specialization: 'General', consultationDurationMinutes: 45 },
   ]);
 }
 

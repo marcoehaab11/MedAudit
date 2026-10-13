@@ -87,10 +87,14 @@ internal sealed class PublicBookingStore(ApplicationDbContext context) : IPublic
 
     public async Task<IReadOnlyCollection<DoctorSchedule>> GetDoctorScheduleAsync(Guid doctorProfileId, CancellationToken token)
     {
-        return await context.DoctorSchedules.AsNoTracking().IgnoreQueryFilters()
-            .Include(x => x.Breaks)
-            .Where(x => x.DoctorProfileId == doctorProfileId)
-            .ToListAsync(token);
+        var doctor = await context.DoctorProfiles.AsNoTracking().IgnoreQueryFilters()
+            .SingleOrDefaultAsync(x => x.Id == doctorProfileId, token);
+        if (doctor is null) return [];
+        var hours = await context.ClinicHours.AsNoTracking().IgnoreQueryFilters()
+            .Include(x => x.Periods).Where(x => x.TenantId == doctor.TenantId).ToListAsync(token);
+        var fallback = await context.DoctorSchedules.AsNoTracking().IgnoreQueryFilters()
+            .Include(x => x.Breaks).Where(x => x.TenantId == doctor.TenantId && x.DoctorProfileId == doctorProfileId).ToListAsync(token);
+        return ClinicAppointmentSchedule.Resolve(doctor.TenantId, doctorProfileId, hours, fallback);
     }
 
     public async Task<IReadOnlyCollection<AppointmentBusyPeriod>> GetBusyPeriodsAsync(

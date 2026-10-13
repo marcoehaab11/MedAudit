@@ -42,8 +42,15 @@ public sealed record FinanceDoctorRule(Guid Id, CompensationType Type, decimal? 
     DateOnly EffectiveFrom, DateOnly? EffectiveTo);
 public sealed record CompensationResult(decimal Amount, decimal? Percentage, string Snapshot);
 
+public sealed record DoctorDuesCurrency(string Currency, decimal Total, int TreatmentCount);
+public sealed record DoctorDues(decimal Total, string Currency, int TreatmentCount, IReadOnlyCollection<DoctorDuesCurrency>? ByCurrency = null);
+public sealed record BillingQueueItem(Guid RevenueId, Guid PatientId, string PatientName, string TreatmentName,
+    decimal Outstanding, string Currency, Guid? AppointmentId, DateTimeOffset OccurredAt, string? PatientNumber = null);
+
 public interface IFinanceQueries
 {
+    Task<DoctorDues?> MyDuesAsync(CancellationToken token);
+    Task<IReadOnlyCollection<BillingQueueItem>> BillingQueueAsync(CancellationToken token);
     Task<FinanceSummary> DashboardAsync(FinanceDateFilter filter, CancellationToken token);
     Task<PagedResult<RevenueItem>> RevenuesAsync(RevenueSearch search, CancellationToken token);
     Task<PagedResult<PaymentItem>> PaymentsAsync(PaymentSearch search, CancellationToken token);

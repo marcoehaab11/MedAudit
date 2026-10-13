@@ -27,6 +27,7 @@ import { FinanceApiService, PatientBalance } from '../finance/finance-api.servic
 import { FINDING_APPEARANCE, PROCEDURE_APPEARANCE, SURFACES } from './dental-appearance';
 import { DentalApiService, ExaminationDetails, ToothChartSummary } from './dental-api.service';
 import { DentalChartComponent } from './dental-chart.component';
+import { allowedCariesClasses, toothName } from './tooth-labels';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 import { TagInputComponent } from '../../shared/tag-input/tag-input.component';
 import { PatientVisitHistorySheetComponent } from '../patients/patient-visit-history-sheet.component';
@@ -585,218 +586,46 @@ export interface PrescribedMedicineRow {
         <!-- ════════════════════════════════════════════════════════════════ -->
         @if (step() === 2) {
           <section class="step-card chart-step-card">
-            <div class="step-header-title">
-              <h2>🦷 {{ t('2. Dental Chart & Clinical Examination', '2. فحص ومخطط الأسنان السريري') }}</h2>
-              <p>{{ t('Select one or more teeth to record problems and caries classification.', 'اختر سنًا أو أكثر لتسجيل المشاكل وتصنيف التسوس.') }}</p>
+            <div class="step-header-title"><h2>{{ t('2. Dental chart & findings', '2. فحص ومخطط الأسنان') }}</h2>
+              <p>{{ t('Hover over or select a tooth to record a problem. Treatment for today is selected separately.', 'مرر على السن أو اضغط عليه لتسجيل المشكلة. أسنان علاج اليوم يتم اختيارها بشكل مستقل.') }}</p>
             </div>
-
-            <div class="dental-workspace exam">
-              <div class="chart-wrapper">
-                <app-dental-chart [teeth]="chartTeeth()" [multiSelect]="true"
-                  [selectedNumber]="selected" [selectedTeeth]="selectedTeeth"
-                  [showQuickFindings]="examination()!.canEdit" [savingFinding]="savingFinding()"
-                  (findingSelected)="chooseFindingType($event)"
-                  (selectedNumberChange)="onSelectedToothChange($event)"
-                  (selectedTeethChange)="onSelectedTeethChange($event)" />
+            <app-dental-chart [teeth]="chartTeeth()" [multiSelect]="true" [selectedNumber]="selected" [selectedTeeth]="selectedTeeth"
+              [showQuickFindings]="examination()!.canEdit" [savingFinding]="savingFinding()"
+              (selectedNumberChange)="onSelectedToothChange($event)" (selectedTeethChange)="onSelectedTeethChange($event)"
+              (findingSelected)="chooseFindingType($event)" (toothFindingSelected)="chooseToothFinding($event)" />
+            <section class="tooth-details">
+              <h3>{{ t('Findings', 'النتائج') }}</h3>
+              <div class="record-stack">
+                @for (item of examination()!.findings; track item.id) {
+                  <article><div><strong>#{{ item.toothNumber }} · {{ toothLabel(item.toothNumber) }} · {{ findingLabel(item.type) }}</strong>
+                    @if (item.cariesClass || item.surfaces.length) { <small>{{ findingDetailsLabel(item) }}</small> }
+                    @if (item.notes) { <p>{{ item.notes }}</p> }
+                  </div>
+                    @if (examination()!.canEdit && item.type === 2) { <button type="button" [disabled]="savingFinding()" (click)="editCariesFinding(item)">{{ t('Edit classification', 'تعديل التصنيف') }}</button> }
+                    @if (examination()!.canEdit) { <button type="button" class="danger-link" [disabled]="savingFinding()" (click)="removeFinding(item.id)">{{ t('Remove', 'حذف') }}</button> }
+                  </article>
+                } @empty { <p>{{ t('No findings recorded yet.', 'لا توجد نتائج مسجلة بعد.') }}</p> }
               </div>
-
-              <aside class="tooth-details">
-                @if (selected) {
-                <div class="selected-tooth-header">
-                  <span class="tooth-badge">{{ selectedTeethLabel() }}</span>
-                  <h3>{{ t('Selected Teeth', 'الأسنان المختارة') }} {{ selectedTeethLabel() }}</h3>
-                </div>
-
-                <nav class="clinical-tabs">
-                  @for (item of tabs; track item.id) {
-                    <button
-                      type="button"
-                      [class.active]="tab() === item.id"
-                      (click)="tab.set(item.id)"
-                    >
-                      {{ t(item.en, item.ar) }}
-                    </button>
+              @if (examination()!.canEdit && selectedTeeth.length && findingEditorOpen) {
+                <form class="clinical-form" [formGroup]="findingForm" (ngSubmit)="addFinding()">
+                  <p>{{ t('Record for:', 'تسجيل للأسنان:') }} {{ findingTeethLabel() }}</p>
+                  <label>{{ t('Problem type', 'نوع المشكلة') }}<select formControlName="type">
+                    @for (item of findingOptions; track item.id) { <option [value]="item.id">{{ t(item.en, item.ar) }}</option> }
+                  </select></label>
+                  @if (+findingForm.controls.type.value === 2) {
+                    <label>{{ t('Caries classification', 'تصنيف التسوس') }}<select formControlName="cariesClass">
+                      <option [ngValue]="null">{{ t('Select class…', 'اختر التصنيف…') }}</option>
+                      @for (value of availableCariesClasses(); track value) { <option [ngValue]="value">Class {{ ['I','II','III','IV','V','VI'][value - 1] }}</option> }
+                    </select></label>
                   }
-                </nav>
-
-                @switch (tab()) {
-                  @case ('findings') {
-                    <div class="record-stack">
-                      @for (item of selectedFindings(); track item.id) {
-                        <article>
-                          <div>
-                            <strong>#{{ item.toothNumber }} · {{ findingLabel(item.type) }}</strong>
-                            <small>{{ findingDetailsLabel(item) }}</small>
-                            <p>{{ item.notes || '—' }}</p>
-                          </div>
-                          @if (examination()!.canEdit) {
-                            <button type="button" class="danger-link" (click)="removeFinding(item.id)">
-                              {{ t('Remove', 'حذف') }}
-                            </button>
-                          }
-                        </article>
-                      } @empty {
-                        <p class="empty-hint">{{ t('No findings recorded for ' + selectedTeethLabel() + '.', 'لا توجد نتائج مسجلة للأسنان ' + selectedTeethLabel() + '.') }}</p>
-                      }
-                    </div>
-
-                    @if (examination()!.canEdit) {
-                      <form [formGroup]="findingForm" (ngSubmit)="addFinding()" class="clinical-form">
-                        <label>
-                          {{ t('Finding Type', 'نوع المشكلة / النتيجة') }}
-                          <select formControlName="type">
-                            @for (item of findingOptions; track item.id) {
-                              <option [value]="item.id">{{ t(item.en, item.ar) }}</option>
-                            }
-                          </select>
-                        </label>
-                        @if (+findingForm.controls.type.value === 2) {
-                          <label>{{ t('Caries classification', 'تصنيف التسوس') }}
-                            <select formControlName="cariesClass">
-                              <option [ngValue]="null">{{ t('Select class…', 'اختر التصنيف…') }}</option>
-                              @for (value of cariesClasses; track value) {
-                                <option [ngValue]="value">Class {{ ['I', 'II', 'III', 'IV', 'V', 'VI'][value - 1] }}</option>
-                              }
-                            </select>
-                          </label>
-                        }
-                        <label>
-                          {{ t('Tooth Notes', 'ملاحظات السن') }}
-                          <textarea formControlName="notes" maxlength="2000"></textarea>
-                        </label>
-                        <button type="submit" class="primary" [disabled]="savingFinding()">+ {{ t('Add Finding', 'إضافة نتيجة') }}</button>
-                      </form>
-                    }
-                  }
-                  @case ('procedures') {
-                    <div class="record-stack">
-                      @for (item of selectedProcedures(); track item.id) {
-                        <article>
-                          <div>
-                            <strong>{{ procedureLabel(item.type) }}</strong>
-                            <small>{{ surfaceLabels(item.surfaces) }}</small>
-                            <p>{{ item.notes || '—' }}</p>
-                          </div>
-                          @if (examination()!.canEdit) {
-                            <button type="button" class="danger-link" (click)="removeProcedure(item.id)">
-                              {{ t('Remove', 'حذف') }}
-                            </button>
-                          }
-                        </article>
-                      } @empty {
-                        <p class="empty-hint">{{ t('No procedures recorded for tooth #' + selected + '.', 'لا توجد إجراءات مسجلة للسن #' + selected + '.') }}</p>
-                      }
-                    </div>
-
-                    @if (examination()!.canEdit) {
-                      <form [formGroup]="procedureForm" (ngSubmit)="addProcedure()" class="clinical-form">
-                        <label>
-                          {{ t('Procedure Type', 'نوع الإجراء السريري') }}
-                          <select formControlName="type">
-                            @for (item of procedureOptions; track item.id) {
-                              <option [value]="item.id">{{ t(item.en, item.ar) }}</option>
-                            }
-                          </select>
-                        </label>
-                        <fieldset>
-                          <legend>{{ t('Surfaces', 'الأسطح') }}</legend>
-                          @for (surface of surfaces; track surface[0]) {
-                            <label>
-                              <input
-                                type="checkbox"
-                                [checked]="hasSurface('procedure', surface[0])"
-                                (change)="toggleSurface('procedure', surface[0])"
-                              />{{ t(surface[1], surface[2]) }}
-                            </label>
-                          }
-                        </fieldset>
-                        <label>
-                          {{ t('Procedure notes', 'ملاحظات الإجراء') }}
-                          <textarea formControlName="notes" maxlength="2000"></textarea>
-                        </label>
-                        <button type="submit" class="primary">+ {{ t('Record Procedure', 'تسجيل الإجراء') }}</button>
-                      </form>
-                    }
-                  }
-                  @case ('endodontic') {
-                    <div class="record-stack">
-                      @for (item of selectedEndodontic(); track item.id) {
-                        <article>
-                          <div>
-                            <strong>{{ t('Root canal record', 'سجل علاج الجذور') }}</strong>
-                            @for (canal of item.canals; track canal.id) {
-                              <p>
-                                <b>{{ canal.name }}</b> · {{ canal.lengthMm }} mm
-                                <small>{{ canal.notes }}</small>
-                              </p>
-                            }
-                            <p>{{ item.notes }}</p>
-                          </div>
-                          @if (examination()!.canEdit) {
-                            <button type="button" class="danger-link" (click)="removeEndodontic(item.id)">
-                              {{ t('Remove', 'حذف') }}
-                            </button>
-                          }
-                        </article>
-                      } @empty {
-                        <p class="empty-hint">{{ t('No endodontic records for tooth #' + selected + '.', 'لا توجد بيانات علاج جذور للسن #' + selected + '.') }}</p>
-                      }
-                    </div>
-
-                    @if (examination()!.canEdit) {
-                      <form [formGroup]="endoForm" (ngSubmit)="addEndodontic()" class="clinical-form">
-                        <label>
-                          {{ t('Canals — one per line (name:length)', 'القنوات — قناة بكل سطر (الاسم:الطول)') }}
-                          <textarea
-                            formControlName="canals"
-                            placeholder="MB:21&#10;ML:20&#10;D:19"
-                          ></textarea>
-                        </label>
-                        <label>
-                          {{ t('Endodontic notes', 'ملاحظات علاج الجذور') }}
-                          <textarea formControlName="notes" maxlength="2000"></textarea>
-                        </label>
-                        <button type="submit" class="primary">+ {{ t('Add Endodontic Record', 'إضافة سجل جذور') }}</button>
-                      </form>
-                    }
-                  }
-                  @case ('notes') {
-                    <form [formGroup]="notesForm" (ngSubmit)="saveNotes()" class="clinical-form">
-                      <label>
-                        {{ t('General Examination Notes', 'ملاحظات الفحص العامة') }}
-                        <textarea
-                          rows="8"
-                          formControlName="notes"
-                          maxlength="4000"
-                          [readonly]="!examination()!.canEdit"
-                        ></textarea>
-                      </label>
-                      @if (examination()!.canEdit) {
-                        <button type="submit" class="primary">💾 {{ t('Save Draft Notes', 'حفظ ملاحظات المسودة') }}</button>
-                      }
-                    </form>
-                  }
-                }
-                } @else {
-                  <p class="empty-hint">{{ t('Select one or more teeth to record findings.', 'اختر سنًا أو أكثر لتسجيل المشاكل.') }}</p>
-                }
-              </aside>
-            </div>
-
-            <div class="step-footer-actions">
-              <button type="button" class="button secondary prev-btn" (click)="setStep(1)">
-                {{ t('← Previous: Intake', '⬅ السابق: الاستقبال') }}
-              </button>
-              <button type="button" class="button primary next-btn" (click)="setStep(3)">
-                {{ t('Next: Procedures & Treatment Plan →', 'التالي: الإجراءات وخطة العلاج ➔') }}
-              </button>
-            </div>
+                  <label>{{ t('Notes', 'ملاحظات') }}<textarea formControlName="notes" maxlength="2000"></textarea></label>
+                  <button class="primary" [disabled]="savingFinding()">{{ menuCariesRecords.size ? t('Save classification', 'حفظ التصنيف') : t('Record finding', 'تسجيل النتيجة') }}</button>
+                </form>
+              }
+            </section>
           </section>
         }
 
-        <!-- ════════════════════════════════════════════════════════════════ -->
-        <!--  STEP 3: PROCEDURES & TREATMENT PLAN (الإجراءات وخطة العلاج)    -->
-        <!-- ════════════════════════════════════════════════════════════════ -->
         @if (step() === 3) {
           <section class="step-card procedures-plan-card">
             <div class="step-header-title">
@@ -807,7 +636,15 @@ export interface PrescribedMedicineRow {
             <!-- Split-View: Interactive Chart (Left) + Tooth Procedure Action Card (Right) -->
             <div class="step3-selection-summary">
               <div class="chart-col">
-                <p>{{ t('Selected teeth:', 'الأسنان المحددة:') }} {{ selectedTeethLabel() }}</p>
+                <p>{{ t('Surveyed teeth:', 'أسنان الفحص المسجلة:') }} {{ surveyTeeth().length }}</p>
+                <button type="button" class="secondary" (click)="showTodayTeethPicker = !showTodayTeethPicker">{{ t("Choose today's treatment teeth", 'اختيار أسنان علاج اليوم') }}</button>
+                @if (showTodayTeethPicker) {
+                  <div class="today-teeth-picker">
+                    @for (number of surveyTeeth(); track number) {
+                      <label><input type="checkbox" [checked]="treatmentTeeth.includes(number)" (change)="toggleTreatmentTooth(number)" />#{{ number }} {{ toothLabel(number) }}</label>
+                    } @empty { <p>{{ t('Record findings or select teeth in the first chart.', 'سجل النتائج أو حدد الأسنان في المخطط الأول.') }}</p> }
+                  </div>
+                }
                 <button type="button" class="secondary" (click)="setStep(2)">{{ t('Choose / change teeth', 'اختيار / تعديل الأسنان') }}</button>
               </div>
 
@@ -817,21 +654,21 @@ export interface PrescribedMedicineRow {
                   <!-- Selected Tooth Header -->
                   <div class="selected-tooth-banner">
                     <span class="tooth-pill">
-                      @if (!selected) {
+                      @if (!treatmentTeeth.length) {
                         {{ t('No tooth selected', 'لم يتم اختيار سن') }}
-                      } @else if (selectedTeeth.length <= 1) {
-                        🦷 #{{ selected }}
+                      } @else if (treatmentTeeth.length <= 1) {
+                        🦷 {{ treatmentTeethLabel() }}
                       } @else {
-                        🦷 {{ selectedTeeth.length }} {{ t('Teeth', 'أسنان') }}
+                        🦷 {{ treatmentTeeth.length }} {{ t('Teeth', 'أسنان') }}
                       }
                     </span>
                     <div class="tooth-title-group">
-                      @if (!selected) {
+                      @if (!treatmentTeeth.length) {
                         {{ t('No tooth selected', 'لم يتم اختيار سن') }}
-                      } @else if (selectedTeeth.length <= 1) {
-                        <h3>{{ t('Selected Tooth', 'السن المحدد') }} #{{ selected }}</h3>
+                      } @else if (treatmentTeeth.length <= 1) {
+                        <h3>{{ t('Selected Tooth', 'السن المحدد') }} {{ treatmentTeethLabel() }}</h3>
                       } @else {
-                        <h3>{{ t('Selected Teeth', 'الأسنان المحددة') }} ({{ selectedTeeth.length }}): {{ selectedTeethLabel() }}</h3>
+                        <h3>{{ t('Selected Teeth', 'الأسنان المحددة') }} ({{ treatmentTeeth.length }}): {{ treatmentTeethLabel() }}</h3>
                       }
                       <p>{{ t('Use the selection button to change teeth', 'استخدم زر تعديل الأسنان لتغيير التحديد') }}</p>
                     </div>
@@ -840,14 +677,14 @@ export interface PrescribedMedicineRow {
                   <!-- 1. Findings & Diagnoses for this Tooth -->
                   <div class="tooth-section diagnoses-section">
                     <div class="section-label">
-                      <span>🔍 {{ t('Diagnoses & Findings for ' + selectedTeethLabel(), 'التشخيصات المسجلة للأسنان ' + selectedTeethLabel()) }}</span>
+                      <span>🔍 {{ t('Diagnoses & Findings for ' + treatmentTeethLabel(), 'التشخيصات المسجلة للأسنان ' + treatmentTeethLabel()) }}</span>
                     </div>
 
                     <div class="findings-chips-stack">
                       @for (f of selectedToothFindings(); track f.id) {
                         <div class="finding-chip-card">
                           <span class="dot-indicator"></span>
-                          <strong class="finding-title">{{ findingLabel(f.type) }}</strong>
+                          <strong class="finding-title">#{{ f.toothNumber }} {{ toothLabel(f.toothNumber) }} · {{ findingLabel(f.type) }}</strong>
                           @if (f.cariesClass || f.surfaces?.length) {
                             <span class="surface-badge">{{ findingDetailsLabel(f) }}</span>
                           }
@@ -871,7 +708,7 @@ export interface PrescribedMedicineRow {
                         <span class="quick-hint">{{ t('Quick Add Diagnosis (Applies to all selected):', 'إضافة تشخيص سريع (يطبق على الأسنان المحددة):') }}</span>
                         <div class="quick-finding-buttons">
                           @for (item of quickFindingOptions; track item.id) {
-                            <button type="button" class="btn-quick-finding" [disabled]="!selected || savingFinding()" (click)="quickAddFinding(item.id)">+ {{ t(item.en, item.ar) }}</button>
+                            <button type="button" class="btn-quick-finding" [disabled]="!treatmentTeeth.length || savingFinding()" (click)="quickAddFinding(item.id)">+ {{ t(item.en, item.ar) }}</button>
                           }
                         </div>
                       </div>
@@ -960,16 +797,16 @@ export interface PrescribedMedicineRow {
                             </div>
                           </div>
 
-                          @if (selectedTeeth.length > 1) {
+                          @if (treatmentTeeth.length > 1) {
                             <div class="calculation-formula-ribbon">
                               <div class="formula-chips">
-                                <span class="chip-count">🦷 {{ selectedTeeth.length }} {{ t('teeth selected', 'أسنان محددة') }}</span>
+                                <span class="chip-count">🦷 {{ treatmentTeeth.length }} {{ t('teeth selected', 'أسنان محددة') }}</span>
                                 <span class="chip-times">×</span>
                                 <span class="chip-unit">{{ treatmentUnitPrice }} {{ t('EGP', 'ج.م') }}</span>
                                 <span class="chip-equals">=</span>
                                 <strong class="chip-result">{{ treatmentPrice }} {{ t('EGP', 'ج.م') }}</strong>
                               </div>
-                              <span class="formula-teeth-list">({{ selectedTeethLabel() }})</span>
+                              <span class="formula-teeth-list">({{ treatmentTeethLabel() }})</span>
                             </div>
                           }
                         </div>
@@ -1031,7 +868,7 @@ export interface PrescribedMedicineRow {
                           type="button"
                           class="btn-execute-procedure-modern"
                           [class.in-progress-btn]="clinicalStatus === 'in_progress'"
-                          [disabled]="!selectedCatalogId || savingTreatment()"
+                          [disabled]="!selectedCatalogId || !treatmentTeeth.length || savingTreatment()"
                           (click)="recordTreatmentForSelectedTooth()"
                         >
                           @if (savingTreatment()) {
@@ -1040,12 +877,12 @@ export interface PrescribedMedicineRow {
                             @if (clinicalStatus === 'completed') {
                               <span class="btn-icon">⚡</span>
                               <span class="btn-main-text">
-                                {{ t('Execute & Bill for ' + selectedTeethLabel() + ' (Finished Today)', 'تنفيذ وترحيل إجراء ' + selectedTeethLabel() + ' — منجز بالكامل (خَلَصْ)') }}
+                                {{ t('Execute & Bill for ' + treatmentTeethLabel() + ' (Finished Today)', 'تنفيذ وترحيل إجراء ' + treatmentTeethLabel() + ' — منجز بالكامل (خَلَصْ)') }}
                               </span>
                             } @else {
                               <span class="btn-icon">⏳</span>
                               <span class="btn-main-text">
-                                {{ t('Start & Bill for ' + selectedTeethLabel() + ' (In Progress - To be continued)', 'بدء وترحيل إجراء ' + selectedTeethLabel() + ' — بدأ العلاج ولسه هنكمل') }}
+                                {{ t('Start & Bill for ' + treatmentTeethLabel() + ' (In Progress - To be continued)', 'بدء وترحيل إجراء ' + treatmentTeethLabel() + ' — بدأ العلاج ولسه هنكمل') }}
                               </span>
                             }
                             @if (treatmentPrice > 0) {
@@ -1913,8 +1750,13 @@ export class ExaminationComponent {
   // Dental Chart State
   selected = 0;
   selectedTeeth: number[] = [];
+  treatmentTeeth: number[] = [];
+  findingTargetTeeth: number[] = [];
+  findingEditorOpen = true;
+  readonly menuCariesRecords = new Map<number, string>();
+  showTodayTeethPicker = false;
   readonly savingFinding = signal(false);
-  readonly quickFindingOptions = [2, 3, 4, 5].map(id => ({ id, ...FINDING_APPEARANCE[id] }));
+  readonly quickFindingOptions = [2, 3, 4, 5, 8, 9, 10].map(id => ({ id, ...FINDING_APPEARANCE[id] }));
   readonly cariesClasses = [1, 2, 3, 4, 5, 6];
   readonly tab = signal<'findings' | 'procedures' | 'endodontic' | 'notes'>('findings');
   readonly tabs = [
@@ -1924,7 +1766,7 @@ export class ExaminationComponent {
     { id: 'notes' as const, en: 'Notes', ar: 'الملاحظات' },
   ];
   readonly surfaces = SURFACES;
-  readonly findingOptions = Object.entries(FINDING_APPEARANCE).map(([id, x]) => ({
+  readonly findingOptions = Object.entries(FINDING_APPEARANCE).filter(([id]) => +id !== 6).map(([id, x]) => ({
     id: +id,
     ...x,
   }));
@@ -1962,7 +1804,7 @@ export class ExaminationComponent {
   // Follow-up & In-Place Appointment Scheduling (Step 5)
   suggestedFollowUpDate = '';
   suggestedFollowUpNotes = '';
-  followUpDuration = 30;
+  followUpDuration = 60;
   private followUpDurationInitialized = false;
   readonly availableSlots = signal<AvailabilitySlot[]>([]);
   readonly loadingSlots = signal<boolean>(false);
@@ -2081,7 +1923,10 @@ export class ExaminationComponent {
 
   constructor() {
     this.findingForm.controls.type.valueChanges.subscribe(type => {
-      if (+type !== 2) this.findingForm.controls.cariesClass.setValue(null);
+      if (+type !== 2) {
+        this.findingForm.controls.cariesClass.setValue(null);
+        this.menuCariesRecords.clear();
+      }
       this.findingForm.controls.surfaces.setValue([]);
     });
     this.load();
@@ -2388,36 +2233,99 @@ export class ExaminationComponent {
     );
   }
 
+  toothLabel(number: number) { return toothName(number, this.i18n.language()); }
+  findingTeethLabel() { return (this.findingTargetTeeth.length ? this.findingTargetTeeth : this.selectedTeeth).map(n => '#' + n + ' ' + this.toothLabel(n)).join(', '); }
+  availableCariesClasses() { return allowedCariesClasses(this.findingTargetTeeth.length ? this.findingTargetTeeth : this.selectedTeeth); }
+  chooseToothFinding(event: { toothNumber: number; type: number }) {
+    if (this.savingFinding()) return;
+    if (!this.selectedTeeth.includes(event.toothNumber)) this.selectedTeeth = [...this.selectedTeeth, event.toothNumber].sort((a,b) => a-b);
+    this.selected = event.toothNumber;
+    this.findingTargetTeeth = [event.toothNumber];
+    this.menuCariesRecords.clear();
+    this.findingEditorOpen = event.type === 2;
+    this.findingForm.controls.notes.setValue('');
+    this.findingForm.controls.type.setValue(event.type);
+    this.findingForm.controls.cariesClass.setValue(null);
+    void this.addFinding(true);
+  }
   chooseFindingType(type: number) {
+    this.findingTargetTeeth = [];
+    this.menuCariesRecords.clear();
+    this.findingEditorOpen = type === 2;
+    this.findingForm.controls.notes.setValue('');
+    this.findingForm.controls.cariesClass.setValue(null);
     this.tab.set('findings');
     this.findingForm.controls.type.setValue(type);
-    if (type !== 2) this.addFinding();
+    void this.addFinding(true);
   }
 
-  async addFinding() {
+  editCariesFinding(item: { id: string; toothNumber: number; cariesClass?: number | null; notes?: string }) {
+    if (this.savingFinding()) return;
+    if (!this.selectedTeeth.includes(item.toothNumber)) this.selectedTeeth = [...this.selectedTeeth, item.toothNumber];
+    this.selected = item.toothNumber;
+    this.findingTargetTeeth = [item.toothNumber];
+    this.menuCariesRecords.clear();
+    this.menuCariesRecords.set(item.toothNumber, item.id);
+    this.findingForm.controls.type.setValue(2);
+    this.findingForm.controls.cariesClass.setValue(item.cariesClass ?? null);
+    this.findingForm.controls.notes.setValue(item.notes || '');
+    this.findingEditorOpen = true;
+  }
+
+  async addFinding(autoSave = false) {
     const e = this.examination();
-    const teeth = this.selectedTeeth.length ? [...this.selectedTeeth] : (this.selected ? [this.selected] : []);
+    const teeth = this.findingTargetTeeth.length ? [...this.findingTargetTeeth] : this.selectedTeeth.length ? [...this.selectedTeeth] : (this.selected ? [this.selected] : []);
     if (!e?.canEdit || !teeth.length || this.savingFinding()) return;
     const v = this.findingForm.getRawValue();
+    if (!autoSave && +v.type === 2 && v.cariesClass && !allowedCariesClasses(teeth).includes(v.cariesClass)) {
+      this.error.set(this.t('This class is not available for the selected teeth.', 'هذا التصنيف غير متاح للأسنان المحددة.'));
+      return;
+    }
     this.savingFinding.set(true);
+    this.findingForm.disable({ emitEvent: false });
+    const editingClassification = this.menuCariesRecords.size > 0;
     let version = e.version;
     let saved = 0;
     try {
       for (const toothNumber of teeth) {
-        await firstValueFrom(this.api.addFinding(e.id, {
-          toothNumber, type: +v.type, surfaces: [],
-          cariesClass: +v.type === 2 ? v.cariesClass : null,
-          notes: v.notes || undefined, version,
-        }));
+        const findings = this.examination()?.findings || [];
+        const existing = findings.filter(x => x.toothNumber === toothNumber && x.type === +v.type).at(-1);
+        if (autoSave && existing) {
+          if (+v.type === 2) {
+            this.menuCariesRecords.set(toothNumber, existing.id);
+            if (teeth.length === 1) {
+              this.findingForm.controls.cariesClass.setValue(existing.cariesClass ?? null, { emitEvent: false });
+              this.findingForm.controls.notes.setValue(existing.notes || '', { emitEvent: false });
+            }
+          }
+          continue;
+        }
+        const editingId = +v.type === 2 && !autoSave ? this.menuCariesRecords.get(toothNumber) : undefined;
+        const editing = findings.find(x => x.id === editingId);
+        const oldIds = new Set(findings.map(x => x.id));
+        const request = {
+          toothNumber, type: +v.type, surfaces: editing?.surfaces || [],
+          cariesClass: +v.type === 2 && !autoSave ? v.cariesClass : null,
+          notes: autoSave ? undefined : (v.notes || (teeth.length > 1 ? editing?.notes : undefined)), version,
+        };
+        await firstValueFrom(editing ? this.api.updateFinding(e.id, editing.id, request) : this.api.addFinding(e.id, request));
         saved++;
         const updated = await firstValueFrom(this.api.examination(e.id));
+        if (autoSave && +v.type === 2) {
+          const created = updated.findings.find(x => x.toothNumber === toothNumber && x.type === 2 && !oldIds.has(x.id));
+          if (created) this.menuCariesRecords.set(toothNumber, created.id);
+        }
         this.examination.set(updated);
         version = updated.version;
       }
       this.success.set(this.t('Finding added.', 'تم إضافة النتيجة.'));
-      this.findingForm.controls.notes.setValue('');
-      this.findingForm.controls.cariesClass.setValue(null);
-      this.load();
+      if (!autoSave) {
+        this.findingForm.controls.notes.setValue('');
+        this.findingForm.controls.cariesClass.setValue(null);
+        this.menuCariesRecords.clear();
+        if (editingClassification) this.findingEditorOpen = false;
+        this.load();
+      }
     } catch (err) {
       if (err instanceof HttpErrorResponse) this.fail(err);
       else this.error.set(this.t('Could not save findings.', 'تعذر حفظ النتائج.'));
@@ -2426,6 +2334,7 @@ export class ExaminationComponent {
         this.load();
       }
     } finally {
+      this.findingForm.enable({ emitEvent: false });
       this.savingFinding.set(false);
     }
   }
@@ -2501,7 +2410,7 @@ export class ExaminationComponent {
   }
 
   selectedToothFindings() {
-    return this.selectedFindings();
+    return (this.examination()?.findings ?? []).filter(x => this.treatmentTeeth.includes(x.toothNumber));
   }
 
   getSelectedCatalogPrice(): number {
@@ -2510,13 +2419,20 @@ export class ExaminationComponent {
   }
 
   quickAddFinding(type: number) {
+    if (!this.treatmentTeeth.length) return;
+    this.findingTargetTeeth = [...this.treatmentTeeth];
+    this.selectedTeeth = [...new Set([...this.selectedTeeth, ...this.treatmentTeeth])];
+    this.selected = this.treatmentTeeth[0];
+    this.menuCariesRecords.clear();
+    this.findingEditorOpen = type === 2;
+    this.findingForm.controls.notes.setValue('');
+    this.findingForm.controls.cariesClass.setValue(null);
     this.findingForm.controls.type.setValue(type);
     if (type === 2) {
       this.setStep(2);
       this.tab.set('findings');
-    } else {
-      void this.addFinding();
     }
+    void this.addFinding(true);
   }
 
   onSelectedToothChange(num: number) {
@@ -2526,6 +2442,11 @@ export class ExaminationComponent {
 
   onSelectedTeethChange(teeth: number[]) {
     this.selectedTeeth = teeth;
+    this.treatmentTeeth = this.treatmentTeeth.filter(number => this.surveyTeeth().includes(number));
+    this.findingEditorOpen = true;
+    this.menuCariesRecords.clear();
+    this.findingTargetTeeth = [];
+    this.findingForm.controls.cariesClass.setValue(null);
     if (!teeth.length) this.selected = 0;
     if (teeth.length > 0 && !teeth.includes(this.selected)) {
       this.selected = teeth[0];
@@ -2537,8 +2458,15 @@ export class ExaminationComponent {
     return this.selectedTeeth.length > 0 ? this.selectedTeeth.map((t) => '#' + t).join(', ') : this.t('No tooth selected', 'لم يتم اختيار سن');
   }
 
+  surveyTeeth() { return [...new Set([...this.selectedTeeth, ...(this.examination()?.findings ?? []).map(x => x.toothNumber)])].sort((a,b) => a-b); }
+  toggleTreatmentTooth(number: number) {
+    if (this.savingTreatment() || !this.surveyTeeth().includes(number)) return;
+    this.treatmentTeeth = this.treatmentTeeth.includes(number) ? this.treatmentTeeth.filter(x => x !== number) : [...this.treatmentTeeth, number].sort((a,b) => a-b);
+    this.recalculateTreatmentPrice();
+  }
+  treatmentTeethLabel() { return this.treatmentTeeth.length ? this.treatmentTeeth.map(n => '#' + n + ' ' + this.toothLabel(n)).join(', ') : this.t('No treatment teeth selected', 'لم يتم اختيار أسنان علاج اليوم'); }
   recalculateTreatmentPrice() {
-    const count = this.selectedTeeth.length || (this.selected ? 1 : 0);
+    const count = this.treatmentTeeth.length;
     this.treatmentPrice = (this.treatmentUnitPrice || 0) * count;
   }
 
@@ -2604,7 +2532,7 @@ export class ExaminationComponent {
   recordTreatmentExecution() {
     const e = this.examination();
     if (!e || !this.selectedCatalogId) return;
-    if (!this.selectedTeeth.length && !this.selected) {
+    if (!this.treatmentTeeth.length || this.treatmentTeeth.some(number => !this.surveyTeeth().includes(number))) {
       this.error.set(this.t('Select teeth before recording treatment.', 'اختر الأسنان قبل تسجيل العلاج.'));
       return;
     }
@@ -2613,7 +2541,7 @@ export class ExaminationComponent {
     this.error.set('');
 
     const execute = (doctorProfileId: string) => {
-      const teeth = this.selectedTeeth.length > 0 ? this.selectedTeeth : [this.selected];
+      const teeth = [...this.treatmentTeeth];
 
       let fullNotes = this.treatmentNotes ? this.treatmentNotes.trim() : '';
       if (this.clinicalStatus === 'in_progress') {
@@ -2644,15 +2572,16 @@ export class ExaminationComponent {
                     const msg =
                       this.clinicalStatus === 'completed'
                         ? this.t(
-                            `Procedure for ${this.selectedTeethLabel()} completed and billed successfully (Finished).`,
-                            `تم تسجيل وانتهاء إجراء ${this.selectedTeethLabel()} وترحيل المبلغ للحساب بنجاح (خَلَصْ).`,
+                            `Procedure for ${this.treatmentTeethLabel()} completed and billed successfully (Finished).`,
+                            `تم تسجيل وانتهاء إجراء ${this.treatmentTeethLabel()} وترحيل المبلغ للحساب بنجاح (خَلَصْ).`,
                           )
                         : this.t(
-                            `Procedure for ${this.selectedTeethLabel()} started (In Progress) and billed successfully.`,
-                            `تم تسجيل بدء إجراء ${this.selectedTeethLabel()} وترحيل المبلغ للحساب بنجاح (بدأ العلاج ولسه هنكمل).`,
+                            `Procedure for ${this.treatmentTeethLabel()} started (In Progress) and billed successfully.`,
+                            `تم تسجيل بدء إجراء ${this.treatmentTeethLabel()} وترحيل المبلغ للحساب بنجاح (بدأ العلاج ولسه هنكمل).`,
                           );
                     this.success.set(msg);
                     this.treatmentToothNumber = null;
+                    this.treatmentTeeth = [];
                     this.treatmentNotes = '';
                     this.remainingWorkDescription = '';
                     this.selectedCatalogId = '';
@@ -2757,8 +2686,8 @@ export class ExaminationComponent {
   private setFollowUpAppointment(app: AppointmentDetails) {
     this.appointment.set(app);
     if (this.followUpDurationInitialized) return;
-    const duration = app.durationMinutes || (Date.parse(app.endAt) - Date.parse(app.startAt)) / 60000;
-    if (Number.isInteger(duration) && duration >= 5 && duration <= 480) {
+    const duration = app.suggestedDurationMinutes;
+    if (duration !== undefined && Number.isInteger(duration) && duration >= 5 && duration <= 480) {
       this.followUpDuration = duration;
       this.followUpDurationInitialized = true;
     }

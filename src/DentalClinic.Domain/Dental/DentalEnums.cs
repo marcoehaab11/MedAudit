@@ -5,7 +5,7 @@ public enum ExaminationStatus { Draft = 1, Completed = 2 }
 public enum DentalFindingType
 {
     Healthy = 1, Caries = 2, Fracture = 3, Missing = 4,
-    Sensitivity = 5, Infection = 6, Other = 7
+    Sensitivity = 5, Infection = 6, Other = 7, RootCanal = 8, Crown = 9, RootCanalAndCrown = 10
 }
 
 public enum DentalProcedureType

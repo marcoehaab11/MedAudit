@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import { BillingQueueComponent } from '../finance/billing-queue.component';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -21,8 +22,8 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
   styleUrl: './appointments.scss',
   selector: 'app-appointments-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
-  template: `
+  imports: [BillingQueueComponent, CommonModule, ReactiveFormsModule, RouterLink],
+  template: ` @if (auth.hasPermission('Finance.Revenue.View')) { <app-billing-queue /> }
     <section class="page-head">
       <div>
         <p class="eyebrow">{{ t('Clinic schedule', 'جدول العيادة') }}</p>

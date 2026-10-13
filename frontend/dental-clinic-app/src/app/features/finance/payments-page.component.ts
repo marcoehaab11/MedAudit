@@ -216,6 +216,7 @@ export class PaymentsPageComponent {
   `,
 })
 export class PaymentFormComponent {
+  private readonly returnTo = inject(ActivatedRoute).snapshot.queryParamMap.get('returnTo') === '/dashboard' ? '/dashboard' : '/finance/payments';
   private api = inject(FinanceApiService);
   private router = inject(Router);
   i18n = inject(LocalizationService);
@@ -268,7 +269,7 @@ export class PaymentFormComponent {
         treatmentId: this.revenue()!.treatmentId,
       })
       .subscribe({
-        next: () => this.router.navigate(['/finance/payments']),
+        next: () => this.router.navigate([this.returnTo]),
         error: (e) => {
           this.error.set(paymentError(e.status, this.i18n.language() === 'ar'));
           this.saving.set(false);

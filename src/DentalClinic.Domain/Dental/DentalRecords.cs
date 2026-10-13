@@ -40,6 +40,9 @@ public sealed class DentalFinding : TenantOwnedEntity
         if (cariesClass is < 1 or > 6) throw new ArgumentOutOfRangeException(nameof(cariesClass));
         if (cariesClass.HasValue && type != DentalFindingType.Caries)
             throw new ArgumentException("Caries classification is only valid for caries.", nameof(cariesClass));
+        var anterior = ToothNumber % 10 <= 3;
+        if (cariesClass.HasValue && (anterior && cariesClass is 1 or 2 || !anterior && cariesClass is 3 or 4))
+            throw new ArgumentException("Caries classification is not allowed for this tooth.", nameof(cariesClass));
         CariesClass = cariesClass;
         FindingType = type; Notes = DentalText.Optional(notes, nameof(notes), 2000);
         surfaces.Clear();

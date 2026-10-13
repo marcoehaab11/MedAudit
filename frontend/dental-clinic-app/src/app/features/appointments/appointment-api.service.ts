@@ -16,6 +16,7 @@ export interface AppointmentItem {
   timeZone: string;
 }
 export interface AppointmentDetails extends AppointmentItem {
+  suggestedDurationMinutes?: number;
   notes?: string;
   cancellationReason?: string;
   createdAt: string;

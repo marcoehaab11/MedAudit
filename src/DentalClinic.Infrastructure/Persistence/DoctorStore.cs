@@ -17,7 +17,7 @@ internal sealed class DoctorStore(ApplicationDbContext context) :
                join user in context.ClinicUsers.AsNoTracking() on doctor.ClinicUserId equals user.Id
                where doctor.Status == DoctorProfileStatus.Active
                orderby user.DisplayName
-               select new DoctorLookupItem(doctor.Id, user.DisplayName, doctor.Specialization))
+               select new DoctorLookupItem(doctor.Id, user.DisplayName, doctor.Specialization, doctor.ConsultationDurationMinutes))
             .ToListAsync(cancellationToken);
 
     public async Task<PagedResult<DoctorListItem>> SearchAsync(DoctorSearchQuery query, CancellationToken cancellationToken)

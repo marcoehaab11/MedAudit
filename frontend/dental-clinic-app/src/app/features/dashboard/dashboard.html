@@ -1,4 +1,5 @@
 <div class="dashboard-page">
+  @if (auth.hasPermission('Finance.Revenue.View')) { <app-billing-queue /> }
   <!-- Top Welcome & Hero Banner -->
   <header class="dashboard-hero">
     <div class="hero-main">
@@ -416,7 +417,7 @@
       </div>
 
       <!-- Month Collections / Revenue -->
-      @if (auth.hasPermission('Reports.Financial') || auth.hasPermission('Finance.View')) {
+      @if ((isDoctor() && auth.hasPermission('Finance.View')) || auth.hasPermission('Reports.Financial') || auth.hasPermission('Finance.Dashboard')) {
         <div class="kpi-card">
           <div class="kpi-icon-wrap kpi-green">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -425,12 +426,12 @@
             </svg>
           </div>
           <div class="kpi-body">
-            <span class="kpi-label">{{ t('Payments Received', 'التحصيلات والمدفوعات') }}</span>
+            <span class="kpi-label">{{ isDoctor() ? t('My recorded compensation', 'مستحقاتي المسجلة') : t('Payments Received', 'التحصيلات والمدفوعات') }}</span>
             <div class="kpi-number">
-              {{ dashboardReport()?.paymentsReceived !== undefined ? (dashboardReport()!.paymentsReceived | number:'1.0-2') + ' ' + (dashboardReport()?.currency ?? 'EGP') : '—' }}
+              {{ isDoctor() ? duesCaption() : (dashboardReport()?.paymentsReceived !== undefined ? (dashboardReport()!.paymentsReceived | number:'1.0-2') + ' ' + (dashboardReport()?.currency ?? 'EGP') : '—') }}
             </div>
             <div class="kpi-footer">
-              <a routerLink="/finance">{{ t('Financial Overview →', 'التقرير المالي ←') }}</a>
+              <a [routerLink]="isDoctor() ? '/finance/my-dues' : '/finance'">{{ isDoctor() ? t('My compensation →', 'مستحقاتي ←') : t('Finance dashboard →', 'لوحة المالية ←') }}</a>
             </div>
           </div>
         </div>

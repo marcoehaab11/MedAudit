@@ -116,6 +116,9 @@ export class DentalApiService {
   addFinding(id: string, request: DentalRecordRequest) {
     return this.http.post<void>(`/api/examinations/${id}/findings`, request);
   }
+  updateFinding(id: string, itemId: string, request: DentalRecordRequest) {
+    return this.http.put<void>(`/api/examinations/${id}/findings/${itemId}`, request);
+  }
   removeFinding(id: string, itemId: string, version: string) {
     return this.http.delete<void>(`/api/examinations/${id}/findings/${itemId}`, {
       body: { version },

@@ -14,6 +14,9 @@ import {
   AppointmentSearchResult,
   AvailabilitySlot,
 } from '../appointments/appointment-api.service';
+import { money } from '../finance/finance-ui';
+import { BillingQueueComponent } from '../finance/billing-queue.component';
+import { DoctorDues, FinanceApiService } from '../finance/finance-api.service';
 import { appointmentStatus, appointmentType } from '../appointments/appointment-labels';
 import { DoctorApiService, DoctorListItem } from '../doctors/doctor-api.service';
 import { PatientApiService, PatientListItem } from '../patients/patient-api.service';
@@ -22,7 +25,7 @@ import { DashboardReport, ReportsApiService } from '../reports/reports-api.servi
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, BillingQueueComponent],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
@@ -36,6 +39,9 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
   private readonly patientApi = inject(PatientApiService);
   private readonly reportsApi = inject(ReportsApiService);
 
+  private readonly financeApi = inject(FinanceApiService);
+  readonly myDues = signal<DoctorDues | null>(null);
+  readonly isDoctor = computed(() => this.auth.roles().includes('Doctor') || this.myDues() !== null);
   readonly loading = signal(true);
   readonly appointmentsLoading = signal(false);
   readonly error = signal('');
@@ -97,8 +103,16 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
     });
   });
 
+  duesCaption(): string {
+    const dues = this.myDues();
+    if (!dues) return '—';
+    const balances = dues.byCurrency?.length ? dues.byCurrency : [{ total: dues.total, currency: dues.currency }];
+    return balances.map(x => money(x.total, x.currency, this.i18n.language())).join(' · ');
+  }
+
   ngOnInit(): void {
     this.loadDashboardData();
+    if (this.auth.hasPermission('Finance.View') && (this.auth.roles().includes('Doctor') || this.auth.hasPermission('Examination.Edit'))) this.financeApi.myDues().subscribe({ next: value => this.myDues.set(value), error: () => {} });
   }
 
   ngOnDestroy(): void {}

@@ -26,8 +26,17 @@ internal sealed class AppointmentStore(ApplicationDbContext context) : IAppointm
 
     public async Task<IReadOnlyCollection<DoctorSchedule>> GetScheduleAsync(
         Guid doctorProfileId, CancellationToken cancellationToken) =>
-        await context.DoctorSchedules.AsNoTracking().Include(x => x.Breaks)
-            .Where(x => x.DoctorProfileId == doctorProfileId).ToListAsync(cancellationToken);
+        await EffectiveScheduleAsync(doctorProfileId, cancellationToken);
+
+    private async Task<IReadOnlyCollection<DoctorSchedule>> EffectiveScheduleAsync(Guid doctorId, CancellationToken token)
+    {
+        var doctor = await FindDoctorAsync(doctorId, token);
+        if (doctor is null) return [];
+        var hours = await context.ClinicHours.AsNoTracking().Include(x => x.Periods).ToListAsync(token);
+        var fallback = await context.DoctorSchedules.AsNoTracking().Include(x => x.Breaks)
+            .Where(x => x.DoctorProfileId == doctorId).ToListAsync(token);
+        return ClinicAppointmentSchedule.Resolve(doctor.TenantId, doctorId, hours, fallback);
+    }
 
     public async Task<IReadOnlyCollection<AppointmentBusyPeriod>> GetBusyPeriodsAsync(Guid doctorProfileId,
         DateTimeOffset rangeStart, DateTimeOffset rangeEnd, Guid? excludeAppointmentId, CancellationToken cancellationToken) =>
@@ -98,6 +107,7 @@ internal sealed class AppointmentStore(ApplicationDbContext context) : IAppointm
                 .Select(d => context.ClinicUsers.Where(u => u.Id == d.ClinicUserId).Select(u => u.DisplayName).Single()).Single(),
             x.Type, x.Status, x.StartAt, x.EndAt, x.DurationMinutes, x.Notes, x.CancellationReason,
             x.CreatedAt, x.UpdatedAt, x.ConfirmedAt, x.CheckedInAt, x.CompletedAt, x.CancelledAt,
-            context.TenantConfigurations.Select(c => c.TimeZone).Single()));
+            context.TenantConfigurations.Select(c => c.TimeZone).Single(),
+            context.DoctorProfiles.Where(d => d.Id == x.DoctorProfileId).Select(d => d.ConsultationDurationMinutes).Single()));
     }
 }

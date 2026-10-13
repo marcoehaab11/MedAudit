@@ -12,6 +12,7 @@ export interface DoctorProfileInput {
   consultationDurationMinutes: number;
 }
 export interface DoctorLookupItem {
+  consultationDurationMinutes?: number;
   id: string;
   displayName: string;
   specialization: string;

@@ -44,8 +44,8 @@ internal static class AppointmentRules
             startTime >= x.StartTime && endTime <= x.EndTime);
         if (period is null) throw Error("StartTime", "The appointment is outside the doctor's working schedule.");
         var offsetMinutes = (int)(startTime - period.StartTime).TotalMinutes;
-        if (durationMinutes % period.SlotDurationMinutes != 0 || offsetMinutes % period.SlotDurationMinutes != 0)
-            throw Error("DurationMinutes", "The appointment must align with the doctor's slot duration.");
+        if (offsetMinutes % 5 != 0 || startTime.Second != 0)
+            throw Error("DurationMinutes", "Appointment start must align with a five-minute interval.");
         if (period.Breaks.Any(x => startTime < x.EndTime && endTime > x.StartTime))
             throw Error("StartTime", "The appointment overlaps a doctor break.");
     }

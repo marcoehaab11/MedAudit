@@ -19,7 +19,7 @@ public sealed record AppointmentDetails(Guid Id, Guid PatientId, string PatientN
     DateTimeOffset EndAt, int DurationMinutes, string? Notes, string? CancellationReason,
     DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, DateTimeOffset? ConfirmedAt,
     DateTimeOffset? CheckedInAt, DateTimeOffset? CompletedAt, DateTimeOffset? CancelledAt,
-    string TimeZone);
+    string TimeZone, int SuggestedDurationMinutes = 60);
 public sealed record AvailabilitySlot(DateTimeOffset StartAt, DateTimeOffset EndAt,
     DateOnly LocalDate, TimeOnly LocalStartTime, TimeOnly LocalEndTime, string TimeZone);
 public sealed record AppointmentBusyPeriod(DateTimeOffset StartAt, DateTimeOffset EndAt);

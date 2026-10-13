@@ -116,6 +116,10 @@ import { DateInputComponent } from "../../shared/date-input/date-input.component
         <label>
           {{ t('Duration', 'المدة') }}
           <select formControlName="durationMinutes">
+            @if (![15,20,30,45,60,90,120].includes(form.controls.durationMinutes.value)) {
+              <option [ngValue]="form.controls.durationMinutes.value">{{ form.controls.durationMinutes.value }} {{ t('minutes', 'دقيقة') }}</option>
+            }
+            <option [ngValue]="20">20 {{ t('minutes', 'دقيقة') }}</option>
             <option [ngValue]="15">15 {{ t('minutes', 'دقيقة') }}</option>
             <option [ngValue]="30">30 {{ t('minutes', 'دقيقة') }}</option>
             <option [ngValue]="45">45 {{ t('minutes', 'دقيقة') }}</option>
@@ -567,7 +571,7 @@ export class AppointmentCreateComponent implements OnInit {
     patientId: ['', Validators.required],
     doctorProfileId: ['', Validators.required],
     date: [this.today(), Validators.required],
-    durationMinutes: [30, [Validators.required, Validators.min(5)]],
+    durationMinutes: [60, [Validators.required, Validators.min(5)]],
     isEmergency: [false],
     type: [3, Validators.required],
     notes: ['', [Validators.maxLength(2000)]],
@@ -619,6 +623,13 @@ export class AppointmentCreateComponent implements OnInit {
 
   ngOnInit() {
     const fc = this.form.controls;
+    fc.doctorProfileId.valueChanges.pipe(startWith(fc.doctorProfileId.value), takeUntilDestroyed(this.destroyRef)).subscribe(id => {
+      if (!id) { fc.durationMinutes.setValue(60); return; }
+      this.doctorApi.listAll().subscribe(doctors => {
+        if (fc.doctorProfileId.value !== id) return;
+        fc.durationMinutes.setValue(doctors.find(d => d.id === id)?.consultationDurationMinutes || 60);
+      });
+    });
     // Auto-load availability when doctor, date, duration, or emergency mode changes
     combineLatest([
       fc.doctorProfileId.valueChanges.pipe(startWith(fc.doctorProfileId.value)),

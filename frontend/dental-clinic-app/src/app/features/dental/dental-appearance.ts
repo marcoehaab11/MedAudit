@@ -11,6 +11,9 @@ export const FINDING_APPEARANCE: Record<number, ClinicalAppearance> = {
   4: { en: 'Missing', ar: 'مفقود', cssClass: 'missing', symbol: '×' },
   5: { en: 'Sensitivity', ar: 'حساسية', cssClass: 'sensitivity', symbol: 'S' },
   6: { en: 'Infection', ar: 'عدوى', cssClass: 'infection', symbol: 'I' },
+  8: { en: 'Root canal', ar: 'علاج جذور', cssClass: 'root-canal', symbol: 'R' },
+  9: { en: 'Crown', ar: 'كراون', cssClass: 'crown', symbol: 'Cr' },
+  10: { en: 'Root canal + crown', ar: 'علاج جذور وكراون', cssClass: 'root-canal-crown', symbol: 'R+Cr' },
   7: { en: 'Other', ar: 'أخرى', cssClass: 'other', symbol: '•' },
 };
 export const PROCEDURE_APPEARANCE: Record<number, ClinicalAppearance> = {

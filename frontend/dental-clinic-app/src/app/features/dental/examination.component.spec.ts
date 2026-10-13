@@ -136,7 +136,6 @@ describe('ExaminationComponent', () => {
     await Promise.resolve(); await Promise.resolve();
     http.expectOne('/api/examinations/e1').flush(examination());
     await Promise.resolve(); await Promise.resolve();
-    http.expectOne('/api/appointments/a1/examination').flush(examination());
     flushAuxiliary(http);
     c.setStep(3); flushAuxiliary(http);
     fixture.detectChanges();
@@ -159,7 +158,7 @@ describe('ExaminationComponent', () => {
     expect(c.bookingError()).toContain('server error');
   });
 
-  it('uses the current appointment duration for follow-up instead of forcing 30 minutes', () => {
+  it("uses the doctor preferred duration for follow-up", () => {
     const fixture = TestBed.createComponent(ExaminationComponent);
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/appointments/a1/examination').flush(examination());
@@ -167,7 +166,7 @@ describe('ExaminationComponent', () => {
     const c = fixture.componentInstance;
     c.appointment.set(null);
     c.loadAvailabilitySlots('2026-10-20');
-    http.expectOne('/api/appointments/a1').flush({ id: 'a1', doctorProfileId: 'doc-1', durationMinutes: 20 });
+    http.expectOne('/api/appointments/a1').flush({ id: 'a1', doctorProfileId: 'doc-1', durationMinutes: 30, suggestedDurationMinutes: 20 });
     const req = http.expectOne(r => r.url === '/api/appointments/availability');
     expect(req.request.params.get('durationMinutes')).toBe('20');
     req.flush([]);
@@ -191,6 +190,85 @@ describe('ExaminationComponent', () => {
     old.flush([{ localDate: '2026-10-20', localStartTime: '09:00' }]);
     expect(c.availableSlots()).toEqual([]);
     expect(c.suggestedFollowUpDate).toBe('2026-10-21');
+  });
+
+  it('limits treatment to today teeth while preserving surveyed teeth', () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    flushAuxiliary(http);
+    const c = fixture.componentInstance;
+    c.selectedTeeth = [24, 25, 36];
+    c.treatmentUnitPrice = 100;
+    c.toggleTreatmentTooth(25);
+    expect(c.treatmentTeeth).toEqual([25]);
+    expect(c.selectedTeeth).toEqual([24, 25, 36]);
+    expect(c.treatmentPrice).toBe(100);
+    c.toggleTreatmentTooth(36);
+    expect(c.treatmentPrice).toBe(200);
+    c.toggleTreatmentTooth(25);
+    expect(c.treatmentTeeth).toEqual([36]);
+  });
+
+  it('offers only common allowed classes when anterior and posterior teeth are selected', () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    flushAuxiliary(http);
+    const c = fixture.componentInstance;
+    c.selectedTeeth = [11]; expect(c.availableCariesClasses()).toEqual([3, 4, 5, 6]);
+    c.selectedTeeth = [36]; expect(c.availableCariesClasses()).toEqual([6, 1, 2, 5]);
+    c.selectedTeeth = [11, 36]; expect(c.availableCariesClasses()).toEqual([5, 6]);
+    c.findingTargetTeeth = [11]; expect(c.availableCariesClasses()).toEqual([3, 4, 5, 6]);
+  });
+
+  it('saves caries immediately then updates its classification without creating a duplicate', async () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    flushAuxiliary(http);
+    const c = fixture.componentInstance;
+    c.setStep(2); flushAuxiliary(http);
+    c.chooseToothFinding({ toothNumber: 24, type: 2 });
+    const create = http.expectOne('/api/examinations/e1/findings');
+    expect(create.request.body).toMatchObject({ toothNumber: 24, type: 2, cariesClass: null });
+    create.flush(null);
+    await Promise.resolve(); await Promise.resolve();
+    const finding = { ...examination().findings[0], id: 'f24', toothNumber: 24, surfaces: [], notes: '' };
+    const updated = { ...examination(), version: 'v2', findings: [...examination().findings, finding] };
+    http.expectOne('/api/examinations/e1').flush(updated);
+    await Promise.resolve(); await Promise.resolve();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('button[aria-label*="#24"] .planora-art')!.innerHTML).toContain('#fb923c');
+    c.findingForm.controls.cariesClass.setValue(2);
+    const save = c.addFinding();
+    const update = http.expectOne('/api/examinations/e1/findings/f24');
+    expect(update.request.method).toBe('PUT');
+    expect(update.request.body).toMatchObject({ toothNumber: 24, cariesClass: 2, version: 'v2' });
+    http.expectNone(r => r.url === '/api/examinations/e1/findings' && r.method === 'POST');
+    update.flush(null);
+    await Promise.resolve(); await Promise.resolve();
+    const classified = { ...updated, version: 'v3', findings: updated.findings.map(x => x.id === 'f24' ? { ...x, cariesClass: 2 } : x) };
+    http.expectOne('/api/examinations/e1').flush(classified);
+    await save;
+    http.expectOne('/api/appointments/a1/examination').flush(classified); flushAuxiliary(http);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Class II');
+    expect(c.examination()!.findings).toHaveLength(2);
+    expect(c.findingEditorOpen).toBe(false);
+  });
+
+  it('quick diagnosis in treatment step applies only to today teeth', () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    const c = fixture.componentInstance;
+    c.selectedTeeth = [24, 25, 36]; c.treatmentTeeth = [25];
+    c.quickAddFinding(8);
+    const request = http.expectOne('/api/examinations/e1/findings');
+    expect(request.request.body.toothNumber).toBe(25);
+    expect(request.request.body.type).toBe(8);
+    request.flush({}, { status: 409, statusText: 'Conflict' });
   });
 
   it('shows actionable conflict feedback after a stale draft write', () => {
@@ -247,6 +325,7 @@ describe('ExaminationComponent', () => {
     component.setStep(3);
     flushAuxiliary(http);
     component.selectedTeeth = [24, 25];
+    component.treatmentTeeth = [24, 25];
     component.selectedCatalogId = 'cat-1';
     component.clinicalStatus = 'in_progress';
     component.remainingWorkDescription = 'Crown fitting';

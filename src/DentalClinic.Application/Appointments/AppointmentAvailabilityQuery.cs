@@ -53,12 +53,11 @@ internal sealed class AppointmentAvailabilityQuery(IAppointmentStore store, IPer
         var result = new List<AvailabilitySlot>();
         foreach (var period in periods)
         {
-            if (query.DurationMinutes % period.SlotDurationMinutes != 0) continue;
             var startMins = (int)period.StartTime.ToTimeSpan().TotalMinutes;
             var endMins = (int)period.EndTime.ToTimeSpan().TotalMinutes;
-            var adjustedEndMins = endMins == 1439 ? 1440 : endMins;
+            var adjustedEndMins = endMins;
 
-            for (var currentMins = startMins; currentMins + query.DurationMinutes <= adjustedEndMins; currentMins += period.SlotDurationMinutes)
+            for (var currentMins = startMins; currentMins + query.DurationMinutes <= adjustedEndMins; currentMins += 5)
             {
                 var start = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(currentMins));
                 var endMinutes = currentMins + query.DurationMinutes;

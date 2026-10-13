@@ -24,6 +24,8 @@ export class AuthService {
 
   readonly authenticated = signal(Boolean(localStorage.getItem('access_token')));
   readonly permissions = signal<string[]>(this.readPermissions());
+  readonly roles = signal<string[]>(this.readRoles());
+  private readRoles(): string[] { try { const value = JSON.parse(localStorage.getItem('roles') || '[]'); return Array.isArray(value) ? value : []; } catch { return []; } }
   readonly userId = signal<string>(localStorage.getItem('user_id') ?? '');
   readonly displayName = signal<string>(localStorage.getItem('display_name') ?? 'User');
   readonly tenantId = signal<string>(localStorage.getItem('tenant_id') ?? '');
@@ -68,6 +70,8 @@ export class AuthService {
 
   private applySession(result: LoginResponse): void {
     localStorage.setItem('access_token', result.accessToken);
+    localStorage.setItem('roles', JSON.stringify(result.roles));
+    this.roles.set(result.roles);
     localStorage.setItem('user_id', result.userId);
     localStorage.setItem('display_name', result.displayName);
     localStorage.setItem('permissions', JSON.stringify(result.permissions));
@@ -93,6 +97,8 @@ export class AuthService {
     localStorage.removeItem('tenant_id');
     localStorage.removeItem('tenant_name');
     localStorage.removeItem('clinics');
+    this.roles.set([]);
+    localStorage.removeItem('roles');
     this.userId.set('');
     this.displayName.set('User');
     this.permissions.set([]);

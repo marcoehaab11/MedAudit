@@ -29,6 +29,23 @@ public sealed partial class DentalWorkflowTests(PlatformPostgresFixture fixture)
     private static readonly DateOnly Monday = new(2026, 8, 17);
 
     [Fact]
+    public async Task RootCanalAndCrownFindingPersistsWithExpandedDatabaseConstraint()
+    {
+        await using var test = await CreateContextAsync();
+        var clinic = await CreateClinicAsync(test, "dental-crown", "admin@dental-crown.example");
+        await AcceptAsync(test, "admin@dental-crown.example"); SetActor(test, clinic);
+        var appointment = await CreateStartedAppointmentAsync(test, clinic, "Root", "Crown", "RC-1");
+        await using var scope = test.Provider.CreateAsyncScope();
+        var commands = scope.ServiceProvider.GetRequiredService<IExaminationCommands>();
+        var queries = scope.ServiceProvider.GetRequiredService<IDentalQueries>();
+        var id = await commands.CreateAsync(appointment.Id, CancellationToken.None);
+        var examination = (await queries.GetExaminationAsync(id, CancellationToken.None))!;
+        Assert.True(await commands.AddFindingAsync(id, new(36, DentalFindingType.RootCanalAndCrown, [], null), examination.Version, CancellationToken.None));
+        var saved = (await queries.GetExaminationAsync(id, CancellationToken.None))!;
+        Assert.Equal(DentalFindingType.RootCanalAndCrown, Assert.Single(saved.Findings).Type);
+    }
+
+    [Fact]
     public async Task ExaminationPersistsClinicalRecordsSurfacesCanalsAndHistory()
     {
         await using var test = await CreateContextAsync();

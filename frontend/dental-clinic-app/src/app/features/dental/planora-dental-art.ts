@@ -1,6 +1,6 @@
 export type ArtStatus = 'existing' | 'planned' | 'progress' | 'rejected' | 'completed';
 export type ArtTreatment = 'none' | 'filling' | 'root-canal' | 'crown' | 'bridge' | 'extraction' | 'implant' | 'cleaning';
-export interface ArtRecord { treatment: ArtTreatment; status: ArtStatus; surfaces: string[]; }
+export interface ArtRecord { treatment: ArtTreatment; status: ArtStatus; surfaces: string[]; caries?: boolean; endo?: boolean; crown?: boolean; }
 
 // Reference-style longitudinal and occlusal illustrations. Treatment overlays
 // remain vector geometry so each tooth and restoration stays interactive.
@@ -29,13 +29,13 @@ export const DentalArt = (() => {
       : 'M11 80 Q21 83 31 80 L30 89 Q29 94 21 93 Q13 94 12 89 Z';
     const color = colors[record.status];
     let treatment = '';
-    if (record.treatment === 'root-canal') treatment = `<path d="${pulp}" fill="${color}" opacity=".9"/>`;
-    if (record.treatment === 'crown' || record.treatment === 'bridge') treatment = `<path d="${crown}" fill="${color}" fill-opacity=".13" stroke="${color}" stroke-width="2"/>${record.treatment === 'bridge' ? `<path d="M2 85 H40" stroke="${color}" stroke-width="2"/>` : ''}`;
+    if (record.endo || record.treatment === 'root-canal') treatment = `<path d="${pulp}" fill="#9333ea" opacity=".9"/>`;
+    if (record.crown || record.treatment === 'crown' || record.treatment === 'bridge') treatment += `<path d="${crown}" fill="#eab308" fill-opacity=".13" stroke="#eab308" stroke-width="2"/>${record.treatment === 'bridge' ? `<path d="M2 85 H40" stroke="#eab308" stroke-width="2"/>` : ''}`;
     if (record.treatment === 'filling') treatment = `<path d="M16 84 Q21 82 26 84 L25 89 L17 89 Z" fill="${color}"/>`;
     if (record.treatment === 'extraction') treatment = `<path d="M9 48 L33 89 M33 48 L9 89" stroke="${color}" stroke-width="3" stroke-linecap="round"/>`;
     if (record.treatment === 'implant') treatment = `<path d="M18 36 L25 36 L24 78 L19 78 Z" fill="${color}" fill-opacity=".22" stroke="${color}"/><path d="M16 42 L27 47 M16 51 L27 56 M17 60 L26 65 M17 69 L26 74" stroke="${color}" stroke-width="1.6"/>`;
     if (record.treatment === 'cleaning') treatment = `<path d="M21 83 V91 M17 87 H25" stroke="${color}" stroke-width="1.6"/>`;
-    return `<svg class="tooth-anatomy" viewBox="0 0 42 98" aria-hidden="true"><defs><linearGradient id="${uid}" x1="0" x2="1"><stop stop-color="#e6edef"/><stop offset=".28" stop-color="#fff"/><stop offset=".73" stop-color="#f4f8f9"/><stop offset="1" stop-color="#dce6e9"/></linearGradient></defs><g${lower ? ' transform="translate(0 98) scale(1 -1)"' : ''}><path d="${body}" fill="url(#${uid})" stroke="#e0e8eb" stroke-width="1.1"/><path d="${pulp}" fill="#d98595"/><path d="${pulp}" fill="none" stroke="#f0bdc5" stroke-width="1"/><path d="${crown}" fill="#f2f7f9" stroke="#e2e9ed" stroke-width=".7"/><path d="M8 86 Q21 88 34 86" fill="none" stroke="white" stroke-width="1.5" opacity=".85"/>${treatment}</g></svg>`;
+    return `<svg class="tooth-anatomy" viewBox="0 0 42 98" aria-hidden="true"><defs><linearGradient id="${uid}" x1="0" x2="1"><stop stop-color="#e6edef"/><stop offset=".28" stop-color="#fff"/><stop offset=".73" stop-color="#f4f8f9"/><stop offset="1" stop-color="#dce6e9"/></linearGradient></defs><g${lower ? ' transform="translate(0 98) scale(1 -1)"' : ''}><path d="${body}" fill="${record.caries ? '#fb923c' : 'url(#'+uid+')'}" stroke="#e0e8eb" stroke-width="1.1"/><path d="${pulp}" fill="${record.endo ? '#9333ea' : '#d98595'}"/><path d="${pulp}" fill="none" stroke="#f0bdc5" stroke-width="1"/><path d="${crown}" fill="#f2f7f9" stroke="#e2e9ed" stroke-width=".7"/><path d="M8 86 Q21 88 34 86" fill="none" stroke="white" stroke-width="1.5" opacity=".85"/>${treatment}</g></svg>`;
   }
   function occlusal(number: number) {
     const position = number % 10;
@@ -76,9 +76,9 @@ export function renderPlanoraTooth(number: number, record: ArtRecord, lower: boo
     const filled = record.treatment === 'filling' && record.surfaces.includes(code);
     return `<path d="${path}" fill="${filled ? color : 'transparent'}" fill-opacity="${filled ? '.88' : '1'}" stroke="${filled ? color : 'none'}" stroke-width=".5"/>`;
   }).join('');
-  let overlay = '';
-  if (record.treatment === 'root-canal') overlay = `<circle cx="21" cy="21" r="5" fill="${color}"/><path d="M21 10 V32 M10 21 H32" stroke="${color}" stroke-width="1.8"/>`;
-  if (record.treatment === 'crown') overlay = `<path d="${art.outer}" fill="${color}" fill-opacity=".1" stroke="${color}" stroke-width="3"/>`;
+  let overlay = record.caries ? `<path d="${art.outer}" fill="#fb923c" fill-opacity=".75"/>` : '';
+  if (record.endo || record.treatment === 'root-canal') overlay += `<circle cx="21" cy="21" r="5" fill="#9333ea"/><path d="M21 10 V32 M10 21 H32" stroke="#9333ea" stroke-width="1.8"/>`;
+  if (record.crown || record.treatment === 'crown') overlay += `<path d="${art.outer}" fill="${color}" fill-opacity=".1" stroke="#eab308" stroke-width="3"/>`;
   if (record.treatment === 'bridge') overlay = `<path d="M5 21 H37 M8 25 H34" stroke="${color}" stroke-width="2.5"/><path d="${art.outer}" fill="none" stroke="${color}" stroke-width="2.5"/>`;
   if (record.treatment === 'extraction') overlay = `<path d="M10 10 L32 32 M32 10 L10 32" stroke="${color}" stroke-width="4" stroke-linecap="round"/>`;
   if (record.treatment === 'implant') overlay = `<circle cx="21" cy="21" r="8" fill="${color}" fill-opacity=".2" stroke="${color}" stroke-width="2"/><circle cx="21" cy="21" r="3" fill="${color}"/>`;

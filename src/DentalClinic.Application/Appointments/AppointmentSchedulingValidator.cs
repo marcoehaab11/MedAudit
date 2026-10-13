@@ -31,8 +31,8 @@ internal sealed class AppointmentSchedulingValidator(IAppointmentStore store)
         var zone = AppointmentRules.ResolveTimeZone(await store.GetTenantTimeZoneAsync(cancellationToken));
         var localStart = time.Date.ToDateTime(time.StartTime, DateTimeKind.Unspecified);
         var localEnd = localStart.AddMinutes(time.DurationMinutes);
-        var startAt = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(localStart, zone), TimeSpan.Zero);
-        var endAt = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(localEnd, zone), TimeSpan.Zero);
+        var startAt = AppointmentRules.ToUtc(time.Date, time.StartTime, zone);
+        var endAt = AppointmentRules.ToUtc(DateOnly.FromDateTime(localEnd), TimeOnly.FromDateTime(localEnd), zone);
 
         if (Math.Round((endAt - startAt).TotalMinutes) != time.DurationMinutes)
             throw AppointmentRules.Error(nameof(time.StartTime),

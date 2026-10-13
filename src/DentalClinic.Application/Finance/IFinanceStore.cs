@@ -7,6 +7,8 @@ namespace DentalClinic.Application.Finance;
 public interface IFinanceTransaction : IAsyncDisposable { Task CommitAsync(CancellationToken token); }
 public interface IFinanceStore
 {
+    Task<DoctorDues?> MyDuesAsync(Guid userId, CancellationToken token);
+    Task<IReadOnlyCollection<BillingQueueItem>> BillingQueueAsync(CancellationToken token);
     Task<FinanceRange> ResolveRangeAsync(FinanceDateFilter filter, CancellationToken token);
     Task<string> CurrencyAsync(CancellationToken token);
     Task<FinancePatient?> FindPatientAsync(Guid id, CancellationToken token);

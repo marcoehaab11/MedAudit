@@ -17,6 +17,8 @@ export interface DailyAmount {
   date: string;
   amount: number;
 }
+export interface DoctorDues { total: number; currency: string; treatmentCount: number; byCurrency?: { currency: string; total: number; treatmentCount: number }[] }
+export interface BillingQueueItem { revenueId: string; patientId: string; patientName: string; patientNumber?: string; treatmentName: string; outstanding: number; currency: string; appointmentId?: string; occurredAt: string }
 export interface FinanceSummary {
   revenue: number;
   payments: number;
@@ -99,6 +101,8 @@ export interface PatientBalance {
 @Injectable({ providedIn: 'root' })
 export class FinanceApiService {
   private readonly http = inject(HttpClient);
+  myDues() { return this.http.get<DoctorDues>('/api/finance/my-dues'); }
+  billingQueue() { return this.http.get<BillingQueueItem[]>('/api/finance/billing-queue'); }
   dashboard(period = 3, from = '', to = '') {
     return this.http.get<FinanceSummary>('/api/finance/dashboard', {
       params: clean({ period, from, to }),

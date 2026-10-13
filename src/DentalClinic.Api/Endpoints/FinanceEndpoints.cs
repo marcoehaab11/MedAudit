@@ -11,6 +11,9 @@ internal static class FinanceEndpoints
     public static IEndpointRouteBuilder MapFinanceEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var api = endpoints.MapGroup("/api/finance").RequireAuthorization(AuthConstants.TenantMemberPolicy);
+        api.MapGet("/my-dues", async (IFinanceQueries x, CancellationToken t) =>
+            await x.MyDuesAsync(t) is { } item ? Results.Ok(item) : Results.NotFound()).RequireAuthorization(Permissions.FinanceView);
+        api.MapGet("/billing-queue", (IFinanceQueries x, CancellationToken t) => x.BillingQueueAsync(t)).RequireAuthorization(Permissions.FinanceRevenueView);
         api.MapGet("/dashboard", (FinancePeriod period, DateOnly? from, DateOnly? to, IFinanceQueries x, CancellationToken t) => x.DashboardAsync(new(period == 0 ? FinancePeriod.ThisMonth : period, from, to), t)).RequireAuthorization(Permissions.FinanceDashboard);
         api.MapGet("/categories", (bool includeInactive, FinancialCategoryType? type, IFinancialCategoryService x, CancellationToken t) => x.ListAsync(includeInactive, type, t)).RequireAuthorization(Permissions.FinanceCategoriesView);
         api.MapPost("/categories", async (FinancialCategoryRequest r, IFinancialCategoryService x, CancellationToken t) => { var id = await x.CreateAsync(new(r.Name, r.Code, (FinancialCategoryType)r.Type, r.ParentId), t); return Results.Created($"/api/finance/categories/{id:D}", new { id }); }).RequireAuthorization(Permissions.FinanceCategoriesManage);

@@ -36,8 +36,6 @@ public sealed class DentalDomainTests
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
-    [InlineData(3)]
-    [InlineData(4)]
     [InlineData(5)]
     [InlineData(6)]
     public void CariesClassificationIsStoredAndClearedWhenDiagnosisChanges(int classification)
@@ -48,6 +46,30 @@ public sealed class DentalDomainTests
         Assert.Equal(classification, finding.CariesClass);
         examination.UpdateFinding(finding.Id, DentalFindingType.Fracture, [], null, examination.Version, Now);
         Assert.Null(finding.CariesClass);
+    }
+
+    [Theory]
+    [InlineData(11, 1)]
+    [InlineData(13, 2)]
+    [InlineData(36, 3)]
+    [InlineData(24, 4)]
+    public void ClassIncompatibleWithToothIsRejected(int tooth, int classification)
+    {
+        var examination = Create();
+        Assert.Throws<ArgumentException>(() => examination.AddFinding(tooth, DentalFindingType.Caries,
+            [], null, Actor, examination.Version, Now, classification));
+    }
+
+    [Theory]
+    [InlineData(11, 3)]
+    [InlineData(13, 4)]
+    [InlineData(36, 1)]
+    [InlineData(24, 2)]
+    public void CompatibleClassIsStored(int tooth, int classification)
+    {
+        var examination = Create();
+        var finding = examination.AddFinding(tooth, DentalFindingType.Caries, [], null, Actor, examination.Version, Now, classification);
+        Assert.Equal(classification, finding.CariesClass);
     }
 
     [Theory]

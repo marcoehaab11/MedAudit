@@ -21,8 +21,18 @@ public sealed class DoctorCompensationCalculator : IDoctorCompensationCalculator
     }
 }
 
-internal sealed class FinanceQueries(IFinanceStore store, IPermissionService permissions) : IFinanceQueries
+internal sealed class FinanceQueries(IFinanceStore store, IPermissionService permissions, ICurrentUser user) : IFinanceQueries
 {
+    public async Task<DoctorDues?> MyDuesAsync(CancellationToken token)
+    {
+        await permissions.EnsurePermissionAsync(Permissions.FinanceView, token);
+        return user.UserId.HasValue ? await store.MyDuesAsync(user.UserId.Value, token) : null;
+    }
+    public async Task<IReadOnlyCollection<BillingQueueItem>> BillingQueueAsync(CancellationToken token)
+    {
+        await permissions.EnsurePermissionAsync(Permissions.FinanceRevenueView, token);
+        return await store.BillingQueueAsync(token);
+    }
     public async Task<FinanceSummary> DashboardAsync(FinanceDateFilter filter, CancellationToken token)
     { await permissions.EnsurePermissionAsync(Permissions.FinanceDashboard, token); return await store.DashboardAsync(await store.ResolveRangeAsync(filter, token), token); }
     public async Task<PagedResult<RevenueItem>> RevenuesAsync(RevenueSearch x, CancellationToken token)

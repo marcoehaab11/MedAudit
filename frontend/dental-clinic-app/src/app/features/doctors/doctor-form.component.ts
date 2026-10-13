@@ -339,7 +339,7 @@ export class DoctorFormComponent {
     licenseNumber: ['', [Validators.maxLength(100)]],
     bio: '',
     consultationDurationMinutes: [
-      30,
+      60,
       [Validators.required, Validators.min(5), Validators.max(480)],
     ],
   });

@@ -36,6 +36,31 @@ describe('DentalChartComponent', () => {
     expect(document.documentElement.dir).toBe('rtl');
   });
 
+  it('shows tooth names and a hover problem menu with independent root canal and crown choices', () => {
+    TestBed.inject(LocalizationService).set('en');
+    const fixture = TestBed.createComponent(DentalChartComponent);
+    fixture.componentInstance.showQuickFindings = true;
+    fixture.detectChanges();
+    const tooth = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('button[aria-label*="#36"]')!;
+    tooth.focus(); fixture.detectChanges();
+    const menu = (fixture.nativeElement as HTMLElement).querySelector('.tooth-problem-menu')!;
+    expect(menu.textContent).toContain('Root canal');
+    expect(menu.textContent).toContain('Crown');
+    expect(menu.textContent).toContain('Lower Left 6');
+    expect(fixture.nativeElement.textContent).not.toContain('3D Studio');
+    expect(fixture.nativeElement.textContent).not.toContain('Odontogram');
+  });
+
+  it('colors caries outside and root canal inside independently', () => {
+    const fixture = TestBed.createComponent(DentalChartComponent);
+    fixture.componentInstance.teeth = [{ toothId: 't36', toothNumber: 36, findings: [2, 10], procedures: [], hasEndodonticRecord: false }];
+    fixture.detectChanges();
+    const art = (fixture.nativeElement as HTMLElement).querySelector('button[aria-label*="#36"] .planora-art')!;
+    expect(art.innerHTML).toContain('#fb923c');
+    expect(art.innerHTML).toContain('#9333ea');
+    expect(art.innerHTML).toContain('#eab308');
+  });
+
   it('supports multi-tooth selection and quick jaw selectors', () => {
     const fixture = TestBed.createComponent(DentalChartComponent);
     const component = fixture.componentInstance;

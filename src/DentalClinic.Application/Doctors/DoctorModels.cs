@@ -4,7 +4,7 @@ using DentalClinic.Domain.Identity;
 
 namespace DentalClinic.Application.Doctors;
 
-public sealed record DoctorLookupItem(Guid Id, string DisplayName, string Specialization);
+public sealed record DoctorLookupItem(Guid Id, string DisplayName, string Specialization, int ConsultationDurationMinutes = 60);
 
 public sealed record DoctorProfileInput(string Specialization, string? LicenseNumber, string? Bio, int ConsultationDurationMinutes,
     string? DisplayName = null, string? Phone = null);

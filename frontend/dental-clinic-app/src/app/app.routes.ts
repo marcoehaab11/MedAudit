@@ -252,6 +252,11 @@ export const routes: Routes = [
       import('./features/crm/follow-up-details.component').then((x) => x.FollowUpDetailsComponent),
   },
   {
+    path: 'finance/my-dues',
+    canActivate: [authGuard, permissionGuard],
+    loadComponent: () => import('./features/finance/my-dues.component').then(x => x.MyDuesComponent),
+  },
+  {
     path: 'finance',
     canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
