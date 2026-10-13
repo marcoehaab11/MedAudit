@@ -284,41 +284,24 @@ import { DateInputComponent } from "../../shared/date-input/date-input.component
             </div>
           </div>
 
-          <!-- Grouped Period Sections & Slots -->
-          <div class="slots-container" data-testid="availability-slots">
-            @for (period of filteredPeriods(); track period.key) {
-              <div class="period-section">
-                <div class="period-section-header">
-                  <div class="period-title-wrap">
-                    <span class="period-icon">{{ period.icon }}</span>
-                    <span class="period-name">{{ period.label }}</span>
-                    <span class="period-range-note">({{ period.range }})</span>
-                  </div>
-                  <span class="period-badge">{{ period.slots.length }} {{ t('available', 'متاح') }}</span>
-                </div>
-
-                <div class="slot-cards-grid">
-                  @for (slot of period.slots; track slot.startAt) {
-                    <button
-                      type="button"
-                      class="slot-card"
-                      [class.selected]="selectedSlot()?.startAt === slot.startAt"
-                      (click)="selectedSlot.set(slot)"
-                    >
-                      <div class="slot-card-primary">
-                        <span class="slot-time">{{ formatTime(slot.localStartTime) }}</span>
-                        @if (selectedSlot()?.startAt === slot.startAt) {
-                          <span class="slot-check-icon" aria-hidden="true">✓</span>
-                        }
-                      </div>
-                      <div class="slot-card-secondary">
-                        {{ t('to', 'إلى') }} {{ formatTime(slot.localEndTime) }}
-                      </div>
-                    </button>
-                  }
-                </div>
-              </div>
-            }
+          <div class="compact-slot-picker" data-testid="availability-slots">
+            <label class="slot-hour-select">
+              <span>{{ t('Choose the hour', 'اختار الساعة') }}</span>
+              <select [value]="activeSlotHour()" (change)="selectedHour.set($any($event.target).value)">
+                @for (hour of availableHours(); track hour) {
+                  <option [value]="hour">{{ formatTime(hour + ':00') }}</option>
+                }
+              </select>
+            </label>
+            <p>{{ t('Choose a start time below. Each card shows the end of your session.', 'اختار وقت البداية. كل موعد موضح معاه نهاية الجلسة.') }}</p>
+            <div class="slot-cards-grid compact-slot-grid">
+              @for (slot of visibleHourSlots(); track slot.startAt) {
+                <button type="button" class="slot-card" [class.selected]="selectedSlot()?.startAt === slot.startAt" [attr.aria-pressed]="selectedSlot()?.startAt === slot.startAt" (click)="selectedSlot.set(slot)">
+                  <div class="slot-card-primary"><span class="slot-time">{{ formatTime(slot.localStartTime) }}</span>@if (selectedSlot()?.startAt === slot.startAt) { <span aria-hidden="true">✓</span> }</div>
+                  <div class="slot-card-secondary">{{ t('to', 'إلى') }} {{ formatTime(slot.localEndTime) }}</div>
+                </button>
+              }
+            </div>
           </div>
         }
       </fieldset>
@@ -563,6 +546,10 @@ export class AppointmentCreateComponent implements OnInit {
 
     return groups.filter((g) => g.slots.length > 0 && (filter === 'all' || filter === g.key));
   });
+  readonly selectedHour = signal('');
+  readonly availableHours = computed(() => [...new Set(this.filteredPeriods().flatMap(period => period.slots).map(slot => slot.localStartTime.slice(0, 2)))].sort());
+  readonly activeSlotHour = computed(() => this.availableHours().includes(this.selectedHour()) ? this.selectedHour() : this.availableHours()[0] || '');
+  readonly visibleHourSlots = computed(() => this.filteredPeriods().flatMap(period => period.slots).filter(slot => slot.localStartTime.slice(0, 2) === this.activeSlotHour()).sort((a, b) => a.startAt.localeCompare(b.startAt)));
   readonly slotsLoading = signal(false);
   readonly saving = signal(false);
   readonly error = signal('');
