@@ -21,6 +21,35 @@ describe('ExaminationComponent', () => {
   });
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
+  it('does not carry diagnosed teeth into the next quick diagnosis', async () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    flushAuxiliary(http);
+    const c = fixture.componentInstance;
+    c.onSelectedTeethChange([24]);
+    c.chooseFindingType(2);
+    const first = http.expectOne('/api/examinations/e1/findings');
+    expect(first.request.body).toMatchObject({ toothNumber: 24, type: 2 });
+    first.flush(null);
+    await Promise.resolve(); await Promise.resolve();
+    const caries = { ...examination().findings[0], id: 'f24', toothNumber: 24, type: 2 };
+    const updated = { ...examination(), version: 'v2', findings: [...examination().findings, caries] };
+    http.expectOne('/api/examinations/e1').flush(updated);
+    await Promise.resolve(); await Promise.resolve();
+    expect(c.selectedTeeth).toEqual([]);
+    c.onSelectedTeethChange([25]);
+    c.chooseFindingType(3);
+    const second = http.expectOne('/api/examinations/e1/findings');
+    expect(second.request.body).toMatchObject({ toothNumber: 25, type: 3 });
+    second.flush(null);
+    await Promise.resolve(); await Promise.resolve();
+    http.expectOne('/api/examinations/e1').flush({ ...updated, version: 'v3', findings: [...updated.findings, { ...caries, id: 'f25', toothNumber: 25, type: 3 }] });
+    await Promise.resolve(); await Promise.resolve();
+    expect(c.examination()!.findings.find(f => f.id === 'f24')!.type).toBe(2);
+    expect(c.selectedTeeth).toEqual([]);
+  });
+
   it('loads the examination and initializes the 5-step clinical flow', () => {
     const fixture = TestBed.createComponent(ExaminationComponent);
     const http = TestBed.inject(HttpTestingController);

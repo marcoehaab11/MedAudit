@@ -2238,7 +2238,7 @@ export class ExaminationComponent {
     void this.addFinding(true);
   }
   chooseFindingType(type: number) {
-    this.findingTargetTeeth = [];
+    this.findingTargetTeeth = this.selectedTeeth.length ? [...this.selectedTeeth] : (this.selected ? [this.selected] : []);
     this.menuCariesRecords.clear();
     this.findingEditorOpen = type === 2;
     this.findingForm.controls.notes.setValue('');
@@ -2307,6 +2307,8 @@ export class ExaminationComponent {
         this.examination.set(updated);
         version = updated.version;
       }
+      this.selectedTeeth = this.selectedTeeth.filter(number => !teeth.includes(number));
+      if (teeth.includes(this.selected)) this.selected = this.selectedTeeth[0] || 0;
       this.success.set(this.t('Finding added.', 'تم إضافة النتيجة.'));
       if (!autoSave) {
         this.findingForm.controls.notes.setValue('');
