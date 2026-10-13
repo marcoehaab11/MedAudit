@@ -3620,3 +3620,7 @@
 
 
 
+
+.today-teeth-picker { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+.today-teeth-picker label { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid #d6e2e5; border-radius: 10px; cursor: pointer; }
+.today-teeth-picker label:has(input:checked) { background: #e6f5f1; border-color: #248a79; }

@@ -636,16 +636,15 @@ export interface PrescribedMedicineRow {
             <!-- Split-View: Interactive Chart (Left) + Tooth Procedure Action Card (Right) -->
             <div class="step3-selection-summary">
               <div class="chart-col">
-                <p>{{ t('Surveyed teeth:', 'أسنان الفحص المسجلة:') }} {{ surveyTeeth().length }}</p>
-                <button type="button" class="secondary" (click)="showTodayTeethPicker = !showTodayTeethPicker">{{ t("Choose today's treatment teeth", 'اختيار أسنان علاج اليوم') }}</button>
-                @if (showTodayTeethPicker) {
-                  <div class="today-teeth-picker">
-                    @for (number of surveyTeeth(); track number) {
-                      <label><input type="checkbox" [checked]="treatmentTeeth.includes(number)" (change)="toggleTreatmentTooth(number)" />#{{ number }} {{ toothLabel(number) }}</label>
-                    } @empty { <p>{{ t('Record findings or select teeth in the first chart.', 'سجل النتائج أو حدد الأسنان في المخطط الأول.') }}</p> }
-                  </div>
-                }
-                <button type="button" class="secondary" (click)="setStep(2)">{{ t('Choose / change teeth', 'اختيار / تعديل الأسنان') }}</button>
+                <h3>{{ t("Choose teeth to start treating today", 'اختار الأسنان اللي هتبدأ علاجها اليوم') }}</h3>
+                <p>{{ t('Select one or more surveyed teeth. The other findings stay recorded for later treatment.', 'اختار سن أو أكتر من أسنان الكشف. باقي النتائج بتفضل مسجلة للعلاج بعدين.') }}</p>
+                <p>{{ t('Surveyed teeth:', 'أسنان الكشف:') }} {{ surveyTeeth().length }} · {{ t("Selected for today:", 'المختارة لعلاج اليوم:') }} {{ treatmentTeeth.length }}</p>
+                <div class="today-teeth-picker">
+                  @for (number of surveyTeeth(); track number) {
+                    <label><input type="checkbox" [disabled]="savingTreatment() || !examination()!.canEdit" [checked]="treatmentTeeth.includes(number)" (change)="toggleTreatmentTooth(number)" />#{{ number }} {{ toothLabel(number) }}</label>
+                  } @empty { <p>{{ t('Record findings in the examination first.', 'سجل الأسنان ونتائج الكشف الأول.') }}</p> }
+                </div>
+                <button type="button" class="secondary" [disabled]="!treatmentTeeth.length || savingTreatment()" (click)="treatmentTeeth = []">{{ t("Clear today's selection", 'إلغاء تحديد أسنان اليوم') }}</button>
               </div>
 
               <!-- Right: Tooth Action Card -->
@@ -666,11 +665,11 @@ export interface PrescribedMedicineRow {
                       @if (!treatmentTeeth.length) {
                         {{ t('No tooth selected', 'لم يتم اختيار سن') }}
                       } @else if (treatmentTeeth.length <= 1) {
-                        <h3>{{ t('Selected Tooth', 'السن المحدد') }} {{ treatmentTeethLabel() }}</h3>
+                        <h3>{{ t('Tooth to treat today', 'السن اللي هنعالجه اليوم') }} {{ treatmentTeethLabel() }}</h3>
                       } @else {
-                        <h3>{{ t('Selected Teeth', 'الأسنان المحددة') }} ({{ treatmentTeeth.length }}): {{ treatmentTeethLabel() }}</h3>
+                        <h3>{{ t('Teeth to treat today', 'الأسنان اللي هنعالجها اليوم') }} ({{ treatmentTeeth.length }}): {{ treatmentTeethLabel() }}</h3>
                       }
-                      <p>{{ t('Use the selection button to change teeth', 'استخدم زر تعديل الأسنان لتغيير التحديد') }}</p>
+                      <p>{{ t('Only the teeth checked above are included in this procedure.', 'الإجراء والحساب على الأسنان المختارة فوق بس.') }}</p>
                     </div>
                   </div>
 
@@ -1754,7 +1753,6 @@ export class ExaminationComponent {
   findingTargetTeeth: number[] = [];
   findingEditorOpen = true;
   readonly menuCariesRecords = new Map<number, string>();
-  showTodayTeethPicker = false;
   readonly savingFinding = signal(false);
   readonly quickFindingOptions = SELECTABLE_FINDING_TYPES.map(id => ({ id, ...FINDING_APPEARANCE[id] }));
   readonly cariesClasses = [1, 2, 3, 4, 5, 6];
