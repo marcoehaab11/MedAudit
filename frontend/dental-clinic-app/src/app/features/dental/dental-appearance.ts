@@ -4,6 +4,8 @@ export interface ClinicalAppearance {
   cssClass: string;
   symbol: string;
 }
+export const SELECTABLE_FINDING_TYPES = [2, 3, 4, 8, 10, 9];
+
 export const FINDING_APPEARANCE: Record<number, ClinicalAppearance> = {
   1: { en: 'Healthy', ar: 'سليم', cssClass: 'healthy', symbol: '✓' },
   2: { en: 'Caries', ar: 'تسوس', cssClass: 'caries', symbol: 'C' },

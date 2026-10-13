@@ -24,7 +24,7 @@ import {
 import { Medication, PrescriptionApiService } from '../prescriptions/prescription-api.service';
 import { MedicationMetadata, parseMedicationNotes } from '../prescriptions/medication-catalog-page.component';
 import { FinanceApiService, PatientBalance } from '../finance/finance-api.service';
-import { FINDING_APPEARANCE, PROCEDURE_APPEARANCE, SURFACES } from './dental-appearance';
+import { FINDING_APPEARANCE, SELECTABLE_FINDING_TYPES, PROCEDURE_APPEARANCE, SURFACES } from './dental-appearance';
 import { DentalApiService, ExaminationDetails, ToothChartSummary } from './dental-api.service';
 import { DentalChartComponent } from './dental-chart.component';
 import { allowedCariesClasses, toothName } from './tooth-labels';
@@ -1756,20 +1756,11 @@ export class ExaminationComponent {
   readonly menuCariesRecords = new Map<number, string>();
   showTodayTeethPicker = false;
   readonly savingFinding = signal(false);
-  readonly quickFindingOptions = [2, 3, 4, 5, 8, 9, 10].map(id => ({ id, ...FINDING_APPEARANCE[id] }));
+  readonly quickFindingOptions = SELECTABLE_FINDING_TYPES.map(id => ({ id, ...FINDING_APPEARANCE[id] }));
   readonly cariesClasses = [1, 2, 3, 4, 5, 6];
   readonly tab = signal<'findings' | 'procedures' | 'endodontic' | 'notes'>('findings');
-  readonly tabs = [
-    { id: 'findings' as const, en: 'Findings', ar: 'النتائج' },
-    { id: 'procedures' as const, en: 'Procedures', ar: 'الإجراءات' },
-    { id: 'endodontic' as const, en: 'Endodontic', ar: 'علاج الجذور' },
-    { id: 'notes' as const, en: 'Notes', ar: 'الملاحظات' },
-  ];
   readonly surfaces = SURFACES;
-  readonly findingOptions = Object.entries(FINDING_APPEARANCE).filter(([id]) => +id !== 6).map(([id, x]) => ({
-    id: +id,
-    ...x,
-  }));
+  readonly findingOptions = SELECTABLE_FINDING_TYPES.map(id => ({ id, ...FINDING_APPEARANCE[id] }));
   readonly procedureOptions = Object.entries(PROCEDURE_APPEARANCE).map(([id, x]) => ({
     id: +id,
     ...x,

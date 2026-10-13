@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { LocalizationService } from '../../core/localization.service';
 import { ToothChartSummary } from './dental-api.service';
-import { FINDING_APPEARANCE } from './dental-appearance';
+import { FINDING_APPEARANCE, SELECTABLE_FINDING_TYPES } from './dental-appearance';
 import { ArtRecord, renderPlanoraTooth } from './planora-dental-art';
 import { toothName } from './tooth-labels';
 
@@ -67,7 +67,7 @@ export class DentalChartComponent {
   @Output() readonly findingSelected = new EventEmitter<number>();
   @Output() readonly toothFindingSelected = new EventEmitter<{ toothNumber: number; type: number }>();
   readonly findingAppearance = FINDING_APPEARANCE;
-  readonly quickFindingTypes = [2, 3, 4, 5, 8, 9, 10];
+  readonly quickFindingTypes = SELECTABLE_FINDING_TYPES;
   readonly jaws = [
     { labelEn: 'Upper jaw', labelAr: 'الفك العلوي', lower: false, teeth: [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28] },
     { labelEn: 'Lower jaw', labelAr: 'الفك السفلي', lower: true, teeth: [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38] },
