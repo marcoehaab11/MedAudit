@@ -84,8 +84,8 @@ internal sealed partial class PublicBookingService(
         var result = new List<PublicAvailabilitySlotDto>();
         foreach (var period in periods)
         {
-            for (var minute = (int)period.StartTime.ToTimeSpan().TotalMinutes;
-                 minute + durationMinutes <= (int)period.EndTime.ToTimeSpan().TotalMinutes; minute += 5)
+            for (var minute = (((int)period.StartTime.ToTimeSpan().TotalMinutes + 59) / 60) * 60;
+                 minute + durationMinutes <= (int)period.EndTime.ToTimeSpan().TotalMinutes; minute += 60)
             {
                 var start = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(minute));
                 var end = start.AddMinutes(durationMinutes);

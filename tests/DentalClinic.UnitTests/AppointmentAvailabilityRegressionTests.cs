@@ -23,6 +23,7 @@ public sealed class AppointmentAvailabilityRegressionTests
         var doctor = ((AppointmentStoreStub)store).Doctor;
         var slots = await query.GetAsync(new(doctor.Id, new(2026, 10, 19), duration), CancellationToken.None);
         Assert.NotEmpty(slots);
+        Assert.All(slots, x => Assert.Equal(0, x.LocalStartTime.Minute));
         Assert.All(slots, x => Assert.Equal(duration, (x.EndAt - x.StartAt).TotalMinutes));
         Assert.All(slots, x => Assert.InRange(x.LocalStartTime, new TimeOnly(9, 0), new TimeOnly(12, 0)));
     }

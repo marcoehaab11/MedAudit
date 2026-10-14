@@ -69,7 +69,7 @@ describe('ExaminationComponent', () => {
     fixture.detectChanges();
     expect(component.selectedFindings()).toHaveLength(1);
     expect(component.selectedProcedures()).toHaveLength(1);
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Dental Chart');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('مخطط الأسنان');
   }, 15000);
 
   it('sends the current version and reloads after adding a finding', async () => {
@@ -102,7 +102,7 @@ describe('ExaminationComponent', () => {
     c.selectedCatalogId = 'cat-1';
     c.recordTreatmentExecution();
     http.expectNone('/api/treatments');
-    expect(c.error()).toContain('Select teeth');
+    expect(c.error()).toContain('اختر الأسنان');
   });
 
   it('saves classification on multiple teeth using the latest examination version', async () => {
@@ -158,7 +158,7 @@ describe('ExaminationComponent', () => {
     c.onSelectedTeethChange([36]);
     fixture.detectChanges();
     const buttons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('.chart-quick-findings button'));
-    buttons.find(x => x.textContent?.includes('Missing'))!.click();
+    buttons.find(x => x.textContent?.includes('مفقود'))!.click();
     const req = http.expectOne('/api/examinations/e1/findings');
     expect(req.request.body).toMatchObject({ toothNumber: 36, type: 4, cariesClass: null, surfaces: [] });
     req.flush(null);
@@ -307,7 +307,7 @@ describe('ExaminationComponent', () => {
     flushAuxiliary(http);
     fixture.componentInstance.saveNotes();
     http.expectOne('/api/examinations/e1').flush({}, { status: 409, statusText: 'Conflict' });
-    expect(fixture.componentInstance.error()).toContain('changed');
+    expect(fixture.componentInstance.error()).toContain('تم تغيير');
   });
 
   it('opens medical alert modal automatically when patient has allergies or conditions', () => {
@@ -458,7 +458,7 @@ describe('ExaminationComponent', () => {
 
     expect(component.paymentErrorModal().isOpen).toBe(true);
     expect(component.paymentErrorModal().title).toBeTruthy();
-    expect(component.paymentErrorModal().message).toContain('Payment exceeds');
+    expect(component.paymentErrorModal().message).toContain('يتجاوز');
   });
 
   it('starts a reception appointment without creating a clinical record', async () => {
@@ -470,9 +470,6 @@ describe('ExaminationComponent', () => {
     http.expectOne('/api/appointments/a1').flush({ id: 'a1', status: 2, patientId: 'p1' });
     flushAuxiliary(http);
     const pending = component.checkInAndStart();
-    http.expectOne('/api/appointments/a1/check-in').flush(null);
-    await Promise.resolve();
-    await Promise.resolve();
     http.expectOne('/api/appointments/a1/start').flush(null);
     await pending;
     expect(component.appointment()?.status).toBe(4);
@@ -480,7 +477,7 @@ describe('ExaminationComponent', () => {
     http.expectNone(request => request.url === '/api/appointments/a1/examination' && request.method === 'POST');
   });
 
-  it('stops the start flow and shows a failed check-in', async () => {
+  it('stops the start flow and shows a failed session start', async () => {
     const fixture = TestBed.createComponent(ExaminationComponent);
     const component = fixture.componentInstance;
     const http = TestBed.inject(HttpTestingController);
@@ -488,9 +485,9 @@ describe('ExaminationComponent', () => {
     flushAuxiliary(http);
     component.appointment.update(value => value ? { ...value, status: 2 } : value);
     const pending = component.checkInAndStart();
-    http.expectOne('/api/appointments/a1/check-in').flush({ detail: 'Check-in failed' }, { status: 409, statusText: 'Conflict' });
+    http.expectOne('/api/appointments/a1/start').flush({ detail: 'Session start failed' }, { status: 409, statusText: 'Conflict' });
     await pending;
-    expect(component.error()).toContain('Check-in failed');
+    expect(component.error()).toContain('Session start failed');
     http.expectNone('/api/appointments/a1/start');
   });
 

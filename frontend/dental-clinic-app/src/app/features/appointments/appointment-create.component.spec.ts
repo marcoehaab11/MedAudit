@@ -94,7 +94,7 @@ describe('AppointmentCreateComponent', () => {
     http.expectOne('/api/appointments').flush({}, { status: 409, statusText: 'Conflict' });
     http.expectOne((r) => r.url === '/api/appointments/availability').flush([]);
 
-    expect(component.error()).toContain('just booked');
+    expect(component.error()).toContain('تم حجز هذا الموعد');
     expect(component.slots()).toEqual([]);
   });
 
@@ -137,6 +137,12 @@ describe('AppointmentCreateComponent', () => {
     expect(component.slotPeriods().evening).toHaveLength(1);
 
     component.timeFormat.set('12h');
+    expect(component.i18n.language()).toBe('ar');
+    expect(document.documentElement.dir).toBe('rtl');
+    expect(component.formatTime('09:30:00')).toContain('ص');
+    component.i18n.toggle();
+    expect(component.i18n.language()).toBe('en');
+    expect(document.documentElement.dir).toBe('ltr');
     expect(component.formatTime('09:30:00')).toContain('AM');
     expect(component.formatTime('14:00:00')).toContain('PM');
 

@@ -1997,14 +1997,6 @@ export class ExaminationComponent {
     this.startingGate.set(true);
     this.error.set('');
     try {
-      if (app.status === 1) {
-        await firstValueFrom(this.appointmentApi.action(this.appointmentId, 'confirm'));
-        this.appointment.update(x => x ? { ...x, status: 2 } : x);
-      }
-      if (app.status <= 2) {
-        await firstValueFrom(this.appointmentApi.action(this.appointmentId, 'check-in'));
-        this.appointment.update(x => x ? { ...x, status: 3 } : x);
-      }
       if (app.status <= 3) {
         await firstValueFrom(this.appointmentApi.action(this.appointmentId, 'start'));
         this.appointment.update(x => x ? { ...x, status: 4 } : x);
