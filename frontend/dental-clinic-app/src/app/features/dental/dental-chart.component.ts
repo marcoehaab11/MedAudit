@@ -36,7 +36,7 @@ import { toothName } from './tooth-labels';
                 [attr.aria-pressed]="isSelectedTooth(number)" [attr.aria-label]="name(number) + ' #' + number" [title]="name(number) + ' #' + number"
                 [style.--tooth-accent]="planoraAccent(number)" (focus)="openMenu(number, $event)" (keydown.escape)="menuTooth = 0" (click)="choose(number, $event)">
                 <span class="planora-marker"></span><span class="planora-art" [innerHTML]="planoraArt(number, jaw.lower)"></span>
-                <span class="planora-number">{{ name(number, true) }}</span><small>#{{ number }}</small>
+                <span class="planora-number">#{{ number }}</span>
               </button>
               @if (showQuickFindings && menuTooth === number) {
                 <div class="tooth-problem-menu" [style.top.px]="menuTop" [style.left.px]="menuLeft" (keydown.escape)="menuTooth = 0" role="group" [attr.aria-label]="name(number)">

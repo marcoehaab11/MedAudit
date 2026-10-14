@@ -11,21 +11,23 @@ button:disabled { opacity: .5; cursor: wait; }
 .chart-quick-findings { margin: .75rem 0; padding: .75rem; background: #f8fafc; border-radius: .75rem; }
 .planora-jaw-label { text-align: center; font-weight: 700; margin: .75rem 0; }
 .planora-chart-scroll { overflow-x: auto; }
-.planora-jaw { display: flex; justify-content: space-between; min-width: 1080px; gap: .25rem; direction: ltr; }
+.planora-jaw { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); min-width: 0; gap: 0; direction: ltr; }
 .planora-upper { border-bottom: 1px dashed #dce6e9; padding-bottom: .75rem; }
 .planora-lower { padding-top: .75rem; }
 .tooth-container { position: relative; }
-.planora-tooth { width: 64px; min-height: 200px; padding: 3px 0; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid transparent; border-radius:10px; background:transparent; }
+.planora-tooth { width: 100%; min-width: 0; min-height: 170px; padding: 3px 0; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid transparent; border-radius:10px; background:transparent; }
 .planora-tooth:hover { background:#edf8f1; border-color:#b4d9c2; }
 .planora-tooth.selected { background:#e8f6ed; border-color:#74c596; box-shadow:0 0 0 2px #bde7cb; }
 .planora-tooth.missing { border-style:dashed; border-color:#b5c1c8; }
 .planora-tooth.missing .planora-art { visibility:hidden; }
 .planora-marker { width:7px; height:7px; border-radius:50%; background:var(--tooth-accent); }
-.planora-number { min-height:28px; text-align:center; white-space:normal; font-size:11px; font-weight:700; color:#334155; }
+.planora-number { min-height:18px; text-align:center; white-space:normal; font-size:11px; font-weight:700; color:#334155; }
 .planora-tooth small { font-size:10px; color:#64748b; }
 .planora-art { display:flex; flex-direction:column; align-items:center; }
-:host ::ng-deep .planora-art .tooth-anatomy { height:110px; width:40px; flex:none; filter:drop-shadow(0 1px 1px #b8c7cd33); }
-:host ::ng-deep .planora-art .tooth-surface { height:44px; width:42px; flex:none; margin:5px 0; }
+:host ::ng-deep .planora-art .tooth-anatomy { height:100px; width:100%; max-width:40px; flex:none; filter:drop-shadow(0 1px 1px #b8c7cd33); }
+:host ::ng-deep .planora-art .tooth-surface { height:36px; width:100%; max-width:42px; flex:none; margin:5px 0; }
 .tooth-problem-menu { position:fixed; z-index:1000; width:200px; padding:.5rem; border:1px solid #cbd5e1; border-radius:.75rem; background:white; box-shadow:0 8px 24px #0002; display:grid; gap:.3rem; direction:inherit; }
 .tooth-problem-menu strong { font-size:.85rem; }
 .chart-legend { color:#64748b; font-size:.85rem; margin-top:.75rem; }
+
+:host ::ng-deep .planora-art { width: 100%; min-width: 0; }
