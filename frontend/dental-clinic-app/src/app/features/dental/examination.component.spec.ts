@@ -19,7 +19,11 @@ describe('ExaminationComponent', () => {
       ],
     }).compileComponents();
   });
-  afterEach(() => TestBed.inject(HttpTestingController).verify());
+  afterEach(() => {
+    const http = TestBed.inject(HttpTestingController);
+    for (const r of http.match('/api/patients/p1/dental')) r.flush({ patientId: 'p1', teeth: [], recentExaminations: [] });
+    http.verify();
+  });
 
   it('does not carry diagnosed teeth into the next quick diagnosis', async () => {
     const fixture = TestBed.createComponent(ExaminationComponent);
@@ -48,6 +52,19 @@ describe('ExaminationComponent', () => {
     await Promise.resolve(); await Promise.resolve();
     expect(c.examination()!.findings.find(f => f.id === 'f24')!.type).toBe(2);
     expect(c.selectedTeeth).toEqual([]);
+  });
+
+  it('shows previous patient chart in a new visit without copying findings into the draft', () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush({ ...examination(), findings: [], procedures: [], endodonticRecords: [] });
+    for (const request of http.match('/api/patients/p1/dental')) request.flush({ patientId: 'p1', teeth: [{ toothId: 't24', toothNumber: 24, findings: [2], procedures: [4], hasEndodonticRecord: true, treatmentProgress: [{ id: 'tr1', name: 'Root canal', type: 4, status: 4 }] }], recentExaminations: [] });
+    flushAuxiliary(http);
+    const c = fixture.componentInstance;
+    expect(c.chartTeeth().find(t => t.toothNumber === 24)).toMatchObject({ findings: [2], procedures: [4], hasEndodonticRecord: true });
+    expect(c.surveyTeeth()).toContain(24);
+    expect(c.examination()!.findings).toEqual([]);
+    expect(c.treatmentTeeth).toEqual([]);
   });
 
   it('loads the examination and initializes the 5-step clinical flow', () => {
@@ -550,6 +567,7 @@ describe('ExaminationComponent', () => {
 });
 
 function flushAuxiliary(http: HttpTestingController) {
+  for (const r of http.match('/api/patients/p1/dental')) r.flush({ patientId: 'p1', teeth: [], recentExaminations: [] });
   const patientReq = http.match('/api/patients/p1');
   for (const r of patientReq) {
     r.flush({

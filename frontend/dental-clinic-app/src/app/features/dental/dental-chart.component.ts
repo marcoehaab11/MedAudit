@@ -37,6 +37,8 @@ import { toothName } from './tooth-labels';
                 [style.--tooth-accent]="planoraAccent(number)" (focus)="openMenu(number, $event)" (keydown.escape)="menuTooth = 0" (click)="choose(number, $event)">
                 <span class="planora-marker"></span><span class="planora-art" [innerHTML]="planoraArt(number, jaw.lower)"></span>
                 <span class="planora-number">#{{ number }}</span>
+                @if (completedWork(number)) { <small [title]="t('Completed treatment recorded', 'يوجد علاج تم')">✓</small> }
+                @if (pendingWork(number)) { <small [title]="t('Pending or ongoing treatment / findings to review', 'علاج متبقي أو تشخيصات للمراجعة')">◷</small> }
               </button>
               @if (showQuickFindings && menuTooth === number) {
                 <div class="tooth-problem-menu" [style.top.px]="menuTop" [style.left.px]="menuLeft" (keydown.escape)="menuTooth = 0" role="group" [attr.aria-label]="name(number)">
@@ -52,7 +54,7 @@ import { toothName } from './tooth-labels';
         </div></div>
       }
     </div>
-    <div class="chart-legend"><span>{{ t('Orange: caries · Purple: root canal · Gold: crown · Missing: hidden tooth', 'برتقالي: تسوس · بنفسجي: علاج جذور · ذهبي: كراون · فقد: سن مخفي') }}</span></div>
+    <div class="chart-legend"><span>{{ t('Orange: caries · Purple: root canal · Gold: crown · Missing: hidden tooth', 'برتقالي: تسوس · بنفسجي: علاج جذور · ذهبي: كراون · فقد: سن مخفي') }}</span><span>{{ t('✓ Completed treatment · ◷ Pending treatment / findings to review', '✓ علاج تم · ◷ علاج متبقي أو تشخيصات للمراجعة') }}</span></div>
   </section>`,
 })
 export class DentalChartComponent {
@@ -81,6 +83,8 @@ export class DentalChartComponent {
   constructor(private readonly i18n: LocalizationService, private readonly sanitizer: DomSanitizer) {}
   t(en: string, ar: string) { return this.i18n.language() === 'ar' ? ar : en; }
   name(number: number, short = false) { return toothName(number, this.i18n.language(), short); }
+  pendingWork(number: number) { const tooth = this.find(number); return tooth?.treatmentProgress?.some(t => [1, 2, 3].includes(t.status)) || (!tooth?.treatmentProgress?.some(t => t.status !== 5) && !!tooth?.findings.length); }
+  completedWork(number: number) { return this.find(number)?.treatmentProgress?.some(t => t.status === 4); }
   find(number: number) { return this.teeth.find(x => x.toothNumber === number); }
   openMenu(number: number, event?: Event) {
     if (!this.showQuickFindings || this.savingFinding) return;

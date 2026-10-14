@@ -48,13 +48,13 @@ public sealed class DoctorSessionStartTests
         public Appointment Appointment { get; } = new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), (AppointmentType)1, DateTimeOffset.UtcNow, 60, null, Guid.NewGuid(), DateTimeOffset.UtcNow);
         public Guid? OwnDoctor { get; set; }
         public bool Saved { get; private set; }
-        protected override object? Invoke(MethodInfo? method, object?[]? args) {
-            switch(method?.Name) {
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
+            switch(targetMethod?.Name) {
                 case nameof(IAppointmentStore.FindAsync): return Task.FromResult<Appointment?>(Appointment);
                 case nameof(IAppointmentStore.FindDoctorProfileIdForUserAsync): return Task.FromResult<Guid?>(OwnDoctor ?? Appointment.DoctorProfileId);
                 case nameof(IAppointmentStore.AddAudit): return null;
                 case nameof(IAppointmentStore.SaveChangesAsync): Saved = true; return Task.CompletedTask;
-                default: throw new NotSupportedException(method?.Name);
+                default: throw new NotSupportedException(targetMethod?.Name);
             }
         }
     }

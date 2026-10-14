@@ -232,7 +232,7 @@ export class PaymentFormComponent {
     amount: [0, [Validators.required, Validators.min(0.01)]],
     paymentMethod: [1, Validators.required],
     paidDate: [new Date().toISOString().slice(0, 10), Validators.required],
-    paidTime: ['09:00', Validators.required],
+    paidTime: [new Date().toTimeString().slice(0, 5), Validators.required],
     reference: '',
     notes: '',
   });
@@ -262,6 +262,9 @@ export class PaymentFormComponent {
     if (this.form.invalid || !this.revenue()) return;
     this.saving.set(true);
     const v = this.form.getRawValue();
+    const now = new Date();
+    if (this.form.controls.paidDate.pristine) v.paidDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    if (this.form.controls.paidTime.pristine) v.paidTime = now.toTimeString().slice(0, 5);
     this.api
       .createPayment({
         ...v,

@@ -7,6 +7,15 @@ describe('DentalChartComponent', () => {
     await TestBed.configureTestingModule({ imports: [DentalChartComponent] }).compileComponents();
   });
 
+  it('shows both completed and pending work on the same tooth', () => {
+    const fixture = TestBed.createComponent(DentalChartComponent);
+    fixture.componentInstance.teeth = [{ toothId: 't36', toothNumber: 36, findings: [10], procedures: [4], hasEndodonticRecord: true, treatmentProgress: [{ id: 'root', name: 'Root canal', type: 4, status: 4 }, { id: 'crown', name: 'Crown', type: 5, status: 1 }] }];
+    fixture.detectChanges();
+    const tooth = (fixture.nativeElement as HTMLElement).querySelector('button[aria-label*="#36"]')!;
+    expect(tooth.textContent).toContain('✓');
+    expect(tooth.textContent).toContain('◷');
+  });
+
   it('renders the permanent FDI chart as visual selectable teeth', () => {
     const fixture = TestBed.createComponent(DentalChartComponent);
     fixture.detectChanges();

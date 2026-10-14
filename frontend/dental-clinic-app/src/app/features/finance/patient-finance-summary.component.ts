@@ -364,6 +364,9 @@ export class PatientFinanceSummaryComponent {
     this.modalError.set('');
 
     const v = this.paymentForm.getRawValue();
+    const now = new Date();
+    if (this.paymentForm.controls.paidDate.pristine) v.paidDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    if (this.paymentForm.controls.paidTime.pristine) v.paidTime = now.toTimeString().slice(0, 5);
     let amountToPay = Number(v.amount);
     
     // Check total outstanding first

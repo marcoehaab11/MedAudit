@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
+import { toothName } from './tooth-labels';
 import { FINDING_APPEARANCE, PROCEDURE_APPEARANCE } from './dental-appearance';
 import { DentalApiService, PatientDentalChart } from './dental-api.service';
 import { DentalChartComponent } from './dental-chart.component';
@@ -30,7 +31,7 @@ import { DentalChartComponent } from './dental-chart.component';
       <div class="dental-workspace">
         <app-dental-chart [teeth]="chart()!.teeth" [(selectedNumber)]="selected" />
         <aside class="tooth-details">
-          <h2>{{ t('Tooth', 'السن') }} {{ selected }}</h2>
+          <h2>#{{ selected }} · {{ toothDescription() }}</h2>
           @let tooth = selectedTooth();
           <section>
             <h3>{{ t('Current findings', 'النتائج الحالية') }}</h3>
@@ -48,6 +49,11 @@ import { DentalChartComponent } from './dental-chart.component';
               <p>{{ t('No completed procedures.', 'لا توجد إجراءات مكتملة.') }}</p>
             }
           </section>
+              <section><h3>{{ t('Treatment progress', 'ما تم وما لم يتم بعد') }}</h3>
+                @for (work of tooth?.treatmentProgress ?? []; track work.id) {
+                  <p><strong>{{ work.status === 4 ? '✓ ' : '◷ ' }}{{ work.name }}</strong> · {{ work.status === 4 ? t('Done', 'تم') : work.status === 3 ? t('In progress', 'قيد العلاج') : work.status === 5 ? t('Cancelled', 'ملغي') : t('Pending', 'لم يتم بعد') }}</p>
+                } @empty { <p>{{ t('No treatment execution recorded. Findings remain for review.', 'لا يوجد تنفيذ علاج مسجل. التشخيصات محفوظة للمراجعة.') }}</p> }
+              </section>
           @if (tooth?.hasEndodonticRecord) {
             <p class="endo-flag">
               R · {{ t('Endodontic record available', 'يوجد سجل علاج جذور') }}
@@ -96,6 +102,7 @@ export class PatientDentalComponent {
       },
     });
   }
+  toothDescription() { return toothName(this.selected, 'en'); }
   selectedTooth() {
     return this.chart()?.teeth.find((x) => x.toothNumber === this.selected);
   }

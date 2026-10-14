@@ -62,13 +62,17 @@ internal sealed class DentalStore(ApplicationDbContext context) : IDentalStore
         var endodontic = await context.EndodonticRecords.AsNoTracking()
             .Where(x => x.PatientId == patientId)
             .Select(x => new { x.ToothNumber, x.CreatedAt }).ToListAsync(token);
+        var treatments = await context.Treatments.AsNoTracking().Include(x => x.Teeth)
+            .Where(x => x.PatientId == patientId).ToListAsync(token);
         var teeth = PermanentToothCatalog.All.Select(tooth => new ToothChartSummary(tooth.Id, tooth.Number,
             findings.Where(x => x.ToothNumber == tooth.Number).OrderByDescending(x => x.CreatedAt).Select(x => x.FindingType).Distinct().ToArray(),
             procedures.Where(x => x.ToothNumber == tooth.Number).OrderByDescending(x => x.CreatedAt).Select(x => x.ProcedureType).Distinct().ToArray(),
             endodontic.Any(x => x.ToothNumber == tooth.Number),
             findings.Where(x => x.ToothNumber == tooth.Number).Select(x => (DateTimeOffset?)x.CreatedAt)
                 .Concat(procedures.Where(x => x.ToothNumber == tooth.Number).Select(x => (DateTimeOffset?)x.CreatedAt))
-                .Concat(endodontic.Where(x => x.ToothNumber == tooth.Number).Select(x => (DateTimeOffset?)x.CreatedAt)).Max()))
+                .Concat(endodontic.Where(x => x.ToothNumber == tooth.Number).Select(x => (DateTimeOffset?)x.CreatedAt)).Max(),
+            treatments.Where(x => x.Teeth.Any(t => t.ToothNumber == tooth.Number)).OrderByDescending(x => x.CreatedAt)
+                .Select(x => new ToothTreatmentProgress(x.Id, x.TreatmentName, (int)x.Type, (int)x.Status, x.CompletedAt)).ToArray()))
             .ToArray();
         return new PatientDentalChart(patient.Id, patient.Name, patient.PatientNumber, teeth,
             await GetHistoryAsync(patientId, 10, token));

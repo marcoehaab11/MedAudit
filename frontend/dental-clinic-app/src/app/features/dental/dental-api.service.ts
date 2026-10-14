@@ -8,6 +8,7 @@ export interface ToothChartSummary {
   procedures: number[];
   hasEndodonticRecord: boolean;
   lastRecordedAt?: string;
+  treatmentProgress?: { id: string; name: string; type: number; status: number; completedAt?: string }[];
 }
 export interface ExaminationHistoryItem {
   id: string;

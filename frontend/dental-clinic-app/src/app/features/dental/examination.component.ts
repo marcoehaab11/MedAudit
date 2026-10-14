@@ -25,7 +25,7 @@ import { Medication, PrescriptionApiService } from '../prescriptions/prescriptio
 import { MedicationMetadata, parseMedicationNotes } from '../prescriptions/medication-catalog-page.component';
 import { FinanceApiService, PatientBalance } from '../finance/finance-api.service';
 import { FINDING_APPEARANCE, SELECTABLE_FINDING_TYPES, PROCEDURE_APPEARANCE, SURFACES } from './dental-appearance';
-import { DentalApiService, ExaminationDetails, ToothChartSummary } from './dental-api.service';
+import { DentalApiService, ExaminationDetails, ToothChartSummary, PatientDentalChart } from './dental-api.service';
 import { DentalChartComponent } from './dental-chart.component';
 import { allowedCariesClasses, toothName } from './tooth-labels';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
@@ -595,6 +595,20 @@ export interface PrescribedMedicineRow {
               (findingSelected)="chooseFindingType($event)" (toothFindingSelected)="chooseToothFinding($event)" />
             <section class="tooth-details">
               <h3>{{ t('Findings', 'النتائج') }}</h3>
+              @if (patientChartError()) { <p class="alert">{{ t('Could not load previous dental records.', 'تعذر تحميل سجل الأسنان السابق.') }} <button type="button" (click)="loadPatient(examination()!.patientId)">{{ t('Retry', 'إعادة المحاولة') }}</button></p> }
+              @if (patientChart(); as previous) {
+                <details><summary>{{ t('Previous patient dental records', 'سجل الأسنان من الجلسات السابقة') }}</summary>
+                  @for (tooth of previous.teeth; track tooth.toothNumber) {
+                    @if (tooth.findings.length || tooth.procedures.length) {
+                      <p><strong>#{{ tooth.toothNumber }} · {{ toothLabel(tooth.toothNumber) }}</strong>
+                      @for (type of tooth.findings; track type) { <span class="clinical-tag">{{ findingLabel(type) }}</span> }
+                      @for (work of tooth.treatmentProgress ?? []; track work.id) { <span class="clinical-tag">{{ work.status === 4 ? '✓ ' : '◷ ' }}{{ work.name }} · {{ work.status === 4 ? t('Done', 'تم') : work.status === 3 ? t('In progress', 'قيد العلاج') : work.status === 5 ? t('Cancelled', 'ملغي') : t('Pending', 'لم يتم بعد') }}</span> }
+                      </p>
+                    }
+                  }
+                </details>
+              }
+
               <div class="record-stack">
                 @for (item of examination()!.findings; track item.id) {
                   <article><div><strong>#{{ item.toothNumber }} · {{ toothLabel(item.toothNumber) }} · {{ findingLabel(item.type) }}</strong>
@@ -606,7 +620,7 @@ export interface PrescribedMedicineRow {
                   </article>
                 } @empty { <p>{{ t('No findings recorded yet.', 'لا توجد نتائج مسجلة بعد.') }}</p> }
               </div>
-              @if (examination()!.canEdit && selectedTeeth.length && findingEditorOpen) {
+              @if (examination()!.canEdit && (selectedTeeth.length || findingTargetTeeth.length) && findingEditorOpen) {
                 <form class="clinical-form" [formGroup]="findingForm" (ngSubmit)="addFinding()">
                   <p>{{ t('Record for:', 'تسجيل للأسنان:') }} {{ findingTeethLabel() }}</p>
                   <label>{{ t('Problem type', 'نوع المشكلة') }}<select formControlName="type">
@@ -1876,6 +1890,8 @@ export class ExaminationComponent {
   paymentAmount = 0;
   paymentMethod = 1;
 
+  readonly patientChart = signal<PatientDentalChart | null>(null);
+  readonly patientChartError = signal(false);
   readonly chartTeeth = computed<ToothChartSummary[]>(() =>
     Array.from({ length: 4 }, (_, q) => Array.from({ length: 8 }, (_, i) => (q + 1) * 10 + i + 1))
       .flat()
@@ -1883,6 +1899,7 @@ export class ExaminationComponent {
         toothId: `tooth-${number}`,
         toothNumber: number,
         findings: [
+          ...(this.patientChart()?.teeth.find(t => t.toothNumber === number)?.findings ?? []),
           ...new Set(
             (this.examination()?.findings ?? [])
               .filter((x) => x.toothNumber === number)
@@ -1890,13 +1907,15 @@ export class ExaminationComponent {
           ),
         ],
         procedures: [
+          ...(this.patientChart()?.teeth.find(t => t.toothNumber === number)?.procedures ?? []),
           ...new Set(
             (this.examination()?.procedures ?? [])
               .filter((x) => x.toothNumber === number)
               .map((x) => x.type),
           ),
         ],
-        hasEndodonticRecord: (this.examination()?.endodonticRecords ?? []).some(
+        treatmentProgress: this.patientChart()?.teeth.find(t => t.toothNumber === number)?.treatmentProgress,
+        hasEndodonticRecord: !!this.patientChart()?.teeth.find(t => t.toothNumber === number)?.hasEndodonticRecord || (this.examination()?.endodonticRecords ?? []).some(
           (x) => x.toothNumber === number,
         ),
       })),
@@ -1934,6 +1953,7 @@ export class ExaminationComponent {
     }
     if (n === 3) {
       this.loadTreatments(e.patientId);
+                    this.loadPatient(e.patientId);
       this.loadAppointment();
     }
     if (n === 4) {
@@ -1942,6 +1962,7 @@ export class ExaminationComponent {
     if (n === 5) {
       this.loadBalance(e.patientId);
       this.loadTreatments(e.patientId);
+                    this.loadPatient(e.patientId);
       if (!this.suggestedFollowUpDate) {
         this.selectFollowUpDays(7);
       } else {
@@ -2050,6 +2071,10 @@ export class ExaminationComponent {
   }
 
   loadPatient(patientId: string) {
+    this.api.chart(patientId).subscribe({
+      next: chart => { this.patientChart.set(chart); this.patientChartError.set(false); },
+      error: () => { this.patientChartError.set(true); },
+    });
     if (this.patient()) return;
     this.patientApi.patient(patientId).subscribe({
       next: (p) => {
@@ -2441,7 +2466,7 @@ export class ExaminationComponent {
     return this.selectedTeeth.length > 0 ? this.selectedTeeth.map((t) => '#' + t).join(', ') : this.t('No tooth selected', 'لم يتم اختيار سن');
   }
 
-  surveyTeeth() { return [...new Set([...this.selectedTeeth, ...(this.examination()?.findings ?? []).map(x => x.toothNumber)])].sort((a,b) => a-b); }
+  surveyTeeth() { return [...new Set([...(this.patientChart()?.teeth.filter(t => t.findings.length || t.procedures.length).map(t => t.toothNumber) ?? []), ...this.selectedTeeth, ...(this.examination()?.findings ?? []).map(x => x.toothNumber)])].sort((a,b) => a-b); }
   toggleTreatmentTooth(number: number) {
     if (this.savingTreatment() || !this.surveyTeeth().includes(number)) return;
     this.treatmentTeeth = this.treatmentTeeth.includes(number) ? this.treatmentTeeth.filter(x => x !== number) : [...this.treatmentTeeth, number].sort((a,b) => a-b);
@@ -2572,6 +2597,7 @@ export class ExaminationComponent {
                     this.treatmentPrice = 0;
                     this.currentParsedItem.set(null);
                     this.loadTreatments(e.patientId);
+                    this.loadPatient(e.patientId);
                     this.loadBalance(e.patientId);
                     setTimeout(() => this.applyUnfinishedToFollowUpNotes(), 600);
                   },
@@ -2579,6 +2605,7 @@ export class ExaminationComponent {
                     this.savingTreatment.set(false);
                     this.fail(err);
                     this.loadTreatments(e.patientId);
+                    this.loadPatient(e.patientId);
                     this.loadBalance(e.patientId);
                   },
                 });

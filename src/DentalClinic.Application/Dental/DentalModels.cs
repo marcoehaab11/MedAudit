@@ -25,7 +25,8 @@ public sealed record ExaminationDetails(Guid Id, Guid PatientId, string PatientN
 
 public sealed record ToothChartSummary(Guid ToothId, int ToothNumber,
     IReadOnlyCollection<DentalFindingType> Findings, IReadOnlyCollection<DentalProcedureType> Procedures,
-    bool HasEndodonticRecord, DateTimeOffset? LastRecordedAt);
+    bool HasEndodonticRecord, DateTimeOffset? LastRecordedAt, IReadOnlyCollection<ToothTreatmentProgress>? TreatmentProgress = null);
+public sealed record ToothTreatmentProgress(Guid Id, string Name, int Type, int Status, DateTimeOffset? CompletedAt);
 public sealed record ExaminationHistoryItem(Guid Id, Guid AppointmentId, ExaminationStatus Status,
     string DoctorName, DateTimeOffset CreatedAt, DateTimeOffset? CompletedAt);
 public sealed record PatientDentalChart(Guid PatientId, string PatientName, string PatientNumber,
