@@ -21,7 +21,7 @@ internal sealed class AppointmentAvailabilityQuery(IAppointmentStore store, IPer
         if (query.IsEmergency)
         {
             var resultEmergency = new List<AvailabilitySlot>();
-            for (var minute = 0; minute + query.DurationMinutes <= 1440; minute += 60)
+            for (var minute = 0; minute + query.DurationMinutes <= 1440; minute += query.DurationMinutes)
             {
                 var start = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(minute));
                 var endMinutes = minute + query.DurationMinutes;
@@ -57,7 +57,7 @@ internal sealed class AppointmentAvailabilityQuery(IAppointmentStore store, IPer
             var endMins = (int)period.EndTime.ToTimeSpan().TotalMinutes;
             var adjustedEndMins = endMins;
 
-            for (var currentMins = ((startMins + 59) / 60) * 60; currentMins + query.DurationMinutes <= adjustedEndMins; currentMins += 60)
+            for (var currentMins = ((startMins + 59) / 60) * 60; currentMins + query.DurationMinutes <= adjustedEndMins; currentMins += query.DurationMinutes)
             {
                 var start = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(currentMins));
                 var endMinutes = currentMins + query.DurationMinutes;

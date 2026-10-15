@@ -211,7 +211,7 @@ import { DateInputComponent } from "../../shared/date-input/date-input.component
                 type="button"
                 class="period-tab"
                 [class.active]="selectedPeriod() === 'all'"
-                (click)="selectedPeriod.set('all')"
+                (click)="slotPage.set(0); selectedPeriod.set('all')"
               >
                 <span>{{ t('All Slots', 'جميع الأوقات') }}</span>
                 <span class="tab-count">{{ slotPeriods().total }}</span>
@@ -222,7 +222,7 @@ import { DateInputComponent } from "../../shared/date-input/date-input.component
                   type="button"
                   class="period-tab"
                   [class.active]="selectedPeriod() === 'morning'"
-                  (click)="selectedPeriod.set('morning')"
+                  (click)="slotPage.set(0); selectedPeriod.set('morning')"
                 >
                   <span>🌅 {{ t('Morning', 'الصباح') }}</span>
                   <span class="tab-count">{{ slotPeriods().morning.length }}</span>
@@ -234,7 +234,7 @@ import { DateInputComponent } from "../../shared/date-input/date-input.component
                   type="button"
                   class="period-tab"
                   [class.active]="selectedPeriod() === 'afternoon'"
-                  (click)="selectedPeriod.set('afternoon')"
+                  (click)="slotPage.set(0); selectedPeriod.set('afternoon')"
                 >
                   <span>☀️ {{ t('Afternoon', 'بعد الظهر') }}</span>
                   <span class="tab-count">{{ slotPeriods().afternoon.length }}</span>
@@ -246,7 +246,7 @@ import { DateInputComponent } from "../../shared/date-input/date-input.component
                   type="button"
                   class="period-tab"
                   [class.active]="selectedPeriod() === 'evening'"
-                  (click)="selectedPeriod.set('evening')"
+                  (click)="slotPage.set(0); selectedPeriod.set('evening')"
                 >
                   <span>🌙 {{ t('Evening', 'المساء') }}</span>
                   <span class="tab-count">{{ slotPeriods().evening.length }}</span>
@@ -258,7 +258,7 @@ import { DateInputComponent } from "../../shared/date-input/date-input.component
                   type="button"
                   class="period-tab"
                   [class.active]="selectedPeriod() === 'night'"
-                  (click)="selectedPeriod.set('night')"
+                  (click)="slotPage.set(0); selectedPeriod.set('night')"
                 >
                   <span>🌌 {{ t('Night', 'الليل') }}</span>
                   <span class="tab-count">{{ slotPeriods().night.length }}</span>
@@ -285,23 +285,22 @@ import { DateInputComponent } from "../../shared/date-input/date-input.component
           </div>
 
           <div class="compact-slot-picker" data-testid="availability-slots">
-            <label class="slot-hour-select">
-              <span>{{ t('Choose the hour', 'اختار الساعة') }}</span>
-              <select [value]="activeSlotHour()" (change)="selectedHour.set($any($event.target).value)">
-                @for (hour of availableHours(); track hour) {
-                  <option [value]="hour">{{ formatTime(hour + ':00') }}</option>
-                }
-              </select>
-            </label>
             <p>{{ t('Choose a start time below. Each card shows the end of your session.', 'اختار وقت البداية. كل موعد موضح معاه نهاية الجلسة.') }}</p>
-            <div class="slot-cards-grid compact-slot-grid">
-              @for (slot of visibleHourSlots(); track slot.startAt) {
+            <div class="slot-cards-grid compact-slot-grid appointment-choice-grid">
+              @for (slot of pagedSlots(); track slot.startAt) {
                 <button type="button" class="slot-card" [class.selected]="selectedSlot()?.startAt === slot.startAt" [attr.aria-pressed]="selectedSlot()?.startAt === slot.startAt" (click)="selectedSlot.set(slot)">
                   <div class="slot-card-primary"><span class="slot-time">{{ formatTime(slot.localStartTime) }}</span>@if (selectedSlot()?.startAt === slot.startAt) { <span aria-hidden="true">✓</span> }</div>
-                  <div class="slot-card-secondary">{{ t('to', 'إلى') }} {{ formatTime(slot.localEndTime) }}</div>
+                  <div class="slot-card-secondary">{{ t('Ends at', 'ينتهي') }} {{ formatTime(slot.localEndTime) }}</div><span class="slot-available">● {{ t('Available', 'متاح') }}</span>
                 </button>
               }
             </div>
+            @if (slotPageCount() > 1) {
+              <nav class="slot-pagination" [attr.aria-label]="t('Appointment pages', 'صفحات المواعيد')">
+                <button type="button" class="secondary" [disabled]="activeSlotPage() === 0" (click)="slotPage.set(activeSlotPage() - 1)">{{ t('Previous', 'السابق') }}</button>
+                <span>{{ activeSlotPage() + 1 }} / {{ slotPageCount() }}</span>
+                <button type="button" class="secondary" [disabled]="activeSlotPage() + 1 >= slotPageCount()" (click)="slotPage.set(activeSlotPage() + 1)">{{ t('Next', 'التالي') }}</button>
+              </nav>
+            }
           </div>
         }
       </fieldset>
@@ -546,10 +545,11 @@ export class AppointmentCreateComponent implements OnInit {
 
     return groups.filter((g) => g.slots.length > 0 && (filter === 'all' || filter === g.key));
   });
-  readonly selectedHour = signal('');
-  readonly availableHours = computed(() => [...new Set(this.filteredPeriods().flatMap(period => period.slots).map(slot => slot.localStartTime.slice(0, 2)))].sort());
-  readonly activeSlotHour = computed(() => this.availableHours().includes(this.selectedHour()) ? this.selectedHour() : this.availableHours()[0] || '');
-  readonly visibleHourSlots = computed(() => this.filteredPeriods().flatMap(period => period.slots).filter(slot => slot.localStartTime.slice(0, 2) === this.activeSlotHour()).sort((a, b) => a.startAt.localeCompare(b.startAt)));
+  readonly slotPage = signal(0);
+  readonly filteredSlots = computed(() => this.filteredPeriods().flatMap(period => period.slots).sort((a, b) => a.startAt.localeCompare(b.startAt)));
+  readonly slotPageCount = computed(() => Math.ceil(this.filteredSlots().length / 9));
+  readonly activeSlotPage = computed(() => Math.max(0, Math.min(this.slotPage(), this.slotPageCount() - 1)));
+  readonly pagedSlots = computed(() => this.filteredSlots().slice(this.activeSlotPage() * 9, this.activeSlotPage() * 9 + 9));
   readonly slotsLoading = signal(false);
   readonly saving = signal(false);
   readonly error = signal('');
@@ -781,6 +781,7 @@ export class AppointmentCreateComponent implements OnInit {
     this.slotsLoading.set(true);
     this.api.availability(x.doctorProfileId, x.date, x.durationMinutes, x.isEmergency).subscribe({
       next: (s) => {
+        this.slotPage.set(0);
         this.slots.set(s);
         this.slotsLoading.set(false);
       },
