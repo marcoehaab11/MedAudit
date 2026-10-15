@@ -224,22 +224,12 @@ import { DateInputComponent } from "../../shared/date-input/date-input.component
                   [class.active]="selectedPeriod() === 'morning'"
                   (click)="slotPage.set(0); selectedPeriod.set('morning')"
                 >
-                  <span>🌅 {{ t('Morning', 'الصباح') }}</span>
+                  <span>🌅 {{ t('Morning', 'صباحًا') }}</span>
                   <span class="tab-count">{{ slotPeriods().morning.length }}</span>
                 </button>
               }
 
-              @if (slotPeriods().afternoon.length > 0) {
-                <button
-                  type="button"
-                  class="period-tab"
-                  [class.active]="selectedPeriod() === 'afternoon'"
-                  (click)="slotPage.set(0); selectedPeriod.set('afternoon')"
-                >
-                  <span>☀️ {{ t('Afternoon', 'بعد الظهر') }}</span>
-                  <span class="tab-count">{{ slotPeriods().afternoon.length }}</span>
-                </button>
-              }
+
 
               @if (slotPeriods().evening.length > 0) {
                 <button
@@ -248,22 +238,12 @@ import { DateInputComponent } from "../../shared/date-input/date-input.component
                   [class.active]="selectedPeriod() === 'evening'"
                   (click)="slotPage.set(0); selectedPeriod.set('evening')"
                 >
-                  <span>🌙 {{ t('Evening', 'المساء') }}</span>
+                  <span>🌙 {{ t('Evening', 'مساءً') }}</span>
                   <span class="tab-count">{{ slotPeriods().evening.length }}</span>
                 </button>
               }
 
-              @if (slotPeriods().night.length > 0) {
-                <button
-                  type="button"
-                  class="period-tab"
-                  [class.active]="selectedPeriod() === 'night'"
-                  (click)="slotPage.set(0); selectedPeriod.set('night')"
-                >
-                  <span>🌌 {{ t('Night', 'الليل') }}</span>
-                  <span class="tab-count">{{ slotPeriods().night.length }}</span>
-                </button>
-              }
+
             </div>
 
             <div class="time-format-toggle" role="group">
@@ -468,82 +448,21 @@ export class AppointmentCreateComponent implements OnInit {
   readonly slots = signal<AvailabilitySlot[]>([]);
   readonly selectedSlot = signal<AvailabilitySlot | null>(null);
   readonly timeFormat = signal<'12h' | '24h'>('12h');
-  readonly selectedPeriod = signal<'all' | 'morning' | 'afternoon' | 'evening' | 'night'>('all');
+  readonly selectedPeriod = signal<'all' | 'morning' | 'evening'>('all');
   readonly patientsLoading = signal(true);
 
-  getSlotPeriod(slot: AvailabilitySlot): 'morning' | 'afternoon' | 'evening' | 'night' {
-    const hour = parseInt(slot.localStartTime.slice(0, 2), 10);
-    if (hour >= 6 && hour < 12) return 'morning';
-    if (hour >= 12 && hour < 17) return 'afternoon';
-    if (hour >= 17 && hour < 24) return 'evening';
-    return 'night';
+  getSlotPeriod(slot: AvailabilitySlot): 'morning' | 'evening' {
+    return Number(slot.localStartTime.slice(0, 2)) < 12 ? 'morning' : 'evening';
   }
-
-  readonly slotPeriods = computed(() => {
-    const list = this.slots();
-    const morning: AvailabilitySlot[] = [];
-    const afternoon: AvailabilitySlot[] = [];
-    const evening: AvailabilitySlot[] = [];
-    const night: AvailabilitySlot[] = [];
-
-    for (const s of list) {
-      const p = this.getSlotPeriod(s);
-      if (p === 'morning') morning.push(s);
-      else if (p === 'afternoon') afternoon.push(s);
-      else if (p === 'evening') evening.push(s);
-      else night.push(s);
-    }
-
-    return {
-      morning,
-      afternoon,
-      evening,
-      night,
-      total: list.length,
-    };
-  });
-
+  readonly slotPeriods = computed(() => ({
+    morning: this.slots().filter(slot => this.getSlotPeriod(slot) === 'morning'),
+    evening: this.slots().filter(slot => this.getSlotPeriod(slot) === 'evening'),
+    total: this.slots().length,
+  }));
   readonly filteredPeriods = computed(() => {
-    const p = this.slotPeriods();
-    const filter = this.selectedPeriod();
-    const groups: {
-      key: 'morning' | 'afternoon' | 'evening' | 'night';
-      label: string;
-      icon: string;
-      range: string;
-      slots: AvailabilitySlot[];
-    }[] = [
-      {
-        key: 'morning',
-        label: this.t('Morning', 'الفترة الصباحية'),
-        icon: '🌅',
-        range: this.t('06:00 AM – 12:00 PM', '06:00 ص – 12:00 م'),
-        slots: p.morning,
-      },
-      {
-        key: 'afternoon',
-        label: this.t('Afternoon', 'فترة بعد الظهر'),
-        icon: '☀️',
-        range: this.t('12:00 PM – 05:00 PM', '12:00 م – 05:00 م'),
-        slots: p.afternoon,
-      },
-      {
-        key: 'evening',
-        label: this.t('Evening', 'الفترة المسائية'),
-        icon: '🌙',
-        range: this.t('05:00 PM – 12:00 AM', '05:00 م – 12:00 ص'),
-        slots: p.evening,
-      },
-      {
-        key: 'night',
-        label: this.t('Late Night', 'الفترة الليلية'),
-        icon: '🌌',
-        range: this.t('12:00 AM – 06:00 AM', '12:00 ص – 06:00 ص'),
-        slots: p.night,
-      },
-    ];
-
-    return groups.filter((g) => g.slots.length > 0 && (filter === 'all' || filter === g.key));
+    const periods = this.slotPeriods();
+    return [{ key: 'morning', slots: periods.morning }, { key: 'evening', slots: periods.evening }]
+      .filter(period => this.selectedPeriod() === 'all' || this.selectedPeriod() === period.key);
   });
   readonly slotPage = signal(0);
   readonly filteredSlots = computed(() => this.filteredPeriods().flatMap(period => period.slots).sort((a, b) => a.startAt.localeCompare(b.startAt)));

@@ -133,8 +133,7 @@ describe('AppointmentCreateComponent', () => {
     ]);
 
     expect(component.slotPeriods().morning).toHaveLength(1);
-    expect(component.slotPeriods().afternoon).toHaveLength(1);
-    expect(component.slotPeriods().evening).toHaveLength(1);
+    expect(component.slotPeriods().evening).toHaveLength(2);
 
     component.timeFormat.set('12h');
     expect(component.i18n.language()).toBe('ar');
