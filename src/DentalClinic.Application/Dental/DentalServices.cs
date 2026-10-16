@@ -64,11 +64,22 @@ internal sealed class ExaminationCommands(
     public Task<bool> UpdateNotesAsync(Guid id, string? notes, Guid version, CancellationToken token) =>
         MutateAsync(id, Permissions.ExaminationEdit, (e, now) => { e.UpdateNotes(notes, version, now); return null; }, PlatformAuditAction.ExaminationNotesUpdated, token);
     public Task<bool> AddFindingAsync(Guid id, DentalRecordInput<DentalFindingType> input, Guid version, CancellationToken token) =>
-        MutateAsync(id, Permissions.DentalEdit, (e, now) => e.AddFinding(input.ToothNumber, input.Type, input.Surfaces, input.Notes, Actor(), version, now, input.CariesClass).Id, PlatformAuditAction.FindingAdded, token);
+        MutateAsync(id, Permissions.DentalEdit, (e, now) => input.Type is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening
+            ? e.AddWholeMouthFinding(input.Type, input.Notes, Actor(), version, now, input.CariesClass)
+            : e.AddFinding(input.ToothNumber, input.Type, input.Surfaces, input.Notes, Actor(), version, now, input.CariesClass).Id, PlatformAuditAction.FindingAdded, token);
     public Task<bool> UpdateFindingAsync(Guid id, Guid itemId, DentalRecordInput<DentalFindingType> input, Guid version, CancellationToken token) =>
         MutateAsync(id, Permissions.DentalEdit, (e, now) => { e.UpdateFinding(itemId, input.Type, input.Surfaces, input.Notes, version, now, input.CariesClass); return null; }, PlatformAuditAction.FindingUpdated, token, itemId);
     public Task<bool> RemoveFindingAsync(Guid id, Guid itemId, Guid version, CancellationToken token) =>
-        MutateAsync(id, Permissions.DentalEdit, (e, now) => { e.RemoveFinding(itemId, version, now); return null; }, PlatformAuditAction.FindingRemoved, token, itemId);
+        MutateAsync(id, Permissions.DentalEdit, (e, now) => {
+            var item = e.Findings.FirstOrDefault(x => x.Id == itemId);
+            if (item?.FindingType is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening) {
+                // First removal validates the caller version, subsequent removals use the updated version.
+                var ids = e.Findings.Where(x => x.FindingType == item.FindingType).Select(x => x.Id).ToArray();
+                e.RemoveFinding(ids[0], version, now);
+                foreach (var otherId in ids.Skip(1)) e.RemoveFinding(otherId, e.Version, now);
+            } else e.RemoveFinding(itemId, version, now);
+            return null;
+        }, PlatformAuditAction.FindingRemoved, token, itemId);
     public Task<bool> AddProcedureAsync(Guid id, DentalRecordInput<DentalProcedureType> input, Guid version, CancellationToken token) =>
         MutateAsync(id, Permissions.DentalEdit, (e, now) => e.AddProcedure(input.ToothNumber, input.Type, input.Surfaces, input.Notes, Actor(), version, now).Id, PlatformAuditAction.ProcedureAdded, token);
     public Task<bool> UpdateProcedureAsync(Guid id, Guid itemId, DentalRecordInput<DentalProcedureType> input, Guid version, CancellationToken token) =>

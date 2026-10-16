@@ -16,11 +16,29 @@ internal sealed class PatientCommandsService(
     {
         await permissions.EnsurePermissionAsync(Permissions.PatientsCreate, cancellationToken);
         PatientValidation.Profile(command.Profile, clock.UtcNow);
+        var allergies = InitialNames(command.Allergies).ToArray();
+        var conditions = InitialNames(command.MedicalConditions).ToArray();
+        var medications = InitialNames(command.Medications).ToArray();
         var tenantId = currentTenant.RequireTenantId();
         await using var transaction = await store.BeginTransactionAsync(cancellationToken);
         var patientNumber = await store.ReservePatientNumberAsync(tenantId, cancellationToken);
         var patient = NewPatient(tenantId, patientNumber, command.Profile, clock.UtcNow);
         store.AddPatient(patient);
+        foreach (var name in allergies) {
+            var item = new PatientAllergy(tenantId, patient.Id, name, null, clock.UtcNow);
+            store.AddAllergy(item);
+            store.AddAudit(new PlatformAuditLog(tenantId, currentUser.UserId, PlatformAuditAction.AllergyAdded, nameof(PatientAllergy), item.Id, clock.UtcNow, null));
+        }
+        foreach (var name in conditions) {
+            var item = new PatientMedicalCondition(tenantId, patient.Id, name, null, clock.UtcNow);
+            store.AddCondition(item);
+            store.AddAudit(new PlatformAuditLog(tenantId, currentUser.UserId, PlatformAuditAction.MedicalConditionAdded, nameof(PatientMedicalCondition), item.Id, clock.UtcNow, null));
+        }
+        foreach (var name in medications) {
+            var item = new PatientMedication(tenantId, patient.Id, name, null, null, clock.UtcNow);
+            store.AddMedication(item);
+            store.AddAudit(new PlatformAuditLog(tenantId, currentUser.UserId, PlatformAuditAction.MedicationAdded, nameof(PatientMedication), item.Id, clock.UtcNow, null));
+        }
         AddAudit(PlatformAuditAction.PatientCreated, patient.Id);
         await store.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -53,6 +71,14 @@ internal sealed class PatientCommandsService(
         AddAudit(PlatformAuditAction.PatientArchived, patient.Id);
         await store.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    private static IEnumerable<string> InitialNames(IReadOnlyCollection<string>? names)
+    {
+        if (names is null) return [];
+        if (names.Count > 100 || names.Any(name => string.IsNullOrWhiteSpace(name) || name.Trim().Length > 200))
+            throw PatientValidation.Error("MedicalHistory", "Provide up to 100 non-empty names per medical history category.");
+        return names.Select(name => name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase);
     }
 
     private void AddAudit(PlatformAuditAction action, Guid entityId) =>

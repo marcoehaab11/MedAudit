@@ -31,3 +31,5 @@ button:disabled { opacity: .5; cursor: wait; }
 .chart-legend { color:#64748b; font-size:.85rem; margin-top:.75rem; }
 
 :host ::ng-deep .planora-art { width: 100%; min-width: 0; }
+
+.tooth-problem-menu { box-sizing: border-box; width: 224px; max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow-y: auto; overscroll-behavior: contain; }

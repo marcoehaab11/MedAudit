@@ -9,6 +9,27 @@ public sealed class DentalDomainTests
     private static readonly DateTimeOffset Now = new(2026, 8, 15, 10, 0, 0, TimeSpan.Zero);
 
     [Theory]
+    [InlineData(DentalFindingType.ScalingAndPolishing)]
+    [InlineData(DentalFindingType.Whitening)]
+    public void WholeMouthFindingsCoverAllTeethWithoutDuplicates(DentalFindingType type)
+    {
+        var examination = Create();
+        examination.AddWholeMouthFinding(type, null, Actor, examination.Version, Now);
+        Assert.Equal(32, examination.Findings.Count);
+        Assert.All(examination.Findings, finding => Assert.Equal(type, finding.FindingType));
+        examination.AddWholeMouthFinding(type, null, Actor, examination.Version, Now);
+        Assert.Equal(32, examination.Findings.Count);
+    }
+    [Fact]
+    public void WholeMouthFindingStillChecksTheDraftVersionAndRejectsToothSpecificDiagnosis()
+    {
+        var examination = Create();
+        Assert.Throws<DentalConcurrencyException>(() => examination.AddWholeMouthFinding(DentalFindingType.Whitening, null, Actor, Guid.NewGuid(), Now));
+        Assert.Throws<ArgumentException>(() => examination.AddWholeMouthFinding(DentalFindingType.Caries, null, Actor, examination.Version, Now));
+        Assert.Empty(examination.Findings);
+    }
+
+    [Theory]
     [InlineData(11)]
     [InlineData(18)]
     [InlineData(21)]

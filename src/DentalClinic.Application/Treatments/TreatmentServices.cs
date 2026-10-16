@@ -137,16 +137,15 @@ internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess ac
         var catalog = await store.FindCatalogAsync(command.CatalogItemId, false, token);
         if (patient is null || !patient.IsActive || doctor is null || !doctor.IsActive || catalog is null || !catalog.IsActive)
             throw new TreatmentNotFoundException("An active patient, doctor, and catalog item are required.");
-        decimal price = command.Price.HasValue && command.Price.Value > 0
-            ? command.Price.Value
-            : (command.ToothNumbers.Count > 1 ? catalog.DefaultPrice * command.ToothNumbers.Count : catalog.DefaultPrice);
+        if (command.Price is < 0) throw new ArgumentOutOfRangeException(nameof(command), "Treatment price cannot be negative.");
+        decimal price = command.Price ?? (command.ToothNumbers.Count > 1 ? catalog.DefaultPrice * command.ToothNumbers.Count : catalog.DefaultPrice);
         Guid? planId = null; var teeth = command.ToothNumbers.ToList();
         if (command.TreatmentPlanItemId.HasValue)
         {
             var source = await store.FindPlanExecutionSourceAsync(command.TreatmentPlanItemId.Value, token) ?? throw new TreatmentNotFoundException("Treatment plan item was not found.");
             if (source.PatientId != command.PatientId || source.DoctorProfileId != command.DoctorProfileId || source.CatalogItemId != command.CatalogItemId || source.PlanStatus is not (TreatmentPlanStatus.Accepted or TreatmentPlanStatus.InProgress))
                 throw new ArgumentException("Treatment plan item does not match this execution.");
-            if (!command.Price.HasValue || command.Price.Value <= 0) price = source.Price;
+            if (!command.Price.HasValue) price = source.Price;
             planId = source.PlanId; if (teeth.Count == 0 && source.ToothNumber.HasValue) teeth.Add(source.ToothNumber.Value);
         }
         if (command.AppointmentId.HasValue)

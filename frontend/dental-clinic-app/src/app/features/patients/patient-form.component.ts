@@ -1,7 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
 import { LocalizationService } from '../../core/localization.service';
 import { parseApiError } from '../../core/error-util';
 import { PatientApiService, PatientProfile } from './patient-api.service';
@@ -379,29 +378,8 @@ export class PatientFormComponent {
         error: (err) => this.saveFailed(err),
       });
     } else {
-      this.api.create(profile).subscribe({
-        next: async (result) => {
-          const patientId = result.id;
-          const calls: Promise<unknown>[] = [];
-
-          for (const name of this.allergies) {
-            calls.push(firstValueFrom(this.api.addText(patientId, 'allergies', { name })).catch(() => {}));
-          }
-
-          for (const name of this.conditions) {
-            calls.push(firstValueFrom(this.api.addText(patientId, 'conditions', { name })).catch(() => {}));
-          }
-
-          for (const name of this.medications) {
-            calls.push(firstValueFrom(this.api.addMedication(patientId, { name })).catch(() => {}));
-          }
-
-          if (calls.length > 0) {
-            await Promise.all(calls);
-          }
-
-          this.saved(patientId);
-        },
+      this.api.create({ ...profile, allergies: [...this.allergies], medicalConditions: [...this.conditions], medications: [...this.medications] }).subscribe({
+        next: result => this.saved(result.id),
         error: (err) => this.saveFailed(err),
       });
     }

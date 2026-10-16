@@ -8,6 +8,7 @@ import { ArtRecord, renderPlanoraTooth } from './planora-dental-art';
 import { toothName } from './tooth-labels';
 
 @Component({
+  host: { '(document:click)': 'dismissMenu($event)' },
   selector: 'app-dental-chart', imports: [FormsModule], styleUrl: './dental-chart.scss',
   template: `<section class="chart-panel" aria-labelledby="chart-title">
     <header class="chart-header"><div><h2 id="chart-title">{{ t('Dental Chart', 'مخطط الأسنان') }}</h2>
@@ -41,12 +42,11 @@ import { toothName } from './tooth-labels';
                 @if (pendingWork(number)) { <small [title]="t('Pending or ongoing treatment / findings to review', 'علاج متبقي أو تشخيصات للمراجعة')">◷</small> }
               </button>
               @if (showQuickFindings && menuTooth === number) {
-                <div class="tooth-problem-menu" [style.top.px]="menuTop" [style.left.px]="menuLeft" (keydown.escape)="menuTooth = 0" role="group" [attr.aria-label]="name(number)">
+                <div class="tooth-problem-menu" [style.top.px]="menuBottom === null ? menuTop : null" [style.bottom.px]="menuBottom" [style.left.px]="menuLeft" [style.max-height.px]="menuMaxHeight" (keydown.escape)="menuTooth = 0" role="group" [attr.aria-label]="name(number)">
                   <strong>{{ name(number) }} #{{ number }}</strong>
                   @for (type of quickFindingTypes; track type) {
                     <button type="button" [disabled]="savingFinding" (click)="toothFindingSelected.emit({ toothNumber: number, type: type }); menuTooth = 0">{{ t(findingAppearance[type].en, findingAppearance[type].ar) }}</button>
                   }
-                  <button type="button" (click)="menuTooth = 0">{{ t('Close', 'إغلاق') }}</button>
                 </div>
               }
             </div>
@@ -86,12 +86,25 @@ export class DentalChartComponent {
   pendingWork(number: number) { const tooth = this.find(number); return tooth?.treatmentProgress?.some(t => [1, 2, 3].includes(t.status)) || (!tooth?.treatmentProgress?.some(t => t.status !== 5) && !!tooth?.findings.length); }
   completedWork(number: number) { return this.find(number)?.treatmentProgress?.some(t => t.status === 4); }
   find(number: number) { return this.teeth.find(x => x.toothNumber === number); }
+  menuBottom: number | null = null;
+  menuMaxHeight = 320;
   openMenu(number: number, event?: Event) {
     if (!this.showQuickFindings || this.savingFinding) return;
     this.menuTooth = number;
     const element = event?.currentTarget as HTMLElement | undefined;
-    if (element) { const rect = element.getBoundingClientRect(); this.menuLeft = Math.max(8, Math.min(rect.left, window.innerWidth - 220)); this.menuTop = Math.max(8, Math.min(rect.bottom, window.innerHeight - 340)); }
+    if (element) {
+      const rect = element.getBoundingClientRect();
+      const height = Math.min(window.innerHeight - 16, this.quickFindingTypes.length * 38 + 48);
+      this.menuLeft = Math.max(8, Math.min(rect.left, window.innerWidth - 232));
+      const below = Math.max(1, window.innerHeight - rect.bottom - 8);
+      const above = Math.max(1, rect.top - 8);
+      const fitsBelow = below >= height || below >= above;
+      this.menuBottom = fitsBelow ? null : Math.max(8, window.innerHeight - rect.top);
+      this.menuTop = Math.max(8, rect.bottom);
+      this.menuMaxHeight = Math.min(fitsBelow ? below : above, window.innerHeight - 16);
+    }
   }
+  dismissMenu(event: Event) { if (!(event.target instanceof Element) || !event.target.closest('.planora-tooth, .tooth-problem-menu')) this.menuTooth = 0; }
   closeMenu(number: number) { if (this.menuTooth === number) this.menuTooth = 0; }
   choose(number: number, event?: Event) {
     if (this.savingFinding) return;
@@ -121,12 +134,12 @@ export class DentalChartComponent {
   isSelectedTooth(number: number) { return this.multiSelect ? this.selectedTeeth.includes(number) : this.selectedNumber === number; }
   isMissing(tooth?: ToothChartSummary) { return !!tooth?.findings.includes(4) && !tooth.procedures.includes(3); }
   isCaries(tooth?: ToothChartSummary) { return !!tooth?.findings.includes(2); }
-  isEndo(tooth?: ToothChartSummary) { return !!tooth && (tooth.hasEndodonticRecord || tooth.procedures.includes(4) || tooth.findings.some(x => [8,10].includes(x))); }
-  isCrown(tooth?: ToothChartSummary) { return !!tooth && (tooth.procedures.includes(5) || tooth.findings.some(x => [9,10].includes(x))); }
+  isEndo(tooth?: ToothChartSummary) { return !!tooth && (tooth.hasEndodonticRecord || tooth.procedures.includes(4) || tooth.findings.some(x => [8,10,11].includes(x))); }
+  isCrown(tooth?: ToothChartSummary) { return !!tooth && (tooth.procedures.includes(5) || tooth.findings.some(x => [9,10,11].includes(x))); }
   planoraArt(number: number, lower: boolean): SafeHtml {
     const tooth = this.find(number);
     const record: ArtRecord = { treatment: tooth?.procedures.includes(3) ? 'implant' : this.isCrown(tooth) ? 'crown' : this.isEndo(tooth) ? 'root-canal' : tooth?.procedures.includes(1) ? 'filling' : 'none',
-      status: tooth?.findings.some(x => [8,9,10].includes(x)) ? 'planned' : 'existing', surfaces: ['O'], caries: this.isCaries(tooth), endo: this.isEndo(tooth), crown: this.isCrown(tooth) };
+      status: tooth?.findings.some(x => [8,9,10,11].includes(x)) ? 'planned' : 'existing', surfaces: ['O'], caries: this.isCaries(tooth), endo: this.isEndo(tooth), crown: this.isCrown(tooth) };
     const key = JSON.stringify([number, lower, record]);
     let art = this.artCache.get(key);
     if (!art) { art = this.sanitizer.bypassSecurityTrustHtml(renderPlanoraTooth(number, record, lower)); this.artCache.set(key, art); }

@@ -6,6 +6,7 @@ import { ExaminationComponent } from './examination.component';
 
 describe('ExaminationComponent', () => {
   beforeEach(async () => {
+    try { window.localStorage.removeItem('medaudit.language'); } catch {}
     await TestBed.configureTestingModule({
       imports: [ExaminationComponent],
       providers: [
@@ -25,6 +26,84 @@ describe('ExaminationComponent', () => {
     http.verify();
   });
 
+  it('stores the filling class for that tooth before executing its service', async () => {
+    const c = TestBed.createComponent(ExaminationComponent).componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    c.catalog.set([{ id: 'fill', type: 1, name: 'Filling', code: 'F', defaultPrice: 100, isActive: true }]);
+    c.selectedTeeth = [24]; c.treatmentTeeth = [24]; Object.assign(c.toothService(24), { catalogId: 'fill', price: 100, cariesClass: 2 });
+    const pending = c.executeToothService(24);
+    http.expectOne('/api/examinations/e1').flush(examination());
+    await Promise.resolve(); await Promise.resolve();
+    const finding = http.expectOne('/api/examinations/e1/findings'); expect(finding.request.body).toMatchObject({ toothNumber: 24, type: 2, cariesClass: 2 }); finding.flush(null);
+    await Promise.resolve(); await Promise.resolve();
+    http.expectOne('/api/examinations/e1').flush({ ...examination(), version: 'v2', findings: [...examination().findings, { ...examination().findings[0], id: 'f24', toothNumber: 24, cariesClass: 2 }] });
+    await Promise.resolve(); await Promise.resolve();
+    const create = http.expectOne('/api/treatments'); expect(create.request.body.notes).toContain('Class II'); expect(create.request.body.toothNumbers).toEqual([24]); create.flush({ id: 'filling' });
+    await Promise.resolve(); await Promise.resolve(); http.expectOne('/api/treatments/filling').flush({ id: 'filling', status: 2, version: 'v1' });
+    await Promise.resolve(); await Promise.resolve(); http.expectOne('/api/treatments/filling/complete').flush(null);
+    await pending; flushAuxiliary(http); expect(c.examination()!.findings.find(f => f.toothNumber === 24)!.cariesClass).toBe(2);
+  });
+  it('records whole-mouth diagnosis in one request and keeps it out of individual tooth selection', async () => {
+    const c = TestBed.createComponent(ExaminationComponent).componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    const pending = c.recordWholeMouthFinding(12);
+    const create = http.expectOne('/api/examinations/e1/findings'); expect(create.request.body.type).toBe(12); create.flush(null);
+    await Promise.resolve(); await Promise.resolve();
+    const globals = Array.from({ length: 32 }, (_, index) => ({ ...examination().findings[0], id: 'global' + index, toothNumber: (Math.floor(index / 8) + 1) * 10 + index % 8 + 1, type: 12 }));
+    http.expectOne('/api/examinations/e1').flush({ ...examination(), version: 'v2', findings: [...examination().findings, ...globals] });
+    await pending;
+    expect(c.displayedFindings().filter(f => f.type === 12)).toHaveLength(1);
+    expect(c.surveyTeeth()).toEqual([36]);
+  });
+  it('keeps a different service and price for each tooth in the same visit', async () => {
+    const fixture = TestBed.createComponent(ExaminationComponent);
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    const c = fixture.componentInstance;
+    c.catalog.set([{ id: 'fill', type: 1, name: 'Filling', code: 'F', defaultPrice: 100, isActive: true }, { id: 'crown', type: 5, name: 'Crown', code: 'C', defaultPrice: 500, isActive: true }]);
+    c.selectedTeeth = [24, 36]; c.treatmentTeeth = [24, 36]; c.step.set(3);
+    c.toothService(24).catalogId = 'fill'; c.selectToothService(24);
+    c.toothService(36).catalogId = 'crown'; c.selectToothService(36);
+    fixture.detectChanges(); expect(fixture.nativeElement.querySelectorAll('[data-tooth]').length).toBe(2);
+    const pending = c.executeToothService(24);
+    const create = http.expectOne('/api/treatments'); expect(create.request.body).toMatchObject({ catalogItemId: 'fill', toothNumbers: [24], price: 100 }); create.flush({ id: 'tr24' });
+    await Promise.resolve(); await Promise.resolve();
+    http.expectOne('/api/treatments/tr24').flush({ id: 'tr24', status: 2, version: 'v1' });
+    await Promise.resolve(); await Promise.resolve();
+    http.expectOne('/api/treatments/tr24/complete').flush(null);
+    await pending; flushAuxiliary(http);
+    expect(c.treatmentTeeth).toEqual([36]); expect(c.toothService(36)).toMatchObject({ catalogId: 'crown', price: 500 });
+    expect(c.examination()!.findings).toHaveLength(1);
+  });
+  it('resumes an already-created service without posting another treatment', async () => {
+    const c = TestBed.createComponent(ExaminationComponent).componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    c.selectedTeeth = [36]; c.treatmentTeeth = [36];
+    Object.assign(c.toothService(36), { catalogId: 'cat-1', price: 100, treatmentId: 'existing' });
+    const pending = c.executeToothService(36);
+    http.expectNone(r => r.method === 'POST' && r.url === '/api/treatments');
+    http.expectOne('/api/treatments/existing').flush({ id: 'existing', status: 2, version: 'v1' });
+    await Promise.resolve(); await Promise.resolve();
+    http.expectOne('/api/treatments/existing/complete').flush(null);
+    await pending; flushAuxiliary(http); expect(c.treatmentTeeth).toEqual([]);
+  });
+  it('bills a whole-mouth service once without requiring selected teeth', async () => {
+    const c = TestBed.createComponent(ExaminationComponent).componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    c.wholeMouthTreatment = true;
+    c.catalog.set([{ id: 'cat-1', type: 6, name: 'Scaling & polishing', code: 'SP', defaultPrice: 400, isActive: true }]);
+    Object.assign(c.toothService(0), { catalogId: 'cat-1', price: 400 });
+    const pending = c.executeToothService(0);
+    const create = http.expectOne('/api/treatments'); expect(create.request.body.toothNumbers).toHaveLength(32); expect(create.request.body.price).toBe(400); create.flush({ id: 'whole' });
+    await Promise.resolve(); await Promise.resolve();
+    http.expectOne('/api/treatments/whole').flush({ id: 'whole', status: 2, version: 'v1' });
+    await Promise.resolve(); await Promise.resolve(); http.expectOne('/api/treatments/whole/complete').flush(null);
+    await pending; flushAuxiliary(http); expect(c.wholeMouthTreatment).toBe(false);
+  });
   it('does not carry diagnosed teeth into the next quick diagnosis', async () => {
     const fixture = TestBed.createComponent(ExaminationComponent);
     const http = TestBed.inject(HttpTestingController);
@@ -590,7 +669,7 @@ function flushAuxiliary(http: HttpTestingController) {
   }
   const catReq = http.match('/api/treatment-catalog?includeInactive=false');
   for (const r of catReq) {
-    r.flush([{ id: 'cat-1', name: 'Implant', defaultPrice: 8000, active: true }]);
+    r.flush([{ id: 'cat-1', type: 3, name: 'Implant', code: 'IM', defaultPrice: 8000, isActive: true }]);
   }
   const trReq = http.match((req) => req.url.includes('/api/treatments') && req.method === 'GET');
   for (const r of trReq) {

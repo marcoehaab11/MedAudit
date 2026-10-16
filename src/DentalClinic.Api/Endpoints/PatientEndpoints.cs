@@ -65,7 +65,7 @@ internal static class PatientEndpoints
     private static async Task<IResult> CreateAsync(
         PatientProfileRequest request, IPatientCommands service, CancellationToken cancellationToken)
     {
-        var id = await service.CreateAsync(new CreatePatientCommand(ToInput(request)), cancellationToken);
+        var id = await service.CreateAsync(new CreatePatientCommand(ToInput(request), request.Allergies, request.MedicalConditions, request.Medications), cancellationToken);
         return Results.Created($"/api/patients/{id:D}", new { id });
     }
 

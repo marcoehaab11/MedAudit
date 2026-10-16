@@ -45,3 +45,23 @@
 - [x] كروت بثلاثة أعمدة على الكمبيوتر وعمودين للموبايل، مع فلاتر الفترات و9 مواعيد بكل صفحة وإتاحة باقي المواعيد بالتنقل.
 
 تحقق تحديث 15 أكتوبر: نجح بناء الواجهة و5 اختبارات حجز و8 اختبارات لتقسيم المواعيد والتعارضات والطوارئ.
+
+## مهام 16 أكتوبر 2026
+
+- [x] تثبيت اختيار اللغة بعد الريفريش مع عربي افتراضي.
+- [x] إنشاء المريض والحساسية والأمراض والأدوية في عملية واحدة مع ظهور التنبيه الطبي.
+- [x] قائمة تشخيص تناسب حدود الشاشة بدون زر إغلاق، وسهم التالي من المخطط.
+- [x] خدمة وسعر وحالة مستقلة لكل سن مختار في جلسة اليوم.
+- [x] تصنيف Class I–VI للحشو العادي حسب السن، وحفظه في السجل.
+- [x] علاج جذور + حشو عادي، وإضافة علاج جذور + دعامة + كراون.
+- [x] تنظيف الجير والتلميع والتبييض للفم بالكامل دون اختيار سن، مع سعر خدمة واحدة.
+- [x] اختبار الحفظ والصلاحيات واستكمال الإجراء بدون تكرار الفواتير عند إعادة المحاولة ثم الرفع.
+
+تفاصيل خطوات حشو العصب الجديدة غير محددة بعد؛ بقي المسار السريري الحالي دون اختراع خطوات طبية.
+
+
+Validation (2026-10-16): 157 backend unit tests passed; API build passed with zero warnings/errors; EF reports no pending model changes. Apply migration `20261016090000_ExpandFindingTypesAndWholeMouth` when deploying. PostgreSQL integration was unavailable because the Docker engine could not start; the migration was not applied to a local database in this session.
+
+Frontend validation: all 48 distinct targeted tests passed (40 non-chart tests plus the final 8-test chart rerun), covering language persistence, medical alerts, per-tooth services, filling classes, whole-mouth billing and appointment regression checks.
+
+Production frontend build passed. Release includes only the clinical workflow fixes listed above.

@@ -4,9 +4,23 @@ import { DentalChartComponent } from './dental-chart.component';
 
 describe('DentalChartComponent', () => {
   beforeEach(async () => {
+    try { window.localStorage.removeItem('medaudit.language'); } catch {}
     await TestBed.configureTestingModule({ imports: [DentalChartComponent] }).compileComponents();
   });
 
+  it('keeps the lower-jaw diagnosis menu inside the viewport without a close option', () => {
+    const fixture = TestBed.createComponent(DentalChartComponent);
+    fixture.componentInstance.showQuickFindings = true;
+    fixture.detectChanges();
+    const tooth = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('button[aria-label*="#36"]')!;
+    tooth.getBoundingClientRect = () => ({ top: window.innerHeight - 120, bottom: window.innerHeight - 20, left: 20, right: 80, width: 60, height: 100, x: 20, y: window.innerHeight - 120, toJSON: () => ({}) });
+    tooth.dispatchEvent(new FocusEvent('focus'));
+    fixture.detectChanges();
+    const menu = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.tooth-problem-menu')!;
+    expect(parseFloat(menu.style.bottom)).toBeGreaterThan(0);
+    expect(parseFloat(menu.style.maxHeight)).toBeLessThanOrEqual(window.innerHeight - 16);
+    expect(menu.textContent).not.toContain('إغلاق'); expect(menu.textContent).not.toContain('Close');
+  });
   it('shows both completed and pending work on the same tooth', () => {
     const fixture = TestBed.createComponent(DentalChartComponent);
     fixture.componentInstance.teeth = [{ toothId: 't36', toothNumber: 36, findings: [10], procedures: [4], hasEndodonticRecord: true, treatmentProgress: [{ id: 'root', name: 'Root canal', type: 4, status: 4 }, { id: 'crown', name: 'Crown', type: 5, status: 1 }] }];

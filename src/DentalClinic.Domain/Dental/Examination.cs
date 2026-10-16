@@ -39,10 +39,38 @@ public sealed class Examination : TenantOwnedEntity
 
     public DentalFinding AddFinding(int toothNumber, DentalFindingType type, IEnumerable<ToothSurface> surfaces,
         string? notes, Guid actorId, Guid expectedVersion, DateTimeOffset now, int? cariesClass = null)
-    { EnsureEditable(expectedVersion); var item = new DentalFinding(TenantId, Id, PatientId, toothNumber, type, surfaces, notes, actorId, now, cariesClass); findings.Add(item); Touch(now); return item; }
+    {
+        EnsureEditable(expectedVersion);
+        if (type is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening)
+            throw new ArgumentException("Use the whole-mouth finding command.", nameof(type));
+        var item = new DentalFinding(TenantId, Id, PatientId, toothNumber, type, surfaces, notes, actorId, now, cariesClass);
+        findings.Add(item); Touch(now); return item;
+    }
+    public Guid? AddWholeMouthFinding(DentalFindingType type, string? notes, Guid actorId, Guid expectedVersion, DateTimeOffset now, int? cariesClass = null)
+    {
+        EnsureEditable(expectedVersion);
+        if (type is not (DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening))
+            throw new ArgumentException("This finding must be recorded for an individual tooth.", nameof(type));
+        if (cariesClass.HasValue) throw new ArgumentException("Caries class does not apply to whole-mouth services.", nameof(cariesClass));
+        Guid? firstId = null;
+        foreach (var tooth in PermanentToothCatalog.All) {
+            if (findings.Any(x => x.ToothNumber == tooth.Number && x.FindingType == type)) continue;
+            var item = new DentalFinding(TenantId, Id, PatientId, tooth.Number, type, [], notes, actorId, now);
+            findings.Add(item); firstId ??= item.Id;
+        }
+        if (firstId.HasValue) Touch(now);
+        return firstId;
+    }
+
     public void UpdateFinding(Guid id, DentalFindingType type, IEnumerable<ToothSurface> surfaces,
         string? notes, Guid expectedVersion, DateTimeOffset now, int? cariesClass = null)
-    { EnsureEditable(expectedVersion); Find(findings, id).Update(type, surfaces, notes, now, cariesClass); Touch(now); }
+    {
+        EnsureEditable(expectedVersion);
+        var item = Find(findings, id);
+        if (type is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening || item.FindingType is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening)
+            throw new DentalStateException("Whole-mouth findings must be changed using the whole-mouth controls.");
+        item.Update(type, surfaces, notes, now, cariesClass); Touch(now);
+    }
     public void RemoveFinding(Guid id, Guid expectedVersion, DateTimeOffset now)
     { EnsureEditable(expectedVersion); findings.Remove(Find(findings, id)); Touch(now); }
 

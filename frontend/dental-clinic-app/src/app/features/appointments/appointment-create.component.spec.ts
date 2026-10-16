@@ -6,6 +6,7 @@ import { AppointmentCreateComponent } from './appointment-create.component';
 
 describe('AppointmentCreateComponent', () => {
   beforeEach(async () => {
+    try { window.localStorage.removeItem('medaudit.language'); } catch {}
     await TestBed.configureTestingModule({
       imports: [AppointmentCreateComponent],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],

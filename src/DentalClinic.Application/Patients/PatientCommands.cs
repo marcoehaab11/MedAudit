@@ -21,7 +21,7 @@ public sealed record PatientProfileInput(
     MaritalStatus? MaritalStatus,
     string? Notes);
 
-public sealed record CreatePatientCommand(PatientProfileInput Profile);
+public sealed record CreatePatientCommand(PatientProfileInput Profile, IReadOnlyCollection<string>? Allergies = null, IReadOnlyCollection<string>? MedicalConditions = null, IReadOnlyCollection<string>? Medications = null);
 public sealed record UpdatePatientCommand(Guid PatientId, PatientProfileInput Profile);
 public sealed record MedicalTextCommand(string Name, string? Notes);
 public sealed record MedicationCommand(string Name, string? Dosage, string? Notes);

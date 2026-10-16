@@ -17,7 +17,7 @@ public sealed record PatientProfileRequest(
     string? Nationality,
     string? Occupation,
     int? MaritalStatus,
-    string? Notes);
+    string? Notes, IReadOnlyCollection<string>? Allergies = null, IReadOnlyCollection<string>? MedicalConditions = null, IReadOnlyCollection<string>? Medications = null);
 
 public sealed record MedicalTextRequest(string Name, string? Notes);
 public sealed record MedicationRequest(string Name, string? Dosage, string? Notes);
