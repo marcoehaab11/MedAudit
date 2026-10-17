@@ -124,7 +124,7 @@ export class PatientApiService {
   create(profile: PatientProfile & { allergies?: string[]; medicalConditions?: string[]; medications?: string[] }) {
     return this.http.post<{ id: string }>('/api/patients', profile).pipe(tap(() => this.invalidateCache()));
   }
-  update(id: string, profile: PatientProfile) {
+  update(id: string, profile: PatientProfile & { allergies?: string[]; medicalConditions?: string[]; medications?: string[] }) {
     return this.http.put<void>(`/api/patients/${id}`, profile).pipe(tap(() => this.invalidateCache()));
   }
   archive(id: string) {

@@ -379,10 +379,12 @@ export class TagInputComponent implements ControlValueAccessor {
 
   onBlur(): void {
     this.isFocused.set(false);
-    if (this.inputValue.trim()) {
-      this.addTag(this.inputValue);
-    }
+    this.commitPending();
     this.onTouched();
+  }
+
+  commitPending(): void {
+    if (this.inputValue.trim()) this.addTag(this.inputValue);
   }
 
   private emitChange(): void {

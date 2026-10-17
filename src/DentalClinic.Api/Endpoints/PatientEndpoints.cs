@@ -71,7 +71,7 @@ internal static class PatientEndpoints
 
     private static async Task<IResult> UpdateAsync(
         Guid id, PatientProfileRequest request, IPatientCommands service, CancellationToken cancellationToken) =>
-        await service.UpdateAsync(new UpdatePatientCommand(id, ToInput(request)), cancellationToken)
+        await service.UpdateAsync(new UpdatePatientCommand(id, ToInput(request), request.Allergies, request.MedicalConditions, request.Medications), cancellationToken)
             ? Results.NoContent() : Results.NotFound();
 
     private static async Task<IResult> ArchiveAsync(Guid id, IPatientCommands service, CancellationToken cancellationToken) =>

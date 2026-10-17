@@ -49,9 +49,32 @@ internal sealed class PatientCommandsService(
     {
         await permissions.EnsurePermissionAsync(Permissions.PatientsEdit, cancellationToken);
         PatientValidation.Profile(command.Profile, clock.UtcNow);
+        var hasMedicalChanges = command.Allergies is not null || command.MedicalConditions is not null || command.Medications is not null;
+        if (hasMedicalChanges) {
+            await permissions.EnsurePermissionAsync(Permissions.PatientsViewMedicalHistory, cancellationToken);
+            await permissions.EnsurePermissionAsync(Permissions.PatientsEditMedicalHistory, cancellationToken);
+        }
+        var allergies = command.Allergies is null ? null : InitialNames(command.Allergies).ToArray();
+        var conditions = command.MedicalConditions is null ? null : InitialNames(command.MedicalConditions).ToArray();
+        var medications = command.Medications is null ? null : InitialNames(command.Medications).ToArray();
+        await using var transaction = await store.BeginTransactionAsync(cancellationToken);
         var patient = await store.FindPatientAsync(command.PatientId, cancellationToken);
         if (patient is null) return false;
         EnsureActive(patient);
+        if (hasMedicalChanges) {
+            var previous = await store.GetDetailsAsync(patient.Id, true, true, cancellationToken)
+                ?? throw PatientValidation.Error("Patient", "Patient not found.");
+            var tenantId = currentTenant.RequireTenantId();
+            await SyncNamesAsync(allergies, previous.Allergies.Select(x => (x.Id, x.Name)),
+                id => store.FindAllergyAsync(patient.Id, id, cancellationToken), store.RemoveAllergy,
+                name => { var item = new PatientAllergy(tenantId, patient.Id, name, null, clock.UtcNow); store.AddAllergy(item); MedicalAudit(PlatformAuditAction.AllergyAdded, item.Id); }, PlatformAuditAction.AllergyRemoved);
+            await SyncNamesAsync(conditions, previous.MedicalConditions.Select(x => (x.Id, x.Name)),
+                id => store.FindConditionAsync(patient.Id, id, cancellationToken), store.RemoveCondition,
+                name => { var item = new PatientMedicalCondition(tenantId, patient.Id, name, null, clock.UtcNow); store.AddCondition(item); MedicalAudit(PlatformAuditAction.MedicalConditionAdded, item.Id); }, PlatformAuditAction.MedicalConditionRemoved);
+            await SyncNamesAsync(medications, previous.Medications.Select(x => (x.Id, x.Name)),
+                id => store.FindMedicationAsync(patient.Id, id, cancellationToken), store.RemoveMedication,
+                name => { var item = new PatientMedication(tenantId, patient.Id, name, null, null, clock.UtcNow); store.AddMedication(item); MedicalAudit(PlatformAuditAction.MedicationAdded, item.Id); }, PlatformAuditAction.MedicationRemoved);
+        }
         var p = command.Profile;
         patient.Update(p.FirstName, p.MiddleName, p.LastName, p.Gender, p.DateOfBirth, p.Phone,
             p.AlternatePhone, p.Email, p.Address, p.City, p.Country, p.EmergencyContactName,
@@ -59,8 +82,23 @@ internal sealed class PatientCommandsService(
             patient.MedicalNotes, clock.UtcNow);
         AddAudit(PlatformAuditAction.PatientUpdated, patient.Id);
         await store.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return true;
     }
+
+    private async Task SyncNamesAsync<T>(string[]? requested, IEnumerable<(Guid Id, string Name)> previous,
+        Func<Guid, Task<T?>> find, Action<T> remove, Action<string> add, PlatformAuditAction removedAction) where T : class
+    {
+        if (requested is null) return;
+        var existing = previous.ToArray();
+        foreach (var item in existing.Where(x => !requested.Contains(x.Name, StringComparer.OrdinalIgnoreCase))) {
+            if (await find(item.Id) is { } entity) { remove(entity); MedicalAudit(removedAction, item.Id); }
+        }
+        foreach (var name in requested.Where(name => !existing.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))) add(name);
+    }
+
+    private void MedicalAudit(PlatformAuditAction action, Guid id) => store.AddAudit(new PlatformAuditLog(
+        currentTenant.RequireTenantId(), currentUser.UserId, action, "PatientMedicalHistory", id, clock.UtcNow, null));
 
     public async Task<bool> ArchiveAsync(Guid patientId, CancellationToken cancellationToken)
     {

@@ -65,3 +65,19 @@ Validation (2026-10-16): 157 backend unit tests passed; API build passed with ze
 Frontend validation: all 48 distinct targeted tests passed (40 non-chart tests plus the final 8-test chart rerun), covering language persistence, medical alerts, per-tooth services, filling classes, whole-mouth billing and appointment regression checks.
 
 Production frontend build passed. Release includes only the clinical workflow fixes listed above.
+
+## متابعة 17 أكتوبر 2026
+
+الخطة: تتبع المدخلات الطبية من الحقول إلى الحفظ والقراءة، ثم إصلاح خدمات الأسنان والفم، ثم فترات الحجز، ثم إظهار تقدم العلاج في الجلسة التالية، وأخيرًا التحقق من الواجهة والخادم.
+
+- [x] الحساسية والأمراض والأدوية: اعتماد النص المكتوب قبل الحفظ، وحفظ التعديلات من نموذج المريض مع الصلاحيات، وقراءة التنبيهات للدكتور.
+- [x] التأكد من توفر الزراعة لكل سن وتصنيف التقويم ضمن خدمات الفم بالكامل.
+- [x] الحجز السريع: صباحًا ومساءً فقط، وإخفاء الفترة الخالية.
+- [x] الجلسة التالية: إظهار العلاج الجاري وملاحظات المتبقي ورابط استكمال نفس العلاج.
+- [ ] مراجعة شكل كروت مواعيد الحجز السريع بصريًا؛ يظل هذا البند غير مكتمل حتى المراجعة، حتى لو نجحت الاختبارات الآلية.
+
+تم تجهيز الكروت بثلاثة أعمدة (عمودين للموبايل)، بداية ونهاية الموعد، وتسعة مواعيد في الصفحة لكل فترة. لا تُعد هذه الملاحظة إثبات مراجعة بصرية.
+
+Validation: 159 backend unit tests and 45 targeted frontend tests passed. API and integration-test projects built with zero warnings/errors. PostgreSQL execution remains unverified because Docker engine is unavailable. No new database migration is required for this update.
+
+Production frontend build passed for the final source. Appointment-card visual review remains unchecked as requested.

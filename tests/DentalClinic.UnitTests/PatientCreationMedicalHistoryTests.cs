@@ -34,8 +34,44 @@ public sealed class PatientCreationMedicalHistoryTests
         Assert.False(((StoreSpy)store).Transaction.Committed);
     }
     private static PatientProfileInput Profile() => new("Mona", null, "Hassan", PatientGender.Female, new(1990, 1, 1), "01012345678", null, null, null, null, null, null, null, null, null, null, null);
-    private static ServiceProvider Services(IPatientStore store) => new ServiceCollection().AddApplication().AddSingleton(store)
-        .AddSingleton<IPermissionService>(new CreateOnly()).AddSingleton<ICurrentTenant>(new Tenant())
+    [Fact]
+    public async Task EditingProfileSavesMedicalChangesWithoutReplacingUnchangedRecordDetails()
+    {
+        var store = DispatchProxy.Create<IPatientStore, StoreSpy>();
+        using var services = Services(store, new AllowAll());
+        var commands = services.GetRequiredService<IPatientCommands>();
+        var id = await commands.CreateAsync(new(Profile(), ["Latex"], ["Diabetes"], ["Metformin"]), CancellationToken.None);
+        var spy = (StoreSpy)store;
+        var original = Assert.Single(spy.Allergies);
+        await commands.UpdateAsync(new(id, Profile(), ["latex", "Penicillin"], [], ["Metformin"]), CancellationToken.None);
+        Assert.Contains(spy.Allergies, x => x.Id == original.Id);
+        Assert.Equal(2, spy.Allergies.Count); Assert.Empty(spy.Conditions);
+        var details = await services.GetRequiredService<IPatientQueries>().GetAsync(id, CancellationToken.None);
+        Assert.Equal(2, details!.Allergies.Count); Assert.Empty(details.MedicalConditions);
+        Assert.Equal("Metformin", Assert.Single(details.Medications).Name);
+        Assert.Equal(2, spy.SaveCount);
+    }
+
+    [Fact]
+    public async Task ProfileEditCannotBypassMedicalHistoryPermissions()
+    {
+        var store = DispatchProxy.Create<IPatientStore, StoreSpy>();
+        using var services = Services(store, new ProfileOnly());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => services.GetRequiredService<IPatientCommands>().UpdateAsync(new(Guid.NewGuid(), Profile(), ["Latex"]), CancellationToken.None));
+        Assert.Equal(0, ((StoreSpy)store).SaveCount);
+    }
+
+    private sealed class ProfileOnly : IPermissionService {
+        public Task<bool> HasPermissionAsync(string permission, CancellationToken cancellationToken) => Task.FromResult(permission == Permissions.PatientsEdit);
+        public Task EnsurePermissionAsync(string permission, CancellationToken cancellationToken) => permission == Permissions.PatientsEdit ? Task.CompletedTask : throw new InvalidOperationException("Medical permission required");
+    }
+
+    private sealed class AllowAll : IPermissionService {
+        public Task<bool> HasPermissionAsync(string permission, CancellationToken cancellationToken) => Task.FromResult(true);
+        public Task EnsurePermissionAsync(string permission, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+    private static ServiceProvider Services(IPatientStore store, IPermissionService? permissions = null) => new ServiceCollection().AddApplication().AddSingleton(store)
+        .AddSingleton<IPermissionService>(permissions ?? new CreateOnly()).AddSingleton<ICurrentTenant>(new Tenant())
         .AddSingleton<ICurrentUser>(new Actor()).AddSingleton<ISystemClock>(new Clock()).BuildServiceProvider();
     private sealed class CreateOnly : IPermissionService {
         public Task<bool> HasPermissionAsync(string permission, CancellationToken cancellationToken) => Task.FromResult(permission == Permissions.PatientsCreate);
@@ -58,6 +94,14 @@ public sealed class PatientCreationMedicalHistoryTests
         public int SaveCount { get; private set; }
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) {
             switch (targetMethod?.Name) {
+                case nameof(IPatientStore.FindPatientAsync): return Task.FromResult(Patients.FirstOrDefault(x => x.Id == (Guid)args![0]!));
+                case nameof(IPatientStore.GetDetailsAsync): {
+                    var patient = Patients.Single(); var p = Profile(); var now = new Clock().UtcNow;
+                    return Task.FromResult<PatientDetails?>(new(patient.Id, patient.PatientNumber, p.FirstName, p.MiddleName, p.LastName, p.Gender, p.DateOfBirth, p.Phone, p.AlternatePhone, p.Email, p.Address, p.City, p.Country, p.EmergencyContactName, p.EmergencyContactPhone, p.Nationality, p.Occupation, p.MaritalStatus, p.Notes, null, PatientStatus.Active, now, now, true, true,
+                        Allergies.Select(x => new MedicalTextItem(x.Id, x.Name, x.Notes, now, now)).ToArray(), Conditions.Select(x => new MedicalTextItem(x.Id, x.Name, x.Notes, now, now)).ToArray(), Medications.Select(x => new MedicationItem(x.Id, x.Name, x.Dosage, x.Notes, now, now)).ToArray(), []));
+                }
+                case nameof(IPatientStore.FindConditionAsync): return Task.FromResult(Conditions.FirstOrDefault(x => x.Id == (Guid)args![1]!));
+                case nameof(IPatientStore.RemoveCondition): Conditions.Remove((PatientMedicalCondition)args![0]!); return null;
                 case nameof(IPatientStore.BeginTransactionAsync): return Task.FromResult<IPatientTransaction>(Transaction);
                 case nameof(IPatientStore.ReservePatientNumberAsync): return Task.FromResult("P-000001");
                 case nameof(IPatientStore.AddPatient): Patients.Add((Patient)args![0]!); return null;

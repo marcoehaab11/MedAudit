@@ -23,9 +23,40 @@ describe('ExaminationComponent', () => {
   afterEach(() => {
     const http = TestBed.inject(HttpTestingController);
     for (const r of http.match('/api/patients/p1/dental')) r.flush({ patientId: 'p1', teeth: [], recentExaminations: [] });
+    for (const r of http.match(r => r.url === '/api/treatments' && r.method === 'GET')) r.flush({ items: [], totalPages: 1 });
     http.verify();
   });
 
+  it('shows the persisted remaining work immediately when opening the next visit', () => {
+    const fixture = TestBed.createComponent(ExaminationComponent); const c = fixture.componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    http.expectOne(r => r.url === '/api/treatments' && r.params.get('page') === '1').flush({ items: [], totalPages: 2 });
+    http.expectOne(r => r.url === '/api/treatments' && r.params.get('page') === '2').flush({ items: [{ id: 'prior', treatmentName: 'Root canal', toothNumbers: [36], status: 3, notes: 'Remaining: crown after healing', price: 500 }], totalPages: 2 });
+    flushAuxiliary(http); fixture.detectChanges();
+    const panel = fixture.nativeElement.querySelector('.continuing-work');
+    expect(panel.textContent).toContain('Remaining: crown after healing');
+    expect(panel.querySelector('a').getAttribute('href')).toBe('/treatments/prior');
+    expect(c.treatmentTeeth).toEqual([]);
+  });
+  it('groups quick-booking slots into morning and evening only and paginates cards', () => {
+    const c = TestBed.createComponent(ExaminationComponent).componentInstance; const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    const slots = Array.from({ length: 12 }, (_, i) => ({ startAt: 's' + i, endAt: 'e' + i, localDate: '2026-10-18', localStartTime: i === 0 ? '09:00' : '13:00', localEndTime: '14:00', timeZone: 'Africa/Cairo' }));
+    c.availableSlots.set(slots);
+    expect(c.slotPeriods().morning).toHaveLength(1); expect(c.slotPeriods().evening).toHaveLength(11);
+    expect(c.slotPeriods()).not.toHaveProperty('afternoon');
+    expect(c.followUpSlots('evening')).toHaveLength(9); c.changeFollowUpPage('evening', 1);
+    expect(c.followUpSlots('evening')).toHaveLength(2);
+    c.availableSlots.set(slots.slice(1)); expect(c.slotPeriods().morning).toEqual([]);
+  });
+  it('offers implants per tooth and orthodontics only as a whole-mouth service', () => {
+    const c = TestBed.createComponent(ExaminationComponent).componentInstance; const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    c.catalog.set([{ id: 'implant', type: 3, code: 'IMPL-01', name: 'Dental Implant', defaultPrice: 8000, isActive: true }, { id: 'ortho', type: 6, code: 'ORTHO-01', name: 'Orthodontic Treatment', defaultPrice: 15000, isActive: true }]);
+    expect(c.toothServiceCatalog(36).map(x => x.id)).toEqual(['implant']);
+    expect(c.toothServiceCatalog(0).map(x => x.id)).toEqual(['ortho']);
+  });
   it('stores the filling class for that tooth before executing its service', async () => {
     const c = TestBed.createComponent(ExaminationComponent).componentInstance;
     const http = TestBed.inject(HttpTestingController);

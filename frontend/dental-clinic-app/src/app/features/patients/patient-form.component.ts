@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ViewChildren, QueryList } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
@@ -209,7 +209,7 @@ export const COMMON_MEDICATIONS: TagSuggestion[] = [
             {{ t('Record allergies, chronic conditions, and current medications to alert doctors during clinical examination.', 'سجل الحساسية، الأمراض المزمنة، والأدوية الحالية لتنبيه الطبيب تلقائياً أثناء الكشف السريري.') }}
           </p>
 
-          <div class="medical-fields-stack">
+          <fieldset class="medical-fields-stack" [disabled]="!!id && !canEditMedical">
             <!-- 1. Allergies -->
             <div class="med-field-group">
               <label class="field-label-danger">
@@ -248,7 +248,7 @@ export const COMMON_MEDICATIONS: TagSuggestion[] = [
                 ></app-tag-input>
               </label>
             </div>
-          </div>
+          </fieldset>
         </section>
 
         <section class="panel">
@@ -293,7 +293,9 @@ export class PatientFormComponent {
   readonly loading = signal(!!this.id);
   readonly saving = signal(false);
   readonly error = signal('');
+  canEditMedical = false;
   allergies: string[] = [];
+  @ViewChildren(TagInputComponent) medicalInputs!: QueryList<TagInputComponent>;
   conditions: string[] = [];
   medications: string[] = [];
   readonly allergySuggestions = COMMON_ALLERGIES;
@@ -337,6 +339,7 @@ export class PatientFormComponent {
             maritalStatus: p.maritalStatus?.toString() ?? '',
             notes: p.notes ?? '',
           });
+          this.canEditMedical = p.canEditMedicalInformation;
           this.allergies = (p.allergies ?? []).map((x) => x.name);
           this.conditions = (p.medicalConditions ?? []).map((x) => x.name);
           this.medications = (p.medications ?? []).map((x) => x.name);
@@ -352,6 +355,7 @@ export class PatientFormComponent {
   }
 
   save(): void {
+    this.medicalInputs?.forEach(input => input.commitPending());
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
     this.saving.set(true);
@@ -373,7 +377,7 @@ export class PatientFormComponent {
       notes: value.notes || null,
     };
     if (this.id) {
-      this.api.update(this.id, profile).subscribe({
+      this.api.update(this.id, { ...profile, ...(this.canEditMedical ? { allergies: [...this.allergies], medicalConditions: [...this.conditions], medications: [...this.medications] } : {}) }).subscribe({
         next: () => this.saved(this.id!),
         error: (err) => this.saveFailed(err),
       });

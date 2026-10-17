@@ -3631,3 +3631,13 @@
 .whole-mouth-service-toggle { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
 
 .chart-quick-findings { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+
+.continuing-work { margin: 16px 0; border-inline-start: 4px solid #c58a25; }
+.continuing-work article { padding: 12px; margin-top: 10px; border: 1px solid #d7e4e8; border-radius: 10px; }
+.continuing-work article > span { margin-inline-start: 12px; }
+.remaining-work-notes { white-space: pre-wrap; }
+.slot-groups-vertical .period-row .period-slots-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
+.slot-groups-vertical .period-row .period-slots-chips .btn-slot-chip { display: grid; gap: 5px; text-align: start; padding: 12px; border-radius: 10px; }
+.btn-slot-chip small { opacity: .75; }
+.follow-up-slot-pager { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 8px; }
+@media (max-width: 600px) { .slot-groups-vertical .period-row .period-slots-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

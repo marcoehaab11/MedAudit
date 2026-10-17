@@ -74,7 +74,7 @@ internal sealed class TreatmentStore(ApplicationDbContext context) : ITreatmentS
         var count = await query.CountAsync(token); var items = await query.OrderByDescending(x => x.CreatedAt).Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
             .Select(x => new TreatmentListItem(x.Id, x.PatientId, context.Patients.Where(p => p.Id == x.PatientId).Select(p => p.FirstName + " " + p.LastName).Single(), x.DoctorProfileId,
                 context.DoctorProfiles.Where(d => d.Id == x.DoctorProfileId).SelectMany(d => context.ClinicUsers.Where(u => u.Id == d.ClinicUserId).Select(u => u.DisplayName)).Single(), x.Type, x.TreatmentName,
-                x.Teeth.OrderBy(t => t.ToothNumber).Select(t => t.ToothNumber).ToArray(), x.Status, x.Price, x.CreatedAt, x.CompletedAt)).ToListAsync(token);
+                x.Teeth.OrderBy(t => t.ToothNumber).Select(t => t.ToothNumber).ToArray(), x.Status, x.Price, x.CreatedAt, x.CompletedAt, x.Notes)).ToListAsync(token);
         return new(items, request.Page, request.PageSize, count);
     }
     public void AddCatalog(TreatmentCatalogItem item) => context.TreatmentCatalogItems.Add(item);

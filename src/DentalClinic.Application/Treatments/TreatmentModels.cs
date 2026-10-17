@@ -37,7 +37,7 @@ public sealed record TreatmentDetails(Guid Id, Guid PatientId, string PatientNam
     DateTimeOffset UpdatedAt, Guid Version);
 public sealed record TreatmentListItem(Guid Id, Guid PatientId, string PatientName, Guid DoctorProfileId,
     string DoctorName, TreatmentType Type, string TreatmentName, IReadOnlyCollection<int> ToothNumbers,
-    TreatmentStatus Status, decimal Price, DateTimeOffset CreatedAt, DateTimeOffset? CompletedAt);
+    TreatmentStatus Status, decimal Price, DateTimeOffset CreatedAt, DateTimeOffset? CompletedAt, string? Notes = null);
 public sealed record TreatmentSearch(Guid? PatientId = null, Guid? DoctorProfileId = null,
     TreatmentType? Type = null, TreatmentStatus? Status = null, DateOnly? From = null,
     DateOnly? To = null, int? ToothNumber = null, int Page = 1, int PageSize = 20);

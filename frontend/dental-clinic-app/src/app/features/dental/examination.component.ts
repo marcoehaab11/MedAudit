@@ -487,6 +487,23 @@ interface ToothServiceDraft {
           </div>
         }
 
+        @if (treatmentHistoryError()) {
+          <p class="alert" role="alert">{{ treatmentHistoryError() }} <button type="button" (click)="loadTreatments(examination()!.patientId)">{{ t('Retry', 'إعادة المحاولة') }}</button></p>
+        }
+        @if (getUnfinishedTreatments().length > 0) {
+          <section class="step-card continuing-work" aria-label="Ongoing patient treatment">
+            <h2>{{ t('Where treatment stopped — work to continue', 'آخر ما وصل إليه العلاج — المطلوب استكماله') }}</h2>
+            @for (work of getUnfinishedTreatments(); track work.id) {
+              <article>
+                <strong>{{ work.treatmentName }}</strong>
+                <span>{{ work.status === 3 ? t('In progress', 'قيد العلاج') : work.status === 2 ? t('Scheduled', 'مجدول') : t('Planned', 'مخطط') }}</span>
+                <p>@for (number of work.toothNumbers; track number) { <span>#{{ number }} · {{ toothLabel(number) }} </span> }</p>
+                @if (work.notes) { <p class="remaining-work-notes">{{ work.notes }}</p> }
+                <a [routerLink]="['/treatments', work.id]">{{ t('Open existing treatment', 'فتح العلاج المسجل واستكماله') }} ←</a>
+              </article>
+            }
+          </section>
+        }
         <!-- ════════════════════════════════════════════════════════════════ -->
         <!--  STEP 1: INTAKE & CHIEF COMPLAINT (الاستقبال والشكوى)            -->
         <!-- ════════════════════════════════════════════════════════════════ -->
@@ -754,7 +771,7 @@ interface ToothServiceDraft {
                         @let row = toothService(number);
                         <section class="catalog-select-box tooth-service-row" [attr.data-tooth]="number">
                           <h3>{{ number === 0 ? t('Whole-mouth service', 'خدمة للفم بالكامل') : '#' + number + ' · ' + toothLabel(number) }}</h3>
-                          @if (number === 0 && !toothServiceCatalog(0).length) { <p>{{ t('Add scaling/polishing and whitening services with their prices to the clinic service list first.', 'أضف خدمات تنظيف الجير والتلميع والتبييض وأسعارها إلى قائمة خدمات العيادة أولًا.') }}</p> }
+                          @if (number === 0 && !toothServiceCatalog(0).length) { <p>{{ t('Add orthodontics, scaling/polishing and whitening services with their prices to the clinic service list first.', 'أضف خدمات التقويم وتنظيف الجير والتلميع والتبييض وأسعارها إلى قائمة خدمات العيادة أولًا.') }}</p> }
                           <fieldset [disabled]="savingTreatment() || !!row.treatmentId">
                             <label>{{ number === 0 ? t('Choose the whole-mouth service', 'اختر الإجراء أو الخدمة الطبية للفم بالكامل') : t('Select procedure / service for tooth ', 'اختر الإجراء أو الخدمة الطبية للسن ') + '#' + number + ' · ' + toothLabel(number) }}
                               <select [(ngModel)]="row.catalogId" (change)="selectToothService(number)" class="styled-select-modern">
@@ -1271,35 +1288,24 @@ interface ToothServiceDraft {
                             <div class="period-row">
                               <span class="period-badge morning">🌅 {{ t('Morning', 'الصباح') }}</span>
                               <div class="period-slots-chips">
-                                @for (slot of slotPeriods().morning; track slot.startAt) {
+                                @for (slot of followUpSlots('morning'); track slot.startAt) {
                                   <button
                                     type="button"
                                     class="btn-slot-chip"
                                     [class.active]="selectedSlot()?.startAt === slot.startAt"
                                     (click)="selectedSlot.set(slot)"
                                   >
-                                    {{ formatSlotTime(slot.localStartTime) }}
+                                    <strong>{{ formatSlotTime(slot.localStartTime) }}</strong><small>{{ t('Ends', 'ينتهي') }} {{ formatSlotTime(slot.localEndTime) }}</small>
                                   </button>
                                 }
                               </div>
-                            </div>
-                          }
-
-                          @if (slotPeriods().afternoon.length > 0) {
-                            <div class="period-row">
-                              <span class="period-badge afternoon">☀️ {{ t('Afternoon', 'بعد الظهر') }}</span>
-                              <div class="period-slots-chips">
-                                @for (slot of slotPeriods().afternoon; track slot.startAt) {
-                                  <button
-                                    type="button"
-                                    class="btn-slot-chip"
-                                    [class.active]="selectedSlot()?.startAt === slot.startAt"
-                                    (click)="selectedSlot.set(slot)"
-                                  >
-                                    {{ formatSlotTime(slot.localStartTime) }}
-                                  </button>
-                                }
-                              </div>
+                              @if (slotPeriods().morning.length > 9) {
+                                <div class="follow-up-slot-pager">
+                                  <button type="button" [disabled]="followUpPage.morning === 0" (click)="changeFollowUpPage('morning', -1)">{{ t('Previous', 'السابق') }}</button>
+                                  <span>{{ followUpPage.morning + 1 }} / {{ followUpPageCount('morning') }}</span>
+                                  <button type="button" [disabled]="followUpPage.morning + 1 >= followUpPageCount('morning')" (click)="changeFollowUpPage('morning', 1)">{{ t('Next', 'التالي') }}</button>
+                                </div>
+                              }
                             </div>
                           }
 
@@ -1307,17 +1313,24 @@ interface ToothServiceDraft {
                             <div class="period-row">
                               <span class="period-badge evening">🌙 {{ t('Evening', 'المساء') }}</span>
                               <div class="period-slots-chips">
-                                @for (slot of slotPeriods().evening; track slot.startAt) {
+                                @for (slot of followUpSlots('evening'); track slot.startAt) {
                                   <button
                                     type="button"
                                     class="btn-slot-chip"
                                     [class.active]="selectedSlot()?.startAt === slot.startAt"
                                     (click)="selectedSlot.set(slot)"
                                   >
-                                    {{ formatSlotTime(slot.localStartTime) }}
+                                    <strong>{{ formatSlotTime(slot.localStartTime) }}</strong><small>{{ t('Ends', 'ينتهي') }} {{ formatSlotTime(slot.localEndTime) }}</small>
                                   </button>
                                 }
                               </div>
+                              @if (slotPeriods().evening.length > 9) {
+                                <div class="follow-up-slot-pager">
+                                  <button type="button" [disabled]="followUpPage.evening === 0" (click)="changeFollowUpPage('evening', -1)">{{ t('Previous', 'السابق') }}</button>
+                                  <span>{{ followUpPage.evening + 1 }} / {{ followUpPageCount('evening') }}</span>
+                                  <button type="button" [disabled]="followUpPage.evening + 1 >= followUpPageCount('evening')" (click)="changeFollowUpPage('evening', 1)">{{ t('Next', 'التالي') }}</button>
+                                </div>
+                              }
                             </div>
                           }
                         </div>
@@ -1611,6 +1624,7 @@ export class ExaminationComponent {
   readonly catalog = signal<CatalogItem[]>([]);
   readonly medications = signal<Medication[]>([]);
   readonly executedTreatments = signal<Treatment[]>([]);
+  readonly treatmentHistoryError = signal('');
   readonly treatmentPlans = signal<TreatmentPlanList[]>([]);
   readonly showVisitHistorySheet = signal(false);
   readonly showMedicalAlertModal = signal(false);
@@ -1714,23 +1728,30 @@ export class ExaminationComponent {
     this.paymentErrorModal.set({ isOpen: false, title: '', message: '' });
   }
 
+  followUpPage = { morning: 0, evening: 0 };
+  followUpPageCount(period: 'morning' | 'evening') { return Math.ceil(this.slotPeriods()[period].length / 9); }
+  followUpSlots(period: 'morning' | 'evening') {
+    const page = Math.min(this.followUpPage[period], Math.max(0, this.followUpPageCount(period) - 1));
+    return this.slotPeriods()[period].slice(page * 9, page * 9 + 9);
+  }
+  changeFollowUpPage(period: 'morning' | 'evening', offset: number) {
+    this.followUpPage[period] = Math.max(0, Math.min(this.followUpPageCount(period) - 1, this.followUpPage[period] + offset));
+  }
+
   readonly slotPeriods = computed(() => {
     const slots = this.availableSlots();
     const morning: AvailabilitySlot[] = [];
-    const afternoon: AvailabilitySlot[] = [];
     const evening: AvailabilitySlot[] = [];
 
     for (const s of slots) {
       const h = parseInt(s.localStartTime.split(':')[0], 10);
       if (h < 12) {
         morning.push(s);
-      } else if (h < 17) {
-        afternoon.push(s);
       } else {
         evening.push(s);
       }
     }
-    return { morning, afternoon, evening };
+    return { morning, evening };
   });
 
 
@@ -2053,13 +2074,21 @@ export class ExaminationComponent {
       next: (c) => this.catalog.set(c.filter((x) => x.isActive)),
       error: () => {},
     });
-    this.treatmentApi.treatments({ patientId }).subscribe({
-      next: (res) => this.executedTreatments.set(res.items || []),
-      error: () => {},
-    });
+    this.loadTreatmentHistory(patientId);
     this.treatmentApi.plans({ patientId, pageSize: '50' }).subscribe({
       next: (res) => this.treatmentPlans.set(res.items || []),
       error: () => {},
+    });
+  }
+
+  loadTreatmentHistory(patientId: string, page = 1, previous: Treatment[] = []) {
+    this.treatmentApi.treatments({ patientId, page: String(page) }).subscribe({
+      next: res => {
+        const items = [...previous, ...(res.items || [])];
+        this.executedTreatments.set(items); this.treatmentHistoryError.set('');
+        if (page < res.totalPages) this.loadTreatmentHistory(patientId, page + 1, items);
+      },
+      error: () => this.treatmentHistoryError.set(this.t('Could not load previous treatment progress.', 'تعذر تحميل تقدم العلاج السابق.')),
     });
   }
 
@@ -2092,6 +2121,7 @@ export class ExaminationComponent {
     this.examination.set(x);
     this.notesForm.setValue({ notes: x.notes ?? '' });
     this.loadPatient(x.patientId);
+    this.loadTreatmentHistory(x.patientId);
     this.loadAppointment();
     this.loadBalance(x.patientId);
     this.loading.set(false);
@@ -2443,7 +2473,7 @@ export class ExaminationComponent {
   }
   isWholeMouthService(item: CatalogItem) {
     const parsed = parseCatalogItem(item);
-    return /scal|polish|whiten|bleach|clean|تنظيف|تنضيف|جير|تلميع|تبييض|تبيض/i.test([item.code, parsed.nameEn, parsed.nameAr].join(' '));
+    return /ortho|braces|aligner|retainer|\u062a\u0642\u0648\u064a\u0645|scal|polish|whiten|bleach|clean|تنظيف|تنضيف|جير|تلميع|تبييض|تبيض/i.test([item.code, parsed.nameEn, parsed.nameAr].join(' '));
   }
   toothServiceCatalog(number: number) { return this.catalog().filter(item => number === 0 ? this.isWholeMouthService(item) : !this.isWholeMouthService(item)); }
   toothServiceTiers(number: number) {
@@ -2620,7 +2650,7 @@ export class ExaminationComponent {
 
   hasUnfinishedWork(): boolean {
     const hasUnfinishedTreatments = this.executedTreatments().some(
-      (t) => t.status === 3 || t.status === 1,
+      (t) => t.status === 3 || t.status === 1 || t.status === 2,
     );
     const hasActivePlans = this.treatmentPlans().some((p) => p.status === 1);
     return hasUnfinishedTreatments || hasActivePlans;
@@ -2687,7 +2717,7 @@ export class ExaminationComponent {
     const requestId = ++this.availabilityRequest;
     const d = dateStr ?? this.suggestedFollowUpDate;
     this.suggestedFollowUpDate = d || '';
-    this.availableSlots.set([]);
+    this.followUpPage = { morning: 0, evening: 0 }; this.availableSlots.set([]);
     this.selectedSlot.set(null);
     this.bookedAppointment.set(null);
     this.bookingError.set('');
@@ -2707,7 +2737,7 @@ export class ExaminationComponent {
       })).subscribe({
         next: slots => {
           if (requestId !== this.availabilityRequest) return;
-          this.availableSlots.set(slots || []);
+          this.followUpPage = { morning: 0, evening: 0 }; this.availableSlots.set(slots || []);
           this.loadingSlots.set(false);
         },
         error: err => {

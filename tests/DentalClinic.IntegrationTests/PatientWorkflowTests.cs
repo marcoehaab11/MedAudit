@@ -109,7 +109,11 @@ public sealed class PatientWorkflowTests(PlatformPostgresFixture fixture)
         var clinic = await CreateClinicAsync(test, "medical", "admin@medical.example");
         await AcceptAsync(test, "admin@medical.example");
         SetActor(test, clinic);
-        var patientId = await CreatePatientAsync(test, "Salma", "Adel");
+        Guid patientId;
+        await using (var scope = test.Provider.CreateAsyncScope()) {
+            patientId = await scope.ServiceProvider.GetRequiredService<IPatientCommands>().CreateAsync(
+                new CreatePatientCommand(Profile("Salma", "Adel"), ["Penicillin"], ["Diabetes"], ["Metformin"]), CancellationToken.None);
+        }
         Guid receptionistId;
         Guid doctorId;
         await using (var scope = test.Provider.CreateAsyncScope())
@@ -147,7 +151,10 @@ public sealed class PatientWorkflowTests(PlatformPostgresFixture fixture)
             var details = await scope.ServiceProvider.GetRequiredService<IPatientQueries>()
                 .GetAsync(patientId, CancellationToken.None);
             Assert.True(details!.CanViewMedicalInformation);
-            Assert.Equal("Latex", Assert.Single(details.Allergies).Name);
+            Assert.Contains(details.Allergies, x => x.Name == "Latex");
+            Assert.Contains(details.Allergies, x => x.Name == "Penicillin");
+            Assert.Equal("Diabetes", Assert.Single(details.MedicalConditions).Name);
+            Assert.Equal("Metformin", Assert.Single(details.Medications).Name);
         }
     }
 
