@@ -87,9 +87,29 @@ internal sealed class ExaminationCommands(
     public Task<bool> RemoveProcedureAsync(Guid id, Guid itemId, Guid version, CancellationToken token) =>
         MutateAsync(id, Permissions.DentalEdit, (e, now) => { e.RemoveProcedure(itemId, version, now); return null; }, PlatformAuditAction.ProcedureRemoved, token, itemId);
     public Task<bool> AddEndodonticAsync(Guid id, EndodonticInput input, Guid version, CancellationToken token) =>
-        MutateAsync(id, Permissions.DentalEdit, (e, now) => e.AddEndodonticRecord(input.ToothNumber, input.Notes, input.Canals, Actor(), version, now).Id, PlatformAuditAction.EndodonticRecordCreated, token);
+        SaveEndodonticAsync(id, null, input, version, token);
     public Task<bool> UpdateEndodonticAsync(Guid id, Guid itemId, EndodonticInput input, Guid version, CancellationToken token) =>
-        MutateAsync(id, Permissions.DentalEdit, (e, now) => { e.UpdateEndodonticRecord(itemId, input.Notes, input.Canals, version, now); return null; }, PlatformAuditAction.EndodonticRecordUpdated, token, itemId);
+        SaveEndodonticAsync(id, itemId, input, version, token);
+
+    private async Task<bool> SaveEndodonticAsync(Guid id, Guid? itemId, EndodonticInput input, Guid version, CancellationToken token)
+    {
+        await permissions.EnsurePermissionAsync(Permissions.DentalEdit, token);
+        await permissions.EnsurePermissionAsync(Permissions.ExaminationEdit, token);
+        var e = await store.FindExaminationAsync(id, true, token);
+        if (e is null) return false;
+        await EnsureExaminationVisibleAsync(e, token);
+        var isNew = !itemId.HasValue;
+        if (input.TreatmentId.HasValue && !await store.IsRootCanalTreatmentAsync(input.TreatmentId.Value, e.PatientId, input.ToothNumber, e.DoctorUserId, token))
+            throw new DentalStateException("The root canal treatment must match this patient, tooth and doctor.");
+        if (itemId.HasValue) {
+            if (e.EndodonticRecords.SingleOrDefault(x => x.Id == itemId)?.ToothNumber != input.ToothNumber)
+                throw new DentalStateException("The endodontic record belongs to a different tooth.");
+            e.UpdateEndodonticRecord(itemId.Value, input.Notes, input.Canals, version, clock.UtcNow, input.Stage, input.TreatmentId);
+        } else itemId = e.AddEndodonticRecord(input.ToothNumber, input.Notes, input.Canals, Actor(), version, clock.UtcNow, input.Stage, input.TreatmentId).Id;
+        Audit(isNew ? PlatformAuditAction.EndodonticRecordCreated : PlatformAuditAction.EndodonticRecordUpdated, itemId ?? e.Id);
+        await store.SaveChangesAsync(token);
+        return true;
+    }
     public Task<bool> RemoveEndodonticAsync(Guid id, Guid itemId, Guid version, CancellationToken token) =>
         MutateAsync(id, Permissions.DentalEdit, (e, now) => { e.RemoveEndodonticRecord(itemId, version, now); return null; }, PlatformAuditAction.EndodonticRecordRemoved, token, itemId);
     public Task<bool> CompleteAsync(Guid id, Guid version, CancellationToken token) =>

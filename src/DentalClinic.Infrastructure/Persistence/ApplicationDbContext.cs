@@ -523,6 +523,7 @@ public sealed class ApplicationDbContext(
             entity.ToTable("endodontic_canals"); entity.HasKey(x => x.Id);
             entity.Property(x => x.Id).ValueGeneratedNever();
             entity.Property(x => x.Name).HasMaxLength(50).IsRequired(); entity.Property(x => x.LengthMm).HasPrecision(5, 2);
+            entity.Property(x => x.FinalFileSize).HasMaxLength(50);
             entity.Property(x => x.Notes).HasMaxLength(1000);
             entity.HasIndex(x => new { x.TenantId, x.EndodonticRecordId, x.Name }).IsUnique();
             entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);

@@ -120,6 +120,7 @@ export interface TreatmentPlanList {
   createdAt: string;
 }
 export interface Treatment {
+  catalogItemId?: string;
   id: string;
   patientId: string;
   patientName: string;

@@ -111,57 +111,74 @@ public sealed class EndodonticRecord : TenantOwnedEntity
     private readonly List<EndodonticCanal> canals = [];
     private EndodonticRecord() { }
     internal EndodonticRecord(Guid tenantId, Guid examinationId, Guid patientId, int toothNumber,
-        string? notes, IEnumerable<EndodonticCanalInput> canalInputs, Guid createdBy, DateTimeOffset createdAt)
+        string? notes, IEnumerable<EndodonticCanalInput> canalInputs, Guid createdBy, DateTimeOffset createdAt, RootCanalStage? stage = null, Guid? treatmentId = null)
     {
         TenantId = tenantId; ExaminationId = examinationId; PatientId = patientId;
         ToothNumber = PermanentToothCatalog.Get(toothNumber).Number;
         ToothId = PermanentToothCatalog.Get(toothNumber).Id;
-        CreatedBy = createdBy; CreatedAt = createdAt; Apply(notes, canalInputs, createdAt);
+        CreatedBy = createdBy; CreatedAt = createdAt; Apply(notes, canalInputs, createdAt, stage, treatmentId);
     }
     public Guid ExaminationId { get; private set; }
     public Guid PatientId { get; private set; }
     public Guid ToothId { get; private set; }
     public int ToothNumber { get; private set; }
+    public RootCanalStage? Stage { get; private set; }
+    public Guid? TreatmentId { get; private set; }
     public string? Notes { get; private set; }
     public Guid CreatedBy { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public IReadOnlyCollection<EndodonticCanal> Canals => canals;
-    internal void Update(string? notes, IEnumerable<EndodonticCanalInput> canalInputs, DateTimeOffset updatedAt) =>
-        Apply(notes, canalInputs, updatedAt);
-    private void Apply(string? notes, IEnumerable<EndodonticCanalInput> canalInputs, DateTimeOffset updatedAt)
+    internal void Update(string? notes, IEnumerable<EndodonticCanalInput> canalInputs, DateTimeOffset updatedAt, RootCanalStage? stage = null, Guid? treatmentId = null) =>
+        Apply(notes, canalInputs, updatedAt, stage, treatmentId);
+    private void Apply(string? notes, IEnumerable<EndodonticCanalInput> canalInputs, DateTimeOffset updatedAt, RootCanalStage? stage, Guid? treatmentId)
     {
-        Notes = DentalText.Optional(notes, nameof(notes), 2000);
+        if (stage.HasValue && !Enum.IsDefined(stage.Value)) throw new ArgumentOutOfRangeException(nameof(stage));
+        if (treatmentId == Guid.Empty || TreatmentId.HasValue && treatmentId != TreatmentId) throw new ArgumentException("The treatment link cannot be changed.", nameof(treatmentId));
+        var cleanNotes = DentalText.Optional(notes, nameof(notes), 2000);
         var inputs = canalInputs?.ToArray() ?? throw new ArgumentNullException(nameof(canalInputs));
         if (inputs.Length == 0) throw new ArgumentException("At least one canal is required.", nameof(canalInputs));
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        canals.Clear();
+        var validated = new List<EndodonticCanal>();
         foreach (var input in inputs)
         {
             var name = DentalText.Required(input.Name, nameof(input.Name), 50);
             if (!names.Add(name)) throw new ArgumentException("Canal names must be unique within a record.", nameof(canalInputs));
-            canals.Add(new EndodonticCanal(TenantId, Id, name, input.LengthMm, input.Notes));
+            validated.Add(new EndodonticCanal(TenantId, Id, name, input.LengthMm, input.Notes, input.FinalFileSize));
         }
+        var retained = new List<EndodonticCanal>();
+        foreach (var item in validated) {
+            var existing = canals.FirstOrDefault(c => string.Equals(c.Name, item.Name, StringComparison.OrdinalIgnoreCase));
+            if (existing is null) retained.Add(item);
+            else { existing.CopyMeasurementsFrom(item); retained.Add(existing); }
+        }
+        canals.Clear(); canals.AddRange(retained);
+        Notes = cleanNotes; Stage = stage; TreatmentId = treatmentId;
         UpdatedAt = updatedAt;
     }
 }
 
-public sealed record EndodonticCanalInput(string Name, decimal LengthMm, string? Notes);
+public sealed record EndodonticCanalInput(string Name, decimal? LengthMm, string? Notes, string? FinalFileSize = null);
 
 public sealed class EndodonticCanal : TenantOwnedEntity
 {
     private EndodonticCanal() { }
-    internal EndodonticCanal(Guid tenantId, Guid endodonticRecordId, string name, decimal lengthMm, string? notes)
+    internal EndodonticCanal(Guid tenantId, Guid endodonticRecordId, string name, decimal? lengthMm, string? notes, string? finalFileSize)
     {
         if (lengthMm is <= 0 or > 50) throw new ArgumentOutOfRangeException(nameof(lengthMm), "Canal length must be between 0 and 50 mm.");
         TenantId = tenantId; EndodonticRecordId = endodonticRecordId;
         Name = DentalText.Required(name, nameof(name), 50); LengthMm = lengthMm;
+        FinalFileSize = DentalText.Optional(finalFileSize, nameof(finalFileSize), 50);
         Notes = DentalText.Optional(notes, nameof(notes), 1000);
     }
     public Guid EndodonticRecordId { get; private set; }
     public string Name { get; private set; } = string.Empty;
-    public decimal LengthMm { get; private set; }
+    public decimal? LengthMm { get; private set; }
+    public string? FinalFileSize { get; private set; }
     public string? Notes { get; private set; }
+    // The replacement was fully validated before any existing measurements are changed.
+    internal void CopyMeasurementsFrom(EndodonticCanal validated)
+    { LengthMm = validated.LengthMm; FinalFileSize = validated.FinalFileSize; Notes = validated.Notes; }
 }
 
 internal static class DentalRules

@@ -24,6 +24,7 @@ export interface PatientDentalChart {
   patientNumber: string;
   teeth: ToothChartSummary[];
   recentExaminations: ExaminationHistoryItem[];
+  endodonticRecords?: EndodonticRecord[];
 }
 export interface DentalFinding {
   id: string;
@@ -42,10 +43,15 @@ export interface DentalProcedure extends Omit<DentalFinding, 'type'> {
 export interface EndodonticCanal {
   id: string;
   name: string;
-  lengthMm: number;
+  lengthMm: number | null;
+  finalFileSize?: string;
   notes?: string;
 }
 export interface EndodonticRecord {
+  stage?: number | null;
+  treatmentId?: string;
+  examinationId?: string;
+  updatedAt?: string;
   id: string;
   toothId: string;
   toothNumber: number;
@@ -87,7 +93,9 @@ export interface DentalRecordRequest {
 export interface EndodonticRequest {
   toothNumber: number;
   notes?: string;
-  canals: { name: string; lengthMm: number; notes?: string }[];
+  stage?: number;
+  treatmentId?: string;
+  canals: { name: string; lengthMm: number | null; finalFileSize?: string; notes?: string }[];
   version: string;
 }
 
@@ -135,6 +143,9 @@ export class DentalApiService {
   }
   addEndodontic(id: string, request: EndodonticRequest) {
     return this.http.post<void>(`/api/examinations/${id}/endodontic`, request);
+  }
+  updateEndodontic(id: string, itemId: string, request: EndodonticRequest) {
+    return this.http.put<void>(`/api/examinations/${id}/endodontic/${itemId}`, request);
   }
   removeEndodontic(id: string, itemId: string, version: string) {
     return this.http.delete<void>(`/api/examinations/${id}/endodontic/${itemId}`, {

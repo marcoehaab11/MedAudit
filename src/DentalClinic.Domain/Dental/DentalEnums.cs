@@ -1,5 +1,7 @@
 namespace DentalClinic.Domain.Dental;
 
+public enum RootCanalStage { AccessOpening = 1, WorkingLength = 2, CleaningAndShaping = 3, Obturation = 4, FinalRestoration = 5 }
+
 public enum ExaminationStatus { Draft = 1, Completed = 2 }
 
 public enum DentalFindingType

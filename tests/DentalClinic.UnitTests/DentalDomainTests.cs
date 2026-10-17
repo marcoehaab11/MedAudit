@@ -145,6 +145,23 @@ public sealed class DentalDomainTests
     }
 
     [Fact]
+    public void RootCanalSessionPreservesStageFilesAndUnmeasuredCanals()
+    {
+        var examination = Create(); var treatmentId = Guid.NewGuid();
+        var record = examination.AddEndodonticRecord(26, "Continue shaping", [new("MB", 21.5m, null, "25/.06"), new("MB2", null, null)], Actor, examination.Version, Now, RootCanalStage.CleaningAndShaping, treatmentId);
+        Assert.Equal(RootCanalStage.CleaningAndShaping, record.Stage); Assert.Equal(treatmentId, record.TreatmentId);
+        Assert.Equal("25/.06", record.Canals.First().FinalFileSize); Assert.Null(record.Canals.Last().LengthMm);
+        var originalCanalId = record.Canals.First().Id;
+        var version = examination.Version;
+        Assert.Throws<ArgumentOutOfRangeException>(() => examination.UpdateEndodonticRecord(record.Id, "Invalid change", [new("MB", 55, null)], version, Now, RootCanalStage.Obturation, treatmentId));
+        Assert.Equal("Continue shaping", record.Notes); Assert.Equal(21.5m, record.Canals.First().LengthMm); Assert.Equal(version, examination.Version);
+        Assert.Throws<ArgumentException>(() => examination.UpdateEndodonticRecord(record.Id, null, [new("MB", 21, null)], version, Now, RootCanalStage.Obturation, Guid.NewGuid()));
+        examination.UpdateEndodonticRecord(record.Id, "Next: final restoration", [new("MB", 21.5m, null, "30/.06")], version, Now.AddDays(7), RootCanalStage.Obturation, treatmentId);
+        Assert.Equal(RootCanalStage.Obturation, record.Stage); Assert.Equal("30/.06", Assert.Single(record.Canals).FinalFileSize);
+        Assert.Equal(originalCanalId, Assert.Single(record.Canals).Id);
+    }
+
+    [Fact]
     public void CompletedExaminationAndStaleVersionsAreProtected()
     {
         var examination = Create(); var stale = examination.Version;

@@ -64,7 +64,7 @@ public sealed partial class DentalWorkflowTests(PlatformPostgresFixture fixture)
             [ToothSurface.Mesial, ToothSurface.Occlusal], "procedure detail"), examination.Version, CancellationToken.None));
         examination = (await query.GetExaminationAsync(id, CancellationToken.None))!;
         Assert.True(await commands.AddEndodonticAsync(id, new(36, "endo detail",
-            [new EndodonticCanalInput("MB", 21m, null), new EndodonticCanalInput("D", 19m, "canal detail")]),
+            [new EndodonticCanalInput("MB", 21m, null, "25/.06"), new EndodonticCanalInput("D", null, "canal detail")], RootCanalStage.CleaningAndShaping),
             examination.Version, CancellationToken.None));
         examination = (await query.GetExaminationAsync(id, CancellationToken.None))!;
         Assert.Equal(2, examination.Findings.Single().Surfaces.Count);
@@ -78,6 +78,11 @@ public sealed partial class DentalWorkflowTests(PlatformPostgresFixture fixture)
         Assert.Contains(DentalFindingType.Caries, tooth.Findings);
         Assert.Contains(DentalProcedureType.Filling, tooth.Procedures);
         Assert.True(tooth.HasEndodonticRecord); Assert.Single(chart.RecentExaminations);
+        var endodontic = Assert.Single(chart.EndodonticRecords!);
+        Assert.Equal(RootCanalStage.CleaningAndShaping, endodontic.Stage);
+        Assert.Equal(id, endodontic.ExaminationId);
+        Assert.Equal("25/.06", endodontic.Canals.Single(x => x.Name == "MB").FinalFileSize);
+        Assert.Null(endodontic.Canals.Single(x => x.Name == "D").LengthMm);
         var completed = (await query.GetExaminationAsync(id, CancellationToken.None))!;
         await Assert.ThrowsAsync<DentalStateException>(() => commands.UpdateNotesAsync(id, "rewrite", completed.Version, CancellationToken.None));
         await using var database = CreateDbContext(test.ConnectionString, clinic.TenantId);

@@ -60,8 +60,7 @@ internal sealed class DentalStore(ApplicationDbContext context) : IDentalStore
             .Where(x => x.PatientId == patientId)
             .Select(x => new { x.ToothNumber, x.ToothId, x.ProcedureType, x.CreatedAt }).ToListAsync(token);
         var endodontic = await context.EndodonticRecords.AsNoTracking()
-            .Where(x => x.PatientId == patientId)
-            .Select(x => new { x.ToothNumber, x.CreatedAt }).ToListAsync(token);
+            .Where(x => x.PatientId == patientId).Include(x => x.Canals).OrderByDescending(x => x.UpdatedAt).ToListAsync(token);
         var treatments = await context.Treatments.AsNoTracking().Include(x => x.Teeth)
             .Where(x => x.PatientId == patientId).ToListAsync(token);
         var teeth = PermanentToothCatalog.All.Select(tooth => new ToothChartSummary(tooth.Id, tooth.Number,
@@ -75,13 +74,17 @@ internal sealed class DentalStore(ApplicationDbContext context) : IDentalStore
                 .Select(x => new ToothTreatmentProgress(x.Id, x.TreatmentName, (int)x.Type, (int)x.Status, x.CompletedAt)).ToArray()))
             .ToArray();
         return new PatientDentalChart(patient.Id, patient.Name, patient.PatientNumber, teeth,
-            await GetHistoryAsync(patientId, 10, token));
+            await GetHistoryAsync(patientId, 10, token), endodontic.Select(Map).ToArray());
     }
     public async Task<IReadOnlyCollection<ExaminationHistoryItem>> GetHistoryAsync(Guid patientId, int take, CancellationToken token) =>
         await context.Examinations.AsNoTracking().Where(x => x.PatientId == patientId).OrderByDescending(x => x.CreatedAt).Take(take)
             .Select(x => new ExaminationHistoryItem(x.Id, x.AppointmentId, x.Status,
                 context.ClinicUsers.Where(u => u.Id == x.DoctorUserId).Select(u => u.DisplayName).Single(), x.CreatedAt, x.CompletedAt))
             .ToListAsync(token);
+    public Task<bool> IsRootCanalTreatmentAsync(Guid treatmentId, Guid patientId, int toothNumber, Guid doctorUserId, CancellationToken cancellationToken) =>
+        context.Treatments.AnyAsync(x => x.Id == treatmentId && x.PatientId == patientId && x.Type == DentalClinic.Domain.Treatments.TreatmentType.RootCanal
+            && x.Status != DentalClinic.Domain.Treatments.TreatmentStatus.Cancelled && x.Teeth.Any(t => t.ToothNumber == toothNumber)
+            && context.DoctorProfiles.Any(d => d.Id == x.DoctorProfileId && d.ClinicUserId == doctorUserId), cancellationToken);
     public void Add(Examination examination) => context.Examinations.Add(examination);
     public void AddAudit(PlatformAuditLog audit) => context.PlatformAuditLogs.Add(audit);
     public async Task SaveChangesAsync(CancellationToken token)
@@ -96,5 +99,5 @@ internal sealed class DentalStore(ApplicationDbContext context) : IDentalStore
     private static DentalProcedureDetails Map(DentalProcedure x) => new(x.Id, x.ToothId, x.ToothNumber, x.ProcedureType,
         x.Surfaces.Select(s => s.Surface).ToArray(), x.Notes, x.CreatedAt, x.CreatedBy);
     private static EndodonticDetails Map(EndodonticRecord x) => new(x.Id, x.ToothId, x.ToothNumber, x.Notes,
-        x.Canals.Select(c => new EndodonticCanalDetails(c.Id, c.Name, c.LengthMm, c.Notes)).ToArray(), x.CreatedAt, x.CreatedBy);
+        x.Canals.Select(c => new EndodonticCanalDetails(c.Id, c.Name, c.LengthMm, c.Notes, c.FinalFileSize)).ToArray(), x.CreatedAt, x.CreatedBy, x.Stage, x.TreatmentId, x.ExaminationId, x.UpdatedAt);
 }

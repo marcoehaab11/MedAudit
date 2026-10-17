@@ -76,6 +76,6 @@ internal static class DentalEndpoints
     private static DentalRecordInput<DentalProcedureType> Procedure(DentalRecordRequest r) =>
         new(r.ToothNumber, (DentalProcedureType)r.Type, r.Surfaces.Select(x => (ToothSurface)x).ToArray(), r.Notes);
     private static EndodonticInput Endodontic(EndodonticRecordRequest r) => new(r.ToothNumber, r.Notes,
-        r.Canals.Select(x => new EndodonticCanalInput(x.Name, x.LengthMm, x.Notes)).ToArray());
+        r.Canals.Select(x => new EndodonticCanalInput(x.Name, x.LengthMm, x.Notes, x.FinalFileSize)).ToArray(), (RootCanalStage?)r.Stage, r.TreatmentId);
     private static async Task<IResult> ResultAsync(Task<bool> result) => await result ? Results.NoContent() : Results.NotFound();
 }

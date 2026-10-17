@@ -5,15 +5,15 @@ namespace DentalClinic.Application.Dental;
 
 public sealed record DentalRecordInput<TType>(int ToothNumber, TType Type,
     IReadOnlyCollection<ToothSurface> Surfaces, string? Notes, int? CariesClass = null) where TType : struct, Enum;
-public sealed record EndodonticInput(int ToothNumber, string? Notes, IReadOnlyCollection<EndodonticCanalInput> Canals);
+public sealed record EndodonticInput(int ToothNumber, string? Notes, IReadOnlyCollection<EndodonticCanalInput> Canals, RootCanalStage? Stage = null, Guid? TreatmentId = null);
 
 public sealed record DentalFindingDetails(Guid Id, Guid ToothId, int ToothNumber, DentalFindingType Type,
     IReadOnlyCollection<ToothSurface> Surfaces, string? Notes, DateTimeOffset CreatedAt, Guid CreatedBy, int? CariesClass = null);
 public sealed record DentalProcedureDetails(Guid Id, Guid ToothId, int ToothNumber, DentalProcedureType Type,
     IReadOnlyCollection<ToothSurface> Surfaces, string? Notes, DateTimeOffset CreatedAt, Guid CreatedBy);
-public sealed record EndodonticCanalDetails(Guid Id, string Name, decimal LengthMm, string? Notes);
+public sealed record EndodonticCanalDetails(Guid Id, string Name, decimal? LengthMm, string? Notes, string? FinalFileSize = null);
 public sealed record EndodonticDetails(Guid Id, Guid ToothId, int ToothNumber, string? Notes,
-    IReadOnlyCollection<EndodonticCanalDetails> Canals, DateTimeOffset CreatedAt, Guid CreatedBy);
+    IReadOnlyCollection<EndodonticCanalDetails> Canals, DateTimeOffset CreatedAt, Guid CreatedBy, RootCanalStage? Stage = null, Guid? TreatmentId = null, Guid? ExaminationId = null, DateTimeOffset? UpdatedAt = null);
 
 public sealed record ExaminationDetails(Guid Id, Guid PatientId, string PatientName, string PatientNumber,
     Guid AppointmentId, AppointmentStatus AppointmentStatus, Guid DoctorUserId, string DoctorName,
@@ -30,7 +30,7 @@ public sealed record ToothTreatmentProgress(Guid Id, string Name, int Type, int 
 public sealed record ExaminationHistoryItem(Guid Id, Guid AppointmentId, ExaminationStatus Status,
     string DoctorName, DateTimeOffset CreatedAt, DateTimeOffset? CompletedAt);
 public sealed record PatientDentalChart(Guid PatientId, string PatientName, string PatientNumber,
-    IReadOnlyCollection<ToothChartSummary> Teeth, IReadOnlyCollection<ExaminationHistoryItem> RecentExaminations);
+    IReadOnlyCollection<ToothChartSummary> Teeth, IReadOnlyCollection<ExaminationHistoryItem> RecentExaminations, IReadOnlyCollection<EndodonticDetails>? EndodonticRecords = null);
 
 public sealed record ClinicalAppointment(Guid Id, Guid PatientId, Guid DoctorProfileId,
     Guid DoctorUserId, AppointmentStatus Status);

@@ -81,3 +81,24 @@ Production frontend build passed. Release includes only the clinical workflow fi
 Validation: 159 backend unit tests and 45 targeted frontend tests passed. API and integration-test projects built with zero warnings/errors. PostgreSQL execution remains unverified because Docker engine is unavailable. No new database migration is required for this update.
 
 Production frontend build passed for the final source. Appointment-card visual review remains unchecked as requested.
+
+## حشو العصب والمتابعة — 17 أكتوبر 2026
+
+- [x] تفاصيل القنوات تظهر فقط عند اختيار خدمة من نوع حشو العصب، داخل كارت السن نفسه.
+- [x] إعداد أسماء القنوات تلقائيًا حسب قائمة العيادة، يمينًا ويسارًا، مع إبقاء أي قنوات إضافية محفوظة سابقًا.
+- [x] Working length وFinal file size لكل قناة، والمرحلة الحالية وملاحظات المتبقي.
+- [x] استكمال العلاج المسجل في جلسة المتابعة مع عرض بيانات الجلسة السابقة ونسخ قيمها إلى مسودة الزيارة الحالية، دون تعديل الزيارة القديمة أو إنشاء تكلفة مكررة.
+- [x] عدم تعبئة أطوال افتراضية للقنوات غير المقاسة؛ القيم تظل فارغة حتى إدخال الطبيب لها.
+
+| الأسنان داخل كل ربع | الفك العلوي | الفك السفلي |
+| --- | --- | --- |
+| 1–3 | Canal 1 | Canal 1 |
+| 4–5 | B, P | B, L |
+| 6–7 | MB, MB2, DB, P | MB, ML, DB, DL |
+| 8 | MB, DB, P | MB, ML, DB, DL |
+
+المراحل: فتح الحجرة، تحديد الأطوال، تنظيف وتشكيل القنوات، حشو القنوات، الترميم النهائي. اختيار المرحلة لا يملأ قياسات ولا يقرر إكمال العلاج تلقائيًا. حفظ تقدم علاج قائم لا ينشئ إجراء أو رسمًا جديدًا؛ تسجيل الإجراء للمرة الأولى يحفظ تفاصيل القنوات معه.
+
+ترحيل مطلوب قبل تشغيل الواجهة الجديدة: `20261017133856_RootCanalVisitProgress` لحفظ المرحلة وربط العلاج وحجم الملف والسماح بالطول الفارغ. السجلات القديمة محفوظة دون افتراض مرحلة لها. الرجوع للترحيل السابق يُمنع إذا توجد أطوال فارغة بدل تحويلها إلى قياسات صفرية وهمية.
+
+Root-canal validation: 163 backend unit tests and 83 frontend tests passed. Production frontend build and API/integration-test builds passed. EF reports no pending model changes. Database execution of the migration was not verified because the Docker engine remains unavailable.

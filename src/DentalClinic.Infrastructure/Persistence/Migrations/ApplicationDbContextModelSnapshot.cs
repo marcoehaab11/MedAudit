@@ -1001,7 +1001,11 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("EndodonticRecordId")
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("LengthMm")
+                    b.Property<string>("FinalFileSize")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal?>("LengthMm")
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)");
 
@@ -1046,6 +1050,9 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("Stage")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
@@ -1054,6 +1061,9 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("ToothNumber")
                         .HasColumnType("integer");
+
+                    b.Property<Guid?>("TreatmentId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
