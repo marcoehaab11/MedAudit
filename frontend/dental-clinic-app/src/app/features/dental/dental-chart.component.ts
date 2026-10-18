@@ -134,12 +134,12 @@ export class DentalChartComponent {
   isSelectedTooth(number: number) { return this.multiSelect ? this.selectedTeeth.includes(number) : this.selectedNumber === number; }
   isMissing(tooth?: ToothChartSummary) { return !!tooth?.findings.includes(4) && !tooth.procedures.includes(3); }
   isCaries(tooth?: ToothChartSummary) { return !!tooth?.findings.includes(2); }
-  isEndo(tooth?: ToothChartSummary) { return !!tooth && (tooth.hasEndodonticRecord || tooth.procedures.includes(4) || tooth.findings.some(x => [8,10,11].includes(x))); }
+  isEndo(tooth?: ToothChartSummary) { return !!tooth && (tooth.hasEndodonticRecord || tooth.procedures.includes(4) || tooth.findings.some(x => [8,10,11,17].includes(x))); }
   isCrown(tooth?: ToothChartSummary) { return !!tooth && (tooth.procedures.includes(5) || tooth.findings.some(x => [9,10,11].includes(x))); }
   planoraArt(number: number, lower: boolean): SafeHtml {
     const tooth = this.find(number);
     const record: ArtRecord = { treatment: tooth?.procedures.includes(3) ? 'implant' : this.isCrown(tooth) ? 'crown' : this.isEndo(tooth) ? 'root-canal' : tooth?.procedures.includes(1) ? 'filling' : 'none',
-      status: tooth?.findings.some(x => [8,9,10,11].includes(x)) ? 'planned' : 'existing', surfaces: ['O'], caries: this.isCaries(tooth), endo: this.isEndo(tooth), crown: this.isCrown(tooth) };
+      status: tooth?.findings.some(x => [8,9,10,11,17].includes(x)) ? 'planned' : 'existing', surfaces: ['O'], caries: this.isCaries(tooth), endo: this.isEndo(tooth), crown: this.isCrown(tooth) };
     const key = JSON.stringify([number, lower, record]);
     let art = this.artCache.get(key);
     if (!art) { art = this.sanitizer.bypassSecurityTrustHtml(renderPlanoraTooth(number, record, lower)); this.artCache.set(key, art); }

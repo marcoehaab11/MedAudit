@@ -111,30 +111,35 @@ public sealed class EndodonticRecord : TenantOwnedEntity
     private readonly List<EndodonticCanal> canals = [];
     private EndodonticRecord() { }
     internal EndodonticRecord(Guid tenantId, Guid examinationId, Guid patientId, int toothNumber,
-        string? notes, IEnumerable<EndodonticCanalInput> canalInputs, Guid createdBy, DateTimeOffset createdAt, RootCanalStage? stage = null, Guid? treatmentId = null)
+        string? notes, IEnumerable<EndodonticCanalInput> canalInputs, Guid createdBy, DateTimeOffset createdAt, RootCanalStage? stage = null, Guid? treatmentId = null, string? restorationType = null, string? postType = null)
     {
         TenantId = tenantId; ExaminationId = examinationId; PatientId = patientId;
         ToothNumber = PermanentToothCatalog.Get(toothNumber).Number;
         ToothId = PermanentToothCatalog.Get(toothNumber).Id;
-        CreatedBy = createdBy; CreatedAt = createdAt; Apply(notes, canalInputs, createdAt, stage, treatmentId);
+        CreatedBy = createdBy; CreatedAt = createdAt; Apply(notes, canalInputs, createdAt, stage, treatmentId, restorationType, postType);
     }
     public Guid ExaminationId { get; private set; }
     public Guid PatientId { get; private set; }
     public Guid ToothId { get; private set; }
     public int ToothNumber { get; private set; }
     public RootCanalStage? Stage { get; private set; }
+    public string? RestorationType { get; private set; }
+    public string? PostType { get; private set; }
     public Guid? TreatmentId { get; private set; }
     public string? Notes { get; private set; }
     public Guid CreatedBy { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public IReadOnlyCollection<EndodonticCanal> Canals => canals;
-    internal void Update(string? notes, IEnumerable<EndodonticCanalInput> canalInputs, DateTimeOffset updatedAt, RootCanalStage? stage = null, Guid? treatmentId = null) =>
-        Apply(notes, canalInputs, updatedAt, stage, treatmentId);
-    private void Apply(string? notes, IEnumerable<EndodonticCanalInput> canalInputs, DateTimeOffset updatedAt, RootCanalStage? stage, Guid? treatmentId)
+    internal void Update(string? notes, IEnumerable<EndodonticCanalInput> canalInputs, DateTimeOffset updatedAt, RootCanalStage? stage = null, Guid? treatmentId = null, string? restorationType = null, string? postType = null) =>
+        Apply(notes, canalInputs, updatedAt, stage, treatmentId, restorationType, postType);
+    private void Apply(string? notes, IEnumerable<EndodonticCanalInput> canalInputs, DateTimeOffset updatedAt, RootCanalStage? stage, Guid? treatmentId, string? restorationType, string? postType)
     {
         if (stage.HasValue && !Enum.IsDefined(stage.Value)) throw new ArgumentOutOfRangeException(nameof(stage));
         if (treatmentId == Guid.Empty || TreatmentId.HasValue && treatmentId != TreatmentId) throw new ArgumentException("The treatment link cannot be changed.", nameof(treatmentId));
+        if (restorationType is not (null or "composite" or "post-core" or "post-core-crown" or "crown")) throw new ArgumentException("Invalid restoration type.");
+        if (postType is not (null or "fiber" or "metal" or "custom")) throw new ArgumentException("Invalid post type.");
+        if (stage == RootCanalStage.Completed && restorationType is "post-core" or "post-core-crown" && postType is null) throw new ArgumentException("Post type is required.");
         var cleanNotes = DentalText.Optional(notes, nameof(notes), 2000);
         var inputs = canalInputs?.ToArray() ?? throw new ArgumentNullException(nameof(canalInputs));
         if (inputs.Length == 0) throw new ArgumentException("At least one canal is required.", nameof(canalInputs));
@@ -153,7 +158,7 @@ public sealed class EndodonticRecord : TenantOwnedEntity
             else { existing.CopyMeasurementsFrom(item); retained.Add(existing); }
         }
         canals.Clear(); canals.AddRange(retained);
-        Notes = cleanNotes; Stage = stage; TreatmentId = treatmentId;
+        Notes = cleanNotes; Stage = stage; TreatmentId = treatmentId; RestorationType = restorationType; PostType = postType;
         UpdatedAt = updatedAt;
     }
 }

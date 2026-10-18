@@ -5,5 +5,5 @@ public sealed record DentalRecordRequest(int ToothNumber, int Type, IReadOnlyCol
     string? Notes, Guid Version, int? CariesClass = null);
 public sealed record EndodonticCanalRequest(string Name, decimal? LengthMm, string? Notes, string? FinalFileSize = null);
 public sealed record EndodonticRecordRequest(int ToothNumber, string? Notes,
-    IReadOnlyCollection<EndodonticCanalRequest> Canals, Guid Version, int? Stage = null, Guid? TreatmentId = null);
+    IReadOnlyCollection<EndodonticCanalRequest> Canals, Guid Version, int? Stage = null, Guid? TreatmentId = null, string? RestorationType = null, string? PostType = null);
 public sealed record ClinicalRecordVersionRequest(Guid Version);

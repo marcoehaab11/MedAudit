@@ -4,7 +4,7 @@ export interface ClinicalAppearance {
   cssClass: string;
   symbol: string;
 }
-export const SELECTABLE_FINDING_TYPES = [2, 4, 8, 10, 11, 9, 14, 15];
+export const SELECTABLE_FINDING_TYPES = [2, 4, 8, 10, 11, 9, 14, 15, 17];
 
 export const FINDING_APPEARANCE: Record<number, ClinicalAppearance> = {
   1: { en: 'Healthy', ar: 'سليم', cssClass: 'healthy', symbol: '✓' },
@@ -19,6 +19,7 @@ export const FINDING_APPEARANCE: Record<number, ClinicalAppearance> = {
   11: { en: 'Root canal + post + crown', ar: 'علاج جذور + دعامة + كراون', cssClass: 'root-canal-crown', symbol: 'R+P+Cr' },
   12: { en: 'Scaling & polishing (whole mouth)', ar: 'تنظيف جير وتلميع الأسنان — الفم بالكامل', cssClass: 'healthy', symbol: 'SP' },
   13: { en: 'Whitening (whole mouth)', ar: 'تبييض الأسنان — الفم بالكامل', cssClass: 'healthy', symbol: 'W' },
+  17: { en: 'Root canal + post and core', ar: 'علاج جذور + دعامة + حشو داخلي', cssClass: 'root-canal-crown', symbol: 'R+P' },
   16: { en: 'Orthodontics (whole mouth)', ar: 'تقويم — الفم بالكامل', cssClass: 'healthy', symbol: 'Or' },
   14: { en: 'Extraction', ar: 'خلع', cssClass: 'extraction', symbol: 'E' },
   15: { en: 'Implant', ar: 'زراعة', cssClass: 'implant', symbol: 'I' },

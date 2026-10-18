@@ -178,6 +178,21 @@ public sealed class DentalDomainTests
 
     }
 
+    [Theory]
+    [InlineData("fiber")]
+    [InlineData("metal")]
+    [InlineData("custom")]
+    public void PostAndCorePersistsWorkflowAndRequiresPostTypeToComplete(string postType)
+    {
+        var examination = Create();
+        var record = examination.AddEndodonticRecord(26, null, [new("MB", 21, null, "25")], Actor, examination.Version, Now, RootCanalStage.PostAndCore, restorationType: "post-core-crown", postType: postType);
+        Assert.Equal(postType, record.PostType); Assert.Equal("post-core-crown", record.RestorationType);
+        Assert.Throws<ArgumentException>(() => examination.UpdateEndodonticRecord(record.Id, null, [new("MB", 21, null, "25")], examination.Version, Now, RootCanalStage.Completed, restorationType: "post-core-crown"));
+        examination.UpdateEndodonticRecord(record.Id, null, [new("MB", 21, null, "25")], examination.Version, Now, RootCanalStage.Crown, restorationType: "post-core-crown", postType: postType);
+        examination.UpdateEndodonticRecord(record.Id, null, [new("MB", 21, null, "25")], examination.Version, Now, RootCanalStage.Completed, restorationType: "post-core-crown", postType: postType);
+        Assert.Equal(RootCanalStage.Completed, record.Stage); Assert.Equal(postType, record.PostType);
+    }
+
     [Fact]
     public void CompletedExaminationAndStaleVersionsAreProtected()
     {

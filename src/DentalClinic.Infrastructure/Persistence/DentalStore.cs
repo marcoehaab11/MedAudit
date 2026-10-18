@@ -99,5 +99,5 @@ internal sealed class DentalStore(ApplicationDbContext context) : IDentalStore
     private static DentalProcedureDetails Map(DentalProcedure x) => new(x.Id, x.ToothId, x.ToothNumber, x.ProcedureType,
         x.Surfaces.Select(s => s.Surface).ToArray(), x.Notes, x.CreatedAt, x.CreatedBy);
     private static EndodonticDetails Map(EndodonticRecord x) => new(x.Id, x.ToothId, x.ToothNumber, x.Notes,
-        x.Canals.Select(c => new EndodonticCanalDetails(c.Id, c.Name, c.LengthMm, c.Notes, c.FinalFileSize)).ToArray(), x.CreatedAt, x.CreatedBy, x.Stage, x.TreatmentId, x.ExaminationId, x.UpdatedAt);
+        x.Canals.Select(c => new EndodonticCanalDetails(c.Id, c.Name, c.LengthMm, c.Notes, c.FinalFileSize)).ToArray(), x.CreatedAt, x.CreatedBy, x.Stage, x.TreatmentId, x.ExaminationId, x.UpdatedAt, x.RestorationType, x.PostType);
 }

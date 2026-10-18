@@ -1,12 +1,13 @@
+import { vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { RootCanalEditorComponent } from './root-canal-editor.component';
 import { rootCanalDraft } from './root-canal';
 
 describe('Sequential root canal editor', () => {
-  function create(stage = 1) {
+  function create(stage = 1, mode?: 'post-core' | 'post-core-crown') {
     const fixture = TestBed.createComponent(RootCanalEditorComponent);
     const c = fixture.componentInstance;
-    c.draft = rootCanalDraft(26); c.draft.stage = stage;
+    c.draft = rootCanalDraft(26); c.draft.stage = stage; c.draft.restorationType = mode;
     c.english = false; fixture.detectChanges();
     return { fixture, c, el: fixture.nativeElement as HTMLElement };
   }
@@ -44,6 +45,25 @@ describe('Sequential root canal editor', () => {
     c.disabled = true; c.completeStage(); expect(c.draft.stage).toBe(1); expect(saves).toBe(0);
     c.disabled = false; c.completeStage(); expect(c.draft.stage).toBe(2); expect(saves).toBe(1);
     c.draft.stage=5; c.completeStage(); expect(c.draft.stage).toBe(6); expect(saves).toBe(2);
+  });
+  it('uses post and core with a required post type and adds crown only for the crown workflow', () => {
+    const {fixture,c,el}=create(7, 'post-core-crown');
+    expect(el.textContent).toContain('4- Post and core');
+    expect(el.textContent).toContain('Fiber post'); expect(el.textContent).toContain('Metal post'); expect(el.textContent).toContain('Custom post');
+    c.completeStage(); expect(c.draft.stage).toBe(7); expect(c.postError).toBe(true);
+    c.draft.postType='fiber'; c.completeStage(); expect(c.draft.stage).toBe(8);
+    expect(c.currentStage.en).toBe('Crown'); expect(c.currentStage.number).toBe(5);
+    c.completeStage(); expect(c.draft.stage).toBe(6);
+    c.draft.restorationType='post-core'; c.draft.stage=7; c.completeStage(); expect(c.draft.stage).toBe(6);
+  });
+  it('debounces measurement edits into one automatic save even before a treatment exists', () => {
+    vi.useFakeTimers();
+    try {
+      const {c}=create(2); let changes=0; c.changed.subscribe(()=>changes++);
+      c.draft.canals[0].lengthMm=2; c.scheduleSave(); vi.advanceTimersByTime(300);
+      c.draft.canals[0].lengthMm=21; c.scheduleSave(); vi.advanceTimersByTime(599); expect(changes).toBe(0);
+      vi.advanceTimersByTime(1); expect(changes).toBe(1); expect(c.canSave).toBe(false);
+    } finally { vi.useRealTimers(); }
   });
   it('restores completed progress without restarting access cavity', () => {
     const {el}=create(6); expect(el.textContent).toContain('Root canal stages completed');

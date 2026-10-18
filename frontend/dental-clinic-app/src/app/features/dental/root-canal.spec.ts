@@ -23,4 +23,10 @@ describe('Clinic root canal templates', () => {
     expect(draft.canals.map(c => c.name)).toContain('Extra');
     draft.canals[0].lengthMm = 23; expect(previous.canals[0].lengthMm).toBe(21.5);
   });
+  it('restores the saved post type and crown workflow for follow-up visits', () => {
+    const draft=rootCanalDraft(27,{id:'r',toothId:'t',toothNumber:27,stage:8,restorationType:'post-core-crown',postType:'metal',canals:[{id:'mb',name:'MB',lengthMm:23.5,finalFileSize:'30/.06'}],createdAt:'',createdBy:'u'});
+    expect(draft).toMatchObject({stage:8,restorationType:'post-core-crown',postType:'metal'});
+    expect(draft.canals[0]).toMatchObject({lengthMm:23.5,finalFileSize:'30/.06'});
+  });
+
 });

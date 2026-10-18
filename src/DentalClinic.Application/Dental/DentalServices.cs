@@ -104,8 +104,8 @@ internal sealed class ExaminationCommands(
         if (itemId.HasValue) {
             if (e.EndodonticRecords.SingleOrDefault(x => x.Id == itemId)?.ToothNumber != input.ToothNumber)
                 throw new DentalStateException("The endodontic record belongs to a different tooth.");
-            e.UpdateEndodonticRecord(itemId.Value, input.Notes, input.Canals, version, clock.UtcNow, input.Stage, input.TreatmentId);
-        } else itemId = e.AddEndodonticRecord(input.ToothNumber, input.Notes, input.Canals, Actor(), version, clock.UtcNow, input.Stage, input.TreatmentId).Id;
+            e.UpdateEndodonticRecord(itemId.Value, input.Notes, input.Canals, version, clock.UtcNow, input.Stage, input.TreatmentId, input.RestorationType, input.PostType);
+        } else itemId = e.AddEndodonticRecord(input.ToothNumber, input.Notes, input.Canals, Actor(), version, clock.UtcNow, input.Stage, input.TreatmentId, input.RestorationType, input.PostType).Id;
         Audit(isNew ? PlatformAuditAction.EndodonticRecordCreated : PlatformAuditAction.EndodonticRecordUpdated, itemId ?? e.Id);
         await store.SaveChangesAsync(token);
         return true;

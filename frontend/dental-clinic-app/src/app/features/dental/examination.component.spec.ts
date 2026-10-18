@@ -69,7 +69,7 @@ describe('ExaminationComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('سعر الخدمة');
     c.step.set(5); fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('سعر الخدمة');
-    expect(c.findingOptions.map(x => x.id)).toEqual([2,4,8,10,11,9,14,15]);
+    expect(c.findingOptions.map(x => x.id)).toEqual([2,4,8,10,11,9,14,15,17]);
   });
   it('shows the persisted remaining work immediately when opening the next visit', () => {
     const fixture = TestBed.createComponent(ExaminationComponent); const c = fixture.componentInstance;
@@ -119,6 +119,26 @@ describe('ExaminationComponent', () => {
     await pending; flushAuxiliary(http);
     http.expectNone(r => r.url === '/api/treatments' && r.method === 'POST');
     expect(c.savingRootCanal()).toBe(false);
+  });
+  it('automatically saves measurements before recording a treatment and serializes later edits', async () => {
+    const c = TestBed.createComponent(ExaminationComponent).componentInstance, http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    c.catalog.set([{ id: 'rct', type: 4, name: 'RCT', code: 'RCT', defaultPrice: 1000, isActive: true }]);
+    c.toothService(26).catalogId='rct'; const draft=c.rootCanalFor(26); draft.stage=2;
+    draft.canals[0].lengthMm=21; draft.restorationType='post-core-crown'; draft.postType='fiber';
+    const first=c.autoSaveRootCanal(26);
+    const create=http.expectOne('/api/examinations/e1/endodontic'); expect(create.request.body).toMatchObject({restorationType:'post-core-crown',postType:'fiber',stage:2});
+    expect(create.request.body.treatmentId).toBeUndefined();
+    draft.canals[0].lengthMm=22; const second=c.autoSaveRootCanal(26);
+    http.expectNone('/api/examinations/e1/endodontic/auto'); create.flush(null);
+    await Promise.resolve(); await Promise.resolve();
+    const persisted={...examination(),version:'v2',endodonticRecords:[{id:'auto',toothNumber:26,canals:[],createdAt:'',createdBy:'u',toothId:'t26'}]};
+    http.expectOne('/api/examinations/e1').flush(persisted);
+    await first; await Promise.resolve(); await Promise.resolve();
+    const update=http.expectOne('/api/examinations/e1/endodontic/auto'); expect(update.request.body.version).toBe('v2'); expect(update.request.body.canals[0].lengthMm).toBe(22); update.flush(null);
+    await Promise.resolve(); await Promise.resolve(); http.expectOne('/api/examinations/e1').flush({...persisted,version:'v3'});
+    await second; http.expectNone(r=>r.url==='/api/treatments'&&r.method==='POST');
+    expect(c.rootCanalAutoErrors()).toEqual([]); expect(c.rootCanalAutoStatus()[26]).toContain('تم الحفظ');
   });
   it('automatically completes the existing root canal after the fourth step without a new charge', async () => {
     const fixture = TestBed.createComponent(ExaminationComponent), c = fixture.componentInstance;

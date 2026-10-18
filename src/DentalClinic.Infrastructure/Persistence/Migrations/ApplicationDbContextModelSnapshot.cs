@@ -1031,6 +1031,9 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("DentalClinic.Domain.Dental.EndodonticRecord", b =>
                 {
+                    b.Property<string>("RestorationType").HasColumnType("text");
+                    b.Property<string>("PostType").HasColumnType("text");
+
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
