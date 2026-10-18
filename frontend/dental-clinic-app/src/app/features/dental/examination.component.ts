@@ -628,6 +628,7 @@ interface ToothServiceDraft {
               <div class="chart-quick-findings"><strong>{{ t('Whole mouth:', 'الفم بالكامل:') }}</strong>
                 <button type="button" [disabled]="savingFinding()" (click)="recordWholeMouthFinding(12)">{{ findingLabel(12) }}</button>
                 <button type="button" [disabled]="savingFinding()" (click)="recordWholeMouthFinding(13)">{{ findingLabel(13) }}</button>
+                <button type="button" [disabled]="savingFinding()" (click)="recordWholeMouthFinding(16)">{{ findingLabel(16) }}</button>
               </div>
             }
             <app-dental-chart [teeth]="chartTeeth()" [multiSelect]="true" [selectedNumber]="selected" [selectedTeeth]="selectedTeeth"
@@ -2164,7 +2165,7 @@ export class ExaminationComponent {
     this.findingForm.controls.cariesClass.setValue(null);
     void this.addFinding(true);
   }
-  isWholeMouthFinding(type: number) { return type === 12 || type === 13; }
+  isWholeMouthFinding(type: number) { return type === 12 || type === 13 || type === 16; }
   displayedFindings() {
     const seen = new Set<number>();
     return (this.examination()?.findings ?? []).filter(item => {

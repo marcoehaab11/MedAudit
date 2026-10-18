@@ -180,17 +180,17 @@ describe('ExaminationComponent', () => {
     await Promise.resolve(); await Promise.resolve(); http.expectOne('/api/treatments/filling/complete').flush(null);
     await pending; flushAuxiliary(http); expect(c.examination()!.findings.find(f => f.toothNumber === 24)!.cariesClass).toBe(2);
   });
-  it('records whole-mouth diagnosis in one request and keeps it out of individual tooth selection', async () => {
+  it.each([12, 13, 16])('records whole-mouth diagnosis %s in one request and keeps it out of individual tooth selection', async (type) => {
     const c = TestBed.createComponent(ExaminationComponent).componentInstance;
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
-    const pending = c.recordWholeMouthFinding(12);
-    const create = http.expectOne('/api/examinations/e1/findings'); expect(create.request.body.type).toBe(12); create.flush(null);
+    const pending = c.recordWholeMouthFinding(type);
+    const create = http.expectOne('/api/examinations/e1/findings'); expect(create.request.body.type).toBe(type); create.flush(null);
     await Promise.resolve(); await Promise.resolve();
-    const globals = Array.from({ length: 32 }, (_, index) => ({ ...examination().findings[0], id: 'global' + index, toothNumber: (Math.floor(index / 8) + 1) * 10 + index % 8 + 1, type: 12 }));
+    const globals = Array.from({ length: 32 }, (_, index) => ({ ...examination().findings[0], id: 'global' + index, toothNumber: (Math.floor(index / 8) + 1) * 10 + index % 8 + 1, type }));
     http.expectOne('/api/examinations/e1').flush({ ...examination(), version: 'v2', findings: [...examination().findings, ...globals] });
     await pending;
-    expect(c.displayedFindings().filter(f => f.type === 12)).toHaveLength(1);
+    expect(c.displayedFindings().filter(f => f.type === type)).toHaveLength(1);
     expect(c.surveyTeeth()).toEqual([36]);
   });
   it('keeps a different service and price for each tooth in the same visit', async () => {

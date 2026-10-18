@@ -19,6 +19,7 @@ export const FINDING_APPEARANCE: Record<number, ClinicalAppearance> = {
   11: { en: 'Root canal + post + crown', ar: 'علاج جذور + دعامة + كراون', cssClass: 'root-canal-crown', symbol: 'R+P+Cr' },
   12: { en: 'Scaling & polishing (whole mouth)', ar: 'تنظيف جير وتلميع الأسنان — الفم بالكامل', cssClass: 'healthy', symbol: 'SP' },
   13: { en: 'Whitening (whole mouth)', ar: 'تبييض الأسنان — الفم بالكامل', cssClass: 'healthy', symbol: 'W' },
+  16: { en: 'Orthodontics (whole mouth)', ar: 'تقويم — الفم بالكامل', cssClass: 'healthy', symbol: 'Or' },
   14: { en: 'Extraction', ar: 'خلع', cssClass: 'extraction', symbol: 'E' },
   15: { en: 'Implant', ar: 'زراعة', cssClass: 'implant', symbol: 'I' },
   7: { en: 'Other', ar: 'أخرى', cssClass: 'other', symbol: '•' },

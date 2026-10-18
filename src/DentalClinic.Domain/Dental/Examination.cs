@@ -41,7 +41,7 @@ public sealed class Examination : TenantOwnedEntity
         string? notes, Guid actorId, Guid expectedVersion, DateTimeOffset now, int? cariesClass = null)
     {
         EnsureEditable(expectedVersion);
-        if (type is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening)
+        if (type is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening or DentalFindingType.Orthodontics)
             throw new ArgumentException("Use the whole-mouth finding command.", nameof(type));
         var item = new DentalFinding(TenantId, Id, PatientId, toothNumber, type, surfaces, notes, actorId, now, cariesClass);
         findings.Add(item); Touch(now); return item;
@@ -49,7 +49,7 @@ public sealed class Examination : TenantOwnedEntity
     public Guid? AddWholeMouthFinding(DentalFindingType type, string? notes, Guid actorId, Guid expectedVersion, DateTimeOffset now, int? cariesClass = null)
     {
         EnsureEditable(expectedVersion);
-        if (type is not (DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening))
+        if (type is not (DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening or DentalFindingType.Orthodontics))
             throw new ArgumentException("This finding must be recorded for an individual tooth.", nameof(type));
         if (cariesClass.HasValue) throw new ArgumentException("Caries class does not apply to whole-mouth services.", nameof(cariesClass));
         Guid? firstId = null;
@@ -67,7 +67,7 @@ public sealed class Examination : TenantOwnedEntity
     {
         EnsureEditable(expectedVersion);
         var item = Find(findings, id);
-        if (type is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening || item.FindingType is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening)
+        if (type is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening or DentalFindingType.Orthodontics || item.FindingType is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening or DentalFindingType.Orthodontics)
             throw new DentalStateException("Whole-mouth findings must be changed using the whole-mouth controls.");
         item.Update(type, surfaces, notes, now, cariesClass); Touch(now);
     }
