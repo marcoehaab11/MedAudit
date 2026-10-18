@@ -110,10 +110,6 @@ public sealed class PatientWorkflowTests(PlatformPostgresFixture fixture)
         await AcceptAsync(test, "admin@medical.example");
         SetActor(test, clinic);
         Guid patientId;
-        await using (var scope = test.Provider.CreateAsyncScope()) {
-            patientId = await scope.ServiceProvider.GetRequiredService<IPatientCommands>().CreateAsync(
-                new CreatePatientCommand(Profile("Salma", "Adel"), ["Penicillin"], ["Diabetes"], ["Metformin"]), CancellationToken.None);
-        }
         Guid receptionistId;
         Guid doctorId;
         await using (var scope = test.Provider.CreateAsyncScope())
@@ -129,6 +125,11 @@ public sealed class PatientWorkflowTests(PlatformPostgresFixture fixture)
         await AcceptAsync(test, "doctor@medical.example");
 
         test.Tenant.Set(clinic.TenantId); test.User.UserId = receptionistId;
+        await using (var scope = test.Provider.CreateAsyncScope()) {
+            patientId = await scope.ServiceProvider.GetRequiredService<IPatientCommands>().CreateAsync(
+                new CreatePatientCommand(Profile("Salma", "Adel"), ["Penicillin"], ["Diabetes"], ["Metformin"]), CancellationToken.None);
+        }
+
         await using (var scope = test.Provider.CreateAsyncScope())
         {
             var details = await scope.ServiceProvider.GetRequiredService<IPatientQueries>()

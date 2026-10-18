@@ -19,6 +19,36 @@ describe('AppointmentCreateComponent', () => {
     http.verify();
   });
 
+  it('saves medical selections from the booking patient dialog in the patient creation request', async () => {
+    const fixture = TestBed.createComponent(AppointmentCreateComponent); const c = fixture.componentInstance;
+    const http = TestBed.inject(HttpTestingController); fixture.detectChanges(); flushLookups(http);
+    c.openNewPatientModal(); c.patientForm.patchValue({ firstName: 'Booking', lastName: 'MedicalTest', dateOfBirth: '1990-01-01', phone: '01012345678' });
+    fixture.detectChanges(); await fixture.whenStable();
+    const groups = fixture.nativeElement.querySelectorAll('app-tag-input') as NodeListOf<HTMLElement>;
+    groups[0].querySelector<HTMLButtonElement>('.chip-suggest')!.click();
+    groups[1].querySelector<HTMLButtonElement>('.chip-suggest')!.click();
+    const medication = groups[2].querySelector('input')!;
+    medication.value = 'Metformin'; medication.dispatchEvent(new Event('input'));
+    c.saveNewPatient();
+    const request = http.expectOne(r => r.url === '/api/patients' && r.method === 'POST');
+    expect(request.request.body).toMatchObject({ allergies: [c.allergySuggestions[0].ar], medicalConditions: [c.conditionSuggestions[0].ar], medications: ['Metformin'] });
+    request.flush({ id: 'p-new' });
+    for (const r of http.match(r => r.url === '/api/patients' && r.method === 'GET')) r.flush({ items: [], totalCount: 0 });
+    expect(c.form.controls.patientId.value).toBe('p-new'); expect(c.showNewPatientModal()).toBe(false);
+    http.expectNone(r => /\/patients\/p-new\/(allergies|conditions|medications)/.test(r.url));
+  });
+
+  it('keeps the booking dialog and medical selections on a failed atomic patient save', () => {
+    const fixture = TestBed.createComponent(AppointmentCreateComponent); const c = fixture.componentInstance;
+    const http = TestBed.inject(HttpTestingController); fixture.detectChanges(); flushLookups(http);
+    c.openNewPatientModal(); c.patientForm.patchValue({ firstName: 'Booking', lastName: 'MedicalTest', dateOfBirth: '1990-01-01', phone: '01012345678' });
+    c.patientAllergies = ['Penicillin']; c.patientConditions = ['Diabetes']; c.saveNewPatient();
+    http.expectOne(r => r.url === '/api/patients' && r.method === 'POST').flush({ detail: 'Medical history could not be saved' }, { status: 409, statusText: 'Conflict' });
+    expect(c.patientError()).toBeTruthy(); expect(c.patientSaving()).toBe(false); expect(c.showNewPatientModal()).toBe(true);
+    expect(c.patientAllergies).toEqual(['Penicillin']); expect(c.patientConditions).toEqual(['Diabetes']);
+    expect(c.form.controls.patientId.value).toBe('');
+  });
+
   it('defaults to 60 minutes and follows the selected doctor preference', () => {
     const fixture = TestBed.createComponent(AppointmentCreateComponent);
     const http = TestBed.inject(HttpTestingController);

@@ -1,7 +1,7 @@
-import { Component, DestroyRef, inject, OnInit, signal, computed, ViewChild } from "@angular/core";
+import { Component, DestroyRef, inject, OnInit, signal, computed, ViewChild, ViewChildren, QueryList } from "@angular/core";
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from "@angular/forms";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
-import { combineLatest, debounceTime, distinctUntilChanged, firstValueFrom, startWith } from "rxjs";
+import { combineLatest, debounceTime, distinctUntilChanged, startWith } from "rxjs";
 import { ActivatedRoute, Router, RouterLink } from "@angular/router";
 import { LocalizationService } from "../../core/localization.service";
 import { parseApiError } from "../../core/error-util";
@@ -485,6 +485,7 @@ export class AppointmentCreateComponent implements OnInit {
   readonly showNewPatientModal = signal(false);
   readonly patientSaving = signal(false);
   readonly patientError = signal('');
+  @ViewChildren(TagInputComponent) medicalInputs!: QueryList<TagInputComponent>;
   patientAllergies: string[] = [];
   patientConditions: string[] = [];
   patientMedications: string[] = [];
@@ -626,6 +627,7 @@ export class AppointmentCreateComponent implements OnInit {
   }
 
   saveNewPatient() {
+    this.medicalInputs?.forEach(input => input.commitPending());
     this.patientForm.markAllAsTouched();
     if (this.patientForm.invalid) return;
 
@@ -637,27 +639,9 @@ export class AppointmentCreateComponent implements OnInit {
       middleName: raw.middleName.trim() || null,
     };
 
-    this.patientApi.create(val).subscribe({
-      next: async (newId) => {
+    this.patientApi.create({ ...val, allergies: [...this.patientAllergies], medicalConditions: [...this.patientConditions], medications: [...this.patientMedications] }).subscribe({
+      next: (newId) => {
         const patientId = newId.id;
-        const calls: Promise<unknown>[] = [];
-
-        for (const name of this.patientAllergies) {
-          calls.push(firstValueFrom(this.patientApi.addText(patientId, 'allergies', { name })).catch(() => {}));
-        }
-
-        for (const name of this.patientConditions) {
-          calls.push(firstValueFrom(this.patientApi.addText(patientId, 'conditions', { name })).catch(() => {}));
-        }
-
-        for (const name of this.patientMedications) {
-          calls.push(firstValueFrom(this.patientApi.addMedication(patientId, { name })).catch(() => {}));
-        }
-
-        if (calls.length > 0) {
-          await Promise.all(calls);
-        }
-
         this.patientSaving.set(false);
         this.showNewPatientModal.set(false);
         this.patientApi.invalidateCache();
