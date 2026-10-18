@@ -709,26 +709,22 @@ interface ToothServiceDraft {
               <aside class="tooth-action-col">
                 <div class="tooth-action-card">
                   <!-- Selected Tooth Header -->
-                  <div class="selected-tooth-banner">
-                    <span class="tooth-pill">
-                      @if (!treatmentTeeth.length) {
-                        {{ t('No tooth selected', 'لم يتم اختيار سن') }}
-                      } @else if (treatmentTeeth.length <= 1) {
-                        🦷 {{ treatmentTeethLabel() }}
-                      } @else {
-                        🦷 {{ treatmentTeeth.length }} {{ t('Teeth', 'أسنان') }}
-                      }
-                    </span>
-                    <div class="tooth-title-group">
-                      @if (!treatmentTeeth.length) {
-                        {{ t('No tooth selected', 'لم يتم اختيار سن') }}
-                      } @else if (treatmentTeeth.length <= 1) {
-                        <h3>{{ t('Tooth to treat today', 'السن اللي هنعالجه اليوم') }} {{ treatmentTeethLabel() }}</h3>
-                      } @else {
-                        <h3>{{ t('Teeth to treat today', 'الأسنان اللي هنعالجها اليوم') }} ({{ treatmentTeeth.length }}): {{ treatmentTeethLabel() }}</h3>
-                      }
-                      <p>{{ t('Only the teeth checked above are included in this procedure.', 'الإجراء والحساب على الأسنان المختارة فوق بس.') }}</p>
-                    </div>
+                  <div class="selected-treatment-summary">
+                    @for (number of treatmentTeeth; track number) {
+                      <div class="selected-treatment-tooth">
+                        <span class="selection-tooth-icon" aria-hidden="true">
+                          <svg viewBox="0 0 32 36" fill="none"><path d="M16 5C12 2 5 2 4 9c-1 6 3 10 4 15 1 4 1 9 4 9 2 0 1-12 4-12s2 12 4 12c3 0 3-5 4-9 1-5 5-9 4-15-1-7-8-7-12-4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+                          <span>✓</span>
+                        </span>
+                        <div class="selected-treatment-title">
+                          <strong dir="ltr">{{ toothLabel(number) }} · #{{ number }}</strong>
+                          <p>{{ t('Tooth selected for treatment', 'السن المحدد للعلاج') }}</p>
+                        </div>
+                        <div class="selected-treatment-labels">
+                          @for (label of treatmentSummaryLabels(number); track label) { <span class="selected-treatment-badge">{{ label }}</span> }
+                        </div>
+                      </div>
+                    } @empty { <p class="no-treatment-selection">{{ t('No tooth selected', 'لم يتم اختيار سن') }}</p> }
                   </div>
 
                   <!-- 1. Findings & Diagnoses for this Tooth -->
@@ -2362,6 +2358,16 @@ export class ExaminationComponent {
         this.api.notes(e.id, this.notesForm.getRawValue().notes, e.version),
         this.t('Draft saved.', 'تم حفظ المسودة.'),
       );
+  }
+
+  treatmentSummaryLabels(number: number): string[] {
+    const row = this.toothServices[number];
+    const service = row?.catalogId ? this.catalog().find(item => item.id === row.catalogId) : undefined;
+    if (service) { const parsed = parseCatalogItem(service); return [this.t(parsed.nameEn, parsed.nameAr)]; }
+    if (row?.treatmentName) return [row.treatmentName];
+    const current = (this.examination()?.findings ?? []).filter(item => item.toothNumber === number).map(item => item.type);
+    const types = current.length ? current : this.patientChart()?.teeth.find(tooth => tooth.toothNumber === number)?.findings ?? [];
+    return [...new Set(types.filter(type => type !== 1 && !this.isWholeMouthFinding(type)).map(type => this.findingLabel(type)))];
   }
 
   selectedToothFindings() {

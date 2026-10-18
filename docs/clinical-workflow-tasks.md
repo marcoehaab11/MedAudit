@@ -126,3 +126,11 @@ Root-canal validation: 163 backend unit tests and 83 frontend tests passed. Prod
 - [x] بناء الإنتاج نجح؛ التحديد المتعدد وإلغاء التحديد يظلان مستقلين عن نتائج الكشف.
 
 Compact tooth-picker visual validation: checked the production build in the isolated clinic browser; tooth #36 becomes green, selecting #35 alongside it yields two pressed cards, and Clear selection resets the count to zero. Screenshot: `tmp/medical-e2e-runtime/compact-tooth-picker.png`.
+
+## تبسيط ملخص السن المحدد — 18 أكتوبر 2026
+
+- [x] إزالة الشريط الأزرق والإطار الأزرق من بطاقة إجراءات السن.
+- [x] ملخص أبيض صغير يعرض الاسم الإنجليزي ورقم السن، وتحته «السن المحدد للعلاج» بخط خفيف.
+- [x] عرض الخدمة المختارة بجانب اسم السن، أو تشخيصاته إن لم تُحدد خدمة بعد؛ وعرض ملخص مستقل لكل سن عند التحديد المتعدد.
+
+Visual validation: production build passed; verified the white summary in the isolated clinic browser with teeth #35 and #36 selected, each displaying its own diagnosis. Screenshot: tmp/medical-e2e-runtime/simple-tooth-summary.png.

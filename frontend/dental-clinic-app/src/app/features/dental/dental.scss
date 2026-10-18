@@ -991,44 +991,12 @@
   .tooth-action-col {
     .tooth-action-card {
       background: #ffffff;
-      border: 2px solid #0284c7;
+      border: 1px solid #dce5ea;
       border-radius: var(--radius-md, 0.75rem);
-      box-shadow: 0 4px 16px rgba(2, 132, 199, 0.08);
+      box-shadow: none;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-
-      .selected-tooth-banner {
-        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-        color: white;
-        padding: 1rem 1.25rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-
-        .tooth-pill {
-          background: rgba(255, 255, 255, 0.22);
-          border: 1px solid rgba(255, 255, 255, 0.4);
-          padding: 0.35rem 0.75rem;
-          border-radius: 9999px;
-          font-weight: 800;
-          font-size: 1.15rem;
-          letter-spacing: -0.01em;
-        }
-
-        .tooth-title-group {
-          h3 {
-            margin: 0;
-            font-size: 1.1rem;
-            font-weight: 800;
-          }
-          p {
-            margin: 0;
-            font-size: 0.78rem;
-            opacity: 0.85;
-          }
-        }
-      }
 
       .tooth-section {
         padding: 1.1rem 1.25rem;
@@ -3650,3 +3618,15 @@
 .btn-slot-chip small { opacity: .75; }
 .follow-up-slot-pager { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 8px; }
 @media (max-width: 600px) { .slot-groups-vertical .period-row .period-slots-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.selected-treatment-tooth { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: #fff; border-bottom: 1px solid #edf1f4; }
+.selection-tooth-icon { position: relative; display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%; background: #e7f5ef; color: #426776; }
+.selection-tooth-icon svg { width: 23px; height: 28px; }
+.selection-tooth-icon > span { position: absolute; bottom: -1px; inset-inline-end: -2px; width: 15px; height: 15px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 50%; background: #249a75; color: #fff; font-size: 9px; }
+.selected-treatment-title { min-width: 0; }
+.selected-treatment-title strong { display: inline-block; color: #263b4c; font-size: .98rem; font-weight: 650; }
+.selected-treatment-title p { margin: 4px 0 0; color: #81909c; font-size: .76rem; font-weight: 400; }
+.selected-treatment-labels { display: flex; flex-wrap: wrap; gap: 6px; margin-inline-start: auto; }
+.selected-treatment-badge { padding: 5px 10px; border-radius: 20px; background: #edf5fb; color: #32759f; font-size: .78rem; font-weight: 500; }
+.no-treatment-selection { margin: 0; padding: 14px 16px; color: #81909c; font-size: .85rem; }
+@media (max-width: 600px) { .selected-treatment-tooth { flex-wrap: wrap; } .selected-treatment-labels { flex: 1 1 100%; margin-inline-start: 52px; } }
