@@ -17,7 +17,7 @@ import { LocalizationService } from '../../core/localization.service';
           <div class="banner-overlay"></div>
           <div class="banner-content">
             <div class="banner-brand">
-              <img src="/planora-logo.jpg" alt="" class="banner-logo-img" />
+              <img src="/planora-logo-transparent.png" alt="" class="banner-logo-img" />
               <span class="banner-brand-name">Planora</span>
             </div>
 
@@ -93,7 +93,7 @@ import { LocalizationService } from '../../core/localization.service';
         <main class="auth-card-wrapper">
           <section class="auth-card">
             <div class="card-header">
-              <div class="card-brand"><img src="/planora-logo.jpg" alt="" class="card-logo-img" /><span>Planora</span></div>
+              <div class="card-brand"><img src="/planora-logo-transparent.png" alt="" class="card-logo-img" /><span>Planora</span></div>
               <div class="clinic-badge">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
