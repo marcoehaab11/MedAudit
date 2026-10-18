@@ -49,9 +49,9 @@ describe('Sequential root canal editor', () => {
   it('uses post and core with a required post type and adds crown only for the crown workflow', () => {
     const {fixture,c,el}=create(7, 'post-core-crown');
     expect(el.textContent).toContain('4- Post and core');
-    expect(el.textContent).toContain('Fiber post'); expect(el.textContent).toContain('Metal post'); expect(el.textContent).toContain('Custom post');
+    expect(el.textContent).toContain('Canal'); expect(el.querySelectorAll('select')[1].textContent).toContain('MB2'); expect(el.textContent).toContain('Fiber post'); expect(el.textContent).toContain('Metal post'); expect(el.textContent).toContain('Custom post');
     c.completeStage(); expect(c.draft.stage).toBe(7); expect(c.postError).toBe(true);
-    c.draft.postType='fiber'; c.completeStage(); expect(c.draft.stage).toBe(8);
+    c.draft.postType='fiber'; c.completeStage(); expect(c.draft.stage).toBe(7); c.draft.postCanal='MB'; c.completeStage(); expect(c.draft.stage).toBe(8);
     expect(c.currentStage.en).toBe('Crown'); expect(c.currentStage.number).toBe(5);
     c.completeStage(); expect(c.draft.stage).toBe(6);
     c.draft.restorationType='post-core'; c.draft.stage=7; c.completeStage(); expect(c.draft.stage).toBe(6);

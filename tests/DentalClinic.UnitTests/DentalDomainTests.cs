@@ -194,6 +194,16 @@ public sealed class DentalDomainTests
     }
 
     [Fact]
+    public void PostCanalMustBeOneOfThisToothsCanalsAndIsSavedWithThePost()
+    {
+        var examination = Create();
+        var record = examination.AddEndodonticRecord(24, null, [new("B", 21, null), new("P", 20, null)], Actor, examination.Version, Now, RootCanalStage.PostAndCore, restorationType: "post-core", postType: "fiber", postCanal: "P");
+        Assert.Equal("P", record.PostCanal);
+        Assert.Throws<ArgumentException>(() => examination.UpdateEndodonticRecord(record.Id, null, [new("B", 21, null), new("P", 20, null)], examination.Version, Now, RootCanalStage.PostAndCore, restorationType: "post-core", postType: "fiber", postCanal: "MB2"));
+        Assert.Equal("P", record.PostCanal);
+    }
+
+    [Fact]
     public void CompletedExaminationAndStaleVersionsAreProtected()
     {
         var examination = Create(); var stale = examination.Version;

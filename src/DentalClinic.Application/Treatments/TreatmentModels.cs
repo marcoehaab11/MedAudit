@@ -28,16 +28,16 @@ public sealed record TreatmentPlanSearch(Guid? PatientId = null, Guid? DoctorPro
 
 public sealed record CreateTreatmentCommand(Guid PatientId, Guid DoctorProfileId, Guid CatalogItemId,
     Guid? AppointmentId, Guid? TreatmentPlanItemId, Guid? SourceDentalProcedureId,
-    IReadOnlyCollection<int> ToothNumbers, string? Notes, decimal? Price = null);
+    IReadOnlyCollection<int> ToothNumbers, string? Notes, decimal? Price = null, bool DeferBilling = false);
 public sealed record TreatmentDetails(Guid Id, Guid PatientId, string PatientName, Guid DoctorProfileId,
     string DoctorName, Guid? AppointmentId, Guid? TreatmentPlanId, Guid? TreatmentPlanItemId,
     Guid CatalogItemId, Guid? SourceDentalProcedureId, TreatmentType Type, string TreatmentName,
     IReadOnlyCollection<int> ToothNumbers, TreatmentStatus Status, decimal Price, string? Notes,
     DateTimeOffset? StartedAt, DateTimeOffset? CompletedAt, DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt, Guid Version);
+    DateTimeOffset UpdatedAt, Guid Version, bool PriceConfirmed = true);
 public sealed record TreatmentListItem(Guid Id, Guid PatientId, string PatientName, Guid DoctorProfileId,
     string DoctorName, TreatmentType Type, string TreatmentName, IReadOnlyCollection<int> ToothNumbers,
-    TreatmentStatus Status, decimal Price, DateTimeOffset CreatedAt, DateTimeOffset? CompletedAt, string? Notes = null);
+    TreatmentStatus Status, decimal Price, DateTimeOffset CreatedAt, DateTimeOffset? CompletedAt, string? Notes = null, bool PriceConfirmed = true);
 public sealed record TreatmentSearch(Guid? PatientId = null, Guid? DoctorProfileId = null,
     TreatmentType? Type = null, TreatmentStatus? Status = null, DateOnly? From = null,
     DateOnly? To = null, int? ToothNumber = null, int Page = 1, int PageSize = 20);

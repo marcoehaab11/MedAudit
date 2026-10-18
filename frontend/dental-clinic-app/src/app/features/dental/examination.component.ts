@@ -846,7 +846,7 @@ interface ToothServiceDraft {
                 {{ t('← Previous: Dental Chart', '⬅ السابق: مخطط الأسنان') }}
               </button>
               <button type="button" class="button primary next-btn" (click)="setStep(4)">
-                {{ t('Next: Prescription & Rx →', 'التالي: الوصفة الطبية ➔') }}
+                {{ t('Next: Accounting →', 'التالي: الحساب ➔') }}
               </button>
             </div>
           </section>
@@ -856,9 +856,94 @@ interface ToothServiceDraft {
         <!--  STEP 4: PRESCRIPTION & INSTRUCTIONS (الروشتة الطبية)            -->
         <!-- ════════════════════════════════════════════════════════════════ -->
         @if (step() === 4) {
+          <section class="step-card accounting-card">
+            <div class="step-header-title"><h2>{{ t('4. Accounting', '4. الحساب') }}</h2><p>{{ t('Approve each service price for reception before prescription.', 'حدد واعتمد سعر كل إجراء للريسبشن قبل الروشتة.') }}</p></div>
+            <div class="panel-box">
+              <h3>{{ t('Selected services — pricing', 'حساب الخدمات المحددة') }}</h3>
+              @for (number of treatmentRowKeys(); track number) {
+                @let row = toothService(number);
+                @if (row.catalogId && !row.treatmentId) {
+                  <section class="billing-service-price">
+                    <strong>{{ number === 0 ? t('Whole mouth', 'الفم بالكامل') : toothLabel(number) + ' · #' + number }}</strong>
+                              <label>{{ t('Price category', 'فئة السعر') }}
+                                <select [(ngModel)]="row.tierId" (change)="selectToothServiceTier(number)">
+                                  @for (tier of toothServiceTiers(number); track tier.id) { <option [value]="tier.id">{{ t(tier.nameEn, tier.nameAr) }} — {{ tier.price }}</option> }
+                                  <option value="custom">{{ t('Custom price', 'سعر مخصص') }}</option>
+                                </select>
+                              </label>
+                              <label>{{ t('Service price', 'سعر الخدمة') }}<input type="number" min="0" [ngModel]="row.price" (ngModelChange)="row.price = +$event; row.tierId = 'custom'" /></label>
+                    <button type="button" class="button primary" [disabled]="savingTreatment() || savingRootCanal() || !!savingVisitPrice() || row.price < 0 || !examination()!.canEdit" (click)="recordAndApproveService(number)">{{ t('Record service & approve price', 'تسجيل الإجراء واعتماد السعر') }}</button>
+                  </section>
+                }
+              }
+            </div>
+            @for (item of executedTreatments(); track item.id) {
+              @if (item.priceConfirmed === false && item.status !== 5) {
+                <section class="billing-service-price">
+                  <strong>{{ item.treatmentName }} · {{ treatmentPriceTeeth(item) }}</strong>
+                  <label>{{ t('Price for reception', 'السعر للريسبشن') }}
+                    <input type="number" min="0" step="0.01" [ngModel]="visitPrices[item.id] ?? item.price" (ngModelChange)="visitPrices[item.id] = +$event" [disabled]="!!savingVisitPrice()" />
+                  </label>
+                  <button type="button" class="button primary" [disabled]="!!savingVisitPrice() || !examination()!.canEdit" (click)="confirmVisitPrice(item)">{{ t('Approve price & send to reception', 'اعتماد السعر وإرساله للريسبشن') }}</button>
+                </section>
+              }
+            }
+              <!-- Executed Treatments List -->
+              <div class="panel-box done-today-box">
+                <div class="box-header">
+                  <h3>⚡ {{ t('Visit services and charges', 'خدمات الزيارة والحساب') }}</h3>
+                  <span class="today-total-tag">{{ todayProceduresTotal() }} EGP</span>
+                </div>
+
+                <div class="executed-list-wrap">
+                  @if (executedTreatments().length > 0) {
+                    <table class="simple-table">
+                      <thead>
+                        <tr>
+                          <th>{{ t('Procedure', 'الإجراء') }}</th>
+                          <th>{{ t('Tooth', 'السن') }}</th>
+                          <th>{{ t('Price', 'المبلغ') }}</th>
+                          <th>{{ t('Status', 'الحالة') }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (tr of executedTreatments(); track tr.id) {
+                          <tr>
+                            <td><strong>{{ tr.treatmentName }}</strong> @if (tr.notes) { <br><small>{{ tr.notes }}</small> }</td>
+                            <td><span class="tooth-table-pill">{{ tr.toothNumbers && tr.toothNumbers.length ? '#' + tr.toothNumbers.join(', #') : '—' }}</span></td>
+                            <td><strong>{{ tr.price }} EGP</strong></td>
+                            <td>
+                              @if (tr.status === 4) {
+                                <span class="status-tag done">✓ {{ t('Finished (Completed)', 'خَلَصْ (مكتمل بالكامل)') }}</span>
+                              } @else if (tr.status === 3) {
+                                <span class="status-tag active">⏳ {{ t('Started (In Progress)', 'بدأ العلاج ولسه هنكمل') }}</span>
+                              } @else {
+                                <span class="status-tag">{{ tr.status }}</span>
+                              }
+                            </td>
+                          </tr>
+
+                        }
+                      </tbody>
+                    </table>
+                  } @else {
+                    <p class="empty-hint">{{ t('No treatments recorded yet in this session. Select teeth and procedure above.', 'لم يتم تسجيل إجراءات في هذه الجلسة بعد. اختر الأسنان والإجراء بالأعلى للتنفيذ.') }}</p>
+                  }
+                </div>
+              </div>
+
+
+            @if (hasPendingVisitPrices()) { <p role="status">{{ t('Approve the pending service prices to continue.', 'اعتمد أسعار الإجراءات المعلّقة للمتابعة.') }}</p> }
+            <div class="step-footer-actions">
+              <button type="button" class="button secondary" (click)="setStep(3)">{{ t('Previous: Procedures', 'السابق: الإجراءات') }}</button>
+              <button type="button" class="button primary" [disabled]="hasPendingVisitPrices()" (click)="setStep(5)">{{ t('Next: Prescription', 'التالي: الروشتة') }}</button>
+            </div>
+          </section>
+        }
+        @if (step() === 5) {
           <section class="step-card rx-card">
             <div class="step-header-title">
-              <h2>💊 {{ t('4. Medical Prescription & Patient Instructions', '4. الوصفة الطبية وتعليمات المريض') }}</h2>
+              <h2>💊 {{ t('5. Medical Prescription & Patient Instructions', '5. الوصفة الطبية وتعليمات المريض') }}</h2>
               <p>{{ t('Prescribe medications with clear dosages, frequency, duration, and post-treatment precautions.', 'تحرير الأدوية والجرعات وتعليمات ما بعد العلاج للمريض.') }}</p>
             </div>
 
@@ -1034,11 +1119,11 @@ interface ToothServiceDraft {
             </div>
 
             <div class="step-footer-actions">
-              <button type="button" class="button secondary prev-btn" (click)="setStep(3)">
-                {{ t('← Previous: Procedures', '⬅ السابق: الإجراءات') }}
+              <button type="button" class="button secondary prev-btn" (click)="setStep(4)">
+                {{ t('← Previous: Accounting', '⬅ السابق: الحساب') }}
               </button>
-              <button type="button" class="button primary next-btn" (click)="setStep(5)">
-                {{ t('Next: Checkout & Billing →', 'التالي: الحساب والإنهاء ➔') }}
+              <button type="button" class="button primary next-btn" (click)="setStep(6)">
+                {{ t('Next: Payment & End →', 'التالي: السداد وإنهاء الجلسة ➔') }}
               </button>
             </div>
           </section>
@@ -1047,74 +1132,12 @@ interface ToothServiceDraft {
         <!-- ════════════════════════════════════════════════════════════════ -->
         <!--  STEP 5: BILLING & COMPLETE VISIT (الحساب وإنهاء الزيارة)         -->
         <!-- ════════════════════════════════════════════════════════════════ -->
-        @if (step() === 5) {
+        @if (step() === 6) {
           <section class="step-card checkout-card">
             <div class="step-header-title">
-              <h2>💳 {{ t('5. Visit Summary, Billing & Checkout', '5. ملخص الزيارة، الحساب وإنهاء الجلسة') }}</h2>
+              <h2>💳 {{ t('6. Payment & End Visit', '6. السداد وإنهاء الجلسة') }}</h2>
               <p>{{ t('Review charges, post fees to patient account, collect payments, and finalize the clinical visit.', 'مراجعة التكاليف، ترحيل المستحقات لحساب المريض، تحصيل الدفعات، وإنهاء الزيارة السريرية رسمياً.') }}</p>
             </div>
-
-            <div class="panel-box">
-              <h3>{{ t('Selected services — pricing', 'حساب الخدمات المحددة') }}</h3>
-              @for (number of treatmentRowKeys(); track number) {
-                @let row = toothService(number);
-                @if (row.catalogId && !row.treatmentId) {
-                  <section class="billing-service-price">
-                    <strong>{{ number === 0 ? t('Whole mouth', 'الفم بالكامل') : toothLabel(number) + ' · #' + number }}</strong>
-                              <label>{{ t('Price category', 'فئة السعر') }}
-                                <select [(ngModel)]="row.tierId" (change)="selectToothServiceTier(number)">
-                                  @for (tier of toothServiceTiers(number); track tier.id) { <option [value]="tier.id">{{ t(tier.nameEn, tier.nameAr) }} — {{ tier.price }}</option> }
-                                  <option value="custom">{{ t('Custom price', 'سعر مخصص') }}</option>
-                                </select>
-                              </label>
-                              <label>{{ t('Service price', 'سعر الخدمة') }}<input type="number" min="0" [ngModel]="row.price" (ngModelChange)="row.price = +$event; row.tierId = 'custom'" /></label>
-                  </section>
-                }
-              }
-            </div>
-              <!-- Executed Treatments List -->
-              <div class="panel-box done-today-box">
-                <div class="box-header">
-                  <h3>⚡ {{ t('Visit services and charges', 'خدمات الزيارة والحساب') }}</h3>
-                  <span class="today-total-tag">{{ todayProceduresTotal() }} EGP</span>
-                </div>
-
-                <div class="executed-list-wrap">
-                  @if (executedTreatments().length > 0) {
-                    <table class="simple-table">
-                      <thead>
-                        <tr>
-                          <th>{{ t('Procedure', 'الإجراء') }}</th>
-                          <th>{{ t('Tooth', 'السن') }}</th>
-                          <th>{{ t('Price', 'المبلغ') }}</th>
-                          <th>{{ t('Status', 'الحالة') }}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        @for (tr of executedTreatments(); track tr.id) {
-                          <tr>
-                            <td><strong>{{ tr.treatmentName }}</strong> @if (tr.notes) { <br><small>{{ tr.notes }}</small> }</td>
-                            <td><span class="tooth-table-pill">{{ tr.toothNumbers && tr.toothNumbers.length ? '#' + tr.toothNumbers.join(', #') : '—' }}</span></td>
-                            <td><strong>{{ tr.price }} EGP</strong></td>
-                            <td>
-                              @if (tr.status === 4) {
-                                <span class="status-tag done">✓ {{ t('Finished (Completed)', 'خَلَصْ (مكتمل بالكامل)') }}</span>
-                              } @else if (tr.status === 3) {
-                                <span class="status-tag active">⏳ {{ t('Started (In Progress)', 'بدأ العلاج ولسه هنكمل') }}</span>
-                              } @else {
-                                <span class="status-tag">{{ tr.status }}</span>
-                              }
-                            </td>
-                          </tr>
-
-                        }
-                      </tbody>
-                    </table>
-                  } @else {
-                    <p class="empty-hint">{{ t('No treatments recorded yet in this session. Select teeth and procedure above.', 'لم يتم تسجيل إجراءات في هذه الجلسة بعد. اختر الأسنان والإجراء بالأعلى للتنفيذ.') }}</p>
-                  }
-                </div>
-              </div>
 
             <!-- Reception Desk & Role Availability Banner -->
             <div class="reception-desk-banner">
@@ -1432,7 +1455,7 @@ interface ToothServiceDraft {
             </div>
 
             <div class="step-footer-actions">
-              <button type="button" class="button secondary prev-btn" (click)="setStep(4)">
+              <button type="button" class="button secondary prev-btn" (click)="setStep(5)">
                 {{ t('← Previous: Prescription', '⬅ السابق: الوصفة الطبية') }}
               </button>
               <div></div>
@@ -1660,8 +1683,9 @@ export class ExaminationComponent {
     { number: 1, icon: '📋', en: '1. Intake', ar: '1. الاستقبال والشكوى' },
     { number: 2, icon: '🦷', en: '2. Dental Chart', ar: '2. فحص ومخطط الأسنان' },
     { number: 3, icon: '🛠️', en: '3. Visit procedures', ar: '3. الإجراءات الطبية للزيارة' },
-    { number: 4, icon: '💊', en: '4. Prescription', ar: '4. الروشتة' },
-    { number: 5, icon: '💳', en: '5. Billing & End', ar: '5. الحساب والإنهاء' },
+    { number: 4, icon: '💳', en: '4. Accounting', ar: '4. الحساب' },
+    { number: 5, icon: '💊', en: '5. Prescription', ar: '5. الروشتة' },
+    { number: 6, icon: '✓', en: '6. Payment & End', ar: '6. السداد والإنهاء' },
   ];
 
   // Dental Chart State
@@ -1867,10 +1891,11 @@ export class ExaminationComponent {
                     this.loadPatient(e.patientId);
       this.loadAppointment();
     }
-    if (n === 4) {
+    if (n === 4) { this.loadTreatments(e.patientId); this.loadBalance(e.patientId); }
+    if (n === 5) {
       this.loadMedicationsCatalog();
     }
-    if (n === 5) {
+    if (n === 6) {
       this.loadBalance(e.patientId);
       this.loadTreatments(e.patientId);
                     this.loadPatient(e.patientId);
@@ -2482,6 +2507,28 @@ export class ExaminationComponent {
   }
 
 
+  readonly visitPrices: Record<string, number> = {};
+  readonly savingVisitPrice = signal('');
+  hasPendingVisitPrices() { return this.executedTreatments().some(item => item.priceConfirmed === false && item.status !== 5); }
+  treatmentPriceTeeth(item: Treatment) { return (item.toothNumbers ?? []).map(number => this.toothLabel(number) + ' · #' + number).join(', '); }
+  async recordAndApproveService(number: number) {
+    const row = this.toothService(number);
+    await this.executeToothService(number);
+    if (row.treatmentId && !this.error()) await this.confirmVisitPrice({id: row.treatmentId, price: row.price});
+  }
+  async confirmVisitPrice(item: Pick<Treatment, 'id' | 'price'>) {
+    const price = this.visitPrices[item.id] ?? item.price;
+    if (!this.examination()?.canEdit || this.savingVisitPrice() || !Number.isFinite(price) || price < 0) return;
+    this.savingVisitPrice.set(item.id); this.error.set('');
+    try {
+      const current = await firstValueFrom(this.treatmentApi.treatment(item.id));
+      if (current.priceConfirmed !== false) throw new Error(this.t('This price has already been approved. Reload the account.', 'تم اعتماد السعر بالفعل؛ حدّث الحساب.'));
+      await firstValueFrom(this.treatmentApi.confirmTreatmentPrice(item.id, price, current.version));
+      this.success.set(this.t('Price approved for reception.', 'تم اعتماد السعر للريسبشن.'));
+      this.loadTreatments(this.examination()!.patientId); this.loadBalance(this.examination()!.patientId);
+    } catch (error) { this.error.set(parseApiError(error, this.t('Could not approve the price.', 'تعذر اعتماد السعر.'))); }
+    finally { this.savingVisitPrice.set(''); }
+  }
   wholeMouthTreatment = false;
   readonly toothServices: Record<number, ToothServiceDraft> = {};
   private readonly serviceFindingTypes = new Map<number, number | undefined>();
@@ -2595,7 +2642,7 @@ export class ExaminationComponent {
     const exam = this.examination()!;
     const row = this.toothService(number), draft = this.rootCanalFor(number);
     const existing = exam.endodonticRecords.find(record => record.toothNumber === number && (!record.treatmentId || record.treatmentId === row.treatmentId));
-    const request = { restorationType: draft.restorationType, postType: draft.postType, toothNumber: number, treatmentId: row.treatmentId, stage: draft.stage, notes: draft.notes || undefined, canals: draft.canals.map(c => ({ ...c, finalFileSize: c.finalFileSize || undefined })), version: exam.version };
+    const request = { restorationType: draft.restorationType, postType: draft.postType, postCanal: draft.postCanal, toothNumber: number, treatmentId: row.treatmentId, stage: draft.stage, notes: draft.notes || undefined, canals: draft.canals.map(c => ({ ...c, finalFileSize: c.finalFileSize || undefined })), version: exam.version };
     await firstValueFrom(existing ? this.api.updateEndodontic(exam.id, existing.id, request) : this.api.addEndodontic(exam.id, request));
     this.examination.set(await firstValueFrom(this.api.examination(exam.id)));
     this.loadPatient(exam.patientId);
@@ -2662,7 +2709,7 @@ export class ExaminationComponent {
         const tier = this.toothServiceTiers(number).find(tier => tier.id === row.tierId);
         const notes = [this.toothServiceIsRootCanal(number) ? this.rootCanalFor(number).notes.trim() : row.notes.trim(), tier && row.tierId !== 'base' ? this.t(tier.nameEn, tier.nameAr) : '', this.toothServiceIsFilling(number) && row.cariesClass ? 'Class ' + ['I','II','III','IV','V','VI'][row.cariesClass - 1] : '', !this.toothServiceIsRootCanal(number) && row.status === 'in_progress' ? '(متبقي: ' + (row.remaining.trim() || 'استكمال العلاج') + ')' : '', number === 0 ? this.t('Whole mouth — one service charge', 'الفم بالكامل — خدمة واحدة') : ''].filter(Boolean).join(' · ');
         const teeth = number === 0 ? Array.from({ length: 4 }, (_, quadrant) => Array.from({ length: 8 }, (_, index) => (quadrant + 1) * 10 + index + 1)).flat() : [number];
-        const created = await firstValueFrom(this.treatmentApi.createTreatment({ patientId: exam.patientId, doctorProfileId: appointment.doctorProfileId, appointmentId: this.appointmentId, catalogItemId: row.catalogId, toothNumbers: teeth, price: row.price, notes: notes || undefined }));
+        const created = await firstValueFrom(this.treatmentApi.createTreatment({ patientId: exam.patientId, doctorProfileId: appointment.doctorProfileId, appointmentId: this.appointmentId, catalogItemId: row.catalogId, toothNumbers: teeth, deferBilling: true, price: row.price, notes: notes || undefined }));
         row.treatmentId = created.id;
           const clinicalDraft = this.rootCanalDrafts.get(number);
           if (clinicalDraft) clinicalDraft.treatmentId = created.id;
@@ -3216,6 +3263,7 @@ export class ExaminationComponent {
   }
 
   async completeVisit() {
+    if (this.hasPendingVisitPrices()) { this.error.set(this.t('Approve the service prices in Accounting first.', 'اعتمد أسعار الإجراءات في خطوة الحساب أولًا.')); this.setStep(4); return; }
     const e = this.examination();
     if (!e) return;
 

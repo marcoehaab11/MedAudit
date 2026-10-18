@@ -16,6 +16,7 @@ export function rootCanalStages(mode: RestorationType = 'composite') {
 export interface RootCanalDraft {
   restorationType?: RestorationType;
   postType?: 'fiber' | 'metal' | 'custom' | null;
+  postCanal?: string | null;
   stage: number;
   notes: string;
   canals: { name: string; lengthMm: number | null; finalFileSize: string; notes?: string }[];
@@ -34,7 +35,7 @@ export function rootCanalNames(tooth: number): string[] {
 export function rootCanalDraft(tooth: number, record?: EndodonticRecord): RootCanalDraft {
   const names = rootCanalNames(tooth);
   for (const canal of record?.canals ?? []) if (!names.some(name => name.toLowerCase() === canal.name.toLowerCase())) names.push(canal.name);
-  return { restorationType: record?.restorationType ?? undefined, postType: record?.postType ?? null, stage: record?.stage ?? 1, notes: record?.notes ?? '', canals: names.map(name => {
+  return { restorationType: record?.restorationType ?? undefined, postType: record?.postType ?? null, postCanal: record?.postCanal ?? null, stage: record?.stage ?? 1, notes: record?.notes ?? '', canals: names.map(name => {
     const saved = record?.canals.find(canal => canal.name.toLowerCase() === name.toLowerCase());
     return { name, lengthMm: saved?.lengthMm ?? null, finalFileSize: saved?.finalFileSize ?? '', notes: saved?.notes };
   }) };

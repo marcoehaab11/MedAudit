@@ -27,6 +27,26 @@ describe('ExaminationComponent', () => {
     http.verify();
   });
 
+  it('approves the doctor price before prescription using the current treatment version', async () => {
+    const fixture=TestBed.createComponent(ExaminationComponent),c=fixture.componentInstance,http=TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    const work={id:'pending',patientId:'p1',patientName:'Patient',doctorProfileId:'d1',doctorName:'Doctor',treatmentName:'Filling',type:1,toothNumbers:[24],status:4,price:200,priceConfirmed:false,createdAt:'',version:'old'};
+    c.executedTreatments.set([work]); c.step.set(4); fixture.detectChanges();
+    expect(c.hasPendingVisitPrices()).toBe(true); expect(c.steps[3].ar).toContain('الحساب'); expect(c.steps[4].ar).toContain('الروشتة');
+    c.visitPrices['pending']=450; const pending=c.confirmVisitPrice(work);
+    http.expectOne('/api/treatments/pending').flush({...work,version:'current'});
+    await Promise.resolve(); await Promise.resolve();
+    const approve=http.expectOne('/api/treatments/pending/price'); expect(approve.request.body).toEqual({price:450,version:'current'}); approve.flush(null);
+    await pending; flushAuxiliary(http);
+    expect(c.success()).toContain('اعتماد السعر'); http.expectNone(r=>r.method==='POST'&&r.url==='/api/treatments');
+  });
+  it('sends unfinished visit prices back to accounting instead of ending the visit', async () => {
+    const c=TestBed.createComponent(ExaminationComponent).componentInstance,http=TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    c.executedTreatments.set([{id:'pending',patientId:'p1',patientName:'Patient',doctorProfileId:'d1',doctorName:'Doctor',treatmentName:'Filling',type:1,toothNumbers:[24],status:4,price:200,priceConfirmed:false,createdAt:'',version:'v'}]);
+    await c.completeVisit(); expect(c.step()).toBe(4); flushAuxiliary(http);
+    http.expectNone(r=>r.url.endsWith('/complete')&&r.method==='POST');
+  });
   it('carries different chart procedures into treatment and updates only the changed tooth', () => {
     const c = TestBed.createComponent(ExaminationComponent).componentInstance;
     const http = TestBed.inject(HttpTestingController);
@@ -57,7 +77,7 @@ describe('ExaminationComponent', () => {
     c.examination.set({ ...c.examination()!, findings: [{ ...examination().findings[0], type: 14 }] });
     expect(c.toothService(36)).toMatchObject({ catalogId: 'b', treatmentId: 'saved', price: 200 });
   });
-  it('keeps diagnosis editing on the chart and financial fields after prescription', () => {
+  it('keeps diagnosis editing on the chart and places accounting before prescription', () => {
     const fixture = TestBed.createComponent(ExaminationComponent), c = fixture.componentInstance;
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
@@ -67,7 +87,7 @@ describe('ExaminationComponent', () => {
     expect(fixture.nativeElement.querySelector('.quick-add-finding-row')).toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('اختر الإجراء أو الخدمة');
     expect(fixture.nativeElement.textContent).not.toContain('سعر الخدمة');
-    c.step.set(5); fixture.detectChanges();
+    c.step.set(4); fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('سعر الخدمة');
     expect(c.findingOptions.map(x => x.id)).toEqual([2,4,8,10,11,9,14,15,17]);
   });
@@ -332,14 +352,14 @@ describe('ExaminationComponent', () => {
     expect(c.treatmentTeeth).toEqual([]);
   });
 
-  it('loads the examination and initializes the 5-step clinical flow', () => {
+  it('loads the examination and initializes the 6-step clinical flow', () => {
     const fixture = TestBed.createComponent(ExaminationComponent);
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/appointments/a1/examination').flush(examination());
     flushAuxiliary(http);
     fixture.detectChanges();
     const component = fixture.componentInstance;
-    expect(component.steps).toHaveLength(5);
+    expect(component.steps).toHaveLength(6);
     expect(component.steps[0].number).toBe(1);
     expect(component.steps[1].number).toBe(2);
     expect(component.steps[2].number).toBe(3);
@@ -666,7 +686,7 @@ describe('ExaminationComponent', () => {
     fixture.detectChanges();
 
     const component = fixture.componentInstance;
-    component.setStep(5);
+    component.setStep(6);
     flushAuxiliary(http);
 
     const availReq = http.match((req) => req.url.includes('/api/appointments/availability'));
@@ -708,7 +728,7 @@ describe('ExaminationComponent', () => {
     fixture.detectChanges();
 
     const component = fixture.componentInstance;
-    component.setStep(5);
+    component.setStep(6);
     flushAuxiliary(http);
 
     const availReq = http.match((req) => req.url.includes('/api/appointments/availability'));
@@ -809,7 +829,7 @@ describe('ExaminationComponent', () => {
     fixture.detectChanges();
 
     const component = fixture.componentInstance;
-    component.setStep(4);
+    component.setStep(5);
     flushAuxiliary(http);
     fixture.detectChanges();
 

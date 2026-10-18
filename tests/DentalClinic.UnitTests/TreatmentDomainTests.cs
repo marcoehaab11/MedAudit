@@ -8,6 +8,20 @@ public sealed class TreatmentDomainTests
     private static readonly DateTimeOffset Now = new(2026, 8, 15, 8, 0, 0, TimeSpan.Zero);
 
     [Fact]
+    public void ClinicalWorkCanFinishBeforeDoctorApprovesThePrice()
+    {
+        var treatment = new Treatment(Tenant, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null, null, Guid.NewGuid(), null, TreatmentType.Filling, "Composite", [24], 200m, null, Now, priceConfirmed: false);
+        treatment.Start(treatment.Version, Now); treatment.Complete(treatment.Version, Now);
+        Assert.False(treatment.PriceConfirmed); Assert.Equal(TreatmentStatus.Completed, treatment.Status);
+        var version = treatment.Version;
+        Assert.Throws<ArgumentOutOfRangeException>(() => treatment.ConfirmPrice(-1, version, Now)); Assert.False(treatment.PriceConfirmed);
+        Assert.Throws<TreatmentConcurrencyException>(() => treatment.ConfirmPrice(450, Guid.NewGuid(), Now));
+        treatment.ConfirmPrice(450, version, Now);
+        Assert.True(treatment.PriceConfirmed); Assert.Equal(450m, treatment.Price); Assert.Equal(TreatmentStatus.Completed, treatment.Status);
+        Assert.Throws<TreatmentStateException>(() => treatment.ConfirmPrice(500, treatment.Version, Now));
+    }
+
+    [Fact]
     public void PlanCalculatesItemAndPlanDiscountsWithoutChangingCatalogPrice()
     {
         var plan = CreatePlan();

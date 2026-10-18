@@ -111,12 +111,12 @@ public sealed class EndodonticRecord : TenantOwnedEntity
     private readonly List<EndodonticCanal> canals = [];
     private EndodonticRecord() { }
     internal EndodonticRecord(Guid tenantId, Guid examinationId, Guid patientId, int toothNumber,
-        string? notes, IEnumerable<EndodonticCanalInput> canalInputs, Guid createdBy, DateTimeOffset createdAt, RootCanalStage? stage = null, Guid? treatmentId = null, string? restorationType = null, string? postType = null)
+        string? notes, IEnumerable<EndodonticCanalInput> canalInputs, Guid createdBy, DateTimeOffset createdAt, RootCanalStage? stage = null, Guid? treatmentId = null, string? restorationType = null, string? postType = null, string? postCanal = null)
     {
         TenantId = tenantId; ExaminationId = examinationId; PatientId = patientId;
         ToothNumber = PermanentToothCatalog.Get(toothNumber).Number;
         ToothId = PermanentToothCatalog.Get(toothNumber).Id;
-        CreatedBy = createdBy; CreatedAt = createdAt; Apply(notes, canalInputs, createdAt, stage, treatmentId, restorationType, postType);
+        CreatedBy = createdBy; CreatedAt = createdAt; Apply(notes, canalInputs, createdAt, stage, treatmentId, restorationType, postType, postCanal);
     }
     public Guid ExaminationId { get; private set; }
     public Guid PatientId { get; private set; }
@@ -125,15 +125,16 @@ public sealed class EndodonticRecord : TenantOwnedEntity
     public RootCanalStage? Stage { get; private set; }
     public string? RestorationType { get; private set; }
     public string? PostType { get; private set; }
+    public string? PostCanal { get; private set; }
     public Guid? TreatmentId { get; private set; }
     public string? Notes { get; private set; }
     public Guid CreatedBy { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public IReadOnlyCollection<EndodonticCanal> Canals => canals;
-    internal void Update(string? notes, IEnumerable<EndodonticCanalInput> canalInputs, DateTimeOffset updatedAt, RootCanalStage? stage = null, Guid? treatmentId = null, string? restorationType = null, string? postType = null) =>
-        Apply(notes, canalInputs, updatedAt, stage, treatmentId, restorationType, postType);
-    private void Apply(string? notes, IEnumerable<EndodonticCanalInput> canalInputs, DateTimeOffset updatedAt, RootCanalStage? stage, Guid? treatmentId, string? restorationType, string? postType)
+    internal void Update(string? notes, IEnumerable<EndodonticCanalInput> canalInputs, DateTimeOffset updatedAt, RootCanalStage? stage = null, Guid? treatmentId = null, string? restorationType = null, string? postType = null, string? postCanal = null) =>
+        Apply(notes, canalInputs, updatedAt, stage, treatmentId, restorationType, postType, postCanal);
+    private void Apply(string? notes, IEnumerable<EndodonticCanalInput> canalInputs, DateTimeOffset updatedAt, RootCanalStage? stage, Guid? treatmentId, string? restorationType, string? postType, string? postCanal)
     {
         if (stage.HasValue && !Enum.IsDefined(stage.Value)) throw new ArgumentOutOfRangeException(nameof(stage));
         if (treatmentId == Guid.Empty || TreatmentId.HasValue && treatmentId != TreatmentId) throw new ArgumentException("The treatment link cannot be changed.", nameof(treatmentId));
@@ -151,6 +152,7 @@ public sealed class EndodonticRecord : TenantOwnedEntity
             if (!names.Add(name)) throw new ArgumentException("Canal names must be unique within a record.", nameof(canalInputs));
             validated.Add(new EndodonticCanal(TenantId, Id, name, input.LengthMm, input.Notes, input.FinalFileSize));
         }
+        if (postCanal is not null && !validated.Any(c => string.Equals(c.Name, postCanal, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException("The post canal must belong to this tooth.");
         var retained = new List<EndodonticCanal>();
         foreach (var item in validated) {
             var existing = canals.FirstOrDefault(c => string.Equals(c.Name, item.Name, StringComparison.OrdinalIgnoreCase));
@@ -158,7 +160,7 @@ public sealed class EndodonticRecord : TenantOwnedEntity
             else { existing.CopyMeasurementsFrom(item); retained.Add(existing); }
         }
         canals.Clear(); canals.AddRange(retained);
-        Notes = cleanNotes; Stage = stage; TreatmentId = treatmentId; RestorationType = restorationType; PostType = postType;
+        Notes = cleanNotes; Stage = stage; TreatmentId = treatmentId; RestorationType = restorationType; PostType = postType; PostCanal = postCanal;
         UpdatedAt = updatedAt;
     }
 }

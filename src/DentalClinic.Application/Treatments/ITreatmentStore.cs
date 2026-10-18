@@ -48,6 +48,7 @@ public interface ITreatmentPlanService
 }
 public interface ITreatmentService
 {
+    Task<bool> ConfirmPriceAsync(Guid id, decimal price, Guid version, CancellationToken token);
     Task<PagedResult<TreatmentListItem>> SearchAsync(TreatmentSearch query, CancellationToken token);
     Task<TreatmentDetails?> GetAsync(Guid id, CancellationToken token);
     Task<Guid> CreateAsync(CreateTreatmentCommand command, CancellationToken token);

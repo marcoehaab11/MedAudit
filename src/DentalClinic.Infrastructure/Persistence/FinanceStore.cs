@@ -154,7 +154,7 @@ internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock cl
         }
 
         var unbilledTreatments = await context.Treatments
-            .Where(t => t.PatientId == patientId && t.Price > 0 && t.Status != Domain.Treatments.TreatmentStatus.Cancelled && !context.Revenues.Any(r => r.TreatmentId == t.Id))
+            .Where(t => t.PatientId == patientId && t.PriceConfirmed && t.Price > 0 && t.Status != Domain.Treatments.TreatmentStatus.Cancelled && !context.Revenues.Any(r => r.TreatmentId == t.Id))
             .ToListAsync(token);
         if (unbilledTreatments.Count > 0)
         {

@@ -126,7 +126,7 @@ internal sealed class TreatmentPlanService(ITreatmentStore store, TreatmentAcces
 }
 
 internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess access, IPermissionService permissions,
-    ICurrentTenant tenant, ICurrentUser user, ISystemClock clock, ITreatmentRevenueCreator revenueCreator, IDentalStore dentalStore) : ITreatmentService
+    ICurrentTenant tenant, ICurrentUser user, ISystemClock clock, ITreatmentRevenueCreator revenueCreator, IDentalStore dentalStore, IFinanceStore financeStore) : ITreatmentService
 {
     public async Task<PagedResult<TreatmentListItem>> SearchAsync(TreatmentSearch query, CancellationToken token)
     { if (query.Page < 1 || query.PageSize is < 1 or > 100 || query.From > query.To) throw new ArgumentException("Invalid treatment search."); if ((query.Type.HasValue && !Enum.IsDefined(query.Type.Value)) || (query.Status.HasValue && !Enum.IsDefined(query.Status.Value))) throw new ArgumentException("Invalid treatment filter."); if (query.ToothNumber.HasValue) DentalClinic.Domain.Dental.PermanentToothCatalog.Get(query.ToothNumber.Value); return await store.SearchTreatmentsAsync(query, await access.VisibleDoctorAsync(Permissions.TreatmentsView, token), token); }
@@ -155,10 +155,25 @@ internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess ac
         if (command.SourceDentalProcedureId.HasValue)
         { var procedure = await store.FindDentalProcedureAsync(command.SourceDentalProcedureId.Value, token); if (procedure is null || procedure.PatientId != command.PatientId || (teeth.Count > 0 && !teeth.Contains(procedure.ToothNumber))) throw new ArgumentException("Dental procedure does not match treatment patient and tooth."); if (teeth.Count == 0) teeth.Add(procedure.ToothNumber); }
         var treatment = new Treatment(tenant.RequireTenantId(), command.PatientId, command.DoctorProfileId, command.AppointmentId,
-            planId, command.TreatmentPlanItemId, catalog.Id, command.SourceDentalProcedureId, catalog.Type, catalog.Name, teeth, price, command.Notes, clock.UtcNow);
+            planId, command.TreatmentPlanItemId, catalog.Id, command.SourceDentalProcedureId, catalog.Type, catalog.Name, teeth, price, command.Notes, clock.UtcNow, !command.DeferBilling);
         store.AddTreatment(treatment); Audit(PlatformAuditAction.TreatmentCreated, treatment.Id); await store.SaveChangesAsync(token);
-        await revenueCreator.EnsureForCompletedTreatmentAsync(treatment.Id, token);
+        if (treatment.PriceConfirmed) await revenueCreator.EnsureForCompletedTreatmentAsync(treatment.Id, token);
         return treatment.Id;
+    }
+    public async Task<bool> ConfirmPriceAsync(Guid id, decimal price, Guid version, CancellationToken token)
+    {
+        await permissions.EnsurePermissionAsync(Permissions.TreatmentsEdit, token);
+        await using var transaction = await financeStore.BeginTransactionAsync(token);
+        var item = await store.FindTreatmentAsync(id, true, token);
+        if (item is null) return false;
+        await access.EnsureDoctorAsync(item.DoctorProfileId, Permissions.TreatmentsEdit, token);
+        item.ConfirmPrice(price, version, clock.UtcNow);
+        Audit(PlatformAuditAction.TreatmentUpdated, id);
+        await store.SaveChangesAsync(token);
+        await revenueCreator.EnsureForCompletedTreatmentAsync(id, token);
+        await store.SaveChangesAsync(token);
+        await transaction.CommitAsync(token);
+        return true;
     }
     public async Task<bool> UpdateNotesAsync(Guid id, string? notes, Guid version, CancellationToken token)
     { await permissions.EnsurePermissionAsync(Permissions.TreatmentsEdit, token); var item = await store.FindTreatmentAsync(id, true, token); if (item is null) return false; await access.EnsureDoctorAsync(item.DoctorProfileId, Permissions.TreatmentsEdit, token); item.UpdateNotes(notes, version, clock.UtcNow); Audit(PlatformAuditAction.TreatmentUpdated, id); await store.SaveChangesAsync(token); return true; }
@@ -182,8 +197,8 @@ internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess ac
                 throw new TreatmentStateException("Complete all root canal steps before completing the treatment.");
         }
         var audit = action == "start" ? PlatformAuditAction.TreatmentStarted : action == "complete" ? PlatformAuditAction.TreatmentCompleted : PlatformAuditAction.TreatmentCancelled;
-        if (action == "start") { item.Start(version, clock.UtcNow); await revenueCreator.EnsureForCompletedTreatmentAsync(id, token); }
-        else if (action == "complete") { item.Complete(version, clock.UtcNow); await revenueCreator.EnsureForCompletedTreatmentAsync(id, token); }
+        if (action == "start") { item.Start(version, clock.UtcNow); if (item.PriceConfirmed) await revenueCreator.EnsureForCompletedTreatmentAsync(id, token); }
+        else if (action == "complete") { item.Complete(version, clock.UtcNow); if (item.PriceConfirmed) await revenueCreator.EnsureForCompletedTreatmentAsync(id, token); }
         else item.Cancel(version, clock.UtcNow);
         Audit(audit, id); await store.SaveChangesAsync(token); return true;
     }

@@ -50,6 +50,7 @@ export interface EndodonticCanal {
 export interface EndodonticRecord {
   restorationType?: import('./root-canal').RestorationType | null;
   postType?: 'fiber' | 'metal' | 'custom' | null;
+  postCanal?: string | null;
   stage?: number | null;
   treatmentId?: string;
   examinationId?: string;
@@ -95,6 +96,7 @@ export interface DentalRecordRequest {
 export interface EndodonticRequest {
   restorationType?: import('./root-canal').RestorationType;
   postType?: 'fiber' | 'metal' | 'custom' | null;
+  postCanal?: string | null;
   toothNumber: number;
   notes?: string;
   stage?: number;

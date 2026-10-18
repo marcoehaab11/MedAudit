@@ -104,16 +104,24 @@ internal sealed class ExaminationCommands(
         if (itemId.HasValue) {
             if (e.EndodonticRecords.SingleOrDefault(x => x.Id == itemId)?.ToothNumber != input.ToothNumber)
                 throw new DentalStateException("The endodontic record belongs to a different tooth.");
-            e.UpdateEndodonticRecord(itemId.Value, input.Notes, input.Canals, version, clock.UtcNow, input.Stage, input.TreatmentId, input.RestorationType, input.PostType);
-        } else itemId = e.AddEndodonticRecord(input.ToothNumber, input.Notes, input.Canals, Actor(), version, clock.UtcNow, input.Stage, input.TreatmentId, input.RestorationType, input.PostType).Id;
+            e.UpdateEndodonticRecord(itemId.Value, input.Notes, input.Canals, version, clock.UtcNow, input.Stage, input.TreatmentId, input.RestorationType, input.PostType, input.PostCanal);
+        } else itemId = e.AddEndodonticRecord(input.ToothNumber, input.Notes, input.Canals, Actor(), version, clock.UtcNow, input.Stage, input.TreatmentId, input.RestorationType, input.PostType, input.PostCanal).Id;
         Audit(isNew ? PlatformAuditAction.EndodonticRecordCreated : PlatformAuditAction.EndodonticRecordUpdated, itemId ?? e.Id);
         await store.SaveChangesAsync(token);
         return true;
     }
     public Task<bool> RemoveEndodonticAsync(Guid id, Guid itemId, Guid version, CancellationToken token) =>
         MutateAsync(id, Permissions.DentalEdit, (e, now) => { e.RemoveEndodonticRecord(itemId, version, now); return null; }, PlatformAuditAction.EndodonticRecordRemoved, token, itemId);
-    public Task<bool> CompleteAsync(Guid id, Guid version, CancellationToken token) =>
-        MutateAsync(id, Permissions.ExaminationComplete, (e, now) => { e.Complete(version, now); return null; }, PlatformAuditAction.ExaminationCompleted, token);
+    public async Task<bool> CompleteAsync(Guid id, Guid version, CancellationToken token)
+    {
+        await permissions.EnsurePermissionAsync(Permissions.ExaminationComplete, token);
+        var examination = await store.FindExaminationAsync(id, true, token);
+        if (examination is null) return false;
+        await EnsureExaminationVisibleAsync(examination, token);
+        if (await store.HasUnapprovedVisitPricesAsync(examination.AppointmentId, token)) throw new DentalStateException("Approve the visit service prices before ending the examination.");
+        examination.Complete(version, clock.UtcNow); Audit(PlatformAuditAction.ExaminationCompleted, id);
+        await store.SaveChangesAsync(token); return true;
+    }
 
     private async Task<bool> MutateAsync(Guid id, string permission, Func<Examination, DateTimeOffset, Guid?> mutation,
         PlatformAuditAction? action, CancellationToken cancellationToken, Guid? auditEntityId = null)

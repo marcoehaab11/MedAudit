@@ -26,6 +26,7 @@ internal static class TreatmentEndpoints
         api.MapGet("/treatments", (Guid? patientId, Guid? doctorProfileId, TreatmentType? type, TreatmentStatus? status, DateOnly? from, DateOnly? to, int? toothNumber, int page, int pageSize, ITreatmentService s, CancellationToken t) => s.SearchAsync(new(patientId, doctorProfileId, type, status, from, to, toothNumber, page == 0 ? 1 : page, pageSize == 0 ? 20 : pageSize), t)).RequireAuthorization(Permissions.TreatmentsView);
         api.MapGet("/treatments/{id:guid}", GetTreatment).RequireAuthorization(Permissions.TreatmentsView);
         api.MapPost("/treatments", CreateTreatment).RequireAuthorization(Permissions.TreatmentsCreate);
+        api.MapPost("/treatments/{id:guid}/price", ConfirmPrice).RequireAuthorization(Permissions.TreatmentsEdit);
         api.MapPut("/treatments/{id:guid}", UpdateTreatment).RequireAuthorization(Permissions.TreatmentsEdit);
         api.MapPost("/treatments/{id:guid}/{action:regex(^(start|complete|cancel)$)}", TransitionTreatment);
         return endpoints;
@@ -43,7 +44,8 @@ internal static class TreatmentEndpoints
     private static async Task<IResult> TransitionPlan(Guid id, string action, TreatmentVersionRequest r, ITreatmentPlanService s, CancellationToken t) => await s.TransitionAsync(id, action, r.Version, t) ? Results.NoContent() : Results.NotFound();
     private static PlanItemInput Item(PlanItemRequest r) => new(r.CatalogItemId, r.ToothNumber, r.Quantity, r.DiscountAmount, r.Notes);
     private static async Task<IResult> GetTreatment(Guid id, ITreatmentService s, CancellationToken t) => await s.GetAsync(id, t) is { } x ? Results.Ok(x) : Results.NotFound();
-    private static async Task<IResult> CreateTreatment(CreateTreatmentRequest r, ITreatmentService s, CancellationToken t) { var id = await s.CreateAsync(new(r.PatientId, r.DoctorProfileId, r.CatalogItemId, r.AppointmentId, r.TreatmentPlanItemId, r.SourceDentalProcedureId, r.ToothNumbers, r.Notes, r.Price), t); return Results.Created($"/api/treatments/{id:D}", new { id }); }
+    private static async Task<IResult> CreateTreatment(CreateTreatmentRequest r, ITreatmentService s, CancellationToken t) { var id = await s.CreateAsync(new(r.PatientId, r.DoctorProfileId, r.CatalogItemId, r.AppointmentId, r.TreatmentPlanItemId, r.SourceDentalProcedureId, r.ToothNumbers, r.Notes, r.Price, r.DeferBilling), t); return Results.Created($"/api/treatments/{id:D}", new { id }); }
+    private static async Task<IResult> ConfirmPrice(Guid id, ConfirmTreatmentPriceRequest r, ITreatmentService s, CancellationToken t) => await s.ConfirmPriceAsync(id, r.Price, r.Version, t) ? Results.NoContent() : Results.NotFound();
     private static async Task<IResult> UpdateTreatment(Guid id, UpdateTreatmentNotesRequest r, ITreatmentService s, CancellationToken t) => await s.UpdateNotesAsync(id, r.Notes, r.Version, t) ? Results.NoContent() : Results.NotFound();
     private static async Task<IResult> TransitionTreatment(Guid id, string action, TreatmentVersionRequest r, ITreatmentService s, CancellationToken t) => await s.TransitionAsync(id, action, r.Version, t) ? Results.NoContent() : Results.NotFound();
 }

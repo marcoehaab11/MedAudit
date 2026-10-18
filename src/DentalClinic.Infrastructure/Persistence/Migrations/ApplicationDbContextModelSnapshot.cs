@@ -1031,6 +1031,7 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("DentalClinic.Domain.Dental.EndodonticRecord", b =>
                 {
+                    b.Property<string>("PostCanal").HasColumnType("text");
                     b.Property<string>("RestorationType").HasColumnType("text");
                     b.Property<string>("PostType").HasColumnType("text");
 
@@ -3620,6 +3621,7 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("DentalClinic.Domain.Treatments.Treatment", b =>
                 {
+                    b.Property<bool>("PriceConfirmed").HasColumnType("boolean");
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 

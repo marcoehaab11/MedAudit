@@ -120,6 +120,7 @@ export interface TreatmentPlanList {
   createdAt: string;
 }
 export interface Treatment {
+  priceConfirmed?: boolean;
   catalogItemId?: string;
   id: string;
   patientId: string;
@@ -219,8 +220,12 @@ export class TreatmentApiService {
     toothNumbers?: number[];
     notes?: string;
     price?: number;
+    deferBilling?: boolean;
   }) {
     return this.http.post<{ id: string }>('/api/treatments', value);
+  }
+  confirmTreatmentPrice(id: string, price: number, version: string) {
+    return this.http.post<void>(`/api/treatments/${id}/price`, {price, version});
   }
   treatmentAction(id: string, action: string, version: string) {
     return this.http.post<void>(`/api/treatments/${id}/${action}`, { version });

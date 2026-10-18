@@ -10,13 +10,14 @@ public sealed class Treatment : TenantOwnedEntity
     public Treatment(Guid tenantId, Guid patientId, Guid doctorProfileId, Guid? appointmentId,
         Guid? treatmentPlanId, Guid? treatmentPlanItemId, Guid catalogItemId, Guid? sourceDentalProcedureId,
         TreatmentType type, string treatmentName, IEnumerable<int> toothNumbers, decimal price, string? notes,
-        DateTimeOffset createdAt)
+        DateTimeOffset createdAt, bool priceConfirmed = true)
     {
         if (tenantId == Guid.Empty || patientId == Guid.Empty || doctorProfileId == Guid.Empty || catalogItemId == Guid.Empty)
             throw new ArgumentException("Tenant, patient, doctor, and catalog IDs are required.");
         TenantId = tenantId; PatientId = patientId; DoctorProfileId = doctorProfileId; AppointmentId = appointmentId;
         TreatmentPlanId = treatmentPlanId; TreatmentPlanItemId = treatmentPlanItemId; TreatmentCatalogItemId = catalogItemId;
         SourceDentalProcedureId = sourceDentalProcedureId; Type = type; TreatmentName = TreatmentRules.Required(treatmentName, nameof(treatmentName), 200);
+        PriceConfirmed = priceConfirmed;
         Price = TreatmentRules.Money(price, nameof(price)); Notes = TreatmentRules.Optional(notes, nameof(notes), 4000);
         foreach (var number in toothNumbers.Distinct()) { PermanentToothCatalog.Get(number); teeth.Add(new TreatmentTooth(tenantId, Id, number)); }
         Status = appointmentId.HasValue ? TreatmentStatus.Scheduled : TreatmentStatus.Planned;
@@ -33,6 +34,7 @@ public sealed class Treatment : TenantOwnedEntity
     public string TreatmentName { get; private set; } = string.Empty;
     public TreatmentStatus Status { get; private set; }
     public decimal Price { get; private set; }
+    public bool PriceConfirmed { get; private set; }
     public string? Notes { get; private set; }
     public DateTimeOffset? StartedAt { get; private set; }
     public DateTimeOffset? CompletedAt { get; private set; }
@@ -40,6 +42,12 @@ public sealed class Treatment : TenantOwnedEntity
     public DateTimeOffset UpdatedAt { get; private set; }
     public Guid Version { get; private set; }
     public IReadOnlyCollection<TreatmentTooth> Teeth => teeth;
+    public void ConfirmPrice(decimal price, Guid expectedVersion, DateTimeOffset now)
+    {
+        EnsureVersion(expectedVersion);
+        if (PriceConfirmed || Status == TreatmentStatus.Cancelled) throw new TreatmentStateException("The treatment price is already approved or cancelled.");
+        Price = TreatmentRules.Money(price, nameof(price)); PriceConfirmed = true; Touch(now);
+    }
     public void UpdateNotes(string? notes, Guid expectedVersion, DateTimeOffset now)
     { EnsureVersion(expectedVersion); EnsureMutable(); Notes = TreatmentRules.Optional(notes, nameof(notes), 4000); Touch(now); }
     public void Start(Guid expectedVersion, DateTimeOffset now)

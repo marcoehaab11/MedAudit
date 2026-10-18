@@ -16,7 +16,7 @@ import { RootCanalDraft, rootCanalStages } from './root-canal';
           <div class="previous-canals">@for (canal of record.canals; track canal.id) {
             <span><b>{{ canal.name }}</b> · {{ canal.lengthMm ?? '—' }} mm · {{ canal.finalFileSize || '—' }}</span>
           }</div>
-          @if (record.postType) { <p dir="ltr">Post and core · {{ record.postType === 'fiber' ? 'Fiber post' : record.postType === 'metal' ? 'Metal post' : 'Custom post' }}</p> }
+          @if (record.postType) { <p dir="ltr">Post and core · {{ record.postType === 'fiber' ? 'Fiber post' : record.postType === 'metal' ? 'Metal post' : 'Custom post' }} @if (record.postCanal) { · {{ record.postCanal }} }</p> }
           @if (record.notes) { <p class="clinical-notes">{{ record.notes }}</p> }
         </details>
       }
@@ -46,7 +46,13 @@ import { RootCanalDraft, rootCanalStages } from './root-canal';
                   <option value="fiber">Fiber post</option><option value="metal">Metal post</option><option value="custom">Custom post</option>
                 </select>
               </label>
-              @if (postError) { <p class="stage-error" role="alert">Select type of post</p> }
+              <label dir="ltr">Canal
+                <select [(ngModel)]="draft.postCanal" (ngModelChange)="scheduleSave()">
+                  <option [ngValue]="null">Select canal…</option>
+                  @for (canal of draft.canals; track canal.name) { <option [value]="canal.name">{{ canal.name }}</option> }
+                </select>
+              </label>
+              @if (postError) { <p class="stage-error" role="alert">Select type of post and canal</p> }
             }
             <label class="stage-check"><input type="checkbox" [checked]="false" (change)="completeStage($event)" />{{ english ? 'Completed' : 'تم' }}</label>
           }
@@ -99,7 +105,7 @@ export class RootCanalEditorComponent implements OnDestroy {
     if (this.disabled || this.draft.stage === 6) return;
     this.measurementError = this.currentStage.value === 2 && (!this.draft.canals.length || this.draft.canals.some(c => c.lengthMm === null || !Number.isFinite(c.lengthMm) || c.lengthMm <= 0 || c.lengthMm > 50 || !c.finalFileSize.trim() || c.finalFileSize.length > 50));
     if (this.measurementError) return;
-    this.postError = this.currentStage.value === 7 && !this.draft.postType;
+    this.postError = this.currentStage.value === 7 && (!this.draft.postType || !this.draft.canals.some(c => c.name === this.draft.postCanal));
     if (this.postError) return;
     if (this.saveTimer) { clearTimeout(this.saveTimer); this.saveTimer = undefined; this.pendingSave = false; }
     const index = this.stages.findIndex(s => s.value === this.currentStage.value);
