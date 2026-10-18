@@ -27,6 +27,42 @@ describe('ExaminationComponent', () => {
     http.verify();
   });
 
+  it('carries different chart procedures into treatment and updates only the changed tooth', () => {
+    const c = TestBed.createComponent(ExaminationComponent).componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    c.catalog.set([{ id: 'fill', type: 1, name: 'Regular filling', code: 'F', defaultPrice: 100, isActive: true }, { id: 'implant', type: 3, name: 'Implant', code: 'I', defaultPrice: 700, isActive: true }, { id: 'extract', type: 2, name: 'Extraction', code: 'E', defaultPrice: 200, isActive: true }]);
+    c.examination.set({ ...c.examination()!, findings: [{ ...examination().findings[0], toothNumber: 35, type: 15 }, examination().findings[0]] });
+    expect(c.toothService(35)).toMatchObject({ catalogId: 'implant', price: 700 });
+    expect(c.toothService(36)).toMatchObject({ catalogId: 'fill', price: 100 });
+    c.examination.set({ ...c.examination()!, findings: [{ ...examination().findings[0], toothNumber: 35, type: 15 }, { ...examination().findings[0], type: 14 }] });
+    expect(c.toothService(36)).toMatchObject({ catalogId: 'extract', price: 200 });
+    expect(c.toothService(35).catalogId).toBe('implant');
+  });
+  it('does not guess an ambiguous clinic service or replace a saved treatment', () => {
+    const c = TestBed.createComponent(ExaminationComponent).componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    c.catalog.set([{ id: 'a', type: 1, name: 'Composite', code: 'A', defaultPrice: 100, isActive: true }, { id: 'b', type: 1, name: 'Amalgam', code: 'B', defaultPrice: 200, isActive: true }]);
+    expect(c.toothService(36).catalogId).toBe('');
+    Object.assign(c.toothService(36), { catalogId: 'b', treatmentId: 'saved', price: 200 });
+    c.examination.set({ ...c.examination()!, findings: [{ ...examination().findings[0], type: 14 }] });
+    expect(c.toothService(36)).toMatchObject({ catalogId: 'b', treatmentId: 'saved', price: 200 });
+  });
+  it('keeps diagnosis editing on the chart and financial fields after prescription', () => {
+    const fixture = TestBed.createComponent(ExaminationComponent), c = fixture.componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    c.catalog.set([{ id: 'f', type: 1, name: 'Regular filling', code: 'F', defaultPrice: 100, isActive: true }]);
+    c.treatmentTeeth = [36]; c.step.set(3); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.diagnoses-section')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.quick-add-finding-row')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('اختر الإجراء أو الخدمة');
+    expect(fixture.nativeElement.textContent).not.toContain('سعر الخدمة');
+    c.step.set(5); fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('سعر الخدمة');
+    expect(c.findingOptions.map(x => x.id)).toEqual([2,4,8,10,11,9,14,15]);
+  });
   it('shows the persisted remaining work immediately when opening the next visit', () => {
     const fixture = TestBed.createComponent(ExaminationComponent); const c = fixture.componentInstance;
     const http = TestBed.inject(HttpTestingController);
@@ -48,10 +84,15 @@ describe('ExaminationComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('.canal-card')).toHaveLength(4);
     await fixture.whenStable();
     c.rootCanalFor(26).canals[0].lengthMm = 21;
-    const serviceSelect = fixture.nativeElement.querySelector('.tooth-service-row .styled-select-modern') as HTMLSelectElement;
-    serviceSelect.value = 'fill'; serviceSelect.dispatchEvent(new Event('change')); await fixture.whenStable(); fixture.detectChanges();
+    c.step.set(2); fixture.detectChanges();
+    let serviceSelect = fixture.nativeElement.querySelector('.chart-service-settings select') as HTMLSelectElement;
+    serviceSelect.value = 'fill'; serviceSelect.dispatchEvent(new Event('change')); await fixture.whenStable();
+    c.step.set(3); fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('app-root-canal-editor')).toBeNull();
-    serviceSelect.value = 'rct'; serviceSelect.dispatchEvent(new Event('change')); await fixture.whenStable(); fixture.detectChanges();
+    c.step.set(2); fixture.detectChanges();
+    serviceSelect = fixture.nativeElement.querySelector('.chart-service-settings select') as HTMLSelectElement;
+    serviceSelect.value = 'rct'; serviceSelect.dispatchEvent(new Event('change')); await fixture.whenStable();
+    c.step.set(3); fixture.detectChanges();
     expect(c.rootCanalFor(26).canals[0].lengthMm).toBe(21);
     expect(c.toothService(26).status).toBe('in_progress');
   });

@@ -661,6 +661,27 @@ interface ToothServiceDraft {
                   </article>
                 } @empty { <p>{{ t('No findings recorded yet.', 'لا توجد نتائج مسجلة بعد.') }}</p> }
               </div>
+              @if (examination()!.canEdit) {
+                <details class="chart-service-settings"><summary>{{ t('Chart services', 'خدمات مخطط الأسنان') }}</summary>
+                  @for (number of surveyTeeth(); track number) {
+                    @let row = toothService(number);
+                    <label>{{ toothLabel(number) }} · #{{ number }}
+                      <select [(ngModel)]="row.catalogId" (change)="selectToothService(number)" [disabled]="!!row.treatmentId">
+                        <option value="">{{ t('Choose the clinic service', 'اختر خدمة العيادة') }}</option>
+                        @for (item of toothServiceCatalog(number); track item.id) { <option [value]="item.id">{{ item.name }}</option> }
+                      </select>
+                    </label>
+                  }
+                  <label><input type="checkbox" [(ngModel)]="wholeMouthTreatment" />{{ t('Whole-mouth service', 'خدمة للفم بالكامل') }}</label>
+                  @if (wholeMouthTreatment) {
+                    @let row = toothService(0);
+                    <select [(ngModel)]="row.catalogId" (change)="selectToothService(0)">
+                      <option value="">{{ t('Choose the clinic service', 'اختر خدمة العيادة') }}</option>
+                      @for (item of toothServiceCatalog(0); track item.id) { <option [value]="item.id">{{ item.name }}</option> }
+                    </select>
+                  }
+                </details>
+              }
               @if (examination()!.canEdit && (selectedTeeth.length || findingTargetTeeth.length) && findingEditorOpen) {
                 <form class="clinical-form" [formGroup]="findingForm" (ngSubmit)="addFinding()">
                   <p>{{ t('Record for:', 'تسجيل للأسنان:') }} {{ findingTeethLabel() }}</p>
@@ -727,71 +748,18 @@ interface ToothServiceDraft {
                     } @empty { <p class="no-treatment-selection">{{ t('No tooth selected', 'لم يتم اختيار سن') }}</p> }
                   </div>
 
-                  <!-- 1. Findings & Diagnoses for this Tooth -->
-                  <div class="tooth-section diagnoses-section">
-                    <div class="section-label">
-                      <span>🔍 {{ t('Diagnoses & Findings for ' + treatmentTeethLabel(), 'التشخيصات المسجلة للأسنان ' + treatmentTeethLabel()) }}</span>
-                    </div>
-
-                    <div class="findings-chips-stack">
-                      @for (f of selectedToothFindings(); track f.id) {
-                        <div class="finding-chip-card">
-                          <span class="dot-indicator"></span>
-                          <strong class="finding-title">#{{ f.toothNumber }} {{ toothLabel(f.toothNumber) }} · {{ findingLabel(f.type) }}</strong>
-                          @if (f.cariesClass || f.surfaces?.length) {
-                            <span class="surface-badge">{{ findingDetailsLabel(f) }}</span>
-                          }
-                          @if (f.notes) {
-                            <span class="finding-notes">({{ f.notes }})</span>
-                          }
-                          @if (examination()!.canEdit) {
-                            <button type="button" class="btn-remove-finding-mini" (click)="removeFinding(f.id)" title="{{ t('Remove finding', 'حذف التشخيص') }}">×</button>
-                          }
-                        </div>
-                      } @empty {
-                        <div class="empty-findings-box">
-                          <p>{{ t('No diagnosis recorded for this selection yet.', 'لا يوجد تشخيص مسجل لهذه الأسنان حتى الآن.') }}</p>
-                        </div>
-                      }
-                    </div>
-
-                    <!-- Quick Add Diagnosis shortcuts if needed -->
-                    @if (examination()!.canEdit) {
-                      <div class="quick-add-finding-row">
-                        <span class="quick-hint">{{ t('Quick Add Diagnosis (Applies to all selected):', 'إضافة تشخيص سريع (يطبق على الأسنان المحددة):') }}</span>
-                        <div class="quick-finding-buttons">
-                          @for (item of quickFindingOptions; track item.id) {
-                            <button type="button" class="btn-quick-finding" [disabled]="!treatmentTeeth.length || savingFinding()" (click)="quickAddFinding(item.id)">+ {{ t(item.en, item.ar) }}</button>
-                          }
-                        </div>
-                      </div>
-                    }
-                  </div>
-
                   <!-- 2. Procedure Execution with Clinical Status -->
                   <div class="tooth-section procedure-select-section">
                     @if (examination()!.canEdit) {
-                      <label class="whole-mouth-service-toggle"><input type="checkbox" [(ngModel)]="wholeMouthTreatment" [disabled]="savingTreatment()" />{{ t('Add a whole-mouth service (one charge)', 'إضافة خدمة للفم بالكامل — تُحسب مرة واحدة') }}</label>
+
                       @for (number of treatmentRowKeys(); track number) {
                         @let row = toothService(number);
                         <section class="catalog-select-box tooth-service-row" [attr.data-tooth]="number">
                           <h3>{{ number === 0 ? t('Whole-mouth service', 'خدمة للفم بالكامل') : '#' + number + ' · ' + toothLabel(number) }}</h3>
                           @if (number === 0 && !toothServiceCatalog(0).length) { <p>{{ t('Add orthodontics, scaling/polishing and whitening services with their prices to the clinic service list first.', 'أضف خدمات التقويم وتنظيف الجير والتلميع والتبييض وأسعارها إلى قائمة خدمات العيادة أولًا.') }}</p> }
                           <fieldset [disabled]="savingTreatment() || !!row.treatmentId">
-                            <label>{{ number === 0 ? t('Choose the whole-mouth service', 'اختر الإجراء أو الخدمة الطبية للفم بالكامل') : t('Select procedure / service for tooth ', 'اختر الإجراء أو الخدمة الطبية للسن ') + '#' + number + ' · ' + toothLabel(number) }}
-                              <select [(ngModel)]="row.catalogId" (change)="selectToothService(number)" class="styled-select-modern">
-                                <option value="">{{ t('Choose from clinic services…', 'اختر من خدمات العيادة…') }}</option>
-                                @for (item of toothServiceCatalog(number); track item.id) { <option [value]="item.id">{{ item.name }}</option> }
-                              </select>
-                            </label>
+                            @if (!row.catalogId) { <p>{{ t('Select the service in the dental chart first.', 'حدد الخدمة من مخطط الأسنان أولاً.') }}</p> }
                             @if (row.catalogId) {
-                              <label>{{ t('Price category', 'فئة السعر') }}
-                                <select [(ngModel)]="row.tierId" (change)="selectToothServiceTier(number)">
-                                  @for (tier of toothServiceTiers(number); track tier.id) { <option [value]="tier.id">{{ t(tier.nameEn, tier.nameAr) }} — {{ tier.price }}</option> }
-                                  <option value="custom">{{ t('Custom price', 'سعر مخصص') }}</option>
-                                </select>
-                              </label>
-                              <label>{{ t('Service price', 'سعر الخدمة') }}<input type="number" min="0" [ngModel]="row.price" (ngModelChange)="row.price = +$event; row.tierId = 'custom'" /></label>
                               @if (number !== 0 && toothServiceIsFilling(number)) {
                                 <label>{{ t('Caries classification', 'تصنيف التسوس للحشو العادي') }}
                                   <select [(ngModel)]="row.cariesClass"><option [ngValue]="null">{{ t('Choose class…', 'اختر التصنيف…') }}</option>
@@ -812,9 +780,9 @@ interface ToothServiceDraft {
                             }
                           }
                           @if (row.treatmentId && !toothServiceIsRootCanal(number)) { <p>{{ t('The service was created. Retry to finish it without creating a duplicate.', 'تم إنشاء الإجراء. إعادة المحاولة تستكمله من غير إنشاء فاتورة أو إجراء مكرر.') }}</p> }
-                          <button type="button" class="btn-execute-procedure-modern" [disabled]="!row.catalogId || savingTreatment() || savingRootCanal() || row.price < 0" (click)="executeToothService(number)">{{ savingTreatment() ? t('Saving…', 'جارٍ الحفظ…') : row.treatmentId && toothServiceIsRootCanal(number) ? t('Save & continue existing treatment', 'حفظ واستكمال نفس العلاج — بدون إجراء جديد') : number === 0 ? t('Record whole-mouth service', 'تسجيل خدمة الفم بالكامل') : t('Record this tooth service', 'تسجيل إجراء هذا السن') }} @if (!row.treatmentId) { · {{ row.price }} {{ t('EGP', 'ج.م') }} }</button>
+                          <button type="button" class="btn-execute-procedure-modern" [disabled]="!row.catalogId || savingTreatment() || savingRootCanal() || row.price < 0" (click)="executeToothService(number)">{{ savingTreatment() ? t('Saving…', 'جارٍ الحفظ…') : row.treatmentId && toothServiceIsRootCanal(number) ? t('Save & continue existing treatment', 'حفظ واستكمال نفس العلاج') : number === 0 ? t('Record whole-mouth service', 'تسجيل خدمة الفم بالكامل') : t('Record this tooth service', 'تسجيل إجراء هذا السن') }}</button>
                         </section>
-                      } @empty { <p>{{ t('Choose today’s treatment teeth above. Each tooth gets its own service.', 'اختار أسنان علاج اليوم فوق. كل سن هيظهر له اختيار خدمة مستقل.') }}</p> }
+                      } @empty { <p>{{ t('Choose today’s treatment teeth above.', 'اختار أسنان علاج اليوم فوق.') }}</p> }
 
                     }
                   </div>
@@ -824,50 +792,6 @@ interface ToothServiceDraft {
 
             <!-- Bottom Section: Executed Treatments Table & Active Treatment Plans -->
             <div class="procedures-single-layout" style="margin-top: 1.5rem;">
-              <!-- Executed Treatments List -->
-              <div class="panel-box done-today-box">
-                <div class="box-header">
-                  <h3>⚡ {{ t('Procedures Executed in Today Session (Billed)', 'الإجراءات المنفذة في جلسة اليوم (المفوترة والمرحلة للحساب)') }}</h3>
-                  <span class="today-total-tag">{{ todayProceduresTotal() }} EGP</span>
-                </div>
-
-                <div class="executed-list-wrap">
-                  @if (executedTreatments().length > 0) {
-                    <table class="simple-table">
-                      <thead>
-                        <tr>
-                          <th>{{ t('Procedure', 'الإجراء') }}</th>
-                          <th>{{ t('Tooth', 'السن') }}</th>
-                          <th>{{ t('Price', 'المبلغ') }}</th>
-                          <th>{{ t('Status', 'الحالة') }}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        @for (tr of executedTreatments(); track tr.id) {
-                          <tr>
-                            <td><strong>{{ tr.treatmentName }}</strong> @if (tr.notes) { <br><small>{{ tr.notes }}</small> }</td>
-                            <td><span class="tooth-table-pill">{{ tr.toothNumbers && tr.toothNumbers.length ? '#' + tr.toothNumbers.join(', #') : '—' }}</span></td>
-                            <td><strong>{{ tr.price }} EGP</strong></td>
-                            <td>
-                              @if (tr.status === 4) {
-                                <span class="status-tag done">✓ {{ t('Finished (Completed)', 'خَلَصْ (مكتمل بالكامل)') }}</span>
-                              } @else if (tr.status === 3) {
-                                <span class="status-tag active">⏳ {{ t('Started (In Progress)', 'بدأ العلاج ولسه هنكمل') }}</span>
-                              } @else {
-                                <span class="status-tag">{{ tr.status }}</span>
-                              }
-                            </td>
-                          </tr>
-
-                        }
-                      </tbody>
-                    </table>
-                  } @else {
-                    <p class="empty-hint">{{ t('No treatments recorded yet in this session. Select teeth and procedure above.', 'لم يتم تسجيل إجراءات في هذه الجلسة بعد. اختر الأسنان والإجراء بالأعلى للتنفيذ.') }}</p>
-                  }
-                </div>
-              </div>
-
               <!-- Active Treatment Plans Table -->
               @if (treatmentPlans().length > 0) {
                 <div class="active-plans-box">
@@ -879,7 +803,7 @@ interface ToothServiceDraft {
                     <thead>
                       <tr>
                         <th>{{ t('Plan Title', 'اسم الخطة') }}</th>
-                        <th>{{ t('Total Cost', 'إجمالي التكلفة') }}</th>
+
                         <th>{{ t('Status', 'الحالة') }}</th>
                         <th>{{ t('Created Date', 'تاريخ الإنشاء') }}</th>
                       </tr>
@@ -888,7 +812,7 @@ interface ToothServiceDraft {
                       @for (plan of treatmentPlans(); track plan.id) {
                         <tr>
                           <td><strong>{{ plan.title }}</strong></td>
-                          <td><strong>{{ plan.total }} EGP</strong></td>
+
                           <td>
                             @if (plan.status === 1) {
                               <span class="status-tag active">⏳ {{ t('In Progress', 'جارية / قيد التنفيذ') }}</span>
@@ -1119,6 +1043,68 @@ interface ToothServiceDraft {
               <h2>💳 {{ t('5. Visit Summary, Billing & Checkout', '5. ملخص الزيارة، الحساب وإنهاء الجلسة') }}</h2>
               <p>{{ t('Review charges, post fees to patient account, collect payments, and finalize the clinical visit.', 'مراجعة التكاليف، ترحيل المستحقات لحساب المريض، تحصيل الدفعات، وإنهاء الزيارة السريرية رسمياً.') }}</p>
             </div>
+
+            <div class="panel-box">
+              <h3>{{ t('Selected services — pricing', 'حساب الخدمات المحددة') }}</h3>
+              @for (number of treatmentRowKeys(); track number) {
+                @let row = toothService(number);
+                @if (row.catalogId && !row.treatmentId) {
+                  <section class="billing-service-price">
+                    <strong>{{ number === 0 ? t('Whole mouth', 'الفم بالكامل') : toothLabel(number) + ' · #' + number }}</strong>
+                              <label>{{ t('Price category', 'فئة السعر') }}
+                                <select [(ngModel)]="row.tierId" (change)="selectToothServiceTier(number)">
+                                  @for (tier of toothServiceTiers(number); track tier.id) { <option [value]="tier.id">{{ t(tier.nameEn, tier.nameAr) }} — {{ tier.price }}</option> }
+                                  <option value="custom">{{ t('Custom price', 'سعر مخصص') }}</option>
+                                </select>
+                              </label>
+                              <label>{{ t('Service price', 'سعر الخدمة') }}<input type="number" min="0" [ngModel]="row.price" (ngModelChange)="row.price = +$event; row.tierId = 'custom'" /></label>
+                  </section>
+                }
+              }
+            </div>
+              <!-- Executed Treatments List -->
+              <div class="panel-box done-today-box">
+                <div class="box-header">
+                  <h3>⚡ {{ t('Visit services and charges', 'خدمات الزيارة والحساب') }}</h3>
+                  <span class="today-total-tag">{{ todayProceduresTotal() }} EGP</span>
+                </div>
+
+                <div class="executed-list-wrap">
+                  @if (executedTreatments().length > 0) {
+                    <table class="simple-table">
+                      <thead>
+                        <tr>
+                          <th>{{ t('Procedure', 'الإجراء') }}</th>
+                          <th>{{ t('Tooth', 'السن') }}</th>
+                          <th>{{ t('Price', 'المبلغ') }}</th>
+                          <th>{{ t('Status', 'الحالة') }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (tr of executedTreatments(); track tr.id) {
+                          <tr>
+                            <td><strong>{{ tr.treatmentName }}</strong> @if (tr.notes) { <br><small>{{ tr.notes }}</small> }</td>
+                            <td><span class="tooth-table-pill">{{ tr.toothNumbers && tr.toothNumbers.length ? '#' + tr.toothNumbers.join(', #') : '—' }}</span></td>
+                            <td><strong>{{ tr.price }} EGP</strong></td>
+                            <td>
+                              @if (tr.status === 4) {
+                                <span class="status-tag done">✓ {{ t('Finished (Completed)', 'خَلَصْ (مكتمل بالكامل)') }}</span>
+                              } @else if (tr.status === 3) {
+                                <span class="status-tag active">⏳ {{ t('Started (In Progress)', 'بدأ العلاج ولسه هنكمل') }}</span>
+                              } @else {
+                                <span class="status-tag">{{ tr.status }}</span>
+                              }
+                            </td>
+                          </tr>
+
+                        }
+                      </tbody>
+                    </table>
+                  } @else {
+                    <p class="empty-hint">{{ t('No treatments recorded yet in this session. Select teeth and procedure above.', 'لم يتم تسجيل إجراءات في هذه الجلسة بعد. اختر الأسنان والإجراء بالأعلى للتنفيذ.') }}</p>
+                  }
+                </div>
+              </div>
 
             <!-- Reception Desk & Role Availability Banner -->
             <div class="reception-desk-banner">
@@ -2488,10 +2474,31 @@ export class ExaminationComponent {
 
   wholeMouthTreatment = false;
   readonly toothServices: Record<number, ToothServiceDraft> = {};
+  private readonly serviceFindingTypes = new Map<number, number | undefined>();
   treatmentRowKeys() { return this.wholeMouthTreatment ? [...this.treatmentTeeth, 0] : this.treatmentTeeth; }
   toothClasses(number: number) { return allowedCariesClasses([number]); }
   toothService(number: number): ToothServiceDraft {
-    return this.toothServices[number] ??= { catalogId: '', tierId: 'base', price: 0, cariesClass: this.examination()?.findings.filter(f => f.toothNumber === number && f.type === 2).at(-1)?.cariesClass ?? null, notes: '', remaining: '', status: 'completed' };
+    const row = this.toothServices[number] ??= { catalogId: '', tierId: 'base', price: 0, cariesClass: this.examination()?.findings.filter(f => f.toothNumber === number && f.type === 2).at(-1)?.cariesClass ?? null, notes: '', remaining: '', status: 'completed' };
+    const type = this.examination()?.findings.filter(f => f.toothNumber === number).at(-1)?.type ?? this.patientChart()?.teeth.find(t => t.toothNumber === number)?.findings.at(-1);
+    if (!row.treatmentId && this.serviceFindingTypes.has(number) && this.serviceFindingTypes.get(number) !== type) {
+      row.catalogId = ''; row.price = 0; row.tierId = 'base'; row.status = 'completed';
+      row.cariesClass = this.examination()?.findings.filter(f => f.toothNumber === number && f.type === 2).at(-1)?.cariesClass ?? null;
+      this.rootCanalDrafts.delete(number);
+    }
+    this.serviceFindingTypes.set(number, type);
+    if (!row.catalogId && type) {
+      const treatmentType = ({2:1, 8:4, 9:5, 10:4, 11:4, 14:2, 15:3} as Record<number, number>)[type];
+      const candidates = this.toothServiceCatalog(number).filter(item => item.type === treatmentType);
+      const appearance = FINDING_APPEARANCE[type];
+      const exact = candidates.filter(item => { const parsed = parseCatalogItem(item); return [parsed.nameEn, parsed.nameAr, item.name].some(name => [appearance.en, appearance.ar].some(label => name.trim().toLowerCase() === label.toLowerCase())); });
+      const item = exact.length === 1 ? exact[0] : candidates.length === 1 && ![10,11].includes(type) ? candidates[0] : undefined;
+      if (item) {
+        const tier = parseCatalogItem(item).priceTiers[0];
+        row.catalogId = item.id; row.tierId = tier?.id ?? 'base'; row.price = tier?.price ?? item.defaultPrice ?? 0;
+        if (item.type === 4) row.status = 'in_progress';
+      }
+    }
+    return row;
   }
   isWholeMouthService(item: CatalogItem) {
     const parsed = parseCatalogItem(item);

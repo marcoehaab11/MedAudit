@@ -677,7 +677,7 @@
 
   .stepper-track {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 0.5rem;
 
     @media (max-width: 860px) {
@@ -686,6 +686,7 @@
   }
 
   .step-node {
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 0.65rem;
@@ -3630,3 +3631,13 @@
 .selected-treatment-badge { padding: 5px 10px; border-radius: 20px; background: #edf5fb; color: #32759f; font-size: .78rem; font-weight: 500; }
 .no-treatment-selection { margin: 0; padding: 14px 16px; color: #81909c; font-size: .85rem; }
 @media (max-width: 600px) { .selected-treatment-tooth { flex-wrap: wrap; } .selected-treatment-labels { flex: 1 1 100%; margin-inline-start: 52px; } }
+
+.chart-service-settings { margin: 12px 0; padding: 12px; border: 1px solid #e4eaf0; border-radius: 10px; }
+.chart-service-settings summary { cursor: pointer; color: #456473; }
+.chart-service-settings label { display: flex; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+.chart-service-settings select { padding: 8px; border: 1px solid #dce5ea; border-radius: 8px; background: white; }
+
+.billing-service-price { display: grid; gap: 12px; margin: 12px 0; padding: 16px; border: 1px solid #e4eaf0; border-radius: 10px; }
+.billing-service-price strong { direction: ltr; text-align: start; }
+.billing-service-price label { display: grid; gap: 6px; color: #536576; font-size: .85rem; }
+.billing-service-price input, .billing-service-price select { box-sizing: border-box; width: 100%; min-width: 0; padding: 10px; border: 1px solid #dce5ea; border-radius: 8px; background: white; }

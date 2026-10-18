@@ -9,6 +9,18 @@ public sealed class DentalDomainTests
     private static readonly DateTimeOffset Now = new(2026, 8, 15, 10, 0, 0, TimeSpan.Zero);
 
     [Theory]
+    [InlineData(DentalFindingType.Extraction)]
+    [InlineData(DentalFindingType.Implant)]
+    public void ChartSupportsExtractionAndImplantWithoutChangingHistoricalCodes(DentalFindingType type)
+    {
+        var examination = Create();
+        examination.AddFinding(36, type, [], null, Actor, examination.Version, Now);
+        Assert.Equal(type, Assert.Single(examination.Findings).FindingType);
+        Assert.Equal(3, (int)DentalFindingType.Fracture);
+        Assert.Equal(4, (int)DentalFindingType.Missing);
+    }
+
+    [Theory]
     [InlineData(DentalFindingType.ScalingAndPolishing)]
     [InlineData(DentalFindingType.Whitening)]
     public void WholeMouthFindingsCoverAllTeethWithoutDuplicates(DentalFindingType type)

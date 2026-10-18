@@ -145,5 +145,5 @@ export class DentalChartComponent {
     if (!art) { art = this.sanitizer.bypassSecurityTrustHtml(renderPlanoraTooth(number, record, lower)); this.artCache.set(key, art); }
     return art;
   }
-  planoraAccent(number: number) { const tooth = this.find(number); return this.isMissing(tooth) ? '#94a3b8' : this.isCaries(tooth) ? '#fb923c' : this.isEndo(tooth) ? '#9333ea' : this.isCrown(tooth) ? '#eab308' : tooth?.findings.includes(3) ? '#f43f5e' : tooth?.findings.includes(5) ? '#06b6d4' : tooth?.procedures.some(x => [1,3].includes(x)) ? '#10b9c5' : '#d4dcde'; }
+  planoraAccent(number: number) { const tooth = this.find(number); return this.isMissing(tooth) ? '#94a3b8' : this.isCaries(tooth) ? '#fb923c' : this.isEndo(tooth) ? '#9333ea' : this.isCrown(tooth) ? '#eab308' : tooth?.findings.some(x => [3,14].includes(x)) ? '#f43f5e' : tooth?.findings.includes(15) ? '#10b9c5' : tooth?.findings.includes(5) ? '#06b6d4' : tooth?.procedures.some(x => [1,3].includes(x)) ? '#10b9c5' : '#d4dcde'; }
 }
