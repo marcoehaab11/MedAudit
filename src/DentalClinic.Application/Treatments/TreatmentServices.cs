@@ -4,6 +4,8 @@ using DentalClinic.Application.Tenants.Models;
 using DentalClinic.Domain.Platform;
 using DentalClinic.Domain.Treatments;
 using DentalClinic.Application.Finance;
+using DentalClinic.Application.Dental;
+using DentalClinic.Domain.Dental;
 
 namespace DentalClinic.Application.Treatments;
 
@@ -124,7 +126,7 @@ internal sealed class TreatmentPlanService(ITreatmentStore store, TreatmentAcces
 }
 
 internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess access, IPermissionService permissions,
-    ICurrentTenant tenant, ICurrentUser user, ISystemClock clock, ITreatmentRevenueCreator revenueCreator) : ITreatmentService
+    ICurrentTenant tenant, ICurrentUser user, ISystemClock clock, ITreatmentRevenueCreator revenueCreator, IDentalStore dentalStore) : ITreatmentService
 {
     public async Task<PagedResult<TreatmentListItem>> SearchAsync(TreatmentSearch query, CancellationToken token)
     { if (query.Page < 1 || query.PageSize is < 1 or > 100 || query.From > query.To) throw new ArgumentException("Invalid treatment search."); if ((query.Type.HasValue && !Enum.IsDefined(query.Type.Value)) || (query.Status.HasValue && !Enum.IsDefined(query.Status.Value))) throw new ArgumentException("Invalid treatment filter."); if (query.ToothNumber.HasValue) DentalClinic.Domain.Dental.PermanentToothCatalog.Get(query.ToothNumber.Value); return await store.SearchTreatmentsAsync(query, await access.VisibleDoctorAsync(Permissions.TreatmentsView, token), token); }
@@ -171,6 +173,14 @@ internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess ac
         };
         await permissions.EnsurePermissionAsync(permission, token); var item = await store.FindTreatmentAsync(id, true, token); if (item is null) return false;
         await access.EnsureDoctorAsync(item.DoctorProfileId, permission, token);
+        if (action == "complete" && item.Type == TreatmentType.RootCanal)
+        {
+            var chart = await dentalStore.GetChartAsync(item.PatientId, token);
+            if (item.Teeth.Count == 0 || item.Teeth.Any(tooth => (chart?.EndodonticRecords ?? [])
+                .Where(record => record.TreatmentId == item.Id && record.ToothNumber == tooth.ToothNumber)
+                .OrderByDescending(record => record.UpdatedAt ?? record.CreatedAt).FirstOrDefault()?.Stage != RootCanalStage.Completed))
+                throw new TreatmentStateException("Complete all root canal steps before completing the treatment.");
+        }
         var audit = action == "start" ? PlatformAuditAction.TreatmentStarted : action == "complete" ? PlatformAuditAction.TreatmentCompleted : PlatformAuditAction.TreatmentCancelled;
         if (action == "start") { item.Start(version, clock.UtcNow); await revenueCreator.EnsureForCompletedTreatmentAsync(id, token); }
         else if (action == "complete") { item.Complete(version, clock.UtcNow); await revenueCreator.EnsureForCompletedTreatmentAsync(id, token); }

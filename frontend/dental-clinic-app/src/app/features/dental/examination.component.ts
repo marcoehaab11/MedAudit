@@ -27,7 +27,7 @@ import { FinanceApiService, PatientBalance } from '../finance/finance-api.servic
 import { FINDING_APPEARANCE, SELECTABLE_FINDING_TYPES, PROCEDURE_APPEARANCE, SURFACES } from './dental-appearance';
 import { DentalApiService, ExaminationDetails, ToothChartSummary, PatientDentalChart, EndodonticRecord } from './dental-api.service';
 import { RootCanalEditorComponent } from './root-canal-editor.component';
-import { RootCanalDraft, rootCanalDraft } from './root-canal';
+import { RootCanalDraft, rootCanalDraft, ROOT_CANAL_STAGES } from './root-canal';
 import { DentalChartComponent } from './dental-chart.component';
 import { allowedCariesClasses, toothName } from './tooth-labels';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
@@ -203,6 +203,7 @@ interface ToothServiceDraft {
   treatmentId?: string;
   treatmentType?: number;
   treatmentName?: string;
+  confirmedCompleted?: boolean;
 }
 
 @Component({
@@ -756,8 +757,9 @@ interface ToothServiceDraft {
                       @for (number of treatmentRowKeys(); track number) {
                         @let row = toothService(number);
                         <section class="catalog-select-box tooth-service-row" [attr.data-tooth]="number">
-                          <h3>{{ number === 0 ? t('Whole-mouth service', 'خدمة للفم بالكامل') : '#' + number + ' · ' + toothLabel(number) }}</h3>
+                          @if (!toothServiceIsRootCanal(number)) { <h3>{{ number === 0 ? t('Whole-mouth service', 'خدمة للفم بالكامل') : '#' + number + ' · ' + toothLabel(number) }}</h3> }
                           @if (number === 0 && !toothServiceCatalog(0).length) { <p>{{ t('Add orthodontics, scaling/polishing and whitening services with their prices to the clinic service list first.', 'أضف خدمات التقويم وتنظيف الجير والتلميع والتبييض وأسعارها إلى قائمة خدمات العيادة أولًا.') }}</p> }
+                          @if (!toothServiceIsRootCanal(number)) {
                           <fieldset [disabled]="savingTreatment() || !!row.treatmentId">
                             @if (!row.catalogId) { <p>{{ t('Select the service in the dental chart first.', 'حدد الخدمة من مخطط الأسنان أولاً.') }}</p> }
                             @if (row.catalogId) {
@@ -768,20 +770,27 @@ interface ToothServiceDraft {
                                   </select>
                                 </label>
                               }
+                              @if (!toothServiceIsRootCanal(number)) {
                               <label>{{ t('Treatment status', 'حالة العلاج') }}<select [(ngModel)]="row.status"><option value="completed">{{ t('Completed today', 'تم الانتهاء اليوم') }}</option><option value="in_progress">{{ t('In progress — continue next visit', 'بدأ العلاج ولسه هنكمل') }}</option></select></label>
                               @if (row.status === 'in_progress') { <label>{{ t('Remaining work', 'العمل المتبقي') }}<input [(ngModel)]="row.remaining" maxlength="1000" /></label> }
                               <label>{{ t('Notes', 'ملاحظات') }}<textarea [(ngModel)]="row.notes" maxlength="2000"></textarea></label>
+                              }
                             }
                           </fieldset>
+                          }
                           @if (number !== 0 && toothServiceIsRootCanal(number)) {
-                            <app-root-canal-editor [draft]="rootCanalFor(number)" [previous]="previousRootCanals(number)" [canSave]="!!row.treatmentId" [english]="t('en','ar') === 'en'" [disabled]="savingTreatment() || savingRootCanal()" (save)="saveRootCanal(number)" />
+                            <app-root-canal-editor [draft]="rootCanalFor(number)" [previous]="previousRootCanals(number)" [canSave]="!!row.treatmentId" [english]="t('en','ar') === 'en'" [disabled]="savingTreatment() || savingRootCanal() || !!row.confirmedCompleted" (save)="saveRootCanal(number)" />
                             @if (row.treatmentId) {
                               <p>{{ row.treatmentName }} · {{ t('Existing treatment — no new charge', 'استكمال نفس العلاج — بدون تكلفة جديدة') }}</p>
-                              <label>{{ t('Treatment status', 'حالة العلاج') }}<select [(ngModel)]="row.status" [disabled]="savingTreatment() || savingRootCanal()"><option value="in_progress">{{ t('Continue next visit', 'استكمال في جلسة تالية') }}</option><option value="completed">{{ t('Treatment completed', 'تم الانتهاء من العلاج') }}</option></select></label>
+
                             }
                           }
                           @if (row.treatmentId && !toothServiceIsRootCanal(number)) { <p>{{ t('The service was created. Retry to finish it without creating a duplicate.', 'تم إنشاء الإجراء. إعادة المحاولة تستكمله من غير إنشاء فاتورة أو إجراء مكرر.') }}</p> }
+                          @if (toothServiceIsRootCanal(number) && row.confirmedCompleted) {
+                            <p class="clinical-tag">✓ {{ t('Treatment completed', 'العلاج مكتمل') }}</p>
+                          } @else {
                           <button type="button" class="btn-execute-procedure-modern" [disabled]="!row.catalogId || savingTreatment() || savingRootCanal() || row.price < 0" (click)="executeToothService(number)">{{ savingTreatment() ? t('Saving…', 'جارٍ الحفظ…') : row.treatmentId && toothServiceIsRootCanal(number) ? t('Save & continue existing treatment', 'حفظ واستكمال نفس العلاج') : number === 0 ? t('Record whole-mouth service', 'تسجيل خدمة الفم بالكامل') : t('Record this tooth service', 'تسجيل إجراء هذا السن') }}</button>
+                          }
                         </section>
                       } @empty { <p>{{ t('Choose today’s treatment teeth above.', 'اختار أسنان علاج اليوم فوق.') }}</p> }
 
@@ -2564,10 +2573,23 @@ export class ExaminationComponent {
     this.examination.set(await firstValueFrom(this.api.examination(exam.id)));
     this.loadPatient(exam.patientId);
   }
+  private applyRootCanalStatus(number: number) {
+    const row = this.toothService(number), draft = this.rootCanalFor(number);
+    row.status = draft.stage === 6 ? 'completed' : 'in_progress';
+    const stage = ROOT_CANAL_STAGES.find(item => item.value === (draft.stage === 3 ? 2 : draft.stage));
+    row.remaining = draft.stage === 6 ? '' : stage?.en ?? 'Access cavity';
+    return row.status === 'completed' ? 4 : 3;
+  }
+  private async syncRootCanalStatus(number: number) {
+    const row = this.toothService(number), target = this.rootCanalFor(number).stage === 6 ? 4 : 3;
+    const treatment = await firstValueFrom(this.treatmentApi.treatment(row.treatmentId!));
+    if (treatment.status !== target) await firstValueFrom(this.treatmentApi.treatmentAction(treatment.id, target === 4 ? 'complete' : 'start', treatment.version));
+    this.applyRootCanalStatus(number); row.confirmedCompleted = target === 4;
+  }
   async saveRootCanal(number: number) {
     if (!this.examination()?.canEdit || !this.toothService(number).treatmentId || !this.toothServiceIsRootCanal(number) || this.savingTreatment() || this.savingRootCanal() || !this.validRootCanal(number)) return;
     this.savingRootCanal.set(true); this.error.set('');
-    try { await this.persistRootCanal(number); this.success.set(this.t('Session progress saved without an additional charge.', 'تم حفظ تقدم الجلسة بدون إضافة تكلفة.')); }
+    try { await this.persistRootCanal(number); await this.syncRootCanalStatus(number); this.loadTreatments(this.examination()!.patientId); this.success.set(this.t('Session progress saved without an additional charge.', 'تم حفظ تقدم الجلسة بدون إضافة تكلفة.')); }
     catch (error) { if (error instanceof HttpErrorResponse) this.fail(error); else this.error.set(parseApiError(error, this.t('Could not save root canal details.', 'تعذر حفظ تفاصيل حشو العصب.'))); }
     finally { this.savingRootCanal.set(false); }
   }
@@ -2594,7 +2616,10 @@ export class ExaminationComponent {
     if (!row.treatmentId && !this.toothServiceCatalog(number).some(item => item.id === row.catalogId)) {
       this.error.set(this.t('Choose a service for the selected treatment scope.', 'اختر خدمة مناسبة لهذا السن أو للفم بالكامل.')); return;
     }
-    if (this.toothServiceIsRootCanal(number) && !this.validRootCanal(number)) return;
+    if (this.toothServiceIsRootCanal(number)) {
+      if (!this.validRootCanal(number)) return;
+      this.applyRootCanalStatus(number);
+    }
     this.savingTreatment.set(true); this.error.set('');
     try {
       const appointment = this.appointment() ?? await firstValueFrom(this.appointmentApi.appointment(this.appointmentId));
@@ -2608,7 +2633,7 @@ export class ExaminationComponent {
           this.examination.set(await firstValueFrom(this.api.examination(exam.id)));
         }
         const tier = this.toothServiceTiers(number).find(tier => tier.id === row.tierId);
-        const notes = [row.notes.trim(), tier && row.tierId !== 'base' ? this.t(tier.nameEn, tier.nameAr) : '', this.toothServiceIsFilling(number) && row.cariesClass ? 'Class ' + ['I','II','III','IV','V','VI'][row.cariesClass - 1] : '', row.status === 'in_progress' ? '(متبقي: ' + (row.remaining.trim() || 'استكمال العلاج') + ')' : '', number === 0 ? this.t('Whole mouth — one service charge', 'الفم بالكامل — خدمة واحدة') : ''].filter(Boolean).join(' · ');
+        const notes = [this.toothServiceIsRootCanal(number) ? this.rootCanalFor(number).notes.trim() : row.notes.trim(), tier && row.tierId !== 'base' ? this.t(tier.nameEn, tier.nameAr) : '', this.toothServiceIsFilling(number) && row.cariesClass ? 'Class ' + ['I','II','III','IV','V','VI'][row.cariesClass - 1] : '', !this.toothServiceIsRootCanal(number) && row.status === 'in_progress' ? '(متبقي: ' + (row.remaining.trim() || 'استكمال العلاج') + ')' : '', number === 0 ? this.t('Whole mouth — one service charge', 'الفم بالكامل — خدمة واحدة') : ''].filter(Boolean).join(' · ');
         const teeth = number === 0 ? Array.from({ length: 4 }, (_, quadrant) => Array.from({ length: 8 }, (_, index) => (quadrant + 1) * 10 + index + 1)).flat() : [number];
         const created = await firstValueFrom(this.treatmentApi.createTreatment({ patientId: exam.patientId, doctorProfileId: appointment.doctorProfileId, appointmentId: this.appointmentId, catalogItemId: row.catalogId, toothNumbers: teeth, price: row.price, notes: notes || undefined }));
         row.treatmentId = created.id;

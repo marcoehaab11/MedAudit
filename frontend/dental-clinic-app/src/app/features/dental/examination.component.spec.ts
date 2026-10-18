@@ -114,9 +114,31 @@ describe('ExaminationComponent', () => {
     const request = http.expectOne('/api/examinations/e1/endodontic');
     expect(request.request.body).toMatchObject({ toothNumber: 26, stage: 3, canals: [{ name: 'MB', lengthMm: 21.5, finalFileSize: '25/.06' }, { name: 'MB2', lengthMm: null }, { name: 'DB', lengthMm: null }, { name: 'P', lengthMm: null }] });
     request.flush(null); await Promise.resolve(); await Promise.resolve();
-    http.expectOne('/api/examinations/e1').flush(examination()); await pending;
+    http.expectOne('/api/examinations/e1').flush(examination());
+    await Promise.resolve(); await Promise.resolve(); http.expectOne('/api/treatments/existing-root').flush({ id: 'existing-root', status: 3, version: 'v1' });
+    await pending; flushAuxiliary(http);
     http.expectNone(r => r.url === '/api/treatments' && r.method === 'POST');
     expect(c.savingRootCanal()).toBe(false);
+  });
+  it('automatically completes the existing root canal after the fourth step without a new charge', async () => {
+    const fixture = TestBed.createComponent(ExaminationComponent), c = fixture.componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    c.catalog.set([{ id: 'rct', type: 4, name: 'RCT', code: 'RCT', defaultPrice: 1000, isActive: true }]);
+    c.treatmentTeeth = [36]; Object.assign(c.toothService(36), { catalogId: 'rct', treatmentId: 'existing-root', treatmentType: 4, status: 'in_progress' });
+    c.rootCanalFor(36).stage = 6;
+    const pending = c.saveRootCanal(36);
+    const record = http.expectOne('/api/examinations/e1/endodontic/r1'); expect(record.request.body.stage).toBe(6); record.flush(null);
+    await Promise.resolve(); await Promise.resolve(); http.expectOne('/api/examinations/e1').flush(examination());
+    await Promise.resolve(); await Promise.resolve(); http.expectOne('/api/treatments/existing-root').flush({ id: 'existing-root', status: 3, version: 'v1' });
+    await Promise.resolve(); await Promise.resolve(); http.expectOne('/api/treatments/existing-root/complete').flush(null);
+    await pending; flushAuxiliary(http);
+    expect(c.toothService(36).status).toBe('completed');
+    http.expectNone(r => r.url === '/api/treatments' && r.method === 'POST');
+    c.step.set(3); fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('حالة العلاج');
+    expect(fixture.nativeElement.querySelector('.tooth-service-row > fieldset')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.tooth-service-row > fieldset textarea')).toBeNull();
   });
   it('resumes a previous root canal in the new examination using the same treatment and prior measurements', async () => {
     const c = TestBed.createComponent(ExaminationComponent).componentInstance; const http = TestBed.inject(HttpTestingController);
@@ -143,7 +165,7 @@ describe('ExaminationComponent', () => {
     http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
     c.catalog.set([{ id: 'rct', type: 4, name: 'RCT', code: 'RCT', defaultPrice: 1000, isActive: true }]);
     c.selectedTeeth = [26]; c.treatmentTeeth = [26]; c.toothService(26).catalogId = 'rct'; c.selectToothService(26);
-    c.rootCanalFor(26).stage = 3; c.rootCanalFor(26).canals[0].lengthMm = 22;
+    c.rootCanalFor(26).stage = 3; c.rootCanalFor(26).canals[0].lengthMm = 22; c.toothService(26).status = 'completed';
     const pending = c.executeToothService(26); http.expectOne('/api/treatments').flush({ id: 'new-root' });
     await Promise.resolve(); await Promise.resolve();
     const record = http.expectOne('/api/examinations/e1/endodontic'); expect(record.request.body).toMatchObject({ treatmentId: 'new-root', stage: 3, canals: [{ name: 'MB', lengthMm: 22 }, {}, {}, {}] }); record.flush(null);
