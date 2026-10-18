@@ -685,22 +685,24 @@ interface ToothServiceDraft {
         @if (step() === 3) {
           <section class="step-card procedures-plan-card">
             <div class="step-header-title">
-              <h2>🛠️ {{ t('3. Procedures Done Today & Treatment Planning', '3. الإجراءات المنفذة وخطة العلاج') }}</h2>
-              <p>{{ t('Review the selected teeth and record procedures or plan treatment.', 'راجع الأسنان المحددة وسجل الإجراءات أو خطط العلاج.') }}</p>
+              <h2>{{ t('Medical procedures for this visit', 'الإجراءات الطبية للزيارة') }}</h2>
             </div>
 
             <!-- Split-View: Interactive Chart (Left) + Tooth Procedure Action Card (Right) -->
             <div class="step3-selection-summary">
               <div class="chart-col">
-                <h3>{{ t("Choose teeth to start treating today", 'اختار الأسنان اللي هتبدأ علاجها اليوم') }}</h3>
-                <p>{{ t('Select one or more surveyed teeth. The other findings stay recorded for later treatment.', 'اختار سن أو أكتر من أسنان الكشف. باقي النتائج بتفضل مسجلة للعلاج بعدين.') }}</p>
-                <p>{{ t('Surveyed teeth:', 'أسنان الكشف:') }} {{ surveyTeeth().length }} · {{ t("Selected for today:", 'المختارة لعلاج اليوم:') }} {{ treatmentTeeth.length }}</p>
+                <div class="treatment-selection-heading">
+                  <h3>{{ t('Select teeth for treatment', 'اختيار الأسنان للعلاج') }}</h3>
+                  <button type="button" class="clear-treatment-selection" [disabled]="!treatmentTeeth.length || savingTreatment() || savingRootCanal()" (click)="treatmentTeeth = []">{{ t('Clear selection', 'إلغاء التحديد') }}</button>
+                </div>
                 <div class="today-teeth-picker">
                   @for (number of surveyTeeth(); track number) {
-                    <label><input type="checkbox" [disabled]="savingTreatment() || !examination()!.canEdit" [checked]="treatmentTeeth.includes(number)" (change)="toggleTreatmentTooth(number)" />#{{ number }} {{ toothLabel(number) }}</label>
+                    <button type="button" class="treatment-tooth-chip" [class.selected]="treatmentTeeth.includes(number)" [attr.aria-pressed]="treatmentTeeth.includes(number)" [disabled]="savingTreatment() || savingRootCanal() || !examination()!.canEdit" (click)="toggleTreatmentTooth(number)">
+                      <strong>#{{ number }}</strong><span class="tooth-chip-name" dir="ltr">{{ toothLabel(number) }}</span>
+                      @if (treatmentTeeth.includes(number)) { <span class="tooth-chip-check" aria-hidden="true">✓</span> }
+                    </button>
                   } @empty { <p>{{ t('Record findings in the examination first.', 'سجل الأسنان ونتائج الكشف الأول.') }}</p> }
                 </div>
-                <button type="button" class="secondary" [disabled]="!treatmentTeeth.length || savingTreatment()" (click)="treatmentTeeth = []">{{ t("Clear today's selection", 'إلغاء تحديد أسنان اليوم') }}</button>
               </div>
 
               <!-- Right: Tooth Action Card -->
@@ -1665,7 +1667,7 @@ export class ExaminationComponent {
   readonly steps = [
     { number: 1, icon: '📋', en: '1. Intake', ar: '1. الاستقبال والشكوى' },
     { number: 2, icon: '🦷', en: '2. Dental Chart', ar: '2. فحص ومخطط الأسنان' },
-    { number: 3, icon: '🛠️', en: '3. Procedures', ar: '3. الإجراءات وخطة العلاج' },
+    { number: 3, icon: '🛠️', en: '3. Visit procedures', ar: '3. الإجراءات الطبية للزيارة' },
     { number: 4, icon: '💊', en: '4. Prescription', ar: '4. الروشتة' },
     { number: 5, icon: '💳', en: '5. Billing & End', ar: '5. الحساب والإنهاء' },
   ];

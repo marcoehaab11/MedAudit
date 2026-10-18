@@ -118,3 +118,11 @@ Root-canal validation: 163 backend unit tests and 83 frontend tests passed. Prod
 التحقق الآلي: 48 اختبار واجهة نجحوا، وبناء الإنتاج نجح. جرى تعديل اختبار تكامل الصلاحيات ليُنشئ المريض والتاريخ الطبي بحساب استقبال قبل قراءته بحساب دكتور. لا يوجد ترحيل جديد لهذا الإصلاح.
 
 دليل التجربة المحلية (بيانات وهمية فقط): `tmp/medical-e2e-runtime/e2e-result.json` وصورة `doctor-medical-alert.png`. تجهيز قاعدة PostgreSQL وسيرفر الاختبار داخل `tmp/` فقط، بدون تغيير إعدادات قاعدة تشغيل العيادة.
+
+## تصغير اختيارات أسنان العلاج — 18 أكتوبر 2026
+
+- [x] العنوان: «الإجراءات الطبية للزيارة»، والعنوان الفرعي: «اختيار الأسنان للعلاج» دون الشرح والعدادات أسفله.
+- [x] كروت أسنان صغيرة تعرض الرقم والاسم الإنجليزي، مع تلوين السن المختار بالأخضر وعلامة صح صغيرة، بدل مربع الاختيار الكبير.
+- [x] بناء الإنتاج نجح؛ التحديد المتعدد وإلغاء التحديد يظلان مستقلين عن نتائج الكشف.
+
+Compact tooth-picker visual validation: checked the production build in the isolated clinic browser; tooth #36 becomes green, selecting #35 alongside it yields two pressed cards, and Clear selection resets the count to zero. Screenshot: `tmp/medical-e2e-runtime/compact-tooth-picker.png`.
