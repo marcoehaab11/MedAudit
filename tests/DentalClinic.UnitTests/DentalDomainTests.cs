@@ -172,6 +172,10 @@ public sealed class DentalDomainTests
         examination.UpdateEndodonticRecord(record.Id, "Next: final restoration", [new("MB", 21.5m, null, "30/.06")], version, Now.AddDays(7), RootCanalStage.Obturation, treatmentId);
         Assert.Equal(RootCanalStage.Obturation, record.Stage); Assert.Equal("30/.06", Assert.Single(record.Canals).FinalFileSize);
         Assert.Equal(originalCanalId, Assert.Single(record.Canals).Id);
+        examination.UpdateEndodonticRecord(record.Id, "All four steps completed", [new("MB", 21.5m, null, "30/.06")], examination.Version, Now.AddDays(8), RootCanalStage.Completed, treatmentId);
+        Assert.Equal(RootCanalStage.Completed, record.Stage);
+        Assert.Equal(originalCanalId, Assert.Single(record.Canals).Id);
+
     }
 
     [Fact]

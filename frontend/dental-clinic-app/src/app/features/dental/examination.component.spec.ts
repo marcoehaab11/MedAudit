@@ -39,6 +39,14 @@ describe('ExaminationComponent', () => {
     expect(c.toothService(36)).toMatchObject({ catalogId: 'extract', price: 200 });
     expect(c.toothService(35).catalogId).toBe('implant');
   });
+  it('keeps a tooth root canal service when a later whole-mouth orthodontic finding exists', () => {
+    const c = TestBed.createComponent(ExaminationComponent).componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    c.catalog.set([{ id: 'rct', type: 4, name: 'RCT', code: 'RCT', defaultPrice: 1000, isActive: true }]);
+    c.examination.set({ ...c.examination()!, findings: [{ ...examination().findings[0], type: 8 }, { ...examination().findings[0], id: 'ortho', type: 16 }] });
+    expect(c.toothService(36).catalogId).toBe('rct');
+  });
   it('does not guess an ambiguous clinic service or replace a saved treatment', () => {
     const c = TestBed.createComponent(ExaminationComponent).componentInstance;
     const http = TestBed.inject(HttpTestingController);
@@ -80,7 +88,7 @@ describe('ExaminationComponent', () => {
     http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
     c.catalog.set([{ id: 'rct', type: 4, name: 'RCT', code: 'RCT', defaultPrice: 1000, isActive: true }, { id: 'fill', type: 1, name: 'Filling', code: 'F', defaultPrice: 400, isActive: true }]);
     c.selectedTeeth = [26]; c.treatmentTeeth = [26]; c.step.set(3);
-    c.toothService(26).catalogId = 'rct'; c.selectToothService(26); fixture.detectChanges();
+    c.toothService(26).catalogId = 'rct'; c.selectToothService(26); c.rootCanalFor(26).stage = 2; fixture.detectChanges();
     expect(fixture.nativeElement.querySelectorAll('.canal-card')).toHaveLength(4);
     await fixture.whenStable();
     c.rootCanalFor(26).canals[0].lengthMm = 21;

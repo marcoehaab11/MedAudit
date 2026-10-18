@@ -1,11 +1,12 @@
 import { EndodonticRecord } from './dental-api.service';
 
+// Persisted values 3/4/5 belong to the original five-stage workflow.
+// Keep those values stable; legacy cleaning/shaping (3) resumes at step 2.
 export const ROOT_CANAL_STAGES = [
-  { value: 1, en: 'Access opening', ar: 'فتح الحجرة' },
-  { value: 2, en: 'Working length', ar: 'تحديد أطوال القنوات' },
-  { value: 3, en: 'Cleaning & shaping', ar: 'تنظيف وتشكيل القنوات' },
-  { value: 4, en: 'Obturation', ar: 'حشو القنوات' },
-  { value: 5, en: 'Final restoration', ar: 'الترميم النهائي' },
+  { value: 1, number: 1, en: 'Access cavity' },
+  { value: 2, number: 2, en: 'Working length and final file size' },
+  { value: 4, number: 3, en: 'Obturation' },
+  { value: 5, number: 4, en: 'Composite filling' },
 ];
 
 export interface RootCanalDraft {

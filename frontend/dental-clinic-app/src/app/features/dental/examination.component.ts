@@ -2480,7 +2480,7 @@ export class ExaminationComponent {
   toothClasses(number: number) { return allowedCariesClasses([number]); }
   toothService(number: number): ToothServiceDraft {
     const row = this.toothServices[number] ??= { catalogId: '', tierId: 'base', price: 0, cariesClass: this.examination()?.findings.filter(f => f.toothNumber === number && f.type === 2).at(-1)?.cariesClass ?? null, notes: '', remaining: '', status: 'completed' };
-    const type = this.examination()?.findings.filter(f => f.toothNumber === number).at(-1)?.type ?? this.patientChart()?.teeth.find(t => t.toothNumber === number)?.findings.at(-1);
+    const type = this.examination()?.findings.filter(f => f.toothNumber === number && !this.isWholeMouthFinding(f.type)).at(-1)?.type ?? this.patientChart()?.teeth.find(t => t.toothNumber === number)?.findings.filter(type => !this.isWholeMouthFinding(type)).at(-1);
     if (!row.treatmentId && this.serviceFindingTypes.has(number) && this.serviceFindingTypes.get(number) !== type) {
       row.catalogId = ''; row.price = 0; row.tierId = 'base'; row.status = 'completed';
       row.cariesClass = this.examination()?.findings.filter(f => f.toothNumber === number && f.type === 2).at(-1)?.cariesClass ?? null;
@@ -2534,7 +2534,7 @@ export class ExaminationComponent {
   }
   validRootCanal(number: number) {
     const draft = this.rootCanalFor(number);
-    const valid = draft.stage >= 1 && draft.stage <= 5 && draft.canals.length > 0 && draft.notes.length <= 2000 && draft.canals.every(c => (c.lengthMm === null || Number.isFinite(c.lengthMm) && c.lengthMm > 0 && c.lengthMm <= 50) && c.finalFileSize.length <= 50);
+    const valid = draft.stage >= 1 && draft.stage <= 6 && draft.canals.length > 0 && draft.notes.length <= 2000 && draft.canals.every(c => (c.lengthMm === null || Number.isFinite(c.lengthMm) && c.lengthMm > 0 && c.lengthMm <= 50) && c.finalFileSize.length <= 50);
     if (!valid) this.error.set(this.t('Check the treatment stage and canal measurements (greater than 0 and at most 50 mm).', 'راجع المرحلة وقياسات القنوات؛ الطول أكبر من صفر وحتى 50 مم.'));
     return valid;
   }
