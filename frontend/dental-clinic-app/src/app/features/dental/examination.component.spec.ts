@@ -22,6 +22,7 @@ describe('ExaminationComponent', () => {
   });
   afterEach(() => {
     const http = TestBed.inject(HttpTestingController);
+    for (const r of http.match('/api/patients/p1')) r.flush({ id: 'p1', allergies: [], medicalConditions: [], medications: [] });
     for (const r of http.match('/api/patients/p1/dental')) r.flush({ patientId: 'p1', teeth: [], recentExaminations: [] });
     for (const r of http.match(r => r.url === '/api/treatments' && r.method === 'GET')) r.flush({ items: [], totalPages: 1 });
     http.verify();
@@ -610,6 +611,37 @@ describe('ExaminationComponent', () => {
     fixture.componentInstance.saveNotes();
     http.expectOne('/api/examinations/e1').flush({}, { status: 409, statusText: 'Conflict' });
     expect(fixture.componentInstance.error()).toContain('تم تغيير');
+  });
+
+  it('refreshes reception medical changes on returning to an already open doctor visit', () => {
+    const c = TestBed.createComponent(ExaminationComponent).componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    expect(c.hasMedicalAlerts()).toBe(false);
+    c.refreshMedicalHistoryOnFocus();
+    http.expectOne('/api/patients/p1').flush({ id: 'p1', canViewMedicalInformation: true, allergies: [{name:'Latex'}], medicalConditions: [{name:'Diabetes'}], medications: [] });
+    expect(c.patientAllergies).toEqual(['Latex']); expect(c.patientConditions).toEqual(['Diabetes']);
+    expect(c.showMedicalAlertModal()).toBe(true);
+    c.closeMedicalAlertModal();
+    c.refreshMedicalHistoryOnFocus();
+    http.expectOne('/api/patients/p1').flush({ id: 'p1', allergies: [{name:'Latex'}], medicalConditions: [{name:'Diabetes'}], medications: [] });
+    expect(c.showMedicalAlertModal()).toBe(false);
+    c.loadPatient('p1');
+    http.expectOne('/api/patients/p1').flush({ id: 'p1', allergies: [{name:'Penicillin'}], medicalConditions: [{name:'Diabetes'}], medications: [] });
+    expect(c.patientAllergies).toEqual(['Penicillin']); expect(c.showMedicalAlertModal()).toBe(true);
+  });
+
+  it('reports failed medical refresh without erasing the previous warnings and allows retry', () => {
+    const c = TestBed.createComponent(ExaminationComponent).componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    c.patientAllergies = ['Latex'];
+    c.refreshMedicalHistoryOnFocus();
+    http.expectOne('/api/patients/p1').flush({}, {status:503,statusText:'Unavailable'});
+    expect(c.medicalHistoryError()).toContain('تعذر تحديث'); expect(c.patientAllergies).toEqual(['Latex']);
+    c.refreshMedicalHistoryOnFocus();
+    http.expectOne('/api/patients/p1').flush({id:'p1',canViewMedicalInformation:false,allergies:[],medicalConditions:[],medications:[]});
+    expect(c.medicalHistoryError()).toContain('صلاحية');
   });
 
   it('opens medical alert modal automatically when patient has allergies or conditions', () => {

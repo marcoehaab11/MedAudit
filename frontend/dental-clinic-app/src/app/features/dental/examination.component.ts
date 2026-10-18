@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, HostListener, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -492,6 +492,9 @@ interface ToothServiceDraft {
           </div>
         }
 
+        @if (medicalHistoryError()) {
+          <p class="alert" role="alert">{{ medicalHistoryError() }} <button type="button" (click)="refreshPatientMedicalHistory(examination()!.patientId)">{{ t('Retry', 'إعادة المحاولة') }}</button></p>
+        }
         @if (treatmentHistoryError()) {
           <p class="alert" role="alert">{{ treatmentHistoryError() }} <button type="button" (click)="loadTreatments(examination()!.patientId)">{{ t('Retry', 'إعادة المحاولة') }}</button></p>
         }
@@ -1659,7 +1662,9 @@ export class ExaminationComponent {
   readonly treatmentPlans = signal<TreatmentPlanList[]>([]);
   readonly showVisitHistorySheet = signal(false);
   readonly showMedicalAlertModal = signal(false);
-  private alertModalAutoShown = false;
+  private medicalAlertSignature = '';
+  private medicalHistoryLoading = false;
+  readonly medicalHistoryError = signal('');
 
   readonly loading = signal(true);
   readonly saving = signal(false);
@@ -2011,7 +2016,24 @@ export class ExaminationComponent {
       next: chart => { this.patientChart.set(chart); this.patientChartError.set(false); },
       error: () => { this.patientChartError.set(true); },
     });
-    if (this.patient()) return;
+    this.refreshPatientMedicalHistory(patientId);
+  }
+
+  @HostListener('window:focus')
+  refreshMedicalHistoryOnFocus(): void {
+    const patientId = this.examination()?.patientId ?? this.patient()?.id;
+    if (patientId) this.refreshPatientMedicalHistory(patientId);
+  }
+
+  @HostListener('document:visibilitychange')
+  refreshMedicalHistoryWhenVisible(): void {
+    if (document.visibilityState === 'visible') this.refreshMedicalHistoryOnFocus();
+  }
+
+  refreshPatientMedicalHistory(patientId: string): void {
+    // The reception may update this patient while the doctor keeps the visit open.
+    if (this.medicalHistoryLoading) return;
+    this.medicalHistoryLoading = true;
     this.patientApi.patient(patientId).subscribe({
       next: (p) => {
         this.patient.set(p);
@@ -2019,12 +2041,19 @@ export class ExaminationComponent {
         this.patientConditions = (p.medicalConditions ?? []).map((x) => x.name);
         this.patientMedications = (p.medications ?? []).map((x) => x.name);
 
-        if (!this.alertModalAutoShown && this.hasMedicalAlerts()) {
-          this.alertModalAutoShown = true;
+        this.medicalHistoryLoading = false;
+        this.medicalHistoryError.set(p.canViewMedicalInformation === false
+          ? this.t('Medical history is unavailable with this account. Check medical history permissions.', 'التاريخ الطبي غير متاح لهذا الحساب. راجع صلاحية الاطلاع على التاريخ الطبي.') : '');
+        const signature = JSON.stringify([this.patientAllergies, this.patientConditions, this.patientMedications]);
+        if (signature !== this.medicalAlertSignature && this.hasMedicalAlerts()) {
           this.showMedicalAlertModal.set(true);
         }
+        this.medicalAlertSignature = signature;
       },
-      error: () => {},
+      error: () => {
+        this.medicalHistoryLoading = false;
+        this.medicalHistoryError.set(this.t('Could not refresh medical history. Previously loaded information may be outdated.', 'تعذر تحديث الحساسية والأمراض المزمنة. البيانات المعروضة قد تكون قديمة.'));
+      },
     });
   }
 
