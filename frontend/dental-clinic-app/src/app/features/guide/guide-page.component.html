@@ -29,7 +29,7 @@
           <button type="button" class="topic-button" [class.selected]="selectedTopic()?.id === topic.id"
             [attr.aria-current]="selectedTopic()?.id === topic.id ? 'page' : null" (click)="choose(topic)">
             <span class="topic-icon" aria-hidden="true">{{ topic.icon }}</span>
-            <span><strong>{{ text(topic.title) }}</strong><small>{{ text(topic.summary) }}</small></span>
+            <span class="topic-copy"><strong>{{ text(topic.title) }}</strong><small>{{ text(topic.summary) }}</small></span>
             <span class="topic-arrow" aria-hidden="true">›</span>
           </button>
         }
