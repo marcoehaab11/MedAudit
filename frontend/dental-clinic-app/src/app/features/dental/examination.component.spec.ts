@@ -68,6 +68,30 @@ describe('ExaminationComponent', () => {
     c.examination.set({ ...c.examination()!, findings: [{ ...examination().findings[0], type: 8 }, { ...examination().findings[0], id: 'ortho', type: 16 }] });
     expect(c.toothService(36).catalogId).toBe('rct');
   });
+  it('preserves chart root-and-crown intent when the billing service has a different name', () => {
+    const fixture=TestBed.createComponent(ExaminationComponent),c=fixture.componentInstance,http=TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());flushAuxiliary(http);
+    c.catalog.set([{id:'root',type:4,name:'حشو عصب وعلاج جذور',code:'RCT',defaultPrice:1500,isActive:true}]);
+    c.examination.set({...c.examination()!,endodonticRecords:[],findings:[{...examination().findings[0],toothNumber:46,type:10}]});
+    c.treatmentTeeth=[46];c.step.set(3);fixture.detectChanges();
+    expect(c.toothService(46).catalogId).toBe('root');
+    expect(c.treatmentSummaryLabels(46)).toEqual(['علاج جذور وكراون']);
+    expect(c.rootCanalFor(46).restorationType).toBe('crown');
+    expect(fixture.nativeElement.querySelector('.selected-treatment-badge').textContent).toContain('كراون');
+    c.toothService(46).treatmentName='Generic root canal';
+    expect(c.treatmentSummaryLabels(46)).toEqual(['علاج جذور وكراون']);
+  });
+  it('keeps the chart restoration variant independent of catalogue wording for every root option', () => {
+    const c=TestBed.createComponent(ExaminationComponent).componentInstance,http=TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());flushAuxiliary(http);
+    c.catalog.set([{id:'root',type:4,name:'Root canal post and crown',code:'RCT',defaultPrice:1500,isActive:true}]);
+    for(const [type,mode] of [[8,'composite'],[10,'crown'],[11,'post-core-crown'],[17,'post-core']] as const){
+      c.examination.set({...c.examination()!,endodonticRecords:[],findings:[{...examination().findings[0],toothNumber:46,type}]});
+      c.toothService(46);expect(c.rootCanalFor(46).restorationType).toBe(mode);
+      expect(c.treatmentSummaryLabels(46)).toEqual([c.findingLabel(type)]);
+    }
+  });
+
   it('opens combined root canal details with a single differently named clinic root service', () => {
     const fixture=TestBed.createComponent(ExaminationComponent),c=fixture.componentInstance,http=TestBed.inject(HttpTestingController);
     http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);

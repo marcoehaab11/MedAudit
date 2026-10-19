@@ -2422,13 +2422,15 @@ export class ExaminationComponent {
   }
 
   treatmentSummaryLabels(number: number): string[] {
-    const row = this.toothServices[number];
-    const service = row?.catalogId ? this.catalog().find(item => item.id === row.catalogId) : undefined;
-    if (service) { const parsed = parseCatalogItem(service); return [this.t(parsed.nameEn, parsed.nameAr)]; }
-    if (row?.treatmentName) return [row.treatmentName];
+    // Clinical intent comes from the chart; catalogue names describe pricing services.
     const current = (this.examination()?.findings ?? []).filter(item => item.toothNumber === number).map(item => item.type);
     const types = current.length ? current : this.patientChart()?.teeth.find(tooth => tooth.toothNumber === number)?.findings ?? [];
-    return [...new Set(types.filter(type => type !== 1 && !this.isWholeMouthFinding(type)).map(type => this.findingLabel(type)))];
+    const labels = [...new Set(types.filter(type => type !== 1 && !this.isWholeMouthFinding(type)).map(type => this.findingLabel(type)))];
+    if (labels.length) return labels;
+    const row = this.toothServices[number];
+    if (row?.treatmentName) return [row.treatmentName];
+    const service = row?.catalogId ? this.catalog().find(item => item.id === row.catalogId) : undefined;
+    return service ? [this.serviceDisplayName(service)] : [];
   }
 
   selectedToothFindings() {
@@ -2636,7 +2638,7 @@ export class ExaminationComponent {
     if (!draft.restorationType) {
       const finding = this.examination()?.findings.filter(f => f.toothNumber === number && [8,10,11,17].includes(f.type)).at(-1)?.type ?? this.patientChart()?.teeth.find(t => t.toothNumber === number)?.findings.filter(type => [8,10,11,17].includes(type)).at(-1);
       const name = this.toothService(number).treatmentName ?? this.catalog().find(c => c.id === this.toothService(number).catalogId)?.name ?? '';
-      draft.restorationType = finding === 11 ? 'post-core-crown' : finding === 17 ? 'post-core' : finding === 10 ? 'crown' : /post|دعامة|دعامه/i.test(name) ? /crown|كراون|تاج/i.test(name) ? 'post-core-crown' : 'post-core' : 'composite';
+      draft.restorationType = finding === 11 ? 'post-core-crown' : finding === 17 ? 'post-core' : finding === 10 ? 'crown' : finding === 8 ? 'composite' : /post|دعامة|دعامه/i.test(name) ? /crown|كراون|تاج/i.test(name) ? 'post-core-crown' : 'post-core' : 'composite';
     }
     this.rootCanalDrafts.set(number, { treatmentId, draft });
     return draft;
