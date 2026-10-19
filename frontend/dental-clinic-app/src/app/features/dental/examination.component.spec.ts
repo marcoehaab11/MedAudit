@@ -68,6 +68,27 @@ describe('ExaminationComponent', () => {
     c.examination.set({ ...c.examination()!, findings: [{ ...examination().findings[0], type: 8 }, { ...examination().findings[0], id: 'ortho', type: 16 }] });
     expect(c.toothService(36).catalogId).toBe('rct');
   });
+  it('opens combined root canal details with a single differently named clinic root service', () => {
+    const fixture=TestBed.createComponent(ExaminationComponent),c=fixture.componentInstance,http=TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    c.catalog.set([{id:'root',type:4,name:'حشو عصب',code:'RCT',defaultPrice:1500,isActive:true}]);
+    c.examination.set({...c.examination()!,findings:[{...examination().findings[0],toothNumber:45,type:10},{...examination().findings[0],id:'f46',toothNumber:46,type:10}]});
+    c.treatmentTeeth=[45,46];c.step.set(3);fixture.detectChanges();
+    expect(c.toothService(45).catalogId).toBe('root');expect(c.toothService(46).catalogId).toBe('root');
+    expect(fixture.nativeElement.querySelectorAll('app-root-canal-editor').length).toBe(2);
+    expect(fixture.nativeElement.textContent).not.toContain('حدد الخدمة من مخطط الأسنان');
+  });
+  it('offers a usable per-tooth service choice when the clinic has multiple matching services', () => {
+    const fixture=TestBed.createComponent(ExaminationComponent),c=fixture.componentInstance,http=TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());flushAuxiliary(http);
+    c.catalog.set([{id:'a',type:4,name:'Anterior RCT',code:'A',defaultPrice:900,isActive:true},{id:'b',type:4,name:'Molar RCT',code:'B',defaultPrice:1500,isActive:true},{id:'f',type:1,name:'Filling',code:'F',defaultPrice:200,isActive:true}]);
+    c.examination.set({...c.examination()!,findings:[{...examination().findings[0],type:10}]});c.treatmentTeeth=[36];c.step.set(3);fixture.detectChanges();
+    const select=fixture.nativeElement.querySelector('[data-tooth="36"] select') as HTMLSelectElement;
+    expect(Array.from(select.options).map(x=>x.value)).toEqual(['','a','b']);
+    select.value='b';select.dispatchEvent(new Event('change'));fixture.detectChanges();
+    expect(c.toothService(36).catalogId).toBe('b');expect(fixture.nativeElement.querySelector('app-root-canal-editor')).not.toBeNull();
+  });
+
   it('does not guess an ambiguous clinic service or replace a saved treatment', () => {
     const c = TestBed.createComponent(ExaminationComponent).componentInstance;
     const http = TestBed.inject(HttpTestingController);

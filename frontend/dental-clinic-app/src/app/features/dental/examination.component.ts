@@ -764,7 +764,18 @@ interface ToothServiceDraft {
                           @if (number === 0 && !toothServiceCatalog(0).length) { <p>{{ t('Add orthodontics, scaling/polishing and whitening services with their prices to the clinic service list first.', 'أضف خدمات التقويم وتنظيف الجير والتلميع والتبييض وأسعارها إلى قائمة خدمات العيادة أولًا.') }}</p> }
                           @if (!toothServiceIsRootCanal(number)) {
                           <fieldset [disabled]="savingTreatment() || !!row.treatmentId">
-                            @if (!row.catalogId) { <p>{{ t('Select the service in the dental chart first.', 'حدد الخدمة من مخطط الأسنان أولاً.') }}</p> }
+                            @if (!row.catalogId) {
+                              @if (matchingToothServices(number).length) {
+                                <label>{{ t('Clinic service for', 'خدمة العيادة للسن') }} {{ toothLabel(number) }} · #{{ number }}
+                                  <select [(ngModel)]="row.catalogId" (change)="selectToothService(number)">
+                                    <option value="">{{ t('Choose the matching clinic service…', 'اختر الخدمة المناسبة من خدمات العيادة…') }}</option>
+                                    @for (item of matchingToothServices(number); track item.id) { <option [value]="item.id">{{ serviceDisplayName(item) }}</option> }
+                                  </select>
+                                </label>
+                              } @else {
+                                <p role="alert">{{ t('No matching active clinic service. Add or activate it in Treatment Types & Prices.', 'لا توجد خدمة مفعلة مناسبة لهذا الإجراء. أضفها أو فعّلها من أنواع العلاجات والأسعار.') }}</p>
+                              }
+                            }
                             @if (row.catalogId) {
                               @if (number !== 0 && toothServiceIsFilling(number)) {
                                 <label>{{ t('Caries classification', 'تصنيف التسوس للحشو العادي') }}
@@ -2577,7 +2588,7 @@ export class ExaminationComponent {
       const candidates = this.toothServiceCatalog(number).filter(item => item.type === treatmentType);
       const appearance = FINDING_APPEARANCE[type];
       const exact = candidates.filter(item => { const parsed = parseCatalogItem(item); return [parsed.nameEn, parsed.nameAr, item.name].some(name => [appearance.en, appearance.ar].some(label => name.trim().toLowerCase() === label.toLowerCase())); });
-      const item = exact.length === 1 ? exact[0] : candidates.length === 1 && ![10,11,17].includes(type) ? candidates[0] : undefined;
+      const item = exact.length === 1 ? exact[0] : candidates.length === 1 ? candidates[0] : undefined;
       if (item) {
         const tier = parseCatalogItem(item).priceTiers[0];
         row.catalogId = item.id; row.tierId = tier?.id ?? 'base'; row.price = tier?.price ?? item.defaultPrice ?? 0;
@@ -2585,6 +2596,14 @@ export class ExaminationComponent {
       }
     }
     return row;
+  }
+  serviceDisplayName(item: CatalogItem) { const parsed = parseCatalogItem(item); return this.t(parsed.nameEn || item.name, parsed.nameAr || item.name); }
+  matchingToothServices(number: number) {
+    if (number === 0) return this.toothServiceCatalog(0);
+    const type = this.examination()?.findings.filter(f => f.toothNumber === number && !this.isWholeMouthFinding(f.type)).at(-1)?.type
+      ?? this.patientChart()?.teeth.find(t => t.toothNumber === number)?.findings.filter(type => !this.isWholeMouthFinding(type)).at(-1);
+    const serviceType = ({2:1,8:4,9:5,10:4,11:4,14:2,15:3,17:4} as Record<number,number>)[type ?? 0];
+    return this.toothServiceCatalog(number).filter(item => !serviceType || item.type === serviceType);
   }
   isWholeMouthService(item: CatalogItem) {
     const parsed = parseCatalogItem(item);
