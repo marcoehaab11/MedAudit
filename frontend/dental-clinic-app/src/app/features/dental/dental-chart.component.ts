@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, DestroyRef, EventEmitter, inject, Input, OnChanges, Output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { LocalizationService } from '../../core/localization.service';
@@ -33,11 +33,14 @@ import { toothName } from './tooth-labels';
         <div class="planora-chart-scroll" (scroll)="menuTooth = 0"><div class="planora-jaw" [class.planora-upper]="!jaw.lower" [class.planora-lower]="jaw.lower">
           @for (number of jaw.teeth; track number) {
             <div class="tooth-container" (mouseenter)="openMenu(number, $event)" (mouseleave)="closeMenu(number)">
-              <button type="button" class="planora-tooth" [class.selected]="isSelectedTooth(number)" [class.missing]="isMissing(find(number))"
+              <button type="button" class="planora-tooth" [class.selected]="isSelectedTooth(number)" [class.missing]="isMissing(find(number))" [class.implanted]="toothState(number) === 'implant'"
+                [class.extracting]="animatedTeeth()[number] === 'extracted'" [class.implanting]="animatedTeeth()[number] === 'implant'"
                 [attr.aria-pressed]="isSelectedTooth(number)" [attr.aria-label]="name(number) + ' #' + number" [title]="name(number) + ' #' + number"
                 [style.--tooth-accent]="planoraAccent(number)" (focus)="openMenu(number, $event)" (keydown.escape)="menuTooth = 0" (click)="choose(number, $event)">
                 <span class="planora-marker"></span><span class="planora-art" [innerHTML]="planoraArt(number, jaw.lower)"></span>
                 <span class="planora-number">#{{ number }}</span>
+                @if (toothState(number) === 'implant') { <span class="restoration-label">{{ t('Implant', 'زراعة') }}</span> }
+                @if (toothState(number) === 'extracted') { <span class="restoration-label">{{ t('Extracted', 'تم الخلع') }}</span> }
                 @if (completedWork(number)) { <small [title]="t('Completed treatment recorded', 'يوجد علاج تم')">✓</small> }
                 @if (pendingWork(number)) { <small [title]="t('Pending or ongoing treatment / findings to review', 'علاج متبقي أو تشخيصات للمراجعة')">◷</small> }
               </button>
@@ -54,10 +57,10 @@ import { toothName } from './tooth-labels';
         </div></div>
       }
     </div>
-    <div class="chart-legend"><span>{{ t('Orange: caries · Purple: root canal · Gold: crown · Missing: hidden tooth', 'برتقالي: تسوس · بنفسجي: علاج جذور · ذهبي: كراون · فقد: سن مخفي') }}</span><span>{{ t('✓ Completed treatment · ◷ Pending treatment / findings to review', '✓ علاج تم · ◷ علاج متبقي أو تشخيصات للمراجعة') }}</span></div>
+    <div class="chart-legend"><span>{{ t('Orange: caries · Purple: root canal · Gold: crown · Missing: hidden tooth', 'برتقالي: تسوس · بنفسجي: علاج جذور · ذهبي: كراون · فقد: سن مخفي') }}</span><span>{{ t('Screw: completed implant · ✓ Completed · ◷ Pending', 'مسمار: زراعة منفذة · ✓ علاج تم · ◷ علاج متبقي') }}</span></div>
   </section>`,
 })
-export class DentalChartComponent {
+export class DentalChartComponent implements OnChanges {
   @Input() teeth: ToothChartSummary[] = [];
   @Input() selectedNumber = 0;
   @Input() multiSelect = false;
@@ -132,12 +135,51 @@ export class DentalChartComponent {
   }
   search() { const number = Number(this.query); if (!this.jaws.some(j => j.teeth.includes(number))) { this.searchError = true; return; } this.choose(number); }
   isSelectedTooth(number: number) { return this.multiSelect ? this.selectedTeeth.includes(number) : this.selectedNumber === number; }
-  isMissing(tooth?: ToothChartSummary) { return !!tooth?.findings.includes(4) && !tooth.procedures.includes(3); }
+  readonly animatedTeeth = signal<Record<number, string>>({});
+  private previousStates = new Map<number, string>();
+  private initialized = false;
+  private readonly animationTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  private readonly destroyRef = inject(DestroyRef);
+  ngOnChanges(): void {
+    for (const jaw of this.jaws) for (const number of jaw.teeth) {
+      const state = this.toothState(number);
+      if (this.initialized && state !== this.previousStates.get(number) && ['implant','extracted'].includes(state)) {
+        clearTimeout(this.animationTimers.get(number));
+        this.animatedTeeth.update(value => ({...value, [number]: state}));
+        this.animationTimers.set(number, setTimeout(() => {
+          this.animatedTeeth.update(value => { const next = {...value}; delete next[number]; return next; });
+          this.animationTimers.delete(number);
+        }, 900));
+      }
+      this.previousStates.set(number, state);
+    }
+    if (!this.initialized) this.destroyRef.onDestroy(() => { for (const timer of this.animationTimers.values()) clearTimeout(timer); });
+    this.initialized = true;
+  }
+  toothState(number: number): string {
+    const tooth = this.find(number);
+    const completed = tooth?.treatmentProgress?.filter(t => t.status === 4 && [2,3].includes(t.type))
+      .sort((a,b) => (Date.parse(b.completedAt ?? '') || 0) - (Date.parse(a.completedAt ?? '') || 0));
+    if (completed?.length) return completed[0].type === 3 ? 'implant' : 'extracted';
+    if (tooth?.procedures.includes(3) && !tooth.treatmentProgress?.some(t => t.type === 3 && t.status !== 5)) return 'implant';
+    if (tooth?.procedures.includes(2) && !tooth.treatmentProgress?.some(t => t.type === 2 && t.status !== 5)) return 'extracted';
+    return tooth?.findings.includes(4) ? 'missing' : 'tooth';
+  }
+  isMissing(tooth?: ToothChartSummary) { return !!tooth && ['missing','extracted'].includes(this.toothState(tooth.toothNumber)); }
   isCaries(tooth?: ToothChartSummary) { return !!tooth?.findings.includes(2); }
   isEndo(tooth?: ToothChartSummary) { return !!tooth && (tooth.hasEndodonticRecord || tooth.procedures.includes(4) || tooth.findings.some(x => [8,10,11,17].includes(x))); }
   isCrown(tooth?: ToothChartSummary) { return !!tooth && (tooth.procedures.includes(5) || tooth.findings.some(x => [9,10,11].includes(x))); }
   planoraArt(number: number, lower: boolean): SafeHtml {
     const tooth = this.find(number);
+    if (this.toothState(number) === 'implant') {
+      const key = 'implant-' + lower;
+      let art = this.artCache.get(key);
+      if (!art) {
+        art = this.sanitizer.bypassSecurityTrustHtml(`<svg class="tooth-anatomy implant-screw" viewBox="0 0 42 98" aria-hidden="true"><g${lower ? '' : ' transform="translate(0 98) scale(1 -1)"'}><path d="M12 8 H30 V18 H12 Z" fill="#d7e3ea" stroke="#647d8d" stroke-width="1.5"/><path d="M15 20 H27 L25 77 Q21 88 17 77 Z" fill="#a8bbc8" stroke="#526e80" stroke-width="1.5"/><path d="M14 27 L28 32 M14 36 L28 41 M15 45 L27 50 M15 54 L27 59 M16 63 L26 68 M17 72 L25 76" stroke="#edf5f8" stroke-width="3"/><path d="M18 22 V73" stroke="#fff" opacity=".45" stroke-width="2"/></g></svg><svg class="tooth-surface" viewBox="0 0 42 42" aria-hidden="true"><circle cx="21" cy="21" r="12" fill="#d7e3ea" stroke="#647d8d" stroke-width="2"/><path d="M17 14 H25 L29 21 L25 28 H17 L13 21 Z" fill="#7893a5"/></svg>`);
+        this.artCache.set(key, art);
+      }
+      return art;
+    }
     const record: ArtRecord = { treatment: tooth?.procedures.includes(3) ? 'implant' : this.isCrown(tooth) ? 'crown' : this.isEndo(tooth) ? 'root-canal' : tooth?.procedures.includes(1) ? 'filling' : 'none',
       status: tooth?.findings.some(x => [8,9,10,11,17].includes(x)) ? 'planned' : 'existing', surfaces: ['O'], caries: this.isCaries(tooth), endo: this.isEndo(tooth), crown: this.isCrown(tooth) };
     const key = JSON.stringify([number, lower, record]);

@@ -8,6 +8,34 @@ describe('DentalChartComponent', () => {
     await TestBed.configureTestingModule({ imports: [DentalChartComponent] }).compileComponents();
   });
 
+  it('keeps planned implants as teeth and replaces completed implants with a screw', () => {
+    const fixture = TestBed.createComponent(DentalChartComponent);
+    fixture.componentRef.setInput('teeth', [{toothId:'t36',toothNumber:36,findings:[15],procedures:[3],treatmentProgress:[{id:'i',name:'Implant',type:3,status:3}]}]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.implant-screw')).toBeNull();
+    fixture.componentRef.setInput('teeth', [{toothId:'t36',toothNumber:36,findings:[15],procedures:[],treatmentProgress:[{id:'i',name:'Implant',type:3,status:4,completedAt:'2026-10-19T10:00:00Z'}]}]);
+    fixture.detectChanges();
+    const tooth=fixture.nativeElement.querySelector('button[aria-label*="#36"]');
+    expect(tooth.querySelector('.implant-screw')).not.toBeNull(); expect(tooth.classList.contains('implanting')).toBe(true);
+    expect(tooth.classList.contains('missing')).toBe(false);
+  });
+  it('animates newly completed extraction and leaves an empty tooth position', () => {
+    const fixture=TestBed.createComponent(DentalChartComponent);
+    fixture.componentRef.setInput('teeth', [{toothId:'t36',toothNumber:36,findings:[14],procedures:[]}]); fixture.detectChanges();
+    expect(fixture.componentInstance.isMissing(fixture.componentInstance.find(36))).toBe(false);
+    fixture.componentRef.setInput('teeth', [{toothId:'t36',toothNumber:36,findings:[14],procedures:[],treatmentProgress:[{id:'e',name:'Extraction',type:2,status:4}]}]); fixture.detectChanges();
+    const tooth=fixture.nativeElement.querySelector('button[aria-label*="#36"]');
+    expect(tooth.classList.contains('extracting')).toBe(true); expect(tooth.classList.contains('missing')).toBe(true);
+    expect(tooth.textContent).toContain('تم الخلع');
+  });
+  it('restores the screw after reopening without replaying historical animation and respects later extraction', () => {
+    const fixture=TestBed.createComponent(DentalChartComponent);
+    fixture.componentRef.setInput('teeth', [{toothId:'t36',toothNumber:36,findings:[4],procedures:[2,3],treatmentProgress:[{id:'i',name:'Implant',type:3,status:4,completedAt:'2026-10-19T10:00:00Z'}]}]); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.implant-screw')).not.toBeNull(); expect(fixture.componentInstance.animatedTeeth()).toEqual({});
+    fixture.componentRef.setInput('teeth', [{toothId:'t36',toothNumber:36,findings:[4],procedures:[2,3],treatmentProgress:[{id:'i',name:'Implant',type:3,status:4,completedAt:'2026-10-19T10:00:00Z'},{id:'e',name:'Extraction',type:2,status:4,completedAt:'2026-10-20T10:00:00Z'}]}]); fixture.detectChanges();
+    expect(fixture.componentInstance.toothState(36)).toBe('extracted'); expect(fixture.nativeElement.querySelector('.implant-screw')).toBeNull();
+  });
+
   it('keeps the lower-jaw diagnosis menu inside the viewport without a close option', () => {
     const fixture = TestBed.createComponent(DentalChartComponent);
     fixture.componentInstance.showQuickFindings = true;
