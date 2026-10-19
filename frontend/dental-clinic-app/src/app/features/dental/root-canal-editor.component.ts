@@ -36,6 +36,14 @@ import { RootCanalDraft, rootCanalStages } from './root-canal';
           <p class="completed-stage" dir="ltr">✓ Root canal stages completed</p>
         } @else {
           <h5 class="current-stage" dir="ltr">{{ currentStage.number }}- {{ currentStage.en }}</h5>
+          @if (currentStage.value === 4) {
+            <aside class="obturation-note" dir="ltr" aria-label="Canal measurements note">
+              <strong>Note</strong>
+              @for (canal of draft.canals; track canal.name) {
+                <span>Canal {{ canal.name }}: length {{ canal.lengthMm ?? '—' }}{{ canal.lengthMm !== null ? 'mm' : '' }} · MAF {{ canal.finalFileSize || '—' }}</span>
+              }
+            </aside>
+          }
           @if (currentStage.value === 2) {
             <div class="canal-grid" dir="ltr">
               @for (canal of draft.canals; track canal.name) {
@@ -78,6 +86,8 @@ import { RootCanalDraft, rootCanalStages } from './root-canal';
     .root-canal-card{border:1px solid #b9dedb;border-radius:12px;background:#f2fbfa;padding:16px;margin-top:16px}
     h4{margin:0 0 12px}fieldset{border:0;padding:0;display:grid;gap:14px;min-width:0}
     label{display:grid;gap:6px}input,select,textarea{box-sizing:border-box;width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:7px;background:white}
+    .obturation-note{display:grid;gap:4px;justify-self:left;max-width:100%;padding:8px 10px;border-inline-start:2px solid #b8d9d0;border-radius:4px;background:#ffffff80;color:#5c737d;font-size:.75rem;line-height:1.6;text-align:left;overflow-wrap:anywhere}
+    .obturation-note strong{font-size:.73rem;color:#43665f;font-weight:650}
     .canal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:12px}
     .canal-card{background:white;border:1px solid #d8e5e8;border-radius:10px;padding:12px;display:grid;gap:10px;text-align:center;font-size:.8rem}
     .canal-card strong{justify-self:center;background:#dbefeb;border-radius:20px;padding:4px 10px;color:#165a50}

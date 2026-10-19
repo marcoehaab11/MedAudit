@@ -11,6 +11,20 @@ describe('Sequential root canal editor', () => {
     c.english = false; fixture.detectChanges();
     return { fixture, c, el: fixture.nativeElement as HTMLElement };
   }
+  it('shows a compact read-only note with the current canal lengths and file sizes in obturation only', () => {
+    const fixture=TestBed.createComponent(RootCanalEditorComponent);
+    const draft={stage:4,notes:'Clinical session note',canals:[{name:'P',lengthMm:23,finalFileSize:'30'},{name:'MB',lengthMm:21.5,finalFileSize:'25/.06'}]};
+    fixture.componentRef.setInput('draft',draft);fixture.detectChanges();
+    const note=fixture.nativeElement.querySelector('.obturation-note') as HTMLElement;
+    expect(note.getAttribute('dir')).toBe('ltr');
+    expect(note.textContent).toContain('Canal P: length 23mm · MAF 30');
+    expect(note.textContent).toContain('Canal MB: length 21.5mm · MAF 25/.06');
+    expect(note.querySelector('input,textarea,select,button')).toBeNull();
+    expect(draft.notes).toBe('Clinical session note');
+    fixture.componentRef.setInput('draft',{...draft,stage:2});fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.obturation-note')).toBeNull();
+  });
+
   it('shows the current workflow left to right with the existing English stage names', () => {
     const fixture=TestBed.createComponent(RootCanalEditorComponent);
     fixture.componentRef.setInput('draft',{stage:2,restorationType:'crown',notes:'',canals:[{name:'Canal 1',lengthMm:20,finalFileSize:'25'}]});
