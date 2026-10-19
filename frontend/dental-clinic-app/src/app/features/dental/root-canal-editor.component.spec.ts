@@ -11,6 +11,25 @@ describe('Sequential root canal editor', () => {
     c.english = false; fixture.detectChanges();
     return { fixture, c, el: fixture.nativeElement as HTMLElement };
   }
+  it('shows the current workflow left to right with the existing English stage names', () => {
+    const fixture=TestBed.createComponent(RootCanalEditorComponent);
+    fixture.componentRef.setInput('draft',{stage:2,restorationType:'crown',notes:'',canals:[{name:'Canal 1',lengthMm:20,finalFileSize:'25'}]});
+    fixture.detectChanges();
+    const timeline=fixture.nativeElement.querySelector('.root-stage-timeline') as HTMLOListElement;
+    expect(timeline.getAttribute('dir')).toBe('ltr');
+    expect(Array.from(timeline.querySelectorAll('.timeline-label')).map(x=>x.textContent?.trim())).toEqual(['Access cavity','Working length and final file size','Obturation','Crown']);
+    expect(timeline.querySelectorAll('.done').length).toBe(1);expect(timeline.querySelector('[aria-current="step"]')?.textContent).toContain('Working length');
+    expect(timeline.querySelectorAll('button').length).toBe(0);
+  });
+  it('shows all five post-and-crown steps as complete after the saved workflow finishes', () => {
+    const fixture=TestBed.createComponent(RootCanalEditorComponent);
+    fixture.componentRef.setInput('draft',{stage:6,restorationType:'post-core-crown',notes:'',canals:[]});fixture.detectChanges();
+    const timeline=fixture.nativeElement.querySelector('.root-stage-timeline');
+    expect(timeline.querySelectorAll('li').length).toBe(5);expect(timeline.querySelectorAll('.done').length).toBe(5);
+    expect(timeline.textContent).toContain('Post and core');expect(timeline.textContent).toContain('Crown');
+    expect(timeline.querySelector('[aria-current]')).toBeNull();
+  });
+
   it('shows four English steps one at a time and only displays measurements in step two', () => {
     const {fixture,c,el} = create();
     expect(el.textContent).toContain('1- Access cavity');

@@ -21,6 +21,16 @@ import { RootCanalDraft, rootCanalStages } from './root-canal';
         </details>
       }
       @if (saveState || pendingSave) { <p class="auto-save-status" role="status">{{ pendingSave ? (english ? 'Saving…' : 'جارٍ الحفظ التلقائي…') : saveState }} @if (saveFailed) { <button type="button" (click)="changed.emit()">{{ english ? 'Retry' : 'إعادة المحاولة' }}</button> }</p> }
+      <ol class="root-stage-timeline" dir="ltr" [attr.aria-label]="english ? 'Root canal treatment steps' : 'خطوات علاج حشو العصب'">
+        @for (stage of stages; track stage.value; let index = $index) {
+          <li [class.active]="draft.stage !== 6 && currentStage.value === stage.value"
+              [class.done]="draft.stage === 6 || index < currentStageIndex"
+              [attr.aria-current]="draft.stage !== 6 && currentStage.value === stage.value ? 'step' : null">
+            <span class="timeline-number" aria-hidden="true">{{ draft.stage === 6 || index < currentStageIndex ? '✓' : stage.number }}</span>
+            <span class="timeline-label">{{ stage.en }}</span>
+          </li>
+        }
+      </ol>
       <fieldset [disabled]="disabled">
         @if (draft.stage === 6) {
           <p class="completed-stage" dir="ltr">✓ Root canal stages completed</p>
@@ -71,8 +81,18 @@ import { RootCanalDraft, rootCanalStages } from './root-canal';
     .canal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:12px}
     .canal-card{background:white;border:1px solid #d8e5e8;border-radius:10px;padding:12px;display:grid;gap:10px;text-align:center;font-size:.8rem}
     .canal-card strong{justify-self:center;background:#dbefeb;border-radius:20px;padding:4px 10px;color:#165a50}
-    .current-stage{margin:0;font-size:1rem;text-align:start}.stage-check{display:flex;align-items:center;gap:8px}.stage-check input{width:18px;height:18px;cursor:pointer}.completed-stage{color:#16825f;font-weight:700}.stage-error{color:#b42318;margin:0}.previous-stage{background:white;color:#436174;border:1px solid #ccdadd;justify-self:start}.stage-strip{display:flex;flex-wrap:wrap;gap:6px;font-size:.75rem}.stage-strip span{padding:6px;border-radius:6px;background:#edf1f5}.stage-strip .current{background:#d9ecfc;color:#174a79;font-weight:700}
+    .current-stage{margin:0;font-size:1rem;text-align:start}.stage-check{display:flex;align-items:center;gap:8px}.stage-check input{width:18px;height:18px;cursor:pointer}.completed-stage{color:#16825f;font-weight:700}.stage-error{color:#b42318;margin:0}.previous-stage{background:white;color:#436174;border:1px solid #ccdadd;justify-self:start}
     .previous-session{background:white;padding:10px;margin-bottom:14px;border:1px solid #d8e5e8;border-radius:8px}summary{cursor:pointer;font-weight:600}.previous-canals{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}.clinical-notes{white-space:pre-wrap}
+    .root-stage-timeline{display:flex;direction:ltr;list-style:none;padding:8px 0 18px;margin:0 0 16px;overflow-x:auto;gap:0;scrollbar-width:thin;border-bottom:1px solid #dcebe7}
+    .root-stage-timeline li{flex:1 0 110px;position:relative;display:flex;align-items:center;flex-direction:column;gap:9px;text-align:center;min-width:0;padding:0 8px;color:#8a98a5}
+    .root-stage-timeline li::before{content:'';position:absolute;height:2px;background:#dce5e9;top:16px;left:calc(-50% + 17px);right:calc(50% + 17px)}
+    .root-stage-timeline li:first-child::before{display:none}
+    .timeline-number{position:relative;z-index:1;display:grid;place-items:center;box-sizing:border-box;width:34px;height:34px;border:1px solid #dce5e9;border-radius:50%;background:#f5f8fa;font-size:.8rem;font-weight:750;flex-shrink:0}
+    .timeline-label{max-width:155px;line-height:1.55;font-size:.73rem;font-weight:600;overflow-wrap:break-word}
+    .root-stage-timeline li.active{color:#137b70}.root-stage-timeline li.active .timeline-number{border-color:#168a82;background:#168a82;color:white;box-shadow:0 0 0 4px #168a8212}
+    .root-stage-timeline li.done{color:#278375}.root-stage-timeline li.done .timeline-number{background:#e0f3eb;border-color:#9bd3bd;color:#167e64}
+    .root-stage-timeline li.done::before,.root-stage-timeline li.active::before{background:#57af9b}
+    @media(max-width:600px){.root-stage-timeline li{flex-basis:105px}.root-canal-card{padding:12px}}
     button{padding:10px;border:0;border-radius:8px;background:#168a82;color:white;font-weight:700;cursor:pointer}
   `],
 })
@@ -89,6 +109,7 @@ export class RootCanalEditorComponent implements OnDestroy {
   private saveTimer?: ReturnType<typeof setTimeout>;
   postError = false;
   pendingSave = false;
+  get currentStageIndex() { return this.stages.findIndex(stage => stage.value === this.currentStage.value); }
   get stages() { return rootCanalStages(this.draft.restorationType); }
   scheduleSave() {
     if (this.disabled) return;
