@@ -15,6 +15,7 @@ import {
   AvailabilitySlot,
 } from '../appointments/appointment-api.service';
 import { money } from '../finance/finance-ui';
+import { DoctorVisitQueueComponent } from './doctor-visit-queue.component';
 import { BillingQueueComponent } from '../finance/billing-queue.component';
 import { DoctorDues, FinanceApiService } from '../finance/finance-api.service';
 import { appointmentStatus, appointmentType } from '../appointments/appointment-labels';
@@ -25,7 +26,7 @@ import { DashboardReport, ReportsApiService } from '../reports/reports-api.servi
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, BillingQueueComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, BillingQueueComponent, DoctorVisitQueueComponent],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
