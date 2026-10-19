@@ -87,11 +87,12 @@ public sealed class DentalDomainTests
     [InlineData(13, 2)]
     [InlineData(36, 3)]
     [InlineData(24, 4)]
-    public void ClassIncompatibleWithToothIsRejected(int tooth, int classification)
+    public void AllClassesCanBeStoredRegardlessOfToothPosition(int tooth, int classification)
     {
         var examination = Create();
-        Assert.Throws<ArgumentException>(() => examination.AddFinding(tooth, DentalFindingType.Caries,
-            [], null, Actor, examination.Version, Now, classification));
+        var finding = examination.AddFinding(tooth, DentalFindingType.Caries,
+            [], null, Actor, examination.Version, Now, classification);
+        Assert.Equal(classification, finding.CariesClass);
     }
 
     [Theory]

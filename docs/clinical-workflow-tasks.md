@@ -279,3 +279,13 @@ Visual validation: production build passed; verified the white summary in the is
 - [x] الإبقاء على كارت المرضى الجاهزين أعلى لوحة الدكتور.
 
 - [x] تحقق PostgreSQL/API: تسجيل حضور موعد غير مؤكد بحساب الريسبشن؛ تحقق المتصفح بحساب الدكتور: الدخول من الحضور فتح الفحص وبدأ الجلسة بضغطة واحدة، ثم ظهر زر المتابعة أعلى اللوحة. اختبارات الأزرار/اللوحة 11 والحضور 8 ناجحة، واختبار التحويل وإعادة اختبار التسعير ناجحان. بناء الواجهة والخادم ناجحان. الصورة: tmp/medical-e2e-runtime/attendance-direct-visit.png.
+
+
+## Regular filling form — 19 October 2026
+- [x] Use a compact regular filling card with caries type and treatment status side by side, full-width notes, and a smaller recording button; stack fields on narrow screens.
+- [x] Rename the field to «اختيار نوع التسوس».
+- [x] Allow Class I–VI on every tooth and mixed tooth selections, overriding the earlier position-based restrictions in both UI and domain validation.
+- [x] Domain regression tests: 45 passed, including previously restricted tooth/class combinations; invalid values and non-caries restrictions remain protected.
+- [x] Production frontend build passed. Browser verification on a fresh origin showed the compact form and all six classes for anterior tooth #11.
+- [x] Frontend class/classification regression cases: four passed.
+- [x] Filling save regression passed on isolated retry. All five affected frontend cases passed across the focused runs.

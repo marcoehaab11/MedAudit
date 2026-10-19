@@ -3641,3 +3641,19 @@
 .billing-service-price strong { direction: ltr; text-align: start; }
 .billing-service-price label { display: grid; gap: 6px; color: #536576; font-size: .85rem; }
 .billing-service-price input, .billing-service-price select { box-sizing: border-box; width: 100%; min-width: 0; padding: 10px; border: 1px solid #dce5ea; border-radius: 8px; background: white; }
+
+.regular-filling-card {
+  background: #f8fcfb;
+  border-color: #dcece7;
+  padding: 20px;
+  h3 { margin: 0 0 16px; font-size: 16px; }
+  fieldset { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  label { font-size: 13px; color: #526660; }
+  select, input, textarea { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid #dce8e4; border-radius: 8px; background: white; padding: 10px 12px; }
+  .procedure-notes { grid-column: 1 / -1; }
+  textarea { min-height: 100px; resize: vertical; }
+  .btn-execute-procedure-modern { display: block; width: auto; min-width: 160px; margin-inline-start: auto; padding: 10px 20px; border-radius: 8px; }
+}
+@media (max-width: 640px) {
+  .regular-filling-card { padding: 14px; fieldset { grid-template-columns: 1fr; } }
+}

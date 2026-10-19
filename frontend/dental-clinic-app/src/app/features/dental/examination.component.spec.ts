@@ -604,16 +604,16 @@ describe('ExaminationComponent', () => {
     expect(c.treatmentTeeth).toEqual([36]);
   });
 
-  it('offers only common allowed classes when anterior and posterior teeth are selected', () => {
+  it('offers all six classes for every tooth and mixed selections', () => {
     const fixture = TestBed.createComponent(ExaminationComponent);
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/appointments/a1/examination').flush(examination());
     flushAuxiliary(http);
     const c = fixture.componentInstance;
-    c.selectedTeeth = [11]; expect(c.availableCariesClasses()).toEqual([3, 4, 5, 6]);
-    c.selectedTeeth = [36]; expect(c.availableCariesClasses()).toEqual([6, 1, 2, 5]);
-    c.selectedTeeth = [11, 36]; expect(c.availableCariesClasses()).toEqual([5, 6]);
-    c.findingTargetTeeth = [11]; expect(c.availableCariesClasses()).toEqual([3, 4, 5, 6]);
+    c.selectedTeeth = [11]; expect(c.availableCariesClasses()).toEqual([1, 2, 3, 4, 5, 6]);
+    c.selectedTeeth = [36]; expect(c.availableCariesClasses()).toEqual([1, 2, 3, 4, 5, 6]);
+    c.selectedTeeth = [11, 36]; expect(c.availableCariesClasses()).toEqual([1, 2, 3, 4, 5, 6]);
+    c.findingTargetTeeth = [11]; expect(c.availableCariesClasses()).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
   it('saves caries immediately then updates its classification without creating a duplicate', async () => {

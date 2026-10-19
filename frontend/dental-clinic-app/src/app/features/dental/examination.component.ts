@@ -695,7 +695,7 @@ interface ToothServiceDraft {
                     @for (item of findingOptions; track item.id) { <option [value]="item.id">{{ t(item.en, item.ar) }}</option> }
                   </select></label>
                   @if (+findingForm.controls.type.value === 2) {
-                    <label>{{ t('Caries classification', 'تصنيف التسوس') }}<select formControlName="cariesClass">
+                    <label>{{ t('Choose caries type', 'اختيار نوع التسوس') }}<select formControlName="cariesClass">
                       <option [ngValue]="null">{{ t('Select class…', 'اختر التصنيف…') }}</option>
                       @for (value of availableCariesClasses(); track value) { <option [ngValue]="value">Class {{ ['I','II','III','IV','V','VI'][value - 1] }}</option> }
                     </select></label>
@@ -760,7 +760,7 @@ interface ToothServiceDraft {
 
                       @for (number of treatmentRowKeys(); track number) {
                         @let row = toothService(number);
-                        <section class="catalog-select-box tooth-service-row" tabindex="-1" [attr.data-tooth]="number">
+                        <section class="catalog-select-box tooth-service-row" [class.regular-filling-card]="toothServiceIsFilling(number)" tabindex="-1" [attr.data-tooth]="number">
                           @if (!toothServiceIsRootCanal(number)) { <h3>{{ number === 0 ? t('Whole-mouth service', 'خدمة للفم بالكامل') : '#' + number + ' · ' + toothLabel(number) }}</h3> }
                           @if (number === 0 && !toothServiceCatalog(0).length) { <p>{{ t('Add orthodontics, scaling/polishing and whitening services with their prices to the clinic service list first.', 'أضف خدمات التقويم وتنظيف الجير والتلميع والتبييض وأسعارها إلى قائمة خدمات العيادة أولًا.') }}</p> }
                           @if (!toothServiceIsRootCanal(number)) {
@@ -779,8 +779,8 @@ interface ToothServiceDraft {
                             }
                             @if (row.catalogId) {
                               @if (number !== 0 && toothServiceIsFilling(number)) {
-                                <label>{{ t('Caries classification', 'تصنيف التسوس للحشو العادي') }}
-                                  <select [(ngModel)]="row.cariesClass"><option [ngValue]="null">{{ t('Choose class…', 'اختر التصنيف…') }}</option>
+                                <label>{{ t('Choose caries type', 'اختيار نوع التسوس') }}
+                                  <select [(ngModel)]="row.cariesClass"><option [ngValue]="null">{{ t('Choose caries type…', 'اختر نوع التسوس…') }}</option>
                                     @for (value of toothClasses(number); track value) { <option [ngValue]="value">Class {{ ['I','II','III','IV','V','VI'][value - 1] }}</option> }
                                   </select>
                                 </label>
@@ -788,7 +788,7 @@ interface ToothServiceDraft {
                               @if (!toothServiceIsRootCanal(number)) {
                               <label>{{ t('Treatment status', 'حالة العلاج') }}<select [(ngModel)]="row.status"><option value="completed">{{ t('Completed today', 'تم الانتهاء اليوم') }}</option><option value="in_progress">{{ t('In progress — continue next visit', 'بدأ العلاج ولسه هنكمل') }}</option></select></label>
                               @if (row.status === 'in_progress') { <label>{{ t('Remaining work', 'العمل المتبقي') }}<input [(ngModel)]="row.remaining" maxlength="1000" /></label> }
-                              <label>{{ t('Notes', 'ملاحظات') }}<textarea [(ngModel)]="row.notes" maxlength="2000"></textarea></label>
+                              <label class="procedure-notes">{{ t('Notes', 'ملاحظات') }}<textarea [(ngModel)]="row.notes" maxlength="2000"></textarea></label>
                               }
                             }
                           </fieldset>
