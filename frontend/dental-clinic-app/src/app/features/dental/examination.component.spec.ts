@@ -226,6 +226,23 @@ describe('ExaminationComponent', () => {
     expect(fixture.nativeElement.querySelector('.tooth-service-row > fieldset')).toBeNull();
     expect(fixture.nativeElement.querySelector('.tooth-service-row > fieldset textarea')).toBeNull();
   });
+  it('opens saved root canal from the continuation button inside the visit instead of linking to treatments', async () => {
+    const fixture=TestBed.createComponent(ExaminationComponent),c=fixture.componentInstance,http=TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());flushAuxiliary(http);
+    const treatment={id:'prior',patientId:'p1',patientName:'Patient',doctorProfileId:'doc',doctorName:'Doctor',catalogItemId:'rct',type:4,treatmentName:'RCT',status:3,toothNumbers:[26],price:1000,version:'v',createdAt:''};
+    c.catalog.set([{id:'rct',type:4,name:'RCT',code:'RCT',defaultPrice:1000,isActive:true}]);
+    c.patientChart.set({patientId:'p1',patientName:'Patient',patientNumber:'P1',teeth:[],recentExaminations:[],endodonticRecords:[{id:'record',toothId:'t26',toothNumber:26,treatmentId:'prior',stage:4,restorationType:'crown',notes:'Saved note',canals:[{id:'p',name:'P',lengthMm:23,finalFileSize:'30'}],createdAt:'',createdBy:'u1'}]});
+    c.executedTreatments.set([treatment]);fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.continuing-work a[href="/treatments/prior"]')).toBeNull();
+    fixture.nativeElement.querySelector('.resume-saved-treatment').click();
+    http.expectOne('/api/treatments/prior').flush(treatment);await fixture.whenStable();fixture.detectChanges();
+    expect(c.step()).toBe(3);expect(c.treatmentTeeth).toContain(26);expect(c.toothService(26).treatmentId).toBe('prior');
+    expect(c.rootCanalFor(26)).toMatchObject({stage:4,restorationType:'crown',notes:'Saved note'});
+    expect(c.rootCanalFor(26).canals.find(x=>x.name==='P')).toMatchObject({lengthMm:23,finalFileSize:'30'});
+    expect(fixture.nativeElement.querySelector('[data-tooth="26"] .current-stage').textContent).toContain('Obturation');
+    http.expectNone(r=>r.url==='/api/treatments'&&r.method==='POST');
+  });
+
   it('resumes a previous root canal in the new examination using the same treatment and prior measurements', async () => {
     const c = TestBed.createComponent(ExaminationComponent).componentInstance; const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);

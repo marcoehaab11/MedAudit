@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, HostListener, inject, signal } from '@angular/core';
+import { afterNextRender, Component, computed, ElementRef, HostListener, inject, Injector, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -508,9 +508,10 @@ interface ToothServiceDraft {
                 <p>@for (number of work.toothNumbers; track number) { <span>#{{ number }} · {{ toothLabel(number) }} </span> }</p>
                 @if (work.notes) { <p class="remaining-work-notes">{{ work.notes }}</p> }
                 @if (work.type === 4 && work.toothNumbers.length === 1 && examination()!.canEdit) {
-                  <button type="button" [disabled]="savingTreatment() || savingRootCanal()" (click)="resumeRootCanal(work)">{{ t('Continue root canal in this visit', 'استكمال حشو العصب في الجلسة الحالية') }}</button>
+                  <button type="button" class="resume-saved-treatment" [disabled]="savingTreatment() || savingRootCanal()" (click)="resumeRootCanal(work)">{{ t('Open existing treatment', 'فتح العلاج المسجل واستكماله') }} ←</button>
+                } @else {
+                  <a [routerLink]="['/treatments', work.id]">{{ t('Open existing treatment', 'فتح العلاج المسجل واستكماله') }} ←</a>
                 }
-                <a [routerLink]="['/treatments', work.id]">{{ t('Open existing treatment', 'فتح العلاج المسجل واستكماله') }} ←</a>
               </article>
             }
           </section>
@@ -759,7 +760,7 @@ interface ToothServiceDraft {
 
                       @for (number of treatmentRowKeys(); track number) {
                         @let row = toothService(number);
-                        <section class="catalog-select-box tooth-service-row" [attr.data-tooth]="number">
+                        <section class="catalog-select-box tooth-service-row" tabindex="-1" [attr.data-tooth]="number">
                           @if (!toothServiceIsRootCanal(number)) { <h3>{{ number === 0 ? t('Whole-mouth service', 'خدمة للفم بالكامل') : '#' + number + ' · ' + toothLabel(number) }}</h3> }
                           @if (number === 0 && !toothServiceCatalog(0).length) { <p>{{ t('Add orthodontics, scaling/polishing and whitening services with their prices to the clinic service list first.', 'أضف خدمات التقويم وتنظيف الجير والتلميع والتبييض وأسعارها إلى قائمة خدمات العيادة أولًا.') }}</p> }
                           @if (!toothServiceIsRootCanal(number)) {
@@ -2649,6 +2650,8 @@ export class ExaminationComponent {
     if (!valid) this.error.set(this.t('Check the treatment stage and canal measurements (greater than 0 and at most 50 mm).', 'راجع المرحلة وقياسات القنوات؛ الطول أكبر من صفر وحتى 50 مم.'));
     return valid;
   }
+  private readonly viewInjector = inject(Injector);
+  private readonly viewHost: ElementRef<HTMLElement> = inject(ElementRef);
   async resumeRootCanal(work: Treatment) {
     const exam = this.examination();
     if (!exam?.canEdit || this.savingTreatment() || this.savingRootCanal()) return;
@@ -2663,6 +2666,11 @@ export class ExaminationComponent {
       if (!this.selectedTeeth.includes(number)) this.selectedTeeth = [...this.selectedTeeth, number];
       if (!this.treatmentTeeth.includes(number)) this.treatmentTeeth = [...this.treatmentTeeth, number];
       this.rootCanalDrafts.delete(number); this.rootCanalFor(number); this.step.set(3);
+      afterNextRender(() => {
+        const editor = this.viewHost.nativeElement.querySelector<HTMLElement>('.tooth-service-row[data-tooth="' + number + '"]');
+        editor?.scrollIntoView?.({block: 'center', behavior: 'instant'});
+        editor?.focus({preventScroll: true});
+      }, {injector: this.viewInjector});
     } catch (error) { this.error.set(parseApiError(error, this.t('Could not open the saved root canal treatment.', 'تعذر فتح علاج العصب المسجل.'))); }
     finally { this.savingRootCanal.set(false); }
   }
