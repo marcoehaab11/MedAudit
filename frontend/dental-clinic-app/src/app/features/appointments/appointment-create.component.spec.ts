@@ -38,6 +38,20 @@ describe('AppointmentCreateComponent', () => {
     http.expectNone(r => /\/patients\/p-new\/(allergies|conditions|medications)/.test(r.url));
   });
 
+  it('submits typed allergy and chronic condition through the quick add form submit event', async () => {
+    const fixture = TestBed.createComponent(AppointmentCreateComponent), c = fixture.componentInstance;
+    const http = TestBed.inject(HttpTestingController); fixture.detectChanges(); flushLookups(http);
+    c.openNewPatientModal(); c.patientForm.patchValue({ firstName:'Quick', lastName:'Submit', dateOfBirth:'1990-01-01', phone:'01012345678' });
+    fixture.detectChanges(); await fixture.whenStable();
+    const inputs = fixture.nativeElement.querySelectorAll('.quick-patient-form app-tag-input input') as NodeListOf<HTMLInputElement>;
+    ['Penicillin','Diabetes','Metformin'].forEach((value,index) => { inputs[index].value=value; inputs[index].dispatchEvent(new Event('input')); });
+    fixture.nativeElement.querySelector('.quick-patient-form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+    const request = http.expectOne(r=>r.url==='/api/patients'&&r.method==='POST');
+    expect(request.request.body).toMatchObject({allergies:['Penicillin'],medicalConditions:['Diabetes'],medications:['Metformin']});
+    request.flush({detail:'Keep test on form'},{status:409,statusText:'Conflict'});
+    expect(c.showNewPatientModal()).toBe(true); expect(c.patientConditions).toEqual(['Diabetes']);
+  });
+
   it('keeps the booking dialog and medical selections on a failed atomic patient save', () => {
     const fixture = TestBed.createComponent(AppointmentCreateComponent); const c = fixture.componentInstance;
     const http = TestBed.inject(HttpTestingController); fixture.detectChanges(); flushLookups(http);
