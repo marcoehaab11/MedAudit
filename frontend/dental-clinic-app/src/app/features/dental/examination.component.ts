@@ -1,3 +1,4 @@
+import { ExtractionDraft, ExtractionEditorComponent } from './extraction-editor.component';
 import { CommonModule } from '@angular/common';
 import { afterNextRender, Component, computed, ElementRef, HostListener, inject, Injector, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -197,6 +198,7 @@ interface ToothServiceDraft {
   tierId: string;
   price: number;
   cariesClass: number | null;
+  extraction?: ExtractionDraft;
   notes: string;
   remaining: string;
   status: 'completed' | 'in_progress';
@@ -210,7 +212,7 @@ interface ToothServiceDraft {
   styleUrl: './dental.scss',
   selector: 'app-examination',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, ReactiveFormsModule, DentalChartComponent, DateInputComponent, TagInputComponent, PatientVisitHistorySheetComponent, RootCanalEditorComponent],
+  imports: [CommonModule, RouterLink, FormsModule, ReactiveFormsModule, DentalChartComponent, DateInputComponent, TagInputComponent, PatientVisitHistorySheetComponent, RootCanalEditorComponent, ExtractionEditorComponent],
   template: `
     <div class="clinical-visit-container">
       <!-- Top Navigation & Back -->
@@ -760,8 +762,8 @@ interface ToothServiceDraft {
 
                       @for (number of treatmentRowKeys(); track number) {
                         @let row = toothService(number);
-                        <section class="catalog-select-box tooth-service-row" [class.regular-filling-card]="toothServiceIsFilling(number)" tabindex="-1" [attr.data-tooth]="number">
-                          @if (!toothServiceIsRootCanal(number)) { <h3>{{ number === 0 ? t('Whole-mouth service', 'خدمة للفم بالكامل') : '#' + number + ' · ' + toothLabel(number) }}</h3> }
+                        <section class="catalog-select-box tooth-service-row" [class.regular-filling-card]="toothServiceIsFilling(number) || toothServiceIsExtraction(number)" tabindex="-1" [attr.data-tooth]="number">
+                          @if (!toothServiceIsRootCanal(number) && !toothServiceIsExtraction(number)) { <h3>{{ number === 0 ? t('Whole-mouth service', 'خدمة للفم بالكامل') : '#' + number + ' · ' + toothLabel(number) }}</h3> }
                           @if (number === 0 && !toothServiceCatalog(0).length) { <p>{{ t('Add orthodontics, scaling/polishing and whitening services with their prices to the clinic service list first.', 'أضف خدمات التقويم وتنظيف الجير والتلميع والتبييض وأسعارها إلى قائمة خدمات العيادة أولًا.') }}</p> }
                           @if (!toothServiceIsRootCanal(number)) {
                           <fieldset [disabled]="savingTreatment() || !!row.treatmentId">
@@ -785,10 +787,13 @@ interface ToothServiceDraft {
                                   </select>
                                 </label>
                               }
+                              @if (toothServiceIsExtraction(number)) {
+                                <app-extraction-editor [draft]="extractionFor(number)" [tooth]="number" [english]="t('en','ar') === 'en'" [disabled]="savingTreatment() || !!row.treatmentId" />
+                              }
                               @if (!toothServiceIsRootCanal(number)) {
-                              <label>{{ t('Treatment status', 'حالة العلاج') }}<select [(ngModel)]="row.status"><option value="completed">{{ t('Completed today', 'تم الانتهاء اليوم') }}</option><option value="in_progress">{{ t('In progress — continue next visit', 'بدأ العلاج ولسه هنكمل') }}</option></select></label>
+                              @if (!toothServiceIsExtraction(number)) { <label>{{ t('Treatment status', 'حالة العلاج') }}<select [(ngModel)]="row.status"><option value="completed">{{ t('Completed today', 'تم الانتهاء اليوم') }}</option><option value="in_progress">{{ t('In progress — continue next visit', 'بدأ العلاج ولسه هنكمل') }}</option></select></label>
                               @if (row.status === 'in_progress') { <label>{{ t('Remaining work', 'العمل المتبقي') }}<input [(ngModel)]="row.remaining" maxlength="1000" /></label> }
-                              <label class="procedure-notes">{{ t('Notes', 'ملاحظات') }}<textarea [(ngModel)]="row.notes" maxlength="2000"></textarea></label>
+                              } <label class="procedure-notes">{{ toothServiceIsExtraction(number) ? t('Notes (optional)', 'ملاحظات (اختياري)') : t('Notes', 'ملاحظات') }}<textarea [(ngModel)]="row.notes" maxlength="2000"></textarea></label>
                               }
                             }
                           </fieldset>
@@ -2619,6 +2624,13 @@ export class ExaminationComponent {
     const item = this.catalog().find(item => item.id === this.toothService(number).catalogId);
     return item ? parseCatalogItem(item).priceTiers : [];
   }
+  toothServiceIsExtraction(number: number) { return this.catalog().find(item => item.id === this.toothService(number).catalogId)?.type === 2; }
+  extractionFor(number: number): ExtractionDraft { return this.toothService(number).extraction ??= { type: 'Simple Extraction', condition: 'Normal', direction: null }; }
+  extractionSummary(number: number) {
+    if (!this.toothServiceIsExtraction(number)) return '';
+    const draft = this.extractionFor(number);
+    return [draft.type, draft.condition, draft.condition === 'Impacted' ? draft.direction : null].filter(Boolean).join(' — ');
+  }
   toothServiceIsFilling(number: number) { return this.catalog().find(item => item.id === this.toothService(number).catalogId)?.type === 1; }
   readonly savingRootCanal = signal(false);
   readonly rootCanalDrafts = new Map<number, { treatmentId?: string; draft: RootCanalDraft }>();
@@ -2747,6 +2759,9 @@ export class ExaminationComponent {
     if (number !== 0 && this.toothServiceIsFilling(number) && row.cariesClass !== null && !this.toothClasses(number).includes(row.cariesClass)) {
       this.error.set(this.t('Choose a valid caries class for this tooth.', 'اختر تصنيف تسوس مناسب لهذا السن.')); return;
     }
+    if (this.toothServiceIsExtraction(number) && this.extractionFor(number).condition === 'Impacted' && !this.extractionFor(number).direction) {
+      this.error.set(this.t('Choose the impacted tooth direction.', 'اختر اتجاه الضرس.')); return;
+    }
     if (!row.treatmentId && !this.toothServiceCatalog(number).some(item => item.id === row.catalogId)) {
       this.error.set(this.t('Choose a service for the selected treatment scope.', 'اختر خدمة مناسبة لهذا السن أو للفم بالكامل.')); return;
     }
@@ -2767,7 +2782,7 @@ export class ExaminationComponent {
           this.examination.set(await firstValueFrom(this.api.examination(exam.id)));
         }
         const tier = this.toothServiceTiers(number).find(tier => tier.id === row.tierId);
-        const notes = [this.toothServiceIsRootCanal(number) ? this.rootCanalFor(number).notes.trim() : row.notes.trim(), tier && row.tierId !== 'base' ? this.t(tier.nameEn, tier.nameAr) : '', this.toothServiceIsFilling(number) && row.cariesClass ? 'Class ' + ['I','II','III','IV','V','VI'][row.cariesClass - 1] : '', !this.toothServiceIsRootCanal(number) && row.status === 'in_progress' ? '(متبقي: ' + (row.remaining.trim() || 'استكمال العلاج') + ')' : '', number === 0 ? this.t('Whole mouth — one service charge', 'الفم بالكامل — خدمة واحدة') : ''].filter(Boolean).join(' · ');
+        const notes = [this.extractionSummary(number), this.toothServiceIsRootCanal(number) ? this.rootCanalFor(number).notes.trim() : row.notes.trim(), tier && row.tierId !== 'base' ? this.t(tier.nameEn, tier.nameAr) : '', this.toothServiceIsFilling(number) && row.cariesClass ? 'Class ' + ['I','II','III','IV','V','VI'][row.cariesClass - 1] : '', !this.toothServiceIsRootCanal(number) && row.status === 'in_progress' ? '(متبقي: ' + (row.remaining.trim() || 'استكمال العلاج') + ')' : '', number === 0 ? this.t('Whole mouth — one service charge', 'الفم بالكامل — خدمة واحدة') : ''].filter(Boolean).join(' · ');
         const teeth = number === 0 ? Array.from({ length: 4 }, (_, quadrant) => Array.from({ length: 8 }, (_, index) => (quadrant + 1) * 10 + index + 1)).flat() : [number];
         const created = await firstValueFrom(this.treatmentApi.createTreatment({ patientId: exam.patientId, doctorProfileId: appointment.doctorProfileId, appointmentId: this.appointmentId, catalogItemId: row.catalogId, toothNumbers: teeth, deferBilling: true, price: row.price, notes: notes || undefined }));
         row.treatmentId = created.id;

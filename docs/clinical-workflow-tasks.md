@@ -289,3 +289,11 @@ Visual validation: production build passed; verified the white summary in the is
 - [x] Production frontend build passed. Browser verification on a fresh origin showed the compact form and all six classes for anterior tooth #11.
 - [x] Frontend class/classification regression cases: four passed.
 - [x] Filling save regression passed on isolated retry. All five affected frontend cases passed across the focused runs.
+
+
+## Extraction procedure — 19 October 2026
+- [x] Show Simple Extraction / Surgical Extraction and Normal / Impacted / Root Remnant in a dedicated compact form for each extraction tooth.
+- [x] Show «اتجاه الضرس» only for Impacted, with Mesial Inclination, Distal Inclination, Vertical and Horizontal choices. Clear the direction when switching to another condition.
+- [x] Preserve optional notes and record extraction type, condition and applicable direction in the saved treatment clinical notes for that tooth. Require direction before recording an impacted extraction.
+- [x] Production frontend build passed; complete examination and extraction editor suites: 56 tests passed.
+- [x] Browser verified #38 extraction selection, default hidden direction and conditional Impacted direction choices on a fresh preview origin.

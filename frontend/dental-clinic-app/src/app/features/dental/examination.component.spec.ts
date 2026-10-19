@@ -295,6 +295,26 @@ describe('ExaminationComponent', () => {
     expect(c.toothServiceCatalog(36).map(x => x.id)).toEqual(['implant']);
     expect(c.toothServiceCatalog(0).map(x => x.id)).toEqual(['ortho']);
   });
+  it('saves extraction details for the selected tooth and validates impacted direction', async () => {
+    const c = TestBed.createComponent(ExaminationComponent).componentInstance;
+    const http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    c.catalog.set([{ id: 'extract', type: 2, name: 'Extraction', code: 'E', defaultPrice: 100, isActive: true }]);
+    c.treatmentTeeth = [36]; Object.assign(c.toothService(36), { catalogId: 'extract', price: 100, notes: 'Clinical note' });
+    Object.assign(c.extractionFor(36), { type: 'Surgical Extraction', condition: 'Impacted', direction: null });
+    await c.executeToothService(36); expect(c.error()).toContain('اتجاه الضرس'); http.expectNone('/api/treatments');
+    c.extractionFor(36).direction = 'Horizontal';
+    const pending = c.executeToothService(36);
+    const create = http.expectOne('/api/treatments'); expect(create.request.body.toothNumbers).toEqual([36]);
+    expect(create.request.body.notes).toContain('Surgical Extraction — Impacted — Horizontal');
+    expect(create.request.body.notes).toContain('Clinical note'); create.flush({ id: 'extraction' });
+    await Promise.resolve(); await Promise.resolve();
+    http.expectOne('/api/treatments/extraction').flush({ id: 'extraction', status: 2, version: 'v1' });
+    await Promise.resolve(); await Promise.resolve(); http.expectOne('/api/treatments/extraction/complete').flush(null);
+    await pending; flushAuxiliary(http);
+    c.toothService(36).catalogId = 'extract'; Object.assign(c.extractionFor(36), { condition: 'Normal', direction: 'Horizontal' });
+    expect(c.extractionSummary(36)).not.toContain('Horizontal');
+  });
   it('stores the filling class for that tooth before executing its service', async () => {
     const c = TestBed.createComponent(ExaminationComponent).componentInstance;
     const http = TestBed.inject(HttpTestingController);
