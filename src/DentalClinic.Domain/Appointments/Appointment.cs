@@ -110,7 +110,8 @@ public sealed class Appointment : TenantOwnedEntity
 
     public void CheckIn(DateTimeOffset occurredAt)
     {
-        EnsureStatus(AppointmentStatus.Confirmed);
+        if (Status is not (AppointmentStatus.Scheduled or AppointmentStatus.Confirmed))
+            throw new InvalidOperationException("Only scheduled or confirmed appointments can be checked in.");
         Status = AppointmentStatus.CheckedIn;
         CheckedInAt = occurredAt;
         UpdatedAt = occurredAt;

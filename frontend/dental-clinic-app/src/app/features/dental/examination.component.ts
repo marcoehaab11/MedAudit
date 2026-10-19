@@ -1952,7 +1952,9 @@ export class ExaminationComponent {
     this.appointmentApi.appointment(this.appointmentId).subscribe({
       next: (app) => {
         this.appointment.set(app);
-        if (app.status === 4 && this.auth.hasPermission('Examination.Create')) {
+        if (app.status === 3 && this.auth.hasPermission('Appointments.Start') && this.auth.hasPermission('Examination.Create')) {
+          void this.checkInAndStart();
+        } else if (app.status === 4 && this.auth.hasPermission('Examination.Create')) {
           this.create();
         } else {
           this.loadPatient(app.patientId);

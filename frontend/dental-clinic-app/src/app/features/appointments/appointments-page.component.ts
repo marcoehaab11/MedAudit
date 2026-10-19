@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
+import { AppointmentCardActionsComponent } from './appointment-card-actions.component';
 import { BillingQueueComponent } from '../finance/billing-queue.component';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -22,7 +23,7 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
   styleUrl: './appointments.scss',
   selector: 'app-appointments-page',
   standalone: true,
-  imports: [BillingQueueComponent, CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [AppointmentCardActionsComponent, BillingQueueComponent, CommonModule, ReactiveFormsModule, RouterLink],
   template: ` @if (auth.hasPermission('Finance.Revenue.View')) { <app-billing-queue /> }
     <section class="page-head">
       <div>
@@ -221,14 +222,14 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
                           <span class="status-badge status-badge-{{ item.status }}">{{
                             statusLabel(item.status)
                           }}</span>
-                          @if (item.status <= 4 && auth.hasPermission('Examination.View')) {
+                          @if ((item.status === 3 || item.status === 4) && auth.hasPermission('Examination.View')) {
                             <a
                               class="card-visit-link"
                               [routerLink]="['/appointments', item.id, 'visit']"
                               (click)="$event.stopPropagation()"
-                              [title]="t('Open Clinical Visit Flow', 'بدء ومتابعة مراحل الزيارة')"
+                              [title]="item.status === 4 ? t('Continue visit', 'متابعة الزيارة') : t('Open visit', 'فتح الزيارة')"
                             >
-                              🦷 {{ t('Visit Flow', 'مراحل الزيارة') }}
+                              🦷 {{ item.status === 4 ? t('Continue visit', 'متابعة الزيارة') : t('Open visit', 'فتح الزيارة') }}
                             </a>
                           }
                         </div>
@@ -288,21 +289,8 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
           @if (selected()!.notes) {
             <p>{{ selected()!.notes }}</p>
           }
-          <div class="actions">
-            @if (selected()!.status <= 4 && auth.hasPermission('Examination.View')) {
-              <a
-                class="button primary visit-flow-btn"
-                [routerLink]="['/appointments', selected()!.id, 'visit']"
-              >
-                ✨ 🦷
-                {{ t('Open Clinical Visit Flow (5 Steps)', 'بدء ومتابعة مراحل الزيارة (5 خطوات)') }}
-              </a>
-            } @else if (selected()!.status === 5 && auth.hasPermission('Examination.View')) {
-              <a class="button" [routerLink]="['/appointments', selected()!.id, 'examination']">
-                🦷 {{ t('View Completed Examination', 'عرض سجل الفحص والزيارة') }}
-              </a>
-            }
-            @if (auth.hasPermission('TreatmentPlans.Create')) {
+          <app-appointment-card-actions [appointment]="selected()!" (action)="action($event)" (cancel)="cancel()" />
+            <details><summary>{{ t('Clinical tools', 'أدوات الزيارة') }}</summary><div class="actions">@if (auth.hasPermission('TreatmentPlans.Create')) {
               <a
                 class="button"
                 routerLink="/treatment-plans/create"
@@ -328,33 +316,7 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
                 💊 {{ t('Create prescription', 'إنشاء وصفة') }}
               </a>
             }
-            @if (selected()!.status === 1 && auth.hasPermission('Appointments.Edit')) {
-              <button (click)="action('confirm')">{{ t('Confirm', 'تأكيد') }}</button>
-            }
-            @if (selected()!.status === 2 && auth.hasPermission('Appointments.CheckIn')) {
-              <button (click)="action('check-in')">{{ t('Check in', 'تسجيل الحضور') }}</button>
-            }
-            @if (selected()!.status === 3 && auth.hasPermission('Appointments.Start')) {
-              <button (click)="action('start')">{{ t('Start', 'بدء') }}</button>
-            }
-            @if (
-              (selected()!.status === 3 || selected()!.status === 4) &&
-              auth.hasPermission('Appointments.Complete')
-            ) {
-              <button (click)="action('complete')">
-                {{ t('Complete session', 'إنهاء الجلسة') }}
-              </button>
-            }
-            @if (
-              (selected()!.status === 1 || selected()!.status === 2) &&
-              auth.hasPermission('Appointments.MarkNoShow')
-            ) {
-              <button (click)="action('no-show')">{{ t('No-show', 'لم يحضر') }}</button>
-            }
-            @if (selected()!.status <= 3 && auth.hasPermission('Appointments.Cancel')) {
-              <button class="danger" (click)="cancel()">{{ t('Cancel', 'إلغاء') }}</button>
-            }
-          </div>
+            </div></details>
           @if (
             (selected()!.status === 1 || selected()!.status === 2) &&
             auth.hasPermission('Appointments.Edit')

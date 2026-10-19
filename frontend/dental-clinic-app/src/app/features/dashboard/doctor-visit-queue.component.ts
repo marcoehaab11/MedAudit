@@ -16,7 +16,7 @@ import { LocalizationService } from '../../core/localization.service';
     <div class="visit-list" aria-live="polite">
       @for (item of items(); track item.id) {
         <article><div><strong>{{ item.patientName }}</strong><p>{{ item.doctorName }} · <span>{{ item.status === 4 ? t('Session started', 'الجلسة بدأت') : t('Patient arrived', 'المريض حضر') }}</span></p></div>
-          <a [routerLink]="['/appointments', item.id, 'visit']">{{ t('Open visit', 'فتح الجلسة') }} ←</a>
+          <a [routerLink]="['/appointments', item.id, 'visit']">{{ item.status === 4 ? t('Continue visit', 'متابعة الجلسة') : t('Open visit', 'فتح الجلسة') }} ←</a>
         </article>
       } @empty { <p class="empty">{{ loading() ? t('Loading…', 'جارٍ التحميل…') : t('No patients waiting for you yet.', 'لا يوجد مرضى جاهزون للكشف حاليًا.') }}</p> }
     </div>

@@ -857,6 +857,18 @@ describe('ExaminationComponent', () => {
     expect(component.paymentErrorModal().message).toContain('يتجاوز');
   });
 
+  it('opens a checked-in patient for the doctor without requiring another start click', async () => {
+    const fixture=TestBed.createComponent(ExaminationComponent),c=fixture.componentInstance,http=TestBed.inject(HttpTestingController);
+    const auth=(c as any).auth;const original=auth.hasPermission;auth.hasPermission=(permission:string)=>['Appointments.Start','Examination.Create'].includes(permission);
+    http.expectOne('/api/appointments/a1/examination').flush({}, {status:404,statusText:'Not found'});
+    http.expectOne('/api/appointments/a1').flush({id:'a1',patientId:'p1',status:3});
+    http.expectOne('/api/appointments/a1/start').flush(null);
+    await Promise.resolve();await Promise.resolve();
+    http.expectOne(r=>r.method==='POST'&&r.url==='/api/appointments/a1/examination').flush({id:'e1'});
+    http.expectOne('/api/examinations/e1').flush(examination());flushAuxiliary(http);
+    expect(c.examination()?.id).toBe('e1');expect(c.startingGate()).toBe(false);auth.hasPermission=original;
+  });
+
   it('starts a reception appointment without creating a clinical record', async () => {
     const fixture = TestBed.createComponent(ExaminationComponent);
     const component = fixture.componentInstance;

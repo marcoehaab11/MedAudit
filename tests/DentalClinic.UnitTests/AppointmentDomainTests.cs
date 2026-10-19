@@ -7,6 +7,18 @@ public sealed class AppointmentDomainTests
     private static readonly DateTimeOffset Now = new(2026, 8, 15, 9, 0, 0, TimeSpan.Zero);
 
     [Fact]
+    public void ReceptionCanCheckInScheduledAppointmentWithoutPriorConfirmation()
+    {
+        var appointment = Create();
+        appointment.CheckIn(Now);
+        Assert.Equal(AppointmentStatus.CheckedIn, appointment.Status);
+        Assert.Equal(Now, appointment.CheckedInAt);
+        Assert.Throws<InvalidOperationException>(() => appointment.CheckIn(Now));
+        appointment.Start(Now);
+        Assert.Equal(AppointmentStatus.InProgress, appointment.Status);
+    }
+
+    [Fact]
     public void AppointmentStartsScheduledWithUtcTiming()
     {
         var appointment = Create();
