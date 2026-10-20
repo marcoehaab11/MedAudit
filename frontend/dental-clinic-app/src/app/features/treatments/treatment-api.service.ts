@@ -120,6 +120,7 @@ export interface TreatmentPlanList {
   createdAt: string;
 }
 export interface Treatment {
+  appointmentId?: string | null;
   priceConfirmed?: boolean;
   catalogItemId?: string;
   id: string;

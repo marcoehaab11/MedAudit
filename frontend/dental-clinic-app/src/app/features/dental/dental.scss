@@ -3800,3 +3800,6 @@
   .intake-redesign .visit-stepper-nav .stepper-track { grid-template-columns: repeat(6, minmax(125px, 1fr)); overflow-y: hidden; align-items: stretch; padding-bottom: 6px; }
   .intake-redesign .visit-stepper-nav .step-node { min-height: 50px; padding: 6px 0 10px; }
 }
+
+.completed-teeth-notice { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px 16px; margin: 12px 0; color: #207558; background: #eefaf4; border: 1px solid #cce8d9; border-radius: 10px; font-size: 13px; }
+.completed-teeth-notice button { margin-inline-start: auto; height: auto; padding: 7px 12px; border: 1px solid #b7daca; border-radius: 8px; color: #207558; background: white; }

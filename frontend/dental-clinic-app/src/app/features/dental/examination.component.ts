@@ -589,7 +589,7 @@ interface ToothServiceDraft {
                 <button type="button" [disabled]="savingFinding()" (click)="recordWholeMouthFinding(16)">{{ findingLabel(16) }}</button>
               </div>
             }
-            <app-dental-chart [teeth]="chartTeeth()" [multiSelect]="true" [selectedNumber]="selected" [selectedTeeth]="selectedTeeth"
+            <app-dental-chart [teeth]="chartTeeth()" [completedHighlights]="recentlyCompletedTeeth()" [multiSelect]="true" [selectedNumber]="selected" [selectedTeeth]="selectedTeeth"
               [showQuickFindings]="examination()!.canEdit" [savingFinding]="savingFinding()"
               (selectedNumberChange)="onSelectedToothChange($event)" (selectedTeethChange)="onSelectedTeethChange($event)"
               (findingSelected)="chooseFindingType($event)" (toothFindingSelected)="chooseToothFinding($event)" />
@@ -622,9 +622,9 @@ interface ToothServiceDraft {
               </div>
               @if (examination()!.canEdit) {
                 <details class="chart-service-settings"><summary>{{ t('Chart services', 'خدمات مخطط الأسنان') }}</summary>
-                  @for (number of surveyTeeth(); track number) {
+                  @for (number of availableTreatmentTeeth(); track number) {
                     @let row = toothService(number);
-                    <label>{{ toothLabel(number) }} · #{{ number }}
+                    <label>{{ number <= 0 ? wholeMouthLabel(number) : toothLabel(number) + ' · #' + number }}
                       <select [(ngModel)]="row.catalogId" (change)="selectToothService(number)" [disabled]="!!row.treatmentId">
                         <option value="">{{ t('Choose the clinic service', 'اختر خدمة العيادة') }}</option>
                         @for (item of toothServiceCatalog(number); track item.id) { <option [value]="item.id">{{ item.name }}</option> }
@@ -669,6 +669,7 @@ interface ToothServiceDraft {
             </div>
 
             <!-- Split-View: Interactive Chart (Left) + Tooth Procedure Action Card (Right) -->
+            @if (recentlyCompletedTeeth().length) { <div class="completed-teeth-notice" role="status">✓ {{ t('Completed teeth:', 'تم علاج الأسنان:') }} {{ recentlyCompletedTeeth().join(', ') }} <button type="button" (click)="setStep(2)">{{ t('View in chart', 'عرض في المخطط') }}</button></div> }
             <div class="step3-selection-summary">
               <div class="chart-col">
                 <div class="treatment-selection-heading">
@@ -676,7 +677,7 @@ interface ToothServiceDraft {
                   <button type="button" class="clear-treatment-selection" [disabled]="!treatmentTeeth.length || savingTreatment() || savingRootCanal()" (click)="treatmentTeeth = []">{{ t('Clear selection', 'إلغاء التحديد') }}</button>
                 </div>
                 <div class="today-teeth-picker">
-                  @for (number of surveyTeeth(); track number) {
+                  @for (number of availableTreatmentTeeth(); track number) {
                     <button type="button" class="treatment-tooth-chip" [class.selected]="treatmentTeeth.includes(number)" [attr.aria-pressed]="treatmentTeeth.includes(number)" [disabled]="savingTreatment() || savingRootCanal() || !examination()!.canEdit" (click)="toggleTreatmentTooth(number)">
                       <strong>#{{ number }}</strong><span class="tooth-chip-name" dir="ltr">{{ toothLabel(number) }}</span>
                       @if (treatmentTeeth.includes(number)) { <span class="tooth-chip-check" aria-hidden="true">✓</span> }
@@ -714,13 +715,13 @@ interface ToothServiceDraft {
                       @for (number of treatmentRowKeys(); track number) {
                         @let row = toothService(number);
                         <section class="catalog-select-box tooth-service-row" [class.regular-filling-card]="toothServiceIsFilling(number) || toothServiceIsExtraction(number)" tabindex="-1" [attr.data-tooth]="number">
-                          @if (!toothServiceIsRootCanal(number) && !toothServiceIsExtraction(number)) { <h3>{{ number === 0 ? t('Whole-mouth service', 'خدمة للفم بالكامل') : '#' + number + ' · ' + toothLabel(number) }}</h3> }
-                          @if (number === 0 && !toothServiceCatalog(0).length) { <p>{{ t('Add orthodontics, scaling/polishing and whitening services with their prices to the clinic service list first.', 'أضف خدمات التقويم وتنظيف الجير والتلميع والتبييض وأسعارها إلى قائمة خدمات العيادة أولًا.') }}</p> }
+                          @if (!toothServiceIsRootCanal(number) && !toothServiceIsExtraction(number)) { <h3>{{ number <= 0 ? wholeMouthLabel(number) : '#' + number + ' · ' + toothLabel(number) }}</h3> }
+                          @if (number <= 0 && !toothServiceCatalog(number).length) { <p>{{ t('Add orthodontics, scaling/polishing and whitening services with their prices to the clinic service list first.', 'أضف خدمات التقويم وتنظيف الجير والتلميع والتبييض وأسعارها إلى قائمة خدمات العيادة أولًا.') }}</p> }
                           @if (!toothServiceIsRootCanal(number)) {
                           <fieldset [disabled]="savingTreatment() || !!row.treatmentId">
                             @if (!row.catalogId) {
                               @if (matchingToothServices(number).length) {
-                                <label>{{ t('Clinic service for', 'خدمة العيادة للسن') }} {{ toothLabel(number) }} · #{{ number }}
+                                <label>{{ number <= 0 ? wholeMouthLabel(number) : t('Clinic service for', 'خدمة العيادة للسن') + ' ' + toothLabel(number) + ' · #' + number }}
                                   <select [(ngModel)]="row.catalogId" (change)="selectToothService(number)">
                                     <option value="">{{ t('Choose the matching clinic service…', 'اختر الخدمة المناسبة من خدمات العيادة…') }}</option>
                                     @for (item of matchingToothServices(number); track item.id) { <option [value]="item.id">{{ serviceDisplayName(item) }}</option> }
@@ -731,13 +732,6 @@ interface ToothServiceDraft {
                               }
                             }
                             @if (row.catalogId) {
-                              @if (number !== 0 && toothServiceIsFilling(number)) {
-                                <label>{{ t('Choose caries type', 'اختيار نوع التسوس') }}
-                                  <select [(ngModel)]="row.cariesClass"><option [ngValue]="null">{{ t('Choose caries type…', 'اختر نوع التسوس…') }}</option>
-                                    @for (value of toothClasses(number); track value) { <option [ngValue]="value">Class {{ ['I','II','III','IV','V','VI'][value - 1] }}</option> }
-                                  </select>
-                                </label>
-                              }
                               @if (toothServiceIsExtraction(number)) {
                                 <app-extraction-editor [draft]="extractionFor(number)" [tooth]="number" [english]="t('en','ar') === 'en'" [disabled]="savingTreatment() || !!row.treatmentId" />
                               }
@@ -749,7 +743,7 @@ interface ToothServiceDraft {
                             }
                           </fieldset>
                           }
-                          @if (number !== 0 && toothServiceIsRootCanal(number)) {
+                          @if (number > 0 && toothServiceIsRootCanal(number)) {
                             <app-root-canal-editor [draft]="rootCanalFor(number)" [previous]="previousRootCanals(number)" [saveState]="rootCanalAutoStatus()[number] || ''" [saveFailed]="rootCanalAutoErrors().includes(number)" (changed)="autoSaveRootCanal(number)" [canSave]="!!row.treatmentId" [english]="t('en','ar') === 'en'" [disabled]="savingTreatment() || savingRootCanal() || !!row.confirmedCompleted" (save)="saveRootCanal(number)" />
                             @if (row.treatmentId) {
                               <p>{{ row.treatmentName }} · {{ t('Existing treatment — no new charge', 'استكمال نفس العلاج — بدون تكلفة جديدة') }}</p>
@@ -760,7 +754,7 @@ interface ToothServiceDraft {
                           @if (toothServiceIsRootCanal(number) && row.confirmedCompleted) {
                             <p class="clinical-tag">✓ {{ t('Treatment completed', 'العلاج مكتمل') }}</p>
                           } @else {
-                          <button type="button" class="btn-execute-procedure-modern" [disabled]="!row.catalogId || savingTreatment() || savingRootCanal() || row.price < 0" (click)="executeToothService(number)">{{ savingTreatment() ? t('Saving…', 'جارٍ الحفظ…') : row.treatmentId && toothServiceIsRootCanal(number) ? t('Save & continue existing treatment', 'حفظ واستكمال نفس العلاج') : number === 0 ? t('Record whole-mouth service', 'تسجيل خدمة الفم بالكامل') : t('Record this tooth service', 'تسجيل إجراء هذا السن') }}</button>
+                          <button type="button" class="btn-execute-procedure-modern" [disabled]="!row.catalogId || savingTreatment() || savingRootCanal() || row.price < 0" (click)="executeToothService(number)">{{ savingTreatment() ? t('Saving…', 'جارٍ الحفظ…') : row.treatmentId && toothServiceIsRootCanal(number) ? t('Save & continue existing treatment', 'حفظ واستكمال نفس العلاج') : number <= 0 ? t('Record whole-mouth service', 'تسجيل خدمة الفم بالكامل') : t('Record this tooth service', 'تسجيل إجراء هذا السن') }}</button>
                           }
                         </section>
                       } @empty { <p>{{ t('Choose today’s treatment teeth above.', 'اختار أسنان علاج اليوم فوق.') }}</p> }
@@ -835,7 +829,7 @@ interface ToothServiceDraft {
                 @let row = toothService(number);
                 @if (row.catalogId && !row.treatmentId) {
                   <section class="billing-service-price">
-                    <strong>{{ number === 0 ? t('Whole mouth', 'الفم بالكامل') : toothLabel(number) + ' · #' + number }}</strong>
+                    <strong>{{ number <= 0 ? t('Whole mouth', 'الفم بالكامل') : toothLabel(number) + ' · #' + number }}</strong>
                               <label>{{ t('Price category', 'فئة السعر') }}
                                 <select [(ngModel)]="row.tierId" (change)="selectToothServiceTier(number)">
                                   @for (tier of toothServiceTiers(number); track tier.id) { <option [value]="tier.id">{{ t(tier.nameEn, tier.nameAr) }} — {{ tier.price }}</option> }
@@ -1990,10 +1984,12 @@ export class ExaminationComponent {
     this.showMedicalAlertModal.set(true);
   }
 
+  private patientChartGeneration = 0;
   loadPatient(patientId: string) {
+    const generation = ++this.patientChartGeneration;
     this.api.chart(patientId).subscribe({
-      next: chart => { this.patientChart.set(chart); this.patientChartError.set(false); },
-      error: () => { this.patientChartError.set(true); },
+      next: chart => { if (generation === this.patientChartGeneration) { this.patientChart.set(chart); this.patientChartError.set(false); } },
+      error: () => { if (generation === this.patientChartGeneration) this.patientChartError.set(true); },
     });
     this.refreshPatientMedicalHistory(patientId);
   }
@@ -2127,6 +2123,7 @@ export class ExaminationComponent {
       next: res => {
         const items = [...previous, ...(res.items || [])];
         this.executedTreatments.set(items); this.treatmentHistoryError.set('');
+        this.treatmentTeeth = this.treatmentTeeth.filter(number => this.availableTreatmentTeeth().includes(number));
         if (page < res.totalPages) this.loadTreatmentHistory(patientId, page + 1, items);
       },
       error: () => this.treatmentHistoryError.set(this.t('Could not load previous treatment progress.', 'تعذر تحميل تقدم العلاج السابق.')),
@@ -2451,8 +2448,20 @@ export class ExaminationComponent {
   }
 
   surveyTeeth() { return [...new Set([...(this.patientChart()?.teeth.filter(t => t.findings.some(type => !this.isWholeMouthFinding(type)) || t.procedures.length).map(t => t.toothNumber) ?? []), ...this.selectedTeeth, ...(this.examination()?.findings ?? []).filter(x => !this.isWholeMouthFinding(x.type)).map(x => x.toothNumber)])].sort((a,b) => a-b); }
+  readonly recentlyCompletedTeeth = signal<number[]>([]);
+  availableTreatmentTeeth() {
+    const completed = new Set([...this.recentlyCompletedTeeth(), ...(this.examination()?.endodonticRecords ?? []).filter(item => item.stage === 6).map(item => item.toothNumber), ...this.executedTreatments().filter(item => item.appointmentId === this.appointmentId && item.status === 4 && item.toothNumbers.length < 32).flatMap(item => item.toothNumbers)]);
+    return this.surveyTeeth().filter(number => !completed.has(number));
+  }
+  private finishTooth(number: number) {
+    this.recentlyCompletedTeeth.update(items => [...new Set([...items, number])]);
+    this.treatmentTeeth = this.treatmentTeeth.filter(tooth => tooth !== number);
+    this.selectedTeeth = this.selectedTeeth.filter(tooth => tooth !== number);
+    this.findingTargetTeeth = this.findingTargetTeeth.filter(tooth => tooth !== number);
+    if (this.selected === number) this.selected = 0;
+  }
   toggleTreatmentTooth(number: number) {
-    if (this.savingTreatment() || !this.surveyTeeth().includes(number)) return;
+    if (this.savingTreatment() || !this.availableTreatmentTeeth().includes(number)) return;
     this.treatmentTeeth = this.treatmentTeeth.includes(number) ? this.treatmentTeeth.filter(x => x !== number) : [...this.treatmentTeeth, number].sort((a,b) => a-b);
     this.recalculateTreatmentPrice();
   }
@@ -2542,11 +2551,20 @@ export class ExaminationComponent {
   wholeMouthTreatment = false;
   readonly toothServices: Record<number, ToothServiceDraft> = {};
   private readonly serviceFindingTypes = new Map<number, number | undefined>();
-  treatmentRowKeys() { return this.wholeMouthTreatment ? [...this.treatmentTeeth, 0] : this.treatmentTeeth; }
+  private readonly recordedWholeMouth = new Set<number>();
+  wholeMouthLabel(number: number) { return number < 0 ? this.findingLabel(-number) : this.t('Whole-mouth service', 'خدمة للفم بالكامل'); }
+  private wholeMouthMatches(item: CatalogItem, type: number) {
+    const parsed = parseCatalogItem(item), text = [item.code, item.name, parsed.nameEn, parsed.nameAr].join(' ');
+    return ({12:/scal|polish|clean|تنظيف|تنضيف|جير|تلميع/i,13:/whiten|bleach|تبيض|تبييض/i,16:/ortho|braces|aligner|retainer|تقويم/i} as Record<number,RegExp>)[type]?.test(text) ?? false;
+  }
+  treatmentRowKeys() {
+    const globals = [...new Set((this.examination()?.findings ?? []).filter(f => this.isWholeMouthFinding(f.type)).map(f => -f.type))].filter(key => !this.recordedWholeMouth.has(key) && !this.executedTreatments().some(item => item.appointmentId === this.appointmentId && item.status !== 5 && item.toothNumbers.length === 32 && this.wholeMouthMatches({id:item.catalogItemId ?? '',code:'',name:item.treatmentName,type:item.type,defaultPrice:item.price,isActive:true}, -key)));
+    return [...this.treatmentTeeth, ...globals, ...(this.wholeMouthTreatment && !globals.length ? [0] : [])];
+  }
   toothClasses(number: number) { return allowedCariesClasses([number]); }
   toothService(number: number): ToothServiceDraft {
     const row = this.toothServices[number] ??= { catalogId: '', tierId: 'base', price: 0, cariesClass: this.examination()?.findings.filter(f => f.toothNumber === number && f.type === 2).at(-1)?.cariesClass ?? null, notes: '', remaining: '', status: 'completed' };
-    const type = this.examination()?.findings.filter(f => f.toothNumber === number && !this.isWholeMouthFinding(f.type)).at(-1)?.type ?? this.patientChart()?.teeth.find(t => t.toothNumber === number)?.findings.filter(type => !this.isWholeMouthFinding(type)).at(-1);
+    const type = number < 0 ? -number : this.examination()?.findings.filter(f => f.toothNumber === number && !this.isWholeMouthFinding(f.type)).at(-1)?.type ?? this.patientChart()?.teeth.find(t => t.toothNumber === number)?.findings.filter(type => !this.isWholeMouthFinding(type)).at(-1);
     if (!row.treatmentId && this.serviceFindingTypes.has(number) && this.serviceFindingTypes.get(number) !== type) {
       row.catalogId = ''; row.price = 0; row.tierId = 'base'; row.status = 'completed';
       row.cariesClass = this.examination()?.findings.filter(f => f.toothNumber === number && f.type === 2).at(-1)?.cariesClass ?? null;
@@ -2554,8 +2572,8 @@ export class ExaminationComponent {
     }
     this.serviceFindingTypes.set(number, type);
     if (!row.catalogId && type) {
-      const treatmentType = ({2:1, 8:4, 9:5, 10:4, 11:4, 14:2, 15:3, 17:4} as Record<number, number>)[type];
-      const candidates = this.toothServiceCatalog(number).filter(item => item.type === treatmentType);
+      const treatmentType = ({2:1, 8:4, 9:5, 10:4, 11:4, 14:2, 15:3, 17:4, 12:6, 13:6, 16:6} as Record<number, number>)[type];
+      const candidates = this.toothServiceCatalog(number).filter(item => number < 0 || item.type === treatmentType);
       const appearance = FINDING_APPEARANCE[type];
       const exact = candidates.filter(item => { const parsed = parseCatalogItem(item); return [parsed.nameEn, parsed.nameAr, item.name].some(name => [appearance.en, appearance.ar].some(label => name.trim().toLowerCase() === label.toLowerCase())); });
       const item = exact.length === 1 ? exact[0] : candidates.length === 1 ? candidates[0] : undefined;
@@ -2569,7 +2587,7 @@ export class ExaminationComponent {
   }
   serviceDisplayName(item: CatalogItem) { const parsed = parseCatalogItem(item); return this.t(parsed.nameEn || item.name, parsed.nameAr || item.name); }
   matchingToothServices(number: number) {
-    if (number === 0) return this.toothServiceCatalog(0);
+    if (number <= 0) return this.toothServiceCatalog(number);
     const type = this.examination()?.findings.filter(f => f.toothNumber === number && !this.isWholeMouthFinding(f.type)).at(-1)?.type
       ?? this.patientChart()?.teeth.find(t => t.toothNumber === number)?.findings.filter(type => !this.isWholeMouthFinding(type)).at(-1);
     const serviceType = ({2:1,8:4,9:5,10:4,11:4,14:2,15:3,17:4} as Record<number,number>)[type ?? 0];
@@ -2579,7 +2597,7 @@ export class ExaminationComponent {
     const parsed = parseCatalogItem(item);
     return /ortho|braces|aligner|retainer|\u062a\u0642\u0648\u064a\u0645|scal|polish|whiten|bleach|clean|تنظيف|تنضيف|جير|تلميع|تبييض|تبيض/i.test([item.code, parsed.nameEn, parsed.nameAr].join(' '));
   }
-  toothServiceCatalog(number: number) { return this.catalog().filter(item => number === 0 ? this.isWholeMouthService(item) : !this.isWholeMouthService(item)); }
+  toothServiceCatalog(number: number) { return this.catalog().filter(item => number <= 0 ? this.isWholeMouthService(item) && (number === 0 || this.wholeMouthMatches(item, -number)) : !this.isWholeMouthService(item)); }
   toothServiceTiers(number: number) {
     const item = this.catalog().find(item => item.id === this.toothService(number).catalogId);
     return item ? parseCatalogItem(item).priceTiers : [];
@@ -2596,7 +2614,7 @@ export class ExaminationComponent {
   readonly rootCanalDrafts = new Map<number, { treatmentId?: string; draft: RootCanalDraft }>();
   toothServiceIsRootCanal(number: number) {
     const row = this.toothService(number);
-    return number !== 0 && (row.treatmentType ?? this.catalog().find(item => item.id === row.catalogId)?.type) === 4;
+    return number > 0 && (row.treatmentType ?? this.catalog().find(item => item.id === row.catalogId)?.type) === 4;
   }
   previousRootCanals(number: number): EndodonticRecord[] {
     const treatmentId = this.toothService(number).treatmentId;
@@ -2663,6 +2681,7 @@ export class ExaminationComponent {
     this.rootCanalAutoStatus.update(state => ({...state, [number]: this.t('Saving…', 'جارٍ الحفظ التلقائي…')}));
     try {
       await this.persistRootCanal(number);
+      if (this.rootCanalFor(number).stage === 6 && this.toothService(number).treatmentId) { await this.syncRootCanalStatus(number); this.loadTreatments(this.examination()!.patientId); }
       this.rootCanalAutoErrors.update(items => items.filter(item => item !== number));
       this.rootCanalAutoStatus.update(state => ({...state, [number]: this.t('Saved automatically', 'تم الحفظ تلقائيًا')}));
     } catch {
@@ -2691,6 +2710,7 @@ export class ExaminationComponent {
     const treatment = await firstValueFrom(this.treatmentApi.treatment(row.treatmentId!));
     if (treatment.status !== target) await firstValueFrom(this.treatmentApi.treatmentAction(treatment.id, target === 4 ? 'complete' : 'start', treatment.version));
     this.applyRootCanalStatus(number); row.confirmedCompleted = target === 4;
+    if (target === 4) { this.finishTooth(number); this.loadPatient(this.examination()!.patientId); }
   }
   async saveRootCanal(number: number) {
     if (!this.examination()?.canEdit || !this.toothService(number).treatmentId || !this.toothServiceIsRootCanal(number) || this.savingTreatment() || this.savingRootCanal() || !this.validRootCanal(number)) return;
@@ -2715,10 +2735,7 @@ export class ExaminationComponent {
     const exam = this.examination();
     const row = this.toothService(number);
     if (!exam?.canEdit || this.savingTreatment() || this.savingRootCanal() || !row.catalogId || !Number.isFinite(row.price) || row.price < 0) return;
-    if (number === 0 ? !this.wholeMouthTreatment : !this.treatmentTeeth.includes(number) || !this.surveyTeeth().includes(number)) return;
-    if (number !== 0 && this.toothServiceIsFilling(number) && row.cariesClass !== null && !this.toothClasses(number).includes(row.cariesClass)) {
-      this.error.set(this.t('Choose a valid caries class for this tooth.', 'اختر تصنيف تسوس مناسب لهذا السن.')); return;
-    }
+    if (number <= 0 ? !this.treatmentRowKeys().includes(number) : !this.treatmentTeeth.includes(number) || !this.surveyTeeth().includes(number)) return;
     if (this.toothServiceIsExtraction(number) && this.extractionFor(number).condition === 'Impacted' && !this.extractionFor(number).direction) {
       this.error.set(this.t('Choose the impacted tooth direction.', 'اختر اتجاه الضرس.')); return;
     }
@@ -2734,16 +2751,9 @@ export class ExaminationComponent {
       const appointment = this.appointment() ?? await firstValueFrom(this.appointmentApi.appointment(this.appointmentId));
       this.appointment.set(appointment);
       if (!row.treatmentId) {
-        if (number !== 0 && this.toothServiceIsFilling(number) && row.cariesClass !== null) {
-          const latest = await firstValueFrom(this.api.examination(exam.id));
-          const finding = latest.findings.filter(f => f.toothNumber === number && f.type === 2).at(-1);
-          const input = { toothNumber: number, type: 2, surfaces: finding?.surfaces ?? [], notes: finding?.notes, cariesClass: row.cariesClass, version: latest.version };
-          await firstValueFrom(finding ? this.api.updateFinding(exam.id, finding.id, input) : this.api.addFinding(exam.id, input));
-          this.examination.set(await firstValueFrom(this.api.examination(exam.id)));
-        }
         const tier = this.toothServiceTiers(number).find(tier => tier.id === row.tierId);
-        const notes = [this.extractionSummary(number), this.toothServiceIsRootCanal(number) ? this.rootCanalFor(number).notes.trim() : row.notes.trim(), tier && row.tierId !== 'base' ? this.t(tier.nameEn, tier.nameAr) : '', this.toothServiceIsFilling(number) && row.cariesClass ? 'Class ' + ['I','II','III','IV','V','VI'][row.cariesClass - 1] : '', !this.toothServiceIsRootCanal(number) && row.status === 'in_progress' ? '(متبقي: ' + (row.remaining.trim() || 'استكمال العلاج') + ')' : '', number === 0 ? this.t('Whole mouth — one service charge', 'الفم بالكامل — خدمة واحدة') : ''].filter(Boolean).join(' · ');
-        const teeth = number === 0 ? Array.from({ length: 4 }, (_, quadrant) => Array.from({ length: 8 }, (_, index) => (quadrant + 1) * 10 + index + 1)).flat() : [number];
+        const notes = [this.extractionSummary(number), this.toothServiceIsRootCanal(number) ? this.rootCanalFor(number).notes.trim() : row.notes.trim(), tier && row.tierId !== 'base' ? this.t(tier.nameEn, tier.nameAr) : '', this.toothServiceIsFilling(number) && row.cariesClass ? 'Class ' + ['I','II','III','IV','V','VI'][row.cariesClass - 1] : '', !this.toothServiceIsRootCanal(number) && row.status === 'in_progress' ? '(متبقي: ' + (row.remaining.trim() || 'استكمال العلاج') + ')' : '', number <= 0 ? this.t('Whole mouth — one service charge', 'الفم بالكامل — خدمة واحدة') : ''].filter(Boolean).join(' · ');
+        const teeth = number <= 0 ? Array.from({ length: 4 }, (_, quadrant) => Array.from({ length: 8 }, (_, index) => (quadrant + 1) * 10 + index + 1)).flat() : [number];
         const created = await firstValueFrom(this.treatmentApi.createTreatment({ patientId: exam.patientId, doctorProfileId: appointment.doctorProfileId, appointmentId: this.appointmentId, catalogItemId: row.catalogId, toothNumbers: teeth, deferBilling: true, price: row.price, notes: notes || undefined }));
         row.treatmentId = created.id;
           const clinicalDraft = this.rootCanalDrafts.get(number);
@@ -2753,10 +2763,11 @@ export class ExaminationComponent {
       const treatment = await firstValueFrom(this.treatmentApi.treatment(row.treatmentId));
       const targetStatus = row.status === 'completed' ? 4 : 3;
       if (treatment.status !== targetStatus) await firstValueFrom(this.treatmentApi.treatmentAction(treatment.id, row.status === 'completed' ? 'complete' : 'start', treatment.version));
-      if (number === 0) this.wholeMouthTreatment = false;
+      if (number <= 0) { this.wholeMouthTreatment = false; if (number < 0) this.recordedWholeMouth.add(number); }
+      else if (row.status === 'completed') this.finishTooth(number);
       else this.treatmentTeeth = this.treatmentTeeth.filter(tooth => tooth !== number);
       delete this.toothServices[number]; this.rootCanalDrafts.delete(number);
-      this.success.set(this.t('Service recorded for ', 'تم تسجيل الخدمة لـ ') + (number === 0 ? this.t('the whole mouth.', 'الفم بالكامل.') : '#' + number + ' · ' + this.toothLabel(number)));
+      this.success.set(this.t('Service recorded for ', 'تم تسجيل الخدمة لـ ') + (number <= 0 ? this.t('the whole mouth.', 'الفم بالكامل.') : '#' + number + ' · ' + this.toothLabel(number)));
     } catch (error) { if (error instanceof HttpErrorResponse) this.fail(error); else this.error.set(parseApiError(error, this.t('Could not save. Retry the request.', 'تعذر الحفظ. أعد المحاولة.'))); }
     finally {
       this.savingTreatment.set(false);

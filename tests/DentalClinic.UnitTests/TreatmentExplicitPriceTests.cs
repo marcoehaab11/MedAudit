@@ -2,6 +2,7 @@ using System.Reflection;
 using DentalClinic.Application;
 using DentalClinic.Application.Common.Interfaces;
 using DentalClinic.Application.Finance;
+using DentalClinic.Application.Dental;
 using DentalClinic.Application.Identity;
 using DentalClinic.Application.Treatments;
 using DentalClinic.Domain.Dental;
@@ -34,7 +35,9 @@ public sealed class TreatmentExplicitPriceTests
     private static ServiceProvider Services(ITreatmentStore store) => new ServiceCollection().AddApplication().AddSingleton(store)
         .AddSingleton<IPermissionService>(new AllowPermissions()).AddSingleton<ICurrentTenant>(new Tenant())
         .AddSingleton<ICurrentUser>(new Actor()).AddSingleton<ISystemClock>(new Clock())
-        .AddSingleton<ITreatmentRevenueCreator>(new NoRevenue()).BuildServiceProvider();
+        .AddSingleton<ITreatmentRevenueCreator>(new NoRevenue())
+        .AddSingleton(DispatchProxy.Create<IDentalStore, UnusedDentalStore>())
+        .AddSingleton(DispatchProxy.Create<IFinanceStore, UnusedDentalStore>()).BuildServiceProvider();
     private sealed class AllowPermissions : IPermissionService {
         public Task<bool> HasPermissionAsync(string permission, CancellationToken cancellationToken) => Task.FromResult(true);
         public Task EnsurePermissionAsync(string permission, CancellationToken cancellationToken) => Task.CompletedTask;
@@ -45,6 +48,9 @@ public sealed class TreatmentExplicitPriceTests
     private sealed class NoRevenue : ITreatmentRevenueCreator {
         public Task EnsureForCompletedTreatmentAsync(Guid treatmentId, CancellationToken token) => Task.CompletedTask;
         public Task EnsureForTreatmentPlanAsync(Guid planId, CancellationToken token) => Task.CompletedTask;
+    }
+    public class UnusedDentalStore : DispatchProxy {
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) => throw new NotSupportedException(targetMethod?.Name);
     }
     public class StoreSpy : DispatchProxy {
         public TreatmentCatalogItem Catalog { get; } = new(new Tenant().RequireTenantId(), TreatmentType.Other, "Scaling and polishing", "SP", null, 400, DateTimeOffset.UtcNow);

@@ -306,3 +306,17 @@ Visual validation: production build passed; verified the white summary in the is
 - [x] Hide the app sidebar only while reception is displayed, without changing sidebar preferences; restore the normal shell on advancing to the dental chart.
 - [x] Production frontend build and all 56 examination tests passed, including preservation of the original notes request payload.
 - [x] Browser verified desktop layout, alert visibility, expandable medical editor and transition to/from the dental chart. Verified 390px mobile layout with no page horizontal overflow and no vertical clipping in the stepper.
+
+
+## Reception attendance and procedure follow-ups — 20 October 2026
+- [x] Scheduled bookings show confirmation/cancellation first, including same-day appointments. Confirmed same-day bookings show Arrived / Did not attend; cancellation remains secondary after confirmation.
+- [x] Reception starts the checked-in visit in place, then sees only End visit as its primary action. Preserve the selected appointment card while refreshing, prevent repeated in-flight actions, and hide empty clinical-tools menus.
+- [x] Verify the existing top doctor queue still opens the exact checked-in/started appointment directly. Preserve no-show history and alternative appointment booking.
+- [x] Remove the caries-class dropdown and redundant finding rewrite from procedures; keep the class already recorded on the chart and preserve it in the service notes. Further styling of its proposed new location awaits the user's promised reference image #1.
+- [x] Remove completed teeth from today's treatment choices and chart selection, including completed root-canal workflows. Add a green completion pulse/outline and a shortcut to the chart; retain diagnostic history and a completed marker. Refresh root-canal chart state after confirmed completion and ignore older chart responses.
+- [x] Show scaling/polishing, whitening and orthodontics findings as separate whole-mouth procedure rows. Match each to its clinic service, record one service price for all 32 teeth, and prevent completed services from reappearing after reopening the visit.
+- [x] Whole-mouth cleaning does not mark untreated individual fillings as completed or remove all teeth from individual treatment choices.
+- [x] Verify extraction shows extraction details and optional notes without Treatment status.
+- [x] Include appointment/catalog IDs in treatment-list responses so completed visit work remains identified after reload; no database migration or pricing-rule change.
+- [x] Fix missing dependency registrations in the existing explicit-price test fixture. Final checks: 86 frontend regression tests and 30 appointment/treatment backend tests passed; frontend and API builds passed.
+- [x] Local browser verification with synthetic receptionist and doctor accounts: confirm → arrive → start without leaving the appointment card; doctor top queue; record filling #26 and whole-mouth cleaning; reopen and verify both are excluded from their completed choices; check extraction has no Treatment status. Screenshots saved locally.

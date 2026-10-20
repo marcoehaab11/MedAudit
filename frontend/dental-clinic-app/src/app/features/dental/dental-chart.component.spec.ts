@@ -112,6 +112,17 @@ describe('DentalChartComponent', () => {
     expect(art.innerHTML).toContain('#eab308');
   });
 
+  it('does not treat completed whole-mouth cleaning as completion of an untreated filling',()=>{
+    const fixture=TestBed.createComponent(DentalChartComponent),c=fixture.componentInstance;
+    fixture.componentRef.setInput('teeth',[{toothId:'t36',toothNumber:36,findings:[2,12],procedures:[],hasEndodonticRecord:false,treatmentProgress:[{id:'clean',name:'Scaling and polishing',type:6,status:4}]}]);fixture.detectChanges();
+    expect(c.completedWork(36)).toBe(false);expect(c.pendingWork(36)).toBe(true);
+  });
+  it('highlights a newly completed tooth while preserving its completed marker',()=>{
+    const fixture=TestBed.createComponent(DentalChartComponent);
+    fixture.componentRef.setInput('teeth',[{toothId:'t36',toothNumber:36,findings:[2],procedures:[],hasEndodonticRecord:false,treatmentProgress:[{id:'done',name:'Filling',type:1,status:4}]}]);
+    fixture.componentRef.setInput('completedHighlights',[36]);fixture.detectChanges();
+    const tooth=fixture.nativeElement.querySelector('button[aria-label*="#36"]');expect(tooth.classList.contains('completion-highlight')).toBe(true);expect(tooth.textContent).toContain('✓');
+  });
   it('supports multi-tooth selection and quick jaw selectors', () => {
     const fixture = TestBed.createComponent(DentalChartComponent);
     const component = fixture.componentInstance;

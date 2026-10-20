@@ -64,6 +64,7 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
 
   readonly result = signal<AppointmentSearchResult | null>(null);
   readonly doctors = signal<DoctorListItem[]>([]);
+  readonly appointmentActionPending = signal(false);
   readonly selected = signal<AppointmentDetails | null>(null);
   readonly rescheduleSlots = signal<AvailabilitySlot[]>([]);
   readonly rescheduleLoading = signal(false);
@@ -314,16 +315,16 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
   }
 
   action(actionType: 'confirm' | 'check-in' | 'start' | 'complete' | 'no-show') {
-    if (!this.selected()) return;
+    if (!this.selected() || this.appointmentActionPending()) return;
     const id = this.selected()!.id;
+    this.appointmentActionPending.set(true);
     this.appointmentApi.action(id, actionType).subscribe({
       next: () => {
         this.showTemporarySuccess(this.t('Appointment updated.', 'تم تحديث الموعد بنجاح.'));
         this.loadAppointments();
-        this.appointmentApi.appointment(id).subscribe((x) => this.selected.set(x));
+        this.appointmentApi.appointment(id).subscribe({next:x=>{this.selected.set(x);this.appointmentActionPending.set(false);},error:()=>{this.appointmentActionPending.set(false);this.error.set(this.t('Could not refresh appointment details.','تعذر تحديث بيانات الموعد.'));}});
       },
-      error: () =>
-        this.error.set(this.t('The appointment could not be updated.', 'تعذر تحديث الموعد.')),
+      error: () => {this.appointmentActionPending.set(false);this.error.set(this.t('The appointment could not be updated.', 'تعذر تحديث الموعد.'));},
     });
   }
 

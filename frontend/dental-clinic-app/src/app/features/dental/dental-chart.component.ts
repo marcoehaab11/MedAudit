@@ -33,7 +33,7 @@ import { toothName } from './tooth-labels';
         <div class="planora-chart-scroll" (scroll)="menuTooth = 0"><div class="planora-jaw" [class.planora-upper]="!jaw.lower" [class.planora-lower]="jaw.lower">
           @for (number of jaw.teeth; track number) {
             <div class="tooth-container" (mouseenter)="openMenu(number, $event)" (mouseleave)="closeMenu(number)">
-              <button type="button" class="planora-tooth" [class.selected]="isSelectedTooth(number)" [class.missing]="isMissing(find(number))" [class.implanted]="toothState(number) === 'implant'"
+              <button type="button" class="planora-tooth" [class.selected]="isSelectedTooth(number)" [class.missing]="isMissing(find(number))" [class.completion-highlight]="completedHighlights.includes(number)" [class.implanted]="toothState(number) === 'implant'"
                 [class.extracting]="animatedTeeth()[number] === 'extracted'" [class.implanting]="animatedTeeth()[number] === 'implant'"
                 [attr.aria-pressed]="isSelectedTooth(number)" [attr.aria-label]="name(number) + ' #' + number" [title]="name(number) + ' #' + number"
                 [style.--tooth-accent]="planoraAccent(number)" (focus)="openMenu(number, $event)" (keydown.escape)="menuTooth = 0" (click)="choose(number, $event)">
@@ -63,6 +63,7 @@ import { toothName } from './tooth-labels';
 export class DentalChartComponent implements OnChanges {
   @Input() teeth: ToothChartSummary[] = [];
   @Input() selectedNumber = 0;
+  @Input() completedHighlights: number[] = [];
   @Input() multiSelect = false;
   @Input() selectedTeeth: number[] = [];
   @Input() showQuickFindings = false;
@@ -86,8 +87,11 @@ export class DentalChartComponent implements OnChanges {
   constructor(private readonly i18n: LocalizationService, private readonly sanitizer: DomSanitizer) {}
   t(en: string, ar: string) { return this.i18n.language() === 'ar' ? ar : en; }
   name(number: number, short = false) { return toothName(number, this.i18n.language(), short); }
-  pendingWork(number: number) { const tooth = this.find(number); return tooth?.treatmentProgress?.some(t => [1, 2, 3].includes(t.status)) || (!tooth?.treatmentProgress?.some(t => t.status !== 5) && !!tooth?.findings.length); }
-  completedWork(number: number) { return this.find(number)?.treatmentProgress?.some(t => t.status === 4); }
+  private individualWork(number: number) {
+    return (this.find(number)?.treatmentProgress ?? []).filter(work => !(work.type === 6 && /scal|polish|whiten|bleach|clean|ortho|braces|aligner|retainer|تنظيف|تنضيف|جير|تلميع|تبييض|تبيض|تقويم/i.test(work.name)));
+  }
+  pendingWork(number: number) { const tooth = this.find(number), work = this.individualWork(number); return work.some(t => [1,2,3].includes(t.status)) || (!work.some(t => t.status !== 5) && !!tooth?.findings.some(type => ![1,12,13,16].includes(type))); }
+  completedWork(number: number) { return this.individualWork(number).some(t => t.status === 4); }
   find(number: number) { return this.teeth.find(x => x.toothNumber === number); }
   menuBottom: number | null = null;
   menuMaxHeight = 320;

@@ -249,8 +249,8 @@
             @if (selected()!.notes) {
               <p>{{ selected()!.notes }}</p>
             }
-            <app-appointment-card-actions [appointment]="selected()!" (action)="action($event)" (cancel)="cancel()" />
-            <details><summary>{{ t('Clinical tools', 'أدوات الزيارة') }}</summary><div class="actions">@if (auth.hasPermission('TreatmentPlans.Create')) {
+            <app-appointment-card-actions [appointment]="selected()!" [busy]="appointmentActionPending()" (action)="action($event)" (cancel)="cancel()" />
+            @if (auth.hasPermission('TreatmentPlans.Create') || auth.hasPermission('Prescriptions.Create')) { <details><summary>{{ t('Clinical tools', 'أدوات الزيارة') }}</summary><div class="actions">@if (auth.hasPermission('TreatmentPlans.Create')) {
                 <a
                   class="button"
                   routerLink="/treatment-plans/create"
@@ -276,7 +276,7 @@
                   💊 {{ t('Create prescription', 'إنشاء وصفة') }}
                 </a>
               }
-              </div></details>
+              </div></details> }
           @if (
               (selected()!.status === 1 || selected()!.status === 2) &&
               auth.hasPermission('Appointments.Edit')

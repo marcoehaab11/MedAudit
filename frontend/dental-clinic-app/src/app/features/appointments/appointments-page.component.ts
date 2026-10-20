@@ -289,8 +289,8 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
           @if (selected()!.notes) {
             <p>{{ selected()!.notes }}</p>
           }
-          <app-appointment-card-actions [appointment]="selected()!" (action)="action($event)" (cancel)="cancel()" />
-            <details><summary>{{ t('Clinical tools', 'أدوات الزيارة') }}</summary><div class="actions">@if (auth.hasPermission('TreatmentPlans.Create')) {
+          <app-appointment-card-actions [appointment]="selected()!" [busy]="appointmentActionPending()" (action)="action($event)" (cancel)="cancel()" />
+            @if (auth.hasPermission('TreatmentPlans.Create') || auth.hasPermission('Prescriptions.Create')) { <details><summary>{{ t('Clinical tools', 'أدوات الزيارة') }}</summary><div class="actions">@if (auth.hasPermission('TreatmentPlans.Create')) {
               <a
                 class="button"
                 routerLink="/treatment-plans/create"
@@ -316,7 +316,7 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
                 💊 {{ t('Create prescription', 'إنشاء وصفة') }}
               </a>
             }
-            </div></details>
+            </div></details> }
           @if (
             (selected()!.status === 1 || selected()!.status === 2) &&
             auth.hasPermission('Appointments.Edit')
@@ -382,6 +382,7 @@ export class AppointmentsPageComponent {
 
   readonly result = signal<AppointmentSearchResult | null>(null);
   readonly doctors = signal<DoctorLookupItem[]>([]);
+  readonly appointmentActionPending = signal(false);
   readonly selected = signal<AppointmentDetails | null>(null);
   readonly loading = signal(true);
   readonly error = signal('');
@@ -444,9 +445,9 @@ export class AppointmentsPageComponent {
     });
   }
 
-  load() {
+  load(preserveSelection = false) {
     this.calendarRequest?.unsubscribe();
-    this.selected.set(null);
+    if (!preserveSelection) this.selected.set(null);
     this.loading.set(true);
     this.error.set('');
     const days = this.days();
@@ -673,10 +674,11 @@ export class AppointmentsPageComponent {
   }
 
   action(action: 'confirm' | 'check-in' | 'start' | 'complete' | 'no-show') {
+    if (!this.selected() || this.appointmentActionPending()) return;
+    this.appointmentActionPending.set(true);
     this.api.action(this.selected()!.id, action).subscribe({
       next: () => this.refresh(this.t('Appointment updated.', 'تم تحديث الموعد.')),
-      error: () =>
-        this.error.set(this.t('The appointment could not be updated.', 'تعذر تحديث الموعد.')),
+      error: () => { this.appointmentActionPending.set(false); this.error.set(this.t('The appointment could not be updated.', 'تعذر تحديث الموعد.')); },
     });
   }
 
@@ -725,8 +727,11 @@ export class AppointmentsPageComponent {
   private refresh(message: string) {
     this.message.set(message);
     const id = this.selected()!.id;
-    this.load();
-    this.api.appointment(id).subscribe((x) => this.selected.set(x));
+    this.load(true);
+    this.api.appointment(id).subscribe({
+      next: x => { this.selected.set(x); this.appointmentActionPending.set(false); },
+      error: () => { this.appointmentActionPending.set(false); this.error.set(this.t('Could not refresh appointment details.', 'تعذر تحديث بيانات الموعد.')); },
+    });
   }
 
   localDate(value: string, zone: string) {

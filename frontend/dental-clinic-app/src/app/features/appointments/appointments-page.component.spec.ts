@@ -20,6 +20,19 @@ describe('AppointmentsPageComponent', () => {
 
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
+  it('keeps the reception appointment card open while starting and refreshing its status',()=>{
+    const fixture=TestBed.createComponent(AppointmentsPageComponent),c=fixture.componentInstance,http=TestBed.inject(HttpTestingController);
+    http.expectOne('/api/doctors/lookup').flush([]);
+    const empty={page:{items:[],page:1,pageSize:100,totalCount:0,totalPages:0},timeZone:'UTC'};
+    http.expectOne(r=>r.url==='/api/appointments').flush(empty);
+    const appointment={id:'a1',patientId:'p1',patientName:'Patient',doctorProfileId:'d1',doctorName:'Doctor',status:3,type:1,startAt:'2026-10-20T10:00:00Z',endAt:'2026-10-20T11:00:00Z',durationMinutes:60,timeZone:'UTC',createdAt:'',updatedAt:''};
+    c.selected.set(appointment);c.action('start');c.action('start');
+    http.expectOne('/api/appointments/a1/start').flush(null);
+    expect(c.selected()?.id).toBe('a1');expect(c.appointmentActionPending()).toBe(true);
+    http.expectOne(r=>r.url==='/api/appointments').flush(empty);
+    http.expectOne('/api/appointments/a1').flush({...appointment,status:4});
+    expect(c.selected()?.status).toBe(4);expect(c.appointmentActionPending()).toBe(false);
+  });
   it('renders appointments returned by the calendar query', () => {
     const fixture = TestBed.createComponent(AppointmentsPageComponent);
     const http = TestBed.inject(HttpTestingController);

@@ -56,3 +56,7 @@ button:disabled { opacity: .5; cursor: wait; }
   .planora-tooth.extracting .planora-art { animation: none; visibility: hidden; }
   .planora-tooth.implanting .planora-art { animation: none; }
 }
+
+.planora-tooth.completion-highlight { animation: completed-tooth-pulse 1.4s ease-out; outline: 2px solid #35a780; outline-offset: 2px; }
+@keyframes completed-tooth-pulse { 0% { box-shadow: 0 0 0 0 #27ad8070; transform: scale(.96); } 45% { box-shadow: 0 0 0 10px #27ad8020; transform: scale(1.04); } 100% { box-shadow: 0 0 0 15px transparent; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .planora-tooth.completion-highlight { animation: none; } }
