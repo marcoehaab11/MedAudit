@@ -582,19 +582,16 @@ interface ToothServiceDraft {
             <div class="step-header-title"><h2>{{ t('2. Dental chart & findings', '2. فحص ومخطط الأسنان') }}</h2>
               <p>{{ t('Hover over or select a tooth to record a problem. Treatment for today is selected separately.', 'مرر على السن أو اضغط عليه لتسجيل المشكلة. أسنان علاج اليوم يتم اختيارها بشكل مستقل.') }}</p>
             </div>
-            @if (examination()!.canEdit) {
-              <div class="chart-quick-findings"><strong>{{ t('Whole mouth:', 'الفم بالكامل:') }}</strong>
-                <button type="button" [disabled]="savingFinding()" (click)="recordWholeMouthFinding(12)">{{ findingLabel(12) }}</button>
-                <button type="button" [disabled]="savingFinding()" (click)="recordWholeMouthFinding(13)">{{ findingLabel(13) }}</button>
-                <button type="button" [disabled]="savingFinding()" (click)="recordWholeMouthFinding(16)">{{ findingLabel(16) }}</button>
-              </div>
-            }
+            <div class="chart-side-layout">
+            <div class="chart-drawing">
             <app-dental-chart [teeth]="chartTeeth()" [completedHighlights]="recentlyCompletedTeeth()" [multiSelect]="true" [selectedNumber]="selected" [selectedTeeth]="selectedTeeth"
               [showQuickFindings]="examination()!.canEdit" [savingFinding]="savingFinding()"
               (selectedNumberChange)="onSelectedToothChange($event)" (selectedTeethChange)="onSelectedTeethChange($event)"
               (findingSelected)="chooseFindingType($event)" (toothFindingSelected)="chooseToothFinding($event)" />
-            <section class="tooth-details">
-              <h3>{{ t('Findings', 'النتائج') }}</h3>
+            </div>
+            <aside class="chart-selection-sidebar">
+            <section class="tooth-details selected-teeth-panel">
+              <h3>{{ t('Selected teeth', 'الأسنان المختارة') }}</h3>
               @if (patientChartError()) { <p class="alert">{{ t('Could not load previous dental records.', 'تعذر تحميل سجل الأسنان السابق.') }} <button type="button" (click)="loadPatient(examination()!.patientId)">{{ t('Retry', 'إعادة المحاولة') }}</button></p> }
               @if (patientChart(); as previous) {
                 <details><summary>{{ t('Previous patient dental records', 'سجل الأسنان من الجلسات السابقة') }}</summary>
@@ -610,7 +607,7 @@ interface ToothServiceDraft {
               }
 
               <div class="record-stack">
-                @for (item of displayedFindings(); track item.id) {
+                @for (item of sidebarToothFindings(); track item.id) {
                   <article><div><strong>{{ isWholeMouthFinding(item.type) ? t('Whole mouth', 'الفم بالكامل') : '#' + item.toothNumber + ' · ' + toothLabel(item.toothNumber) }} · {{ findingLabel(item.type) }}</strong>
                     @if (item.cariesClass || item.surfaces.length) { <small>{{ findingDetailsLabel(item) }}</small> }
                     @if (item.notes) { <p>{{ item.notes }}</p> }
@@ -658,6 +655,18 @@ interface ToothServiceDraft {
                 </form>
               }
             </section>
+            <section class="whole-mouth-panel">
+              <h3>{{ t('Full mouth services', 'خدمات الفم بالكامل') }}</h3>
+              <div class="whole-mouth-cards chart-quick-findings">
+                @for (type of wholeMouthFindingTypes; track type) {
+                  <button type="button" class="whole-mouth-card" [class.is-selected]="wholeMouthFinding(type)" [disabled]="!examination()!.canEdit || savingFinding()" (click)="toggleWholeMouthFinding(type)">
+                    <span class="service-icon" aria-hidden="true">{{ type === 12 ? '✧' : type === 13 ? '✦' : type === 16 ? '♧' : '⌣' }}</span>
+                    <span>{{ findingLabel(type) }}</span><span class="service-state" aria-hidden="true">{{ wholeMouthFinding(type) ? '✓' : '+' }}</span>
+                  </button>
+                }
+              </div>
+            </section>
+            </aside></div>
             <div class="step-navigation"><button type="button" class="button primary next-btn" (click)="setStep(3)">{{ t('Next: procedures & treatment plan', 'التالي: الإجراءات وخطة العلاج') }} {{ t('→', '←') }}</button></div>
           </section>
         }
@@ -2204,7 +2213,15 @@ export class ExaminationComponent {
     this.findingForm.controls.cariesClass.setValue(null);
     void this.addFinding(true);
   }
-  isWholeMouthFinding(type: number) { return type === 12 || type === 13 || type === 16; }
+  readonly wholeMouthFindingTypes = [12, 13, 16, 18];
+  sidebarToothFindings() { return this.displayedFindings().filter(item => !this.isWholeMouthFinding(item.type)); }
+  wholeMouthFinding(type: number) { return this.examination()?.findings.find(item => item.type === type); }
+  toggleWholeMouthFinding(type: number) {
+    if (!this.examination()?.canEdit || this.savingFinding()) return;
+    const item = this.wholeMouthFinding(type);
+    if (item) this.removeFinding(item.id); else this.recordWholeMouthFinding(type);
+  }
+  isWholeMouthFinding(type: number) { return type === 12 || type === 13 || type === 16 || type === 18; }
   displayedFindings() {
     const seen = new Set<number>();
     return (this.examination()?.findings ?? []).filter(item => {
@@ -2555,7 +2572,7 @@ export class ExaminationComponent {
   wholeMouthLabel(number: number) { return number < 0 ? this.findingLabel(-number) : this.t('Whole-mouth service', 'خدمة للفم بالكامل'); }
   private wholeMouthMatches(item: CatalogItem, type: number) {
     const parsed = parseCatalogItem(item), text = [item.code, item.name, parsed.nameEn, parsed.nameAr].join(' ');
-    return ({12:/scal|polish|clean|تنظيف|تنضيف|جير|تلميع/i,13:/whiten|bleach|تبيض|تبييض/i,16:/ortho|braces|aligner|retainer|تقويم/i} as Record<number,RegExp>)[type]?.test(text) ?? false;
+    return ({12:/scal|polish|clean|تنظيف|تنضيف|جير|تلميع/i,13:/whiten|bleach|تبيض|تبييض/i,16:/ortho|braces|aligner|retainer|تقويم/i,18:/denture|أطقم|اطقم|طقم/i} as Record<number,RegExp>)[type]?.test(text) ?? false;
   }
   treatmentRowKeys() {
     const globals = [...new Set((this.examination()?.findings ?? []).filter(f => this.isWholeMouthFinding(f.type)).map(f => -f.type))].filter(key => !this.recordedWholeMouth.has(key) && !this.executedTreatments().some(item => item.appointmentId === this.appointmentId && item.status !== 5 && item.toothNumbers.length === 32 && this.wholeMouthMatches({id:item.catalogItemId ?? '',code:'',name:item.treatmentName,type:item.type,defaultPrice:item.price,isActive:true}, -key)));
@@ -2572,7 +2589,7 @@ export class ExaminationComponent {
     }
     this.serviceFindingTypes.set(number, type);
     if (!row.catalogId && type) {
-      const treatmentType = ({2:1, 8:4, 9:5, 10:4, 11:4, 14:2, 15:3, 17:4, 12:6, 13:6, 16:6} as Record<number, number>)[type];
+      const treatmentType = ({2:1, 8:4, 9:5, 10:4, 11:4, 14:2, 15:3, 17:4, 12:6, 13:6, 16:6, 18:6} as Record<number, number>)[type];
       const candidates = this.toothServiceCatalog(number).filter(item => number < 0 || item.type === treatmentType);
       const appearance = FINDING_APPEARANCE[type];
       const exact = candidates.filter(item => { const parsed = parseCatalogItem(item); return [parsed.nameEn, parsed.nameAr, item.name].some(name => [appearance.en, appearance.ar].some(label => name.trim().toLowerCase() === label.toLowerCase())); });
@@ -2595,7 +2612,7 @@ export class ExaminationComponent {
   }
   isWholeMouthService(item: CatalogItem) {
     const parsed = parseCatalogItem(item);
-    return /ortho|braces|aligner|retainer|\u062a\u0642\u0648\u064a\u0645|scal|polish|whiten|bleach|clean|تنظيف|تنضيف|جير|تلميع|تبييض|تبيض/i.test([item.code, parsed.nameEn, parsed.nameAr].join(' '));
+    return /denture|أطقم|اطقم|طقم|ortho|braces|aligner|retainer|\u062a\u0642\u0648\u064a\u0645|scal|polish|whiten|bleach|clean|تنظيف|تنضيف|جير|تلميع|تبييض|تبيض/i.test([item.code, parsed.nameEn, parsed.nameAr].join(' '));
   }
   toothServiceCatalog(number: number) { return this.catalog().filter(item => number <= 0 ? this.isWholeMouthService(item) && (number === 0 || this.wholeMouthMatches(item, -number)) : !this.isWholeMouthService(item)); }
   toothServiceTiers(number: number) {

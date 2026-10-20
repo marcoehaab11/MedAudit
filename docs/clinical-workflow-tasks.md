@@ -320,3 +320,10 @@ Visual validation: production build passed; verified the white summary in the is
 - [x] Include appointment/catalog IDs in treatment-list responses so completed visit work remains identified after reload; no database migration or pricing-rule change.
 - [x] Fix missing dependency registrations in the existing explicit-price test fixture. Final checks: 86 frontend regression tests and 30 appointment/treatment backend tests passed; frontend and API builds passed.
 - [x] Local browser verification with synthetic receptionist and doctor accounts: confirm → arrive → start without leaving the appointment card; doctor top queue; record filling #26 and whole-mouth cleaning; reopen and verify both are excluded from their completed choices; check extraction has no Treatment status. Screenshots saved locally.
+
+
+### 20 October 2026 — chart selections sidebar
+- Preserved the existing tooth drawing and six visit steps. Moved recorded tooth findings into a physical-left sidebar with localized Selected teeth and Full mouth services headings; responsive layouts stack below the chart.
+- Tooth quick menu now contains regular filling, root canal treatment, extraction, implant and crown, in that order. Historical finding types remain supported.
+- Added removable dentures as a whole-mouth finding, catalog template and independent procedure row, without marking individual teeth as completed.
+- Validation: 73 frontend tests and 46 dental domain tests passed; frontend and API builds passed.

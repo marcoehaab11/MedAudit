@@ -24,6 +24,8 @@ interface DefaultTreatmentSeed {
 }
 
 const DEFAULT_PROCEDURES: DefaultTreatmentSeed[] = [
+  { nameEn: 'Removable dentures', nameAr: 'الأطقم المتحركة', code: 'DENTURE-REM', type: 6,
+    defaultPrice: 0, description: 'الأطقم المتحركة — يحدد الطبيب السعر', priceTiers: [] },
   {
     nameEn: 'Regular Composite Filling',
     nameAr: 'حشو عادي / كمبوزيت',

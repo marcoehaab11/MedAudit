@@ -64,7 +64,7 @@ internal sealed class ExaminationCommands(
     public Task<bool> UpdateNotesAsync(Guid id, string? notes, Guid version, CancellationToken token) =>
         MutateAsync(id, Permissions.ExaminationEdit, (e, now) => { e.UpdateNotes(notes, version, now); return null; }, PlatformAuditAction.ExaminationNotesUpdated, token);
     public Task<bool> AddFindingAsync(Guid id, DentalRecordInput<DentalFindingType> input, Guid version, CancellationToken token) =>
-        MutateAsync(id, Permissions.DentalEdit, (e, now) => input.Type is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening or DentalFindingType.Orthodontics
+        MutateAsync(id, Permissions.DentalEdit, (e, now) => input.Type is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening or DentalFindingType.Orthodontics or DentalFindingType.RemovableDentures
             ? e.AddWholeMouthFinding(input.Type, input.Notes, Actor(), version, now, input.CariesClass)
             : e.AddFinding(input.ToothNumber, input.Type, input.Surfaces, input.Notes, Actor(), version, now, input.CariesClass).Id, PlatformAuditAction.FindingAdded, token);
     public Task<bool> UpdateFindingAsync(Guid id, Guid itemId, DentalRecordInput<DentalFindingType> input, Guid version, CancellationToken token) =>
@@ -72,7 +72,7 @@ internal sealed class ExaminationCommands(
     public Task<bool> RemoveFindingAsync(Guid id, Guid itemId, Guid version, CancellationToken token) =>
         MutateAsync(id, Permissions.DentalEdit, (e, now) => {
             var item = e.Findings.FirstOrDefault(x => x.Id == itemId);
-            if (item?.FindingType is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening or DentalFindingType.Orthodontics) {
+            if (item?.FindingType is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening or DentalFindingType.Orthodontics or DentalFindingType.RemovableDentures) {
                 // First removal validates the caller version, subsequent removals use the updated version.
                 var ids = e.Findings.Where(x => x.FindingType == item.FindingType).Select(x => x.Id).ToArray();
                 e.RemoveFinding(ids[0], version, now);

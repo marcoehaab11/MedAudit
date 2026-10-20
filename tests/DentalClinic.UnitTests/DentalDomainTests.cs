@@ -24,6 +24,7 @@ public sealed class DentalDomainTests
     [InlineData(DentalFindingType.ScalingAndPolishing)]
     [InlineData(DentalFindingType.Whitening)]
     [InlineData(DentalFindingType.Orthodontics)]
+    [InlineData(DentalFindingType.RemovableDentures)]
     public void WholeMouthFindingsCoverAllTeethWithoutDuplicates(DentalFindingType type)
     {
         var examination = Create();

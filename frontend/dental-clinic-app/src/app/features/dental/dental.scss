@@ -3803,3 +3803,32 @@
 
 .completed-teeth-notice { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px 16px; margin: 12px 0; color: #207558; background: #eefaf4; border: 1px solid #cce8d9; border-radius: 10px; font-size: 13px; }
 .completed-teeth-notice button { margin-inline-start: auto; height: auto; padding: 7px 12px; border: 1px solid #b7daca; border-radius: 8px; color: #207558; background: white; }
+
+/* Keep the chart drawing intact; selections live on the physical left. */
+.chart-side-layout { display:grid; grid-template-columns:minmax(260px,310px) minmax(0,1fr); grid-template-areas:"selections drawing"; gap:20px; direction:ltr; align-items:start; }
+.chart-drawing { grid-area:drawing; min-width:0; }
+.chart-selection-sidebar { grid-area:selections; min-width:0; display:grid; gap:18px; direction:rtl; }
+:host-context([dir="ltr"]) .chart-selection-sidebar { direction:ltr; }
+.chart-selection-sidebar .tooth-details, .whole-mouth-panel { margin:0; padding:16px; border:1px solid #e4eceb; border-radius:16px; background:#fff; box-shadow:0 3px 15px #123c3610; }
+.chart-selection-sidebar h3 { margin:0 0 14px; font-size:16px; color:#143c36; }
+.chart-selection-sidebar .record-stack article { padding:12px; border:1px solid #e5eeec; border-radius:12px; flex-wrap:wrap; gap:8px; margin:8px 0; }
+.chart-selection-sidebar .record-stack strong { font-size:13px; line-height:1.7; }
+.chart-selection-sidebar .record-stack button { font-size:12px; padding:4px 8px; }
+.chart-selection-sidebar details { margin:12px 0; font-size:12px; }
+.whole-mouth-cards.chart-quick-findings { display:grid; gap:10px; margin:0; padding:0; background:transparent; }
+.whole-mouth-card { display:flex; align-items:center; gap:10px; width:100%; min-height:68px; padding:12px; text-align:start; border:1px solid #e1eae8; border-radius:12px; background:white; color:#173c36; font-size:13px; }
+.whole-mouth-card.is-selected { background:#edf9f5; border-color:#279c86; }
+.service-icon { display:grid; place-items:center; flex:0 0 36px; height:36px; border-radius:50%; background:#eaf7f4; color:#078577; font-size:24px; }
+.service-state { margin-inline-start:auto; color:#078577; font-size:20px; }
+@media(max-width:1100px) { .chart-side-layout { grid-template-columns:minmax(0,1fr); grid-template-areas:"drawing" "selections"; } .chart-selection-sidebar { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) { .chart-selection-sidebar { grid-template-columns:minmax(0,1fr); } }
+
+.chart-selection-sidebar { grid-template-columns:minmax(0,1fr); }
+.chart-selection-sidebar > section { min-width:0; width:100%; box-sizing:border-box; overflow-wrap:anywhere; }
+.chart-selection-sidebar .record-stack article > div { min-width:0; }
+.chart-selection-sidebar select, .chart-selection-sidebar textarea { max-width:100%; box-sizing:border-box; }
+@media(min-width:601px) and (max-width:1100px) { .chart-selection-sidebar { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+.whole-mouth-cards.chart-quick-findings { grid-template-columns:minmax(0,1fr); }
+.whole-mouth-card { min-width:0; white-space:normal; }
+.whole-mouth-card > span:nth-child(2) { min-width:0; overflow-wrap:anywhere; }

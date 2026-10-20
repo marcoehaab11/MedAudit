@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { LocalizationService } from '../../core/localization.service';
 import { ToothChartSummary } from './dental-api.service';
-import { FINDING_APPEARANCE, SELECTABLE_FINDING_TYPES } from './dental-appearance';
+import { FINDING_APPEARANCE, QUICK_TOOTH_FINDING_TYPES } from './dental-appearance';
 import { ArtRecord, renderPlanoraTooth } from './planora-dental-art';
 import { toothName } from './tooth-labels';
 
@@ -73,7 +73,7 @@ export class DentalChartComponent implements OnChanges {
   @Output() readonly findingSelected = new EventEmitter<number>();
   @Output() readonly toothFindingSelected = new EventEmitter<{ toothNumber: number; type: number }>();
   readonly findingAppearance = FINDING_APPEARANCE;
-  readonly quickFindingTypes = SELECTABLE_FINDING_TYPES;
+  readonly quickFindingTypes = QUICK_TOOTH_FINDING_TYPES;
   readonly jaws = [
     { labelEn: 'Upper jaw', labelAr: 'الفك العلوي', lower: false, teeth: [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28] },
     { labelEn: 'Lower jaw', labelAr: 'الفك السفلي', lower: true, teeth: [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38] },
@@ -88,9 +88,9 @@ export class DentalChartComponent implements OnChanges {
   t(en: string, ar: string) { return this.i18n.language() === 'ar' ? ar : en; }
   name(number: number, short = false) { return toothName(number, this.i18n.language(), short); }
   private individualWork(number: number) {
-    return (this.find(number)?.treatmentProgress ?? []).filter(work => !(work.type === 6 && /scal|polish|whiten|bleach|clean|ortho|braces|aligner|retainer|تنظيف|تنضيف|جير|تلميع|تبييض|تبيض|تقويم/i.test(work.name)));
+    return (this.find(number)?.treatmentProgress ?? []).filter(work => !(work.type === 6 && /denture|أطقم|اطقم|scal|polish|whiten|bleach|clean|ortho|braces|aligner|retainer|تنظيف|تنضيف|جير|تلميع|تبييض|تبيض|تقويم/i.test(work.name)));
   }
-  pendingWork(number: number) { const tooth = this.find(number), work = this.individualWork(number); return work.some(t => [1,2,3].includes(t.status)) || (!work.some(t => t.status !== 5) && !!tooth?.findings.some(type => ![1,12,13,16].includes(type))); }
+  pendingWork(number: number) { const tooth = this.find(number), work = this.individualWork(number); return work.some(t => [1,2,3].includes(t.status)) || (!work.some(t => t.status !== 5) && !!tooth?.findings.some(type => ![1,12,13,16,18].includes(type))); }
   completedWork(number: number) { return this.individualWork(number).some(t => t.status === 4); }
   find(number: number) { return this.teeth.find(x => x.toothNumber === number); }
   menuBottom: number | null = null;

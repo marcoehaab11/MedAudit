@@ -3,6 +3,11 @@ import { LocalizationService } from '../../core/localization.service';
 import { DentalChartComponent } from './dental-chart.component';
 
 describe('DentalChartComponent', () => {
+  it('offers exactly the requested five tooth services in order', () => {
+    const fixture = TestBed.createComponent(DentalChartComponent);
+    expect(fixture.componentInstance.quickFindingTypes).toEqual([2,8,14,15,9]);
+  });
+
   beforeEach(async () => {
     try { window.localStorage.removeItem('medaudit.language'); } catch {}
     await TestBed.configureTestingModule({ imports: [DentalChartComponent] }).compileComponents();
