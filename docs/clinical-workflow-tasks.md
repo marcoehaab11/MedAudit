@@ -297,3 +297,12 @@ Visual validation: production build passed; verified the white summary in the is
 - [x] Preserve optional notes and record extraction type, condition and applicable direction in the saved treatment clinical notes for that tooth. Require direction before recording an impacted extraction.
 - [x] Production frontend build passed; complete examination and extraction editor suites: 56 tests passed.
 - [x] Browser verified #38 extraction selection, default hidden direction and conditional Impacted direction choices on a fresh preview origin.
+
+
+## Reception visual redesign — 20 October 2026
+- [x] Reception-only spacious layout inspired by the supplied reference: six-step header, compact patient identity, visible medical alert preview, two-column medical history and visit complaint, and fixed footer.
+- [x] Collapsible allergies, chronic conditions and current medications retain the existing tag editors and save callbacks. Surgical history and other medical notes display existing patient data only.
+- [x] Keep the current single clinical-notes field and manual Save draft operation, critical-alert modal, visit history sheet, price/accounting workflow and six clinical steps. No new backend fields or clinical rules.
+- [x] Hide the app sidebar only while reception is displayed, without changing sidebar preferences; restore the normal shell on advancing to the dental chart.
+- [x] Production frontend build and all 56 examination tests passed, including preservation of the original notes request payload.
+- [x] Browser verified desktop layout, alert visibility, expandable medical editor and transition to/from the dental chart. Verified 390px mobile layout with no page horizontal overflow and no vertical clipping in the stepper.

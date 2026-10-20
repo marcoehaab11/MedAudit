@@ -28,6 +28,21 @@ describe('ExaminationComponent', () => {
     http.verify();
   });
 
+  it('keeps six reception steps and saves the existing clinical notes without adding intake fields', () => {
+    const fixture = TestBed.createComponent(ExaminationComponent), c = fixture.componentInstance, http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    c.showMedicalAlertModal.set(false); fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelectorAll('.visit-stepper-nav .step-node').length).toBe(6);
+    expect(el.querySelector('.intake-workspace')).not.toBeNull();
+    expect(el.querySelector('.intake-history-item summary')?.textContent).toContain('الحساسيات');
+    c.notesForm.setValue({ notes: 'Existing clinical complaint' });
+    (el.querySelector('.intake-complaint-panel') as HTMLFormElement).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    const request = http.expectOne(r => r.url === '/api/examinations/e1' && r.method === 'PUT');
+    expect(request.request.body).toEqual({ notes: 'Existing clinical complaint', version: examination().version }); request.flush(null);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());
+    flushAuxiliary(http);
+  });
   it('approves the doctor price before prescription using the current treatment version', async () => {
     const fixture=TestBed.createComponent(ExaminationComponent),c=fixture.componentInstance,http=TestBed.inject(HttpTestingController);
     http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);

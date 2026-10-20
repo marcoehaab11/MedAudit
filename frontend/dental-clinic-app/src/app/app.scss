@@ -858,3 +858,11 @@ a.nav-item {
 .sidebar-nav::-webkit-scrollbar-thumb { background: #94a3b8; }
 .sidebar-nav:focus-visible { outline: 2px solid #67e8f9; outline-offset: -3px; }
 .sidebar-nav .nav-item:focus-visible { outline: 2px solid #67e8f9; outline-offset: -2px; }
+
+// Keep the reception workspace spacious without changing sidebar preferences.
+.app-shell:has(.intake-redesign) {
+  .sidebar, .sidebar-overlay, .mobile-bottom-nav, .mobile-menu-btn { display: none; }
+  .main-area { margin-inline-start: 0 !important; margin-inline-end: 0 !important; width: 100%; }
+  .page-content { padding: 0; max-width: none; }
+  .topbar-mini { box-shadow: none; border-bottom: 1px solid #edf2f4; }
+}

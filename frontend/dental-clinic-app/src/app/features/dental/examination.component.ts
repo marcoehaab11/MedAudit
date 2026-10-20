@@ -214,7 +214,7 @@ interface ToothServiceDraft {
   standalone: true,
   imports: [CommonModule, RouterLink, FormsModule, ReactiveFormsModule, DentalChartComponent, DateInputComponent, TagInputComponent, PatientVisitHistorySheetComponent, RootCanalEditorComponent, ExtractionEditorComponent],
   template: `
-    <div class="clinical-visit-container">
+    <div class="clinical-visit-container" [class.intake-redesign]="step() === 1 && !!examination() && examination()!.status !== 2 && !loading()">
       <!-- Top Navigation & Back -->
       <div class="visit-top-bar">
         <a class="back-link" routerLink="/appointments">
@@ -418,22 +418,27 @@ interface ToothServiceDraft {
         <!-- Patient Banner -->
         <header class="patient-visit-banner">
           <div class="patient-profile-snippet">
-            <div class="patient-avatar">👤</div>
+            <div class="patient-avatar">{{ step() === 1 ? examination()!.patientName.slice(0, 1) : '👤' }}</div>
             <div class="patient-info">
               <span class="patient-code">{{ examination()!.patientNumber }}</span>
               <h1 class="patient-name">{{ examination()!.patientName }}</h1>
               <p class="patient-meta">
-                <span>👨‍⚕️ {{ examination()!.doctorName }}</span>
+                <span>{{ step() === 1 ? '' : '👨‍⚕️ ' }}{{ examination()!.doctorName }}</span>
                 @if (patient()?.phone) {
-                  <span>📞 {{ patient()!.phone }}</span>
+                  <span dir="ltr">{{ patient()!.phone }}</span>
                 }
                 @if (patient()?.gender !== undefined) {
                   <span>{{ patient()!.gender === 1 ? t('Male', 'ذكر') : t('Female', 'أنثى') }}</span>
                 }
+                @if (step() === 1 && patientAge() !== null) { <span>{{ patientAge() }} {{ t('years', 'سنة') }}</span> }
               </p>
             </div>
           </div>
-
+          @if (step() === 1) {
+            <button type="button" class="intake-history-shortcut" (click)="showVisitHistorySheet.set(true)">
+              <span class="intake-icon">↺</span>{{ t('Patient visit history', 'تاريخ زيارات المريض') }} <span aria-hidden="true">‹</span>
+            </button>
+          }
           <div class="visit-quick-stats">
             @if (hasMedicalAlerts()) {
               <button
@@ -444,7 +449,8 @@ interface ToothServiceDraft {
               >
                 <span class="pill-icon pulse-alert">🚨</span>
                 <span class="pill-text">{{ totalAlertsCount() }} {{ t('Medical Alerts', 'تنبيهات طبية حرجة') }}</span>
-                <span class="pill-badge-action">⚠️ {{ t('Review', 'مراجعة') }}</span>
+                <span class="pill-badge-action">{{ t('Review', 'مراجعة') }} ‹</span>
+                @if (step() === 1) { <span class="intake-alert-preview">@for (item of patientAllergies.slice(0, 1); track item) { <span>{{ item }}</span> } @for (item of patientConditions.slice(0, 1); track item) { <span>{{ item }}</span> }</span> }
               </button>
             }
             @if (balance()) {
@@ -460,6 +466,8 @@ interface ToothServiceDraft {
 
         <!-- Stepper Navigation Bar -->
         <nav class="visit-stepper-nav" aria-label="Visit Steps">
+          @if (step() === 1) { <a class="intake-brand" routerLink="/dashboard"><svg viewBox="0 0 32 36" fill="none" aria-hidden="true"><path d="M8 3C1 2 2 13 5 19L8 31C10 37 13 30 14 24C15 19 17 19 18 24C19 30 22 37 24 31L27 19C30 13 31 2 24 3C20 2 19 6 16 6C13 6 12 2 8 3Z" stroke="currentColor" stroke-width="2.3"/></svg>Planora</a> }
+
           <div class="stepper-track">
             @for (s of steps; track s.number) {
               <button
@@ -472,11 +480,12 @@ interface ToothServiceDraft {
                 <span class="step-num">{{ s.number }}</span>
                 <div class="step-label-wrap">
                   <span class="step-icon">{{ s.icon }}</span>
-                  <span class="step-title">{{ t(s.en, s.ar) }}</span>
+                  <span class="step-title">{{ step() === 1 ? t(s.en, s.ar).slice(3) : t(s.en, s.ar) }}</span>
                 </div>
               </button>
             }
           </div>
+          @if (step() === 1) { <a class="intake-close" routerLink="/appointments">{{ t('Close', 'إغلاق') }} <span aria-hidden="true">×</span></a> }
         </nav>
 
         @if (error()) {
@@ -522,104 +531,46 @@ interface ToothServiceDraft {
         <!--  STEP 1: INTAKE & CHIEF COMPLAINT (الاستقبال والشكوى)            -->
         <!-- ════════════════════════════════════════════════════════════════ -->
         @if (step() === 1) {
-          <section class="step-card intake-card">
-            <div class="step-header-row">
-              <div class="step-header-title">
-                <h2>📋 {{ t('1. Intake & Chief Complaint', '1. استقبال المريض والشكوى الأولية') }}</h2>
-                <p>{{ t('Review medical alerts and document current visit reasons and general clinical notes.', 'مراجعة التنبيهات الطبية وتدوين سبب الزيارة وملاحظات الجلسة العامة.') }}</p>
+          <section class="intake-workspace" aria-label="{{ t('Patient reception', 'استقبال المريض') }}">
+            <div class="intake-medical-panel intake-panel">
+              <header class="intake-panel-heading">
+                <span class="intake-icon" aria-hidden="true">♡</span>
+                <div><h2>{{ t('General medical history', 'التاريخ الطبي العام') }}</h2><p>{{ t('Review the patient’s recorded medical information.', 'راجع بيانات المريض الطبية المسجلة، وافتح القسم لتعديلها.') }}</p></div>
+              </header>
+              <div class="intake-history-list">
+                <details class="intake-history-item allergies" [open]="intakeMedicalEditing">
+                  <summary><span class="history-symbol" aria-hidden="true">✧</span><strong>{{ t('Allergies', 'الحساسيات') }}</strong><span class="history-tags">@for (item of patientAllergies; track item) { <span>{{ item }}</span> } @empty { <small>{{ t('None recorded', 'لا توجد بيانات مسجلة') }}</small> }</span><span class="history-chevron" aria-hidden="true">⌄</span></summary>
+                  <div class="history-editor"><app-tag-input [tags]="patientAllergies" (tagsChange)="onAllergiesChange($event)" theme="danger" [placeholder]="t('Type an allergy and press Enter…', 'اكتب الحساسية واضغط Enter…')" [suggestions]="allergySuggestions" /></div>
+                </details>
+                <details class="intake-history-item conditions" [open]="intakeMedicalEditing">
+                  <summary><span class="history-symbol" aria-hidden="true">♡</span><strong>{{ t('Chronic conditions', 'الأمراض المزمنة') }}</strong><span class="history-tags">@for (item of patientConditions; track item) { <span>{{ item }}</span> } @empty { <small>{{ t('None recorded', 'لا توجد بيانات مسجلة') }}</small> }</span><span class="history-chevron" aria-hidden="true">⌄</span></summary>
+                  <div class="history-editor"><app-tag-input [tags]="patientConditions" (tagsChange)="onConditionsChange($event)" theme="warning" [placeholder]="t('Type a condition and press Enter…', 'اكتب الحالة واضغط Enter…')" [suggestions]="conditionSuggestions" /></div>
+                </details>
+                <details class="intake-history-item medications" [open]="intakeMedicalEditing">
+                  <summary><span class="history-symbol" aria-hidden="true">◈</span><strong>{{ t('Current medications', 'الأدوية الحالية') }}</strong><span class="history-tags">@for (item of patientMedications; track item) { <span>{{ item }}</span> } @empty { <small>{{ t('None recorded', 'لا توجد بيانات مسجلة') }}</small> }</span><span class="history-chevron" aria-hidden="true">⌄</span></summary>
+                  <div class="history-editor"><app-tag-input [tags]="patientMedications" (tagsChange)="onMedicationsChange($event)" theme="info" [placeholder]="t('Type a medication and press Enter…', 'اكتب الدواء واضغط Enter…')" [suggestions]="medicationSuggestions" /></div>
+                </details>
+                <details class="intake-history-item">
+                  <summary><span class="history-symbol" aria-hidden="true">⌁</span><strong>{{ t('Surgical history', 'التاريخ الجراحي') }}</strong><span class="history-tags"><small>{{ patient()?.surgeries?.length ? patient()!.surgeries.length + ' ' + t('record(s)', 'سجل') : t('None recorded', 'لا توجد بيانات مسجلة') }}</small></span><span class="history-chevron" aria-hidden="true">⌄</span></summary>
+                  <div class="history-readonly">@for (surgery of patient()?.surgeries ?? []; track surgery.id) { <p><strong>{{ surgery.procedure }}</strong> @if (surgery.procedureDate) { <span>{{ surgery.procedureDate }}</span> } @if (surgery.notes) { <span>{{ surgery.notes }}</span> }</p> } @empty { <p>{{ t('No surgical history recorded.', 'لا يوجد تاريخ جراحي مسجل.') }}</p> }</div>
+                </details>
+                @if (patient()?.medicalNotes) { <details class="intake-history-item"><summary><span class="history-symbol" aria-hidden="true">≡</span><strong>{{ t('Other medical notes', 'ملاحظات طبية أخرى') }}</strong><span class="history-chevron" aria-hidden="true">⌄</span></summary><p class="history-readonly">{{ patient()!.medicalNotes }}</p></details> }
               </div>
-              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                @if (patient()) {
-                  <button
-                    type="button"
-                    class="button secondary"
-                    (click)="showVisitHistorySheet.set(true)"
-                    style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.84rem; font-weight: 750;"
-                  >
-                    <span>📑</span>
-                    <span>{{ t('Past Visits Sheet (5 Stages)', 'ورقة السجل والزيارات السابقة (5 مراحل)') }}</span>
-                  </button>
-                }
-                @if (appointment() && appointment()!.status === 3 && auth.hasPermission('Appointments.Start')) {
-                  <button type="button" class="btn-start-session" (click)="startSession()">
-                    ▶ {{ t('Start Visit Timer', 'بدء وقت الجلسة الفعلي') }}
-                  </button>
-                }
-              </div>
+              <button type="button" class="intake-edit-all" (click)="intakeMedicalEditing = !intakeMedicalEditing">{{ intakeMedicalEditing ? t('Collapse sections', 'طي الأقسام') : t('Edit medical information', 'تعديل البيانات الطبية') }} <span aria-hidden="true">✎</span></button>
             </div>
-
-            <!-- Medical History Cards Grid with Multi-Select Tags -->
-            <div class="medical-alerts-grid">
-              <div class="alert-card allergies-box">
-                <div class="alert-card-head">
-                  <span class="head-icon">⚠️</span>
-                  <h3>{{ t('Allergies & Sensitivities', 'الحساسية والمحاذير') }}</h3>
-                </div>
-                <app-tag-input
-                  [tags]="patientAllergies"
-                  (tagsChange)="onAllergiesChange($event)"
-                  theme="danger"
-                  [placeholder]="t('Type an allergy and press Enter, or choose below…', 'اكتب الحساسية واضغط Enter، أو اختر أدناه…')"
-                  [suggestions]="allergySuggestions"
-                ></app-tag-input>
-              </div>
-
-              <div class="alert-card conditions-box">
-                <div class="alert-card-head">
-                  <span class="head-icon">🩺</span>
-                  <h3>{{ t('Chronic Medical Conditions', 'الأمراض والحالات المزمنة') }}</h3>
-                </div>
-                <app-tag-input
-                  [tags]="patientConditions"
-                  (tagsChange)="onConditionsChange($event)"
-                  theme="warning"
-                  [placeholder]="t('Type a condition and press Enter, or choose below…', 'اكتب الحالة واضغط Enter، أو اختر أدناه…')"
-                  [suggestions]="conditionSuggestions"
-                ></app-tag-input>
-              </div>
-
-              <div class="alert-card medications-box">
-                <div class="alert-card-head">
-                  <span class="head-icon">💊</span>
-                  <h3>{{ t('Current Patient Medications', 'الأدوية المستمرة للمريض') }}</h3>
-                </div>
-                <app-tag-input
-                  [tags]="patientMedications"
-                  (tagsChange)="onMedicationsChange($event)"
-                  theme="info"
-                  [placeholder]="t('Type a medication and press Enter, or choose below…', 'اكتب الدواء واضغط Enter، أو اختر أدناه…')"
-                  [suggestions]="medicationSuggestions"
-                ></app-tag-input>
-              </div>
+            <div class="intake-visit-column">
+              <form [formGroup]="notesForm" (ngSubmit)="saveNotes()" class="intake-panel intake-complaint-panel">
+                <header class="intake-panel-heading"><span class="intake-icon" aria-hidden="true">≡</span><div><h2>{{ t('Chief complaint & visit notes', 'الشكوى الرئيسية وملاحظات الكشف') }}</h2><p>{{ t('Document the patient’s complaint, symptoms and clinical notes for this visit.', 'دوّن شكوى المريض والأعراض وملاحظاتك الخاصة بالزيارة.') }}</p></div></header>
+                <label class="intake-complaint-field"><span class="sr-only">{{ t('Visit notes and chief complaint', 'شكوى المريض وملاحظات الكشف') }}</span><textarea formControlName="notes" [readonly]="!examination()!.canEdit" [placeholder]="t('Write the patient’s complaint and your clinical notes…', 'اكتب شكوى المريض وملاحظات الكشف هنا…')" rows="7"></textarea></label>
+                <div class="intake-note-actions"><span>{{ t('Saved to this visit’s clinical record.', 'تُحفظ في السجل السريري لهذه الزيارة.') }}</span>@if (examination()!.canEdit) { <button type="submit" class="button secondary">{{ t('Save draft', 'حفظ المسودة') }}</button> }</div>
+              </form>
+              <section class="intake-panel intake-visit-context">
+                <header class="intake-panel-heading"><span class="intake-icon" aria-hidden="true">↺</span><div><h2>{{ t('Patient record & previous visits', 'سجل المريض والزيارات السابقة') }}</h2><p>{{ t('Review previous treatment and where the patient’s care has reached.', 'راجع العلاجات السابقة وآخر ما وصل إليه علاج المريض.') }}</p></div></header>
+                <button type="button" class="intake-record-link" (click)="showVisitHistorySheet.set(true)"><span>{{ t('Open patient visit history', 'فتح سجل زيارات المريض') }}</span><span aria-hidden="true">‹</span></button>
+                @if (appointment() && appointment()!.status === 3 && auth.hasPermission('Appointments.Start')) { <button type="button" class="button secondary" (click)="startSession()">{{ t('Start visit timer', 'بدء وقت الجلسة الفعلي') }}</button> }
+              </section>
             </div>
-
-            <!-- Notes & Complaint Editor -->
-            <form [formGroup]="notesForm" (ngSubmit)="saveNotes()" class="intake-form">
-              <label class="field-label">
-                <span>{{ t('Visit Notes & Chief Complaint', 'شكوى المريض وملاحظات الكشف') }}</span>
-                <textarea
-                  rows="5"
-                  formControlName="notes"
-                  [placeholder]="t('Type patient complaint, symptoms, or visit notes…', 'اكتب شكوى المريض، الأعراض، أو الملاحظات العامة…')"
-                  [readonly]="!examination()!.canEdit"
-                ></textarea>
-              </label>
-
-              @if (examination()!.canEdit) {
-                <div class="form-actions-inline">
-                  <button type="submit" class="button secondary">
-                    💾 {{ t('Save Notes Draft', 'حفظ ملاحظات المسودة') }}
-                  </button>
-                </div>
-              }
-            </form>
-
-            <div class="step-footer-actions">
-              <div></div>
-              <button type="button" class="button primary next-btn" (click)="setStep(2)">
-                {{ t('Next: Dental Chart Examination →', 'التالي: فحص ومخطط الأسنان ➔') }}
-              </button>
-            </div>
+            <footer class="intake-bottom-bar"><a routerLink="/appointments" class="intake-cancel">{{ t('Close', 'إغلاق') }} <span aria-hidden="true">×</span></a><span class="intake-save-help">{{ t('Save your notes using Save draft.', 'احفظ ملاحظاتك من زر حفظ المسودة.') }}</span><button type="button" class="button primary" (click)="setStep(2)">{{ t('Continue to dental chart', 'متابعة إلى مخطط الأسنان') }} <span aria-hidden="true">←</span></button></footer>
           </section>
         }
 
@@ -1700,6 +1651,15 @@ export class ExaminationComponent {
   readonly medicationSuggestions = COMMON_MEDICATIONS;
 
   // Stepper State
+  intakeMedicalEditing = false;
+  patientAge(): number | null {
+    const birth = this.patient()?.dateOfBirth;
+    if (!birth) return null;
+    const date = new Date(birth + 'T00:00:00'); const today = new Date();
+    if (!Number.isFinite(date.getTime())) return null;
+    const years = today.getFullYear() - date.getFullYear() - (today.getMonth() < date.getMonth() || today.getMonth() === date.getMonth() && today.getDate() < date.getDate() ? 1 : 0);
+    return years >= 0 && years <= 130 ? years : null;
+  }
   readonly step = signal<number>(1);
   readonly steps = [
     { number: 1, icon: '📋', en: '1. Intake', ar: '1. الاستقبال والشكوى' },
