@@ -3832,3 +3832,10 @@
 .whole-mouth-cards.chart-quick-findings { grid-template-columns:minmax(0,1fr); }
 .whole-mouth-card { min-width:0; white-space:normal; }
 .whole-mouth-card > span:nth-child(2) { min-width:0; overflow-wrap:anywhere; }
+
+/* Intake navigation and patient header follow the active interface language. */
+.intake-redesign {
+  .visit-stepper-nav, .stepper-track, .patient-visit-banner,
+  .patient-profile-snippet, .patient-info, .visit-quick-stats,
+  .step-title, .intake-bottom-bar { direction: inherit; }
+}

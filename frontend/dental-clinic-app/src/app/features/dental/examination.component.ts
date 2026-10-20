@@ -214,7 +214,7 @@ interface ToothServiceDraft {
   standalone: true,
   imports: [CommonModule, RouterLink, FormsModule, ReactiveFormsModule, DentalChartComponent, DateInputComponent, TagInputComponent, PatientVisitHistorySheetComponent, RootCanalEditorComponent, ExtractionEditorComponent],
   template: `
-    <div class="clinical-visit-container" [class.intake-redesign]="step() === 1 && !!examination() && examination()!.status !== 2 && !loading()">
+    <div class="clinical-visit-container" [attr.dir]="t('ltr', 'rtl')" [class.intake-redesign]="step() === 1 && !!examination() && examination()!.status !== 2 && !loading()">
       <!-- Top Navigation & Back -->
       <div class="visit-top-bar">
         <a class="back-link" routerLink="/appointments">
