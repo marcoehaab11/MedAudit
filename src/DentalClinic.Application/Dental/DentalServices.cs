@@ -99,13 +99,13 @@ internal sealed class ExaminationCommands(
         if (e is null) return false;
         await EnsureExaminationVisibleAsync(e, token);
         var isNew = !itemId.HasValue;
-        if (input.TreatmentId.HasValue && !await store.IsRootCanalTreatmentAsync(input.TreatmentId.Value, e.PatientId, input.ToothNumber, e.DoctorUserId, token))
+        if (input.TreatmentId.HasValue && !await store.IsRootCanalTreatmentAsync(input.TreatmentId.Value, e.PatientId, input.ToothNumber, e.DoctorUserId, token, input.RestorationType == "crown-only"))
             throw new DentalStateException("The root canal treatment must match this patient, tooth and doctor.");
         if (itemId.HasValue) {
             if (e.EndodonticRecords.SingleOrDefault(x => x.Id == itemId)?.ToothNumber != input.ToothNumber)
                 throw new DentalStateException("The endodontic record belongs to a different tooth.");
-            e.UpdateEndodonticRecord(itemId.Value, input.Notes, input.Canals, version, clock.UtcNow, input.Stage, input.TreatmentId, input.RestorationType, input.PostType, input.PostCanal);
-        } else itemId = e.AddEndodonticRecord(input.ToothNumber, input.Notes, input.Canals, Actor(), version, clock.UtcNow, input.Stage, input.TreatmentId, input.RestorationType, input.PostType, input.PostCanal).Id;
+            e.UpdateEndodonticRecord(itemId.Value, input.Notes, input.Canals, version, clock.UtcNow, input.Stage, input.TreatmentId, input.RestorationType, input.PostType, input.PostCanal, input.WorkflowJson);
+        } else itemId = e.AddEndodonticRecord(input.ToothNumber, input.Notes, input.Canals, Actor(), version, clock.UtcNow, input.Stage, input.TreatmentId, input.RestorationType, input.PostType, input.PostCanal, input.WorkflowJson).Id;
         Audit(isNew ? PlatformAuditAction.EndodonticRecordCreated : PlatformAuditAction.EndodonticRecordUpdated, itemId ?? e.Id);
         await store.SaveChangesAsync(token);
         return true;

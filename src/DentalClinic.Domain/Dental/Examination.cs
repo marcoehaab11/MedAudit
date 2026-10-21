@@ -84,11 +84,11 @@ public sealed class Examination : TenantOwnedEntity
     { EnsureEditable(expectedVersion); procedures.Remove(Find(procedures, id)); Touch(now); }
 
     public EndodonticRecord AddEndodonticRecord(int toothNumber, string? notes, IEnumerable<EndodonticCanalInput> canals,
-        Guid actorId, Guid expectedVersion, DateTimeOffset now, RootCanalStage? stage = null, Guid? treatmentId = null, string? restorationType = null, string? postType = null, string? postCanal = null)
-    { EnsureEditable(expectedVersion); var item = new EndodonticRecord(TenantId, Id, PatientId, toothNumber, notes, canals, actorId, now, stage, treatmentId, restorationType, postType, postCanal); endodonticRecords.Add(item); Touch(now); return item; }
+        Guid actorId, Guid expectedVersion, DateTimeOffset now, RootCanalStage? stage = null, Guid? treatmentId = null, string? restorationType = null, string? postType = null, string? postCanal = null, string? workflowJson = null)
+    { EnsureEditable(expectedVersion); var item = new EndodonticRecord(TenantId, Id, PatientId, toothNumber, notes, canals, actorId, now, stage, treatmentId, restorationType, postType, postCanal, workflowJson); endodonticRecords.Add(item); Touch(now); return item; }
     public void UpdateEndodonticRecord(Guid id, string? notes, IEnumerable<EndodonticCanalInput> canals,
-        Guid expectedVersion, DateTimeOffset now, RootCanalStage? stage = null, Guid? treatmentId = null, string? restorationType = null, string? postType = null, string? postCanal = null)
-    { EnsureEditable(expectedVersion); Find(endodonticRecords, id).Update(notes, canals, now, stage, treatmentId, restorationType, postType, postCanal); Touch(now); }
+        Guid expectedVersion, DateTimeOffset now, RootCanalStage? stage = null, Guid? treatmentId = null, string? restorationType = null, string? postType = null, string? postCanal = null, string? workflowJson = null)
+    { EnsureEditable(expectedVersion); Find(endodonticRecords, id).Update(notes, canals, now, stage, treatmentId, restorationType, postType, postCanal, workflowJson); Touch(now); }
     public void RemoveEndodonticRecord(Guid id, Guid expectedVersion, DateTimeOffset now)
     { EnsureEditable(expectedVersion); endodonticRecords.Remove(Find(endodonticRecords, id)); Touch(now); }
 

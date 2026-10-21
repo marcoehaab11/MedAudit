@@ -350,3 +350,11 @@ Visual validation: production build passed; verified the white summary in the is
 - Validates class/material before creating a new filling; saves both in the treatment's existing persistent clinical notes alongside optional notes. Existing diagnostic chart classification is not rewritten.
 - Retained optional unfinished-treatment status in a collapsed follow-up section, existing service pricing, deferred billing and duplicate-safe retries.
 - Validation: 60 visit regression tests passed, including material persistence, validation and separate tooth drafts; frontend production build and responsive visual review completed.
+
+
+### 21 October 2026 — persistent restoration and crown workflow
+- Access cavity now selects suggested canals and adds custom canals; the measurement stage uses only selected canals and saves numbers automatically.
+- Obturation shows read-only measurements and optional post canal/type/size. Final restoration offers four materials; temporary fillings remain unfinished.
+- Optional crown work adds a fifth root stage. Standalone crowns open the same crown editor directly, with preparation, impression/scan, optional temporary crown, try-in and final cementation.
+- Added versioned persistent workflow data and a database migration. Existing stage codes and legacy records remain supported; completion guards prevent temporary restorations or unfinished crowns being marked complete.
+- Verified save/reopen at the exact crown substep and completion on the existing treatment without adding a second charge, using isolated synthetic data. Frontend: 107 tests passed; backend: 52 tests passed; production frontend/API builds passed. Reviewed narrow-screen layout.

@@ -6,20 +6,28 @@ export const ROOT_CANAL_STAGES = [
   { value: 1, number: 1, en: 'Access cavity' },
   { value: 2, number: 2, en: 'Working length and final file size' },
   { value: 4, number: 3, en: 'Obturation' },
-  { value: 5, number: 4, en: 'Composite filling' },
+  { value: 5, number: 4, en: 'Final restoration' },
 ];
 
-export type RestorationType = 'composite' | 'post-core' | 'post-core-crown' | 'crown';
+export type RestorationType = 'composite' | 'post-core' | 'post-core-crown' | 'crown' | 'crown-only';
 export function rootCanalStages(mode: RestorationType = 'composite') {
-  return [...ROOT_CANAL_STAGES.slice(0, 3), ...(mode === 'composite' ? [ROOT_CANAL_STAGES[3]] : mode === 'crown' ? [{ value: 8, number: 4, en: 'Crown' }] : [{ value: 7, number: 4, en: 'Post and core' }, ...(mode === 'post-core-crown' ? [{ value: 8, number: 5, en: 'Crown' }] : [])])];
+  if (mode === 'crown-only') return [{value:8,number:1,en:'Crown'}];
+  return [...ROOT_CANAL_STAGES, ...(['crown','post-core-crown'].includes(mode) ? [{value:8,number:5,en:'Crown'}] : [])];
 }
+export interface CrownDraft { type:string; material:string; shade:string; laboratory:string; step:number; completed:boolean[]; dates:string[]; notes:string[]; temporary:boolean; }
+export interface ClinicalWorkflow { version:1; finalMaterial:string|null; needsPost:boolean; postSize:string; needsCrown:boolean; obturationDone:boolean; crown:CrownDraft; unselectedCanals?:RootCanalDraft['canals']; }
+export function workflowFor(draft:RootCanalDraft):ClinicalWorkflow {
+  return draft.workflow ??= {version:1,finalMaterial:draft.stage===6?'composite':null,needsPost:!!draft.postType || ['post-core','post-core-crown'].includes(draft.restorationType ?? ''),postSize:'',needsCrown:['crown','post-core-crown','crown-only'].includes(draft.restorationType ?? ''),obturationDone:draft.stage>=5,crown:{type:'',material:'',shade:'',laboratory:'',step:1,completed:Array(5).fill(draft.stage===6),dates:Array(5).fill(''),notes:Array(5).fill(''),temporary:false}};
+}
+export function serializeWorkflow(draft:RootCanalDraft) { return JSON.stringify({...workflowFor(draft),unselectedCanals:draft.canals.filter(c=>c.enabled===false)}); }
 export interface RootCanalDraft {
+  workflow?:ClinicalWorkflow;
   restorationType?: RestorationType;
   postType?: 'fiber' | 'metal' | 'custom' | null;
   postCanal?: string | null;
   stage: number;
   notes: string;
-  canals: { name: string; lengthMm: number | null; finalFileSize: string; notes?: string }[];
+  canals: { name: string; lengthMm: number | null; finalFileSize: string; notes?: string; enabled?:boolean }[];
 }
 
 // Clinic-provided templates. Existing extra canals are preserved when resuming.
@@ -33,10 +41,13 @@ export function rootCanalNames(tooth: number): string[] {
 }
 
 export function rootCanalDraft(tooth: number, record?: EndodonticRecord): RootCanalDraft {
-  const names = rootCanalNames(tooth);
+  let workflow:ClinicalWorkflow|undefined;
+  try { const parsed=record?.workflowJson ? JSON.parse(record.workflowJson) : undefined; if(parsed?.version===1)workflow=parsed; } catch {}
+  const names = workflow ? [...(record?.canals.map(c=>c.name) ?? []),...(workflow.unselectedCanals?.map(c=>c.name) ?? [])] : rootCanalNames(tooth);
   for (const canal of record?.canals ?? []) if (!names.some(name => name.toLowerCase() === canal.name.toLowerCase())) names.push(canal.name);
-  return { restorationType: record?.restorationType ?? undefined, postType: record?.postType ?? null, postCanal: record?.postCanal ?? null, stage: record?.stage ?? 1, notes: record?.notes ?? '', canals: names.map(name => {
-    const saved = record?.canals.find(canal => canal.name.toLowerCase() === name.toLowerCase());
-    return { name, lengthMm: saved?.lengthMm ?? null, finalFileSize: saved?.finalFileSize ?? '', notes: saved?.notes };
+  return { workflow,restorationType:record?.restorationType ?? undefined,postType:record?.postType ?? null,postCanal:record?.postCanal ?? null,stage:record?.stage===7 ? 4 : record?.stage ?? 1,notes:record?.notes ?? '',canals:names.map(name=>{
+    const saved=record?.canals.find(c=>c.name.toLowerCase()===name.toLowerCase());
+    const hidden=workflow?.unselectedCanals?.find(c=>c.name===name);
+    return {name,lengthMm:saved?.lengthMm ?? hidden?.lengthMm ?? null,finalFileSize:saved?.finalFileSize ?? hidden?.finalFileSize ?? '',notes:saved?.notes ?? hidden?.notes,enabled:!hidden};
   }) };
 }

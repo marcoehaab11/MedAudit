@@ -5,7 +5,7 @@ namespace DentalClinic.Application.Dental;
 
 public sealed record DentalRecordInput<TType>(int ToothNumber, TType Type,
     IReadOnlyCollection<ToothSurface> Surfaces, string? Notes, int? CariesClass = null) where TType : struct, Enum;
-public sealed record EndodonticInput(int ToothNumber, string? Notes, IReadOnlyCollection<EndodonticCanalInput> Canals, RootCanalStage? Stage = null, Guid? TreatmentId = null, string? RestorationType = null, string? PostType = null, string? PostCanal = null);
+public sealed record EndodonticInput(int ToothNumber, string? Notes, IReadOnlyCollection<EndodonticCanalInput> Canals, RootCanalStage? Stage = null, Guid? TreatmentId = null, string? RestorationType = null, string? PostType = null, string? PostCanal = null, string? WorkflowJson = null);
 
 public sealed record DentalFindingDetails(Guid Id, Guid ToothId, int ToothNumber, DentalFindingType Type,
     IReadOnlyCollection<ToothSurface> Surfaces, string? Notes, DateTimeOffset CreatedAt, Guid CreatedBy, int? CariesClass = null);
@@ -13,7 +13,7 @@ public sealed record DentalProcedureDetails(Guid Id, Guid ToothId, int ToothNumb
     IReadOnlyCollection<ToothSurface> Surfaces, string? Notes, DateTimeOffset CreatedAt, Guid CreatedBy);
 public sealed record EndodonticCanalDetails(Guid Id, string Name, decimal? LengthMm, string? Notes, string? FinalFileSize = null);
 public sealed record EndodonticDetails(Guid Id, Guid ToothId, int ToothNumber, string? Notes,
-    IReadOnlyCollection<EndodonticCanalDetails> Canals, DateTimeOffset CreatedAt, Guid CreatedBy, RootCanalStage? Stage = null, Guid? TreatmentId = null, Guid? ExaminationId = null, DateTimeOffset? UpdatedAt = null, string? RestorationType = null, string? PostType = null, string? PostCanal = null);
+    IReadOnlyCollection<EndodonticCanalDetails> Canals, DateTimeOffset CreatedAt, Guid CreatedBy, RootCanalStage? Stage = null, Guid? TreatmentId = null, Guid? ExaminationId = null, DateTimeOffset? UpdatedAt = null, string? RestorationType = null, string? PostType = null, string? PostCanal = null, string? WorkflowJson = null);
 
 public sealed record ExaminationDetails(Guid Id, Guid PatientId, string PatientName, string PatientNumber,
     Guid AppointmentId, AppointmentStatus AppointmentStatus, Guid DoctorUserId, string DoctorName,

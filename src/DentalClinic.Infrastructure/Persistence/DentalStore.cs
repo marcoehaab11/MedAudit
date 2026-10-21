@@ -66,7 +66,7 @@ internal sealed class DentalStore(ApplicationDbContext context) : IDentalStore
         var teeth = PermanentToothCatalog.All.Select(tooth => new ToothChartSummary(tooth.Id, tooth.Number,
             findings.Where(x => x.ToothNumber == tooth.Number).OrderByDescending(x => x.CreatedAt).Select(x => x.FindingType).Distinct().ToArray(),
             procedures.Where(x => x.ToothNumber == tooth.Number).OrderByDescending(x => x.CreatedAt).Select(x => x.ProcedureType).Distinct().ToArray(),
-            endodontic.Any(x => x.ToothNumber == tooth.Number),
+            endodontic.Any(x => x.ToothNumber == tooth.Number && x.RestorationType != "crown-only"),
             findings.Where(x => x.ToothNumber == tooth.Number).Select(x => (DateTimeOffset?)x.CreatedAt)
                 .Concat(procedures.Where(x => x.ToothNumber == tooth.Number).Select(x => (DateTimeOffset?)x.CreatedAt))
                 .Concat(endodontic.Where(x => x.ToothNumber == tooth.Number).Select(x => (DateTimeOffset?)x.CreatedAt)).Max(),
@@ -83,8 +83,8 @@ internal sealed class DentalStore(ApplicationDbContext context) : IDentalStore
             .ToListAsync(token);
     public Task<bool> HasUnapprovedVisitPricesAsync(Guid appointmentId, CancellationToken token) =>
         context.Treatments.AnyAsync(item => item.AppointmentId == appointmentId && !item.PriceConfirmed && item.Status != DentalClinic.Domain.Treatments.TreatmentStatus.Cancelled, token);
-    public Task<bool> IsRootCanalTreatmentAsync(Guid treatmentId, Guid patientId, int toothNumber, Guid doctorUserId, CancellationToken cancellationToken) =>
-        context.Treatments.AnyAsync(x => x.Id == treatmentId && x.PatientId == patientId && x.Type == DentalClinic.Domain.Treatments.TreatmentType.RootCanal
+    public Task<bool> IsRootCanalTreatmentAsync(Guid treatmentId, Guid patientId, int toothNumber, Guid doctorUserId, CancellationToken cancellationToken, bool crownOnly = false) =>
+        context.Treatments.AnyAsync(x => x.Id == treatmentId && x.PatientId == patientId && x.Type == (crownOnly ? DentalClinic.Domain.Treatments.TreatmentType.Crown : DentalClinic.Domain.Treatments.TreatmentType.RootCanal)
             && x.Status != DentalClinic.Domain.Treatments.TreatmentStatus.Cancelled && x.Teeth.Any(t => t.ToothNumber == toothNumber)
             && context.DoctorProfiles.Any(d => d.Id == x.DoctorProfileId && d.ClinicUserId == doctorUserId), cancellationToken);
     public void Add(Examination examination) => context.Examinations.Add(examination);
@@ -101,5 +101,5 @@ internal sealed class DentalStore(ApplicationDbContext context) : IDentalStore
     private static DentalProcedureDetails Map(DentalProcedure x) => new(x.Id, x.ToothId, x.ToothNumber, x.ProcedureType,
         x.Surfaces.Select(s => s.Surface).ToArray(), x.Notes, x.CreatedAt, x.CreatedBy);
     private static EndodonticDetails Map(EndodonticRecord x) => new(x.Id, x.ToothId, x.ToothNumber, x.Notes,
-        x.Canals.Select(c => new EndodonticCanalDetails(c.Id, c.Name, c.LengthMm, c.Notes, c.FinalFileSize)).ToArray(), x.CreatedAt, x.CreatedBy, x.Stage, x.TreatmentId, x.ExaminationId, x.UpdatedAt, x.RestorationType, x.PostType, x.PostCanal);
+        x.Canals.Select(c => new EndodonticCanalDetails(c.Id, c.Name, c.LengthMm, c.Notes, c.FinalFileSize)).ToArray(), x.CreatedAt, x.CreatedBy, x.Stage, x.TreatmentId, x.ExaminationId, x.UpdatedAt, x.RestorationType, x.PostType, x.PostCanal, x.WorkflowJson);
 }

@@ -108,12 +108,12 @@ public sealed class EndodonticRecord : TenantOwnedEntity
     private readonly List<EndodonticCanal> canals = [];
     private EndodonticRecord() { }
     internal EndodonticRecord(Guid tenantId, Guid examinationId, Guid patientId, int toothNumber,
-        string? notes, IEnumerable<EndodonticCanalInput> canalInputs, Guid createdBy, DateTimeOffset createdAt, RootCanalStage? stage = null, Guid? treatmentId = null, string? restorationType = null, string? postType = null, string? postCanal = null)
+        string? notes, IEnumerable<EndodonticCanalInput> canalInputs, Guid createdBy, DateTimeOffset createdAt, RootCanalStage? stage = null, Guid? treatmentId = null, string? restorationType = null, string? postType = null, string? postCanal = null, string? workflowJson = null)
     {
         TenantId = tenantId; ExaminationId = examinationId; PatientId = patientId;
         ToothNumber = PermanentToothCatalog.Get(toothNumber).Number;
         ToothId = PermanentToothCatalog.Get(toothNumber).Id;
-        CreatedBy = createdBy; CreatedAt = createdAt; Apply(notes, canalInputs, createdAt, stage, treatmentId, restorationType, postType, postCanal);
+        CreatedBy = createdBy; CreatedAt = createdAt; Apply(notes, canalInputs, createdAt, stage, treatmentId, restorationType, postType, postCanal, workflowJson);
     }
     public Guid ExaminationId { get; private set; }
     public Guid PatientId { get; private set; }
@@ -123,24 +123,37 @@ public sealed class EndodonticRecord : TenantOwnedEntity
     public string? RestorationType { get; private set; }
     public string? PostType { get; private set; }
     public string? PostCanal { get; private set; }
+    public string? WorkflowJson { get; private set; }
     public Guid? TreatmentId { get; private set; }
     public string? Notes { get; private set; }
     public Guid CreatedBy { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
     public IReadOnlyCollection<EndodonticCanal> Canals => canals;
-    internal void Update(string? notes, IEnumerable<EndodonticCanalInput> canalInputs, DateTimeOffset updatedAt, RootCanalStage? stage = null, Guid? treatmentId = null, string? restorationType = null, string? postType = null, string? postCanal = null) =>
-        Apply(notes, canalInputs, updatedAt, stage, treatmentId, restorationType, postType, postCanal);
-    private void Apply(string? notes, IEnumerable<EndodonticCanalInput> canalInputs, DateTimeOffset updatedAt, RootCanalStage? stage, Guid? treatmentId, string? restorationType, string? postType, string? postCanal)
+    internal void Update(string? notes, IEnumerable<EndodonticCanalInput> canalInputs, DateTimeOffset updatedAt, RootCanalStage? stage = null, Guid? treatmentId = null, string? restorationType = null, string? postType = null, string? postCanal = null, string? workflowJson = null) =>
+        Apply(notes, canalInputs, updatedAt, stage, treatmentId, restorationType, postType, postCanal, workflowJson);
+    private void Apply(string? notes, IEnumerable<EndodonticCanalInput> canalInputs, DateTimeOffset updatedAt, RootCanalStage? stage, Guid? treatmentId, string? restorationType, string? postType, string? postCanal, string? workflowJson)
     {
         if (stage.HasValue && !Enum.IsDefined(stage.Value)) throw new ArgumentOutOfRangeException(nameof(stage));
         if (treatmentId == Guid.Empty || TreatmentId.HasValue && treatmentId != TreatmentId) throw new ArgumentException("The treatment link cannot be changed.", nameof(treatmentId));
-        if (restorationType is not (null or "composite" or "post-core" or "post-core-crown" or "crown")) throw new ArgumentException("Invalid restoration type.");
+        if (restorationType is not (null or "composite" or "post-core" or "post-core-crown" or "crown" or "crown-only")) throw new ArgumentException("Invalid restoration type.");
         if (postType is not (null or "fiber" or "metal" or "custom")) throw new ArgumentException("Invalid post type.");
         if (stage == RootCanalStage.Completed && restorationType is "post-core" or "post-core-crown" && postType is null) throw new ArgumentException("Post type is required.");
+        var cleanWorkflow = DentalText.Optional(workflowJson ?? WorkflowJson, nameof(workflowJson), 16000);
+        if (cleanWorkflow is not null) {
+            System.Text.Json.JsonDocument parsedWorkflow;
+            try { parsedWorkflow = System.Text.Json.JsonDocument.Parse(cleanWorkflow); } catch (System.Text.Json.JsonException error) { throw new ArgumentException("Invalid clinical workflow JSON.", nameof(workflowJson), error); }
+            using var document = parsedWorkflow;
+            var data = document.RootElement;
+            if (data.ValueKind != System.Text.Json.JsonValueKind.Object || !data.TryGetProperty("version", out var version) || version.GetInt32() != 1) throw new ArgumentException("Invalid clinical workflow version.");
+            if (stage == RootCanalStage.Completed) {
+                if (restorationType != "crown-only" && (!data.TryGetProperty("finalMaterial", out var material) || material.GetString() is not ("composite" or "amalgam" or "glass-ionomer"))) throw new ArgumentException("A permanent restoration is required before completion.");
+                if ((restorationType == "crown-only" || data.TryGetProperty("needsCrown", out var needed) && needed.GetBoolean()) && (!data.TryGetProperty("crown", out var crown) || !crown.TryGetProperty("completed", out var completed) || completed.GetArrayLength() != 5 || completed.EnumerateArray().Where((item, index) => index != 2).Any(item => item.ValueKind != System.Text.Json.JsonValueKind.True))) throw new ArgumentException("Final crown cementation is not completed.");
+            }
+        }
         var cleanNotes = DentalText.Optional(notes, nameof(notes), 2000);
         var inputs = canalInputs?.ToArray() ?? throw new ArgumentNullException(nameof(canalInputs));
-        if (inputs.Length == 0) throw new ArgumentException("At least one canal is required.", nameof(canalInputs));
+        if (inputs.Length == 0 && restorationType != "crown-only") throw new ArgumentException("At least one canal is required.", nameof(canalInputs));
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var validated = new List<EndodonticCanal>();
         foreach (var input in inputs)
@@ -157,7 +170,7 @@ public sealed class EndodonticRecord : TenantOwnedEntity
             else { existing.CopyMeasurementsFrom(item); retained.Add(existing); }
         }
         canals.Clear(); canals.AddRange(retained);
-        Notes = cleanNotes; Stage = stage; TreatmentId = treatmentId; RestorationType = restorationType; PostType = postType; PostCanal = postCanal;
+        WorkflowJson = cleanWorkflow; Notes = cleanNotes; Stage = stage; TreatmentId = treatmentId; RestorationType = restorationType; PostType = postType; PostCanal = postCanal;
         UpdatedAt = updatedAt;
     }
 }

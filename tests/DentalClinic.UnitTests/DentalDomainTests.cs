@@ -8,6 +8,34 @@ public sealed class DentalDomainTests
     private static readonly Guid Actor = Guid.NewGuid();
     private static readonly DateTimeOffset Now = new(2026, 8, 15, 10, 0, 0, TimeSpan.Zero);
 
+    private static string Workflow(string material, bool crown, bool finished) => System.Text.Json.JsonSerializer.Serialize(new {
+        version = 1, finalMaterial = material, needsCrown = crown,
+        crown = new { completed = new[] { true, true, false, true, finished } }
+    });
+    [Fact]
+    public void TemporaryRestorationCannotCompleteButIsSavedForFollowUp()
+    {
+        var e = Create(); var json = Workflow("temporary", false, false);
+        var record = e.AddEndodonticRecord(26, "Follow-up", [new("MB", 22, null, "30")], Actor, e.Version, Now, RootCanalStage.FinalRestoration, restorationType: "composite", workflowJson: json);
+        Assert.Equal(json, record.WorkflowJson);
+        Assert.Throws<ArgumentException>(() => e.UpdateEndodonticRecord(record.Id, null, [new("MB", 22, null, "30")], e.Version, Now, RootCanalStage.Completed, restorationType: "composite", workflowJson: json));
+        Assert.NotEqual(RootCanalStage.Completed, record.Stage);
+    }
+    [Fact]
+    public void CrownCannotCompleteUntilRequiredStepsAndFinalCementationAreDone()
+    {
+        var e = Create();
+        Assert.Throws<ArgumentException>(() => e.AddEndodonticRecord(26, null, [new("MB", 22, null, "30")], Actor, e.Version, Now, RootCanalStage.Completed, restorationType: "crown", workflowJson: Workflow("composite", true, false)));
+        var record = e.AddEndodonticRecord(26, null, [new("MB", 22, null, "30")], Actor, e.Version, Now, RootCanalStage.Completed, restorationType: "crown", workflowJson: Workflow("composite", true, true));
+        Assert.Equal(RootCanalStage.Completed, record.Stage);
+    }
+    [Fact]
+    public void StandaloneCrownStoresProgressWithoutInventingRootCanals()
+    {
+        var e = Create(); var json = Workflow("composite", true, true);
+        var record = e.AddEndodonticRecord(16, null, [], Actor, e.Version, Now, RootCanalStage.Completed, restorationType: "crown-only", workflowJson: json);
+        Assert.Empty(record.Canals); Assert.Equal("crown-only", record.RestorationType); Assert.Equal(json, record.WorkflowJson);
+    }
     [Theory]
     [InlineData(DentalFindingType.Extraction)]
     [InlineData(DentalFindingType.Implant)]

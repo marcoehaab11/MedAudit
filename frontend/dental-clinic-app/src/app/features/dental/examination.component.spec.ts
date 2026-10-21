@@ -374,6 +374,13 @@ describe('ExaminationComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('[data-tooth="24"] .filling-material-grid input')).toHaveLength(4);
     c.toothService(24).fillingMaterial='invalid'; await c.executeToothService(24); http.expectNone('/api/treatments');
   });
+  it('routes a standalone crown through a crown-only workflow and retains pending root restorations',()=>{
+    const c=TestBed.createComponent(ExaminationComponent).componentInstance,http=TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());flushAuxiliary(http);
+    c.catalog.set([{id:'crown',code:'C',name:'Crown',type:5,defaultPrice:500,isActive:true}]);
+    c.examination.set({...examination(),findings:[{...examination().findings[0],type:9}]});c.treatmentTeeth=[36];
+    expect(c.toothServiceIsRootCanal(36)).toBe(true);const crown=c.rootCanalFor(36);expect(crown.restorationType).toBe('crown-only');expect(crown.stage).toBe(8);expect(crown.canals).toEqual([]);expect(c.validRootCanal(36)).toBe(true);
+  });
   it('uses the chart filling classification without rewriting it from procedures', async () => {
     const c = TestBed.createComponent(ExaminationComponent).componentInstance;
     const http = TestBed.inject(HttpTestingController);

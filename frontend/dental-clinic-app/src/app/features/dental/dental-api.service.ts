@@ -48,6 +48,7 @@ export interface EndodonticCanal {
   notes?: string;
 }
 export interface EndodonticRecord {
+  workflowJson?:string|null;
   restorationType?: import('./root-canal').RestorationType | null;
   postType?: 'fiber' | 'metal' | 'custom' | null;
   postCanal?: string | null;
@@ -94,6 +95,7 @@ export interface DentalRecordRequest {
   version: string;
 }
 export interface EndodonticRequest {
+  workflowJson?:string;
   restorationType?: import('./root-canal').RestorationType;
   postType?: 'fiber' | 'metal' | 'custom' | null;
   postCanal?: string | null;

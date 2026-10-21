@@ -28,7 +28,7 @@ import { FinanceApiService, PatientBalance } from '../finance/finance-api.servic
 import { FINDING_APPEARANCE, SELECTABLE_FINDING_TYPES, PROCEDURE_APPEARANCE, SURFACES } from './dental-appearance';
 import { DentalApiService, ExaminationDetails, ToothChartSummary, PatientDentalChart, EndodonticRecord } from './dental-api.service';
 import { RootCanalEditorComponent } from './root-canal-editor.component';
-import { RootCanalDraft, rootCanalDraft, rootCanalStages } from './root-canal';
+import { RootCanalDraft, rootCanalDraft, rootCanalStages, serializeWorkflow, workflowFor } from './root-canal';
 import { DentalChartComponent } from './dental-chart.component';
 import { allowedCariesClasses, toothName } from './tooth-labels';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
@@ -519,7 +519,7 @@ interface ToothServiceDraft {
                 <span>{{ work.status === 3 ? t('In progress', 'قيد العلاج') : work.status === 2 ? t('Scheduled', 'مجدول') : t('Planned', 'مخطط') }}</span>
                 <p>@for (number of work.toothNumbers; track number) { <span>#{{ number }} · {{ toothLabel(number) }} </span> }</p>
                 @if (work.notes) { <p class="remaining-work-notes">{{ work.notes }}</p> }
-                @if (work.type === 4 && work.toothNumbers.length === 1 && examination()!.canEdit) {
+                @if ([4,5].includes(work.type) && work.toothNumbers.length === 1 && examination()!.canEdit) {
                   <button type="button" class="resume-saved-treatment" [disabled]="savingTreatment() || savingRootCanal()" (click)="resumeRootCanal(work)">{{ t('Open existing treatment', 'فتح العلاج المسجل واستكماله') }} ←</button>
                 } @else {
                   <a [routerLink]="['/treatments', work.id]">{{ t('Open existing treatment', 'فتح العلاج المسجل واستكماله') }} ←</a>
@@ -2638,7 +2638,7 @@ export class ExaminationComponent {
       if (item) {
         const tier = parseCatalogItem(item).priceTiers[0];
         row.catalogId = item.id; row.tierId = tier?.id ?? 'base'; row.price = tier?.price ?? item.defaultPrice ?? 0;
-        if (item.type === 4) row.status = 'in_progress';
+        if ([4,5].includes(item.type)) row.status = 'in_progress';
       }
     }
     return row;
@@ -2672,7 +2672,7 @@ export class ExaminationComponent {
   readonly rootCanalDrafts = new Map<number, { treatmentId?: string; draft: RootCanalDraft }>();
   toothServiceIsRootCanal(number: number) {
     const row = this.toothService(number);
-    return number > 0 && (row.treatmentType ?? this.catalog().find(item => item.id === row.catalogId)?.type) === 4;
+    return number > 0 && [4,5].includes(row.treatmentType ?? this.catalog().find(item => item.id === row.catalogId)?.type ?? 0);
   }
   previousRootCanals(number: number): EndodonticRecord[] {
     const treatmentId = this.toothService(number).treatmentId;
@@ -2684,8 +2684,10 @@ export class ExaminationComponent {
     const treatmentId = this.toothService(number).treatmentId;
     const cached = this.rootCanalDrafts.get(number);
     if (cached && cached.treatmentId === treatmentId) return cached.draft;
-    const record = this.examination()?.endodonticRecords.filter(record => record.toothNumber === number && (!record.treatmentId || record.treatmentId === treatmentId)).at(-1) ?? this.previousRootCanals(number)[0];
+    const crownOnly = (this.toothService(number).treatmentType ?? this.catalog().find(item=>item.id===this.toothService(number).catalogId)?.type) === 5;
+    const record = this.examination()?.endodonticRecords.filter(record => (record.restorationType==='crown-only')===crownOnly && record.toothNumber === number && (!record.treatmentId || record.treatmentId === treatmentId)).at(-1) ?? this.previousRootCanals(number)[0];
     const draft = rootCanalDraft(number, record);
+    if (crownOnly) { draft.restorationType = 'crown-only'; draft.canals = []; if (!record) draft.stage = 8; }
     if (!draft.restorationType) {
       const finding = this.examination()?.findings.filter(f => f.toothNumber === number && [8,10,11,17].includes(f.type)).at(-1)?.type ?? this.patientChart()?.teeth.find(t => t.toothNumber === number)?.findings.filter(type => [8,10,11,17].includes(type)).at(-1);
       const name = this.toothService(number).treatmentName ?? this.catalog().find(c => c.id === this.toothService(number).catalogId)?.name ?? '';
@@ -2696,7 +2698,7 @@ export class ExaminationComponent {
   }
   validRootCanal(number: number) {
     const draft = this.rootCanalFor(number);
-    const valid = draft.stage >= 1 && draft.stage <= 8 && draft.canals.length > 0 && draft.notes.length <= 2000 && draft.canals.every(c => (c.lengthMm === null || Number.isFinite(c.lengthMm) && c.lengthMm > 0 && c.lengthMm <= 50) && c.finalFileSize.length <= 50);
+    const valid = draft.stage >= 1 && draft.stage <= 8 && (draft.restorationType==='crown-only' || draft.canals.some(c=>c.enabled!==false)) && draft.notes.length <= 2000 && draft.canals.every(c => (c.lengthMm === null || Number.isFinite(c.lengthMm) && c.lengthMm > 0 && c.lengthMm <= 50) && c.finalFileSize.length <= 50);
     if (!valid) this.error.set(this.t('Check the treatment stage and canal measurements (greater than 0 and at most 50 mm).', 'راجع المرحلة وقياسات القنوات؛ الطول أكبر من صفر وحتى 50 مم.'));
     return valid;
   }
@@ -2708,7 +2710,7 @@ export class ExaminationComponent {
     this.savingRootCanal.set(true); this.error.set('');
     try {
       const treatment = await firstValueFrom(this.treatmentApi.treatment(work.id));
-      if (treatment.patientId !== exam.patientId || treatment.type !== 4 || treatment.toothNumbers.length !== 1 || ![1, 2, 3].includes(treatment.status) || !treatment.catalogItemId) throw new Error('Invalid treatment');
+      if (treatment.patientId !== exam.patientId || ![4,5].includes(treatment.type) || treatment.toothNumbers.length !== 1 || ![1, 2, 3].includes(treatment.status) || !treatment.catalogItemId) throw new Error('Invalid treatment');
       if (!this.patientChart()) this.patientChart.set(await firstValueFrom(this.api.chart(exam.patientId)));
       if (!this.catalog().length) this.catalog.set((await firstValueFrom(this.treatmentApi.catalog())).filter(item => item.isActive));
       const number = treatment.toothNumbers[0];
@@ -2751,7 +2753,7 @@ export class ExaminationComponent {
     const exam = this.examination()!;
     const row = this.toothService(number), draft = this.rootCanalFor(number);
     const existing = exam.endodonticRecords.find(record => record.toothNumber === number && (!record.treatmentId || record.treatmentId === row.treatmentId));
-    const request = { restorationType: draft.restorationType, postType: draft.postType, postCanal: draft.postCanal, toothNumber: number, treatmentId: row.treatmentId, stage: draft.stage, notes: draft.notes || undefined, canals: draft.canals.map(c => ({ ...c, finalFileSize: c.finalFileSize || undefined })), version: exam.version };
+    const request = { workflowJson: serializeWorkflow(draft), restorationType: draft.restorationType, postType: workflowFor(draft).needsPost ? draft.postType : null, postCanal: workflowFor(draft).needsPost ? draft.postCanal : null, toothNumber: number, treatmentId: row.treatmentId, stage: draft.stage, notes: draft.notes || undefined, canals: draft.canals.filter(c=>c.enabled!==false).map(c => ({ ...c, finalFileSize: c.finalFileSize || undefined })), version: exam.version };
     await firstValueFrom(existing ? this.api.updateEndodontic(exam.id, existing.id, request) : this.api.addEndodontic(exam.id, request));
     this.examination.set(await firstValueFrom(this.api.examination(exam.id)));
     this.loadPatient(exam.patientId);

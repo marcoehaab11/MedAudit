@@ -6,7 +6,7 @@ namespace DentalClinic.Application.Dental;
 public interface IDentalStore
 {
     Task<bool> HasUnapprovedVisitPricesAsync(Guid appointmentId, CancellationToken token);
-    Task<bool> IsRootCanalTreatmentAsync(Guid treatmentId, Guid patientId, int toothNumber, Guid doctorUserId, CancellationToken cancellationToken);
+    Task<bool> IsRootCanalTreatmentAsync(Guid treatmentId, Guid patientId, int toothNumber, Guid doctorUserId, CancellationToken cancellationToken, bool crownOnly = false);
     Task<DentalPatient?> FindPatientAsync(Guid patientId, CancellationToken cancellationToken);
     Task<ClinicalAppointment?> FindAppointmentAsync(Guid appointmentId, CancellationToken cancellationToken);
     Task<Guid?> FindDoctorProfileIdForUserAsync(Guid userId, CancellationToken cancellationToken);
