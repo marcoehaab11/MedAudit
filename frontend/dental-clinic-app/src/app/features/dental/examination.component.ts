@@ -584,7 +584,7 @@ interface ToothServiceDraft {
             </div>
             <div class="chart-side-layout">
             <div class="chart-drawing">
-            <app-dental-chart [showSearch]="false" [teeth]="chartTeeth()" [completedHighlights]="recentlyCompletedTeeth()" [multiSelect]="true" [selectedNumber]="selected" [selectedTeeth]="selectedTeeth"
+            <app-dental-chart [showHeading]="false" [showSearch]="false" [teeth]="chartTeeth()" [completedHighlights]="recentlyCompletedTeeth()" [multiSelect]="true" [selectedNumber]="selected" [selectedTeeth]="selectedTeeth"
               [showQuickFindings]="examination()!.canEdit" [savingFinding]="savingFinding()"
               (selectedNumberChange)="onSelectedToothChange($event)" (selectedTeethChange)="onSelectedTeethChange($event)"
               (findingSelected)="chooseFindingType($event)" (toothFindingSelected)="chooseToothFinding($event)" />
@@ -660,8 +660,13 @@ interface ToothServiceDraft {
               <div class="whole-mouth-cards chart-quick-findings">
                 @for (type of wholeMouthFindingTypes; track type) {
                   <button type="button" class="whole-mouth-card" [class.is-selected]="wholeMouthFinding(type)" [disabled]="!examination()!.canEdit || savingFinding()" (click)="toggleWholeMouthFinding(type)">
-                    <span class="service-icon" aria-hidden="true">{{ type === 12 ? '✧' : type === 13 ? '✦' : type === 16 ? '♧' : '⌣' }}</span>
-                    <span>{{ findingLabel(type) }}</span><span class="service-state" aria-hidden="true">{{ wholeMouthFinding(type) ? '✓' : '+' }}</span>
+                    <span class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                      @if (type === 16) { <rect x="3" y="6" width="18" height="12" rx="4"/><path d="M3 12h18M8 9v6m8-6v6"/> }
+                      @else if (type === 18) { <path d="M3 10c0-7 18-7 18 0v4c0 8-18 8-18 0v-4Zm0 2c4 5 14 5 18 0M7 14v4m5-3v4m5-5v4"/> }
+                      @else if (type === 13) { <path d="m9 3 2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Zm10 12 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"/> }
+                      @else { <path d="M12 5C9 2 4 3 4 8c0 4 3 6 3 10 0 5 3 3 3 0 0-5 4-5 4 0 0 3 3 5 3 0 0-4 3-6 3-10 0-5-5-6-8-3Z"/><path d="m17 2 1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2Z"/> }
+                    </svg></span>
+                    <span>{{ findingLabel(type).replace(' — الفم بالكامل', '').replace(' (whole mouth)', '') }}</span><span class="service-state" aria-hidden="true">{{ wholeMouthFinding(type) ? '✓' : '+' }}</span>
                   </button>
                 }
               </div>

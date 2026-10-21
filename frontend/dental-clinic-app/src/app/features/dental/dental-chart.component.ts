@@ -10,11 +10,11 @@ import { toothName } from './tooth-labels';
 @Component({
   host: { '(document:click)': 'dismissMenu($event)' },
   selector: 'app-dental-chart', imports: [FormsModule], styleUrl: './dental-chart.scss',
-  template: `<section class="chart-panel" aria-labelledby="chart-title">
-    <header class="chart-header"><div><h2 id="chart-title">{{ t('Dental Chart', 'مخطط الأسنان') }}</h2>
+  template: `<section class="chart-panel" [attr.aria-labelledby]="showHeading ? 'chart-title' : null" [attr.aria-label]="showHeading ? null : t('Dental chart', 'مخطط الأسنان')">
+    @if (showHeading) { <header class="chart-header"><div><h2 id="chart-title">{{ t('Dental Chart', 'مخطط الأسنان') }}</h2>
       <p>{{ t('Patient right appears on the left of this chart.', 'يمين المريض يظهر على يسار المخطط.') }}</p></div>
       @if (showSearch) { <form (ngSubmit)="search()"><label>{{ t('Find tooth', 'بحث برقم السن') }} <input name="tooth" [(ngModel)]="query" maxlength="2" /></label><button>{{ t('Find', 'بحث') }}</button></form> }
-    </header>
+    </header> }
     @if (multiSelect) {
       <div class="chart-multi-bar"><span>{{ selectedTeeth.length }} {{ t('teeth selected', 'أسنان محددة') }}</span>
         <div class="multi-actions"><button type="button" (click)="selectAllUpper()">{{ t('All upper', 'الفك العلوي') }}</button>
@@ -63,6 +63,7 @@ import { toothName } from './tooth-labels';
 export class DentalChartComponent implements OnChanges {
   @Input() teeth: ToothChartSummary[] = [];
   @Input() showSearch = true;
+  @Input() showHeading = true;
   @Input() selectedNumber = 0;
   @Input() completedHighlights: number[] = [];
   @Input() multiSelect = false;

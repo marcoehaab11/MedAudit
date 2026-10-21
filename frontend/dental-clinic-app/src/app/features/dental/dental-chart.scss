@@ -60,3 +60,19 @@ button:disabled { opacity: .5; cursor: wait; }
 .planora-tooth.completion-highlight { animation: completed-tooth-pulse 1.4s ease-out; outline: 2px solid #35a780; outline-offset: 2px; }
 @keyframes completed-tooth-pulse { 0% { box-shadow: 0 0 0 0 #27ad8070; transform: scale(.96); } 45% { box-shadow: 0 0 0 10px #27ad8020; transform: scale(1.04); } 100% { box-shadow: 0 0 0 15px transparent; transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .planora-tooth.completion-highlight { animation: none; } }
+
+/* Let tooth artwork and status labels determine their full height. */
+.planora-chart-scroll { overflow:visible; }
+.planora-tooth { height:auto; block-size:auto; min-height:196px; gap:3px; }
+.planora-art, .planora-marker, .planora-number { flex-shrink:0; }
+.planora-jaw-label { margin:10px 0; font-size:14px; color:#34545b; }
+.chart-legend { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:11px; line-height:1.8; padding-top:12px; border-top:1px solid #edf2f2; }
+.chart-multi-bar { gap:10px; font-size:12px; }
+.multi-actions button { padding:7px 10px; font-size:12px; border-color:#dce7e5; background:white; color:#42635f; }
+@media(max-width:650px) {
+  .planora-chart-scroll { overflow-x:auto; padding:4px 4px 10px; }
+  .planora-jaw { min-width:560px; }
+  .chart-multi-bar { align-items:flex-start; }
+  .multi-actions { gap:5px; }
+  .multi-actions button { padding:7px; font-size:11px; }
+}

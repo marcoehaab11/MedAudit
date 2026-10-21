@@ -335,3 +335,10 @@ Visual validation: production build passed; verified the white summary in the is
 - Unified previous/next controls in a fixed bottom bar. Existing price approval, root-canal progress, prescription and visit completion rules remain unchanged.
 - Restyled the medical alert dialog around recorded patient information, with visible acknowledgement and medical-detail actions; no new clinical recommendations or warning rules were added.
 - Validation: 59 existing visit regression tests passed; production frontend build passed. Reviewed all six steps, Arabic/English direction and a 390px responsive layout against isolated test data.
+
+
+### 21 October 2026 — visual polish
+- Reduced patient-banner, navigation and footer spacing so clinical content appears sooner; standardized heading and button sizes.
+- Removed the duplicated chart heading in visits and repeated whole-mouth suffixes from service cards; replaced service symbols with consistent vector icons.
+- Allowed tooth buttons to fit their artwork and progress labels, removing vertical scroll clipping. Narrow screens retain horizontal chart scrolling to keep tooth targets readable.
+- Preserved chart artwork, dental selection, clinical progress and financial behavior. Validation: 73 existing chart/visit regression tests passed; production frontend build passed.

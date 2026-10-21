@@ -3917,3 +3917,67 @@
 .intake-redesign .procedure-row-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:0 0 14px; margin-bottom:16px; border-bottom:1px solid #e4eeeb; }
 .intake-redesign .procedure-row-heading h3 { margin:0; color:#163347; font-size:16px; }
 .intake-redesign .procedure-row-heading > span { color:#087f74; background:#e9f6f1; border-radius:20px; padding:5px 10px; font-size:12px; }
+
+/* Final visit spacing and visual hierarchy. */
+.intake-redesign {
+  --intake-muted:#687f8e;
+  padding:0 20px 84px; gap:14px;
+  .visit-stepper-nav { padding:10px 22px; gap:16px; margin-inline:-20px; }
+  .patient-visit-banner { padding:12px 18px; gap:14px; border-radius:12px; }
+  .patient-visit-banner .patient-profile-snippet { gap:12px; flex-basis:300px; }
+  .patient-visit-banner .patient-profile-snippet .patient-avatar { width:48px; height:48px; flex-basis:48px; font-size:21px; border-width:2px; }
+  .patient-visit-banner .patient-profile-snippet .patient-name { font-size:20px; margin:1px 0 5px; }
+  .patient-visit-banner .patient-profile-snippet .patient-meta { gap:4px; font-size:11px; }
+  .patient-meta > span { padding:4px 7px; border-radius:6px; }
+  .patient-code { font-size:11px; }
+  .patient-visit-banner .visit-quick-stats { flex-basis:330px; gap:5px; }
+  .patient-visit-banner .visit-quick-stats .stat-pill-btn.danger { min-height:0; padding:9px 12px; gap:5px; border-radius:10px; }
+  .patient-visit-banner .intake-history-shortcut { padding:10px 14px; font-size:12px; }
+  .intake-history-shortcut .intake-icon { width:30px; height:30px; flex-basis:30px; font-size:20px; }
+  .step-card { padding:20px; border-radius:14px; }
+  .step-header-title { margin-bottom:16px; }
+  .step-header-title h2 { font-size:20px; }
+  .step-header-title p { font-size:12px; line-height:1.8; }
+  .chart-side-layout { grid-template-columns:280px minmax(0,1fr); gap:16px; }
+  .chart-selection-sidebar { gap:14px; }
+  .chart-selection-sidebar .tooth-details, .whole-mouth-panel { padding:14px; border-radius:12px; box-shadow:none; }
+  .chart-selection-sidebar h3 { font-size:15px; margin-bottom:10px; }
+  .whole-mouth-card { min-height:56px; padding:9px 10px; font-size:12px; }
+  .service-icon { flex-basis:30px; height:30px; font-size:21px; }
+  .chart-selection-sidebar .record-stack article { padding:10px; margin:6px 0; box-shadow:none; }
+  .chart-selection-sidebar .record-stack strong { font-size:12px; }
+  .procedures-plan-card .chart-col { padding:16px; }
+  .procedure-empty-state { padding:44px 18px; }
+  .step-footer-actions, .step-navigation, .intake-bottom-bar { padding:10px 22px; gap:12px; }
+  .step-footer-actions .button, .step-navigation .button, .intake-bottom-bar .button { min-height:40px; padding:9px 16px; font-size:13px; }
+  .intake-complaint-field textarea { min-height:170px; }
+}
+@media(max-width:1100px) { .intake-redesign .chart-side-layout { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:650px) {
+  .intake-redesign { padding:0 12px 92px; gap:12px;
+    .visit-stepper-nav { padding:10px 12px; margin-inline:-12px; }
+    .patient-visit-banner { padding:12px; gap:10px; }
+    .patient-visit-banner .patient-profile-snippet { flex-basis:100%; }
+    .patient-visit-banner .visit-quick-stats { flex:1 1 100%; }
+    .patient-visit-banner .patient-profile-snippet .patient-name { font-size:18px; }
+    .step-card { padding:14px; }
+    .step-header-title h2 { font-size:18px; }
+    .step-footer-actions, .step-navigation, .intake-bottom-bar { padding:10px 12px; }
+    .step-footer-actions .button, .step-navigation .button { max-width:65%; font-size:12px; padding:9px 12px; white-space:normal; }
+  }
+}
+
+.intake-redesign .service-icon svg { width:21px; height:21px; display:block; }
+
+.intake-redesign .patient-visit-banner {
+  .patient-info { display:flex; flex-wrap:wrap; align-items:baseline; gap:3px 9px; }
+  .patient-info .patient-name { order:0; margin:0; }
+  .patient-info .patient-code { order:1; line-height:1.5; }
+  .patient-info .patient-meta { order:2; flex-basis:100%; }
+  .visit-quick-stats .stat-pill-btn.danger .pill-text { font-size:12px; line-height:1.4; }
+  .visit-quick-stats .stat-pill-btn.danger .pill-icon { font-size:15px; line-height:1; }
+  .visit-quick-stats .stat-pill-btn.danger .pill-badge-action { font-size:11px; line-height:1.4; padding:0; }
+  .intake-alert-preview { line-height:1.4; gap:4px; }
+  .intake-alert-preview > span { font-size:10px; padding:3px 6px; }
+  .visit-quick-stats .stat-pill.balance { min-height:0; height:auto; line-height:1.4; padding:4px 8px; margin:0; }
+}
