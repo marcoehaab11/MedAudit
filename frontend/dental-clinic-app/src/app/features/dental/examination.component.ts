@@ -584,7 +584,7 @@ interface ToothServiceDraft {
             </div>
             <div class="chart-side-layout">
             <div class="chart-drawing">
-            <app-dental-chart [teeth]="chartTeeth()" [completedHighlights]="recentlyCompletedTeeth()" [multiSelect]="true" [selectedNumber]="selected" [selectedTeeth]="selectedTeeth"
+            <app-dental-chart [showSearch]="false" [teeth]="chartTeeth()" [completedHighlights]="recentlyCompletedTeeth()" [multiSelect]="true" [selectedNumber]="selected" [selectedTeeth]="selectedTeeth"
               [showQuickFindings]="examination()!.canEdit" [savingFinding]="savingFinding()"
               (selectedNumberChange)="onSelectedToothChange($event)" (selectedTeethChange)="onSelectedTeethChange($event)"
               (findingSelected)="chooseFindingType($event)" (toothFindingSelected)="chooseToothFinding($event)" />

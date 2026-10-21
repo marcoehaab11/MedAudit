@@ -13,7 +13,7 @@ import { toothName } from './tooth-labels';
   template: `<section class="chart-panel" aria-labelledby="chart-title">
     <header class="chart-header"><div><h2 id="chart-title">{{ t('Dental Chart', 'مخطط الأسنان') }}</h2>
       <p>{{ t('Patient right appears on the left of this chart.', 'يمين المريض يظهر على يسار المخطط.') }}</p></div>
-      <form (ngSubmit)="search()"><label>{{ t('Find tooth', 'بحث برقم السن') }} <input name="tooth" [(ngModel)]="query" maxlength="2" /></label><button>{{ t('Find', 'بحث') }}</button></form>
+      @if (showSearch) { <form (ngSubmit)="search()"><label>{{ t('Find tooth', 'بحث برقم السن') }} <input name="tooth" [(ngModel)]="query" maxlength="2" /></label><button>{{ t('Find', 'بحث') }}</button></form> }
     </header>
     @if (multiSelect) {
       <div class="chart-multi-bar"><span>{{ selectedTeeth.length }} {{ t('teeth selected', 'أسنان محددة') }}</span>
@@ -26,7 +26,7 @@ import { toothName } from './tooth-labels';
         @for (type of quickFindingTypes; track type) { <button type="button" [disabled]="savingFinding" (click)="findingSelected.emit(type)">{{ t(findingAppearance[type].en, findingAppearance[type].ar) }}</button> }
       </div>
     }
-    @if (searchError) { <p role="alert">{{ t('Enter a valid FDI number.', 'أدخل رقم سن صحيحًا.') }}</p> }
+    @if (showSearch && searchError) { <p role="alert">{{ t('Enter a valid FDI number.', 'أدخل رقم سن صحيحًا.') }}</p> }
     <div class="chart-body planora-chart">
       @for (jaw of jaws; track jaw.labelEn) {
         <div class="planora-jaw-label">{{ t(jaw.labelEn, jaw.labelAr) }}</div>
@@ -62,6 +62,7 @@ import { toothName } from './tooth-labels';
 })
 export class DentalChartComponent implements OnChanges {
   @Input() teeth: ToothChartSummary[] = [];
+  @Input() showSearch = true;
   @Input() selectedNumber = 0;
   @Input() completedHighlights: number[] = [];
   @Input() multiSelect = false;
