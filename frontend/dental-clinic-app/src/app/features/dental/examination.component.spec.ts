@@ -360,16 +360,31 @@ describe('ExaminationComponent', () => {
     c.examination.set({...examination(),findings:[{...examination().findings[0],type:14}]});c.treatmentTeeth=[36];c.step.set(3);fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('app-extraction-editor')).not.toBeNull();expect(fixture.nativeElement.textContent).not.toContain('حالة العلاج');expect(fixture.nativeElement.textContent).not.toContain('اختيار نوع التسوس');
   });
+  it('requires a valid filling class and material and keeps each tooth draft independent', async () => {
+    const fixture = TestBed.createComponent(ExaminationComponent), c = fixture.componentInstance, http = TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
+    c.catalog.set([{id:'fill',type:1,name:'Filling',code:'F',defaultPrice:100,isActive:true}]);
+    c.examination.set({...examination(),findings:[24,36].map(toothNumber=>({...examination().findings[0],id:'f'+toothNumber,toothNumber,type:2,cariesClass:null}))});
+    c.treatmentTeeth=[24,36]; c.step.set(3);
+    await c.executeToothService(24); expect(c.error()).toContain('كلاس الحشو'); http.expectNone('/api/treatments');
+    Object.assign(c.toothService(24),{cariesClass:6,fillingMaterial:'Amalgam'});
+    expect(c.toothService(36).cariesClass).toBeNull(); expect(c.toothService(36).fillingMaterial).toBe('Composite');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('[data-tooth="24"] .filling-class-grid input')).toHaveLength(6);
+    expect(fixture.nativeElement.querySelectorAll('[data-tooth="24"] .filling-material-grid input')).toHaveLength(4);
+    c.toothService(24).fillingMaterial='invalid'; await c.executeToothService(24); http.expectNone('/api/treatments');
+  });
   it('uses the chart filling classification without rewriting it from procedures', async () => {
     const c = TestBed.createComponent(ExaminationComponent).componentInstance;
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/appointments/a1/examination').flush(examination()); flushAuxiliary(http);
     c.catalog.set([{ id: 'fill', type: 1, name: 'Filling', code: 'F', defaultPrice: 100, isActive: true }]);
-    c.selectedTeeth = [24]; c.treatmentTeeth = [24]; Object.assign(c.toothService(24), { catalogId: 'fill', price: 100, cariesClass: 2 });
+    c.selectedTeeth = [24]; c.treatmentTeeth = [24]; Object.assign(c.toothService(24), { catalogId: 'fill', price: 100, cariesClass: 2, fillingMaterial: 'Glass Ionomer' });
     c.examination.set({...examination(),findings:[{...examination().findings[0],toothNumber:24,cariesClass:2}]});
+    c.toothService(24).fillingMaterial = 'Glass Ionomer';
     const pending = c.executeToothService(24);
     http.expectNone(r=>r.url==='/api/examinations/e1/findings');
-    const create = http.expectOne('/api/treatments'); expect(create.request.body.notes).toContain('Class II'); expect(create.request.body.toothNumbers).toEqual([24]); create.flush({ id: 'filling' });
+    const create = http.expectOne('/api/treatments'); expect(create.request.body.notes).toContain('Class II'); expect(create.request.body.notes).toContain('Filling material: Glass Ionomer'); expect(create.request.body.toothNumbers).toEqual([24]); create.flush({ id: 'filling' });
     await Promise.resolve(); await Promise.resolve(); http.expectOne('/api/treatments/filling').flush({ id: 'filling', status: 2, version: 'v1' });
     await Promise.resolve(); await Promise.resolve(); http.expectOne('/api/treatments/filling/complete').flush(null);
     await pending; flushAuxiliary(http); expect(c.examination()!.findings.find(f => f.toothNumber === 24)!.cariesClass).toBe(2);
@@ -395,7 +410,7 @@ describe('ExaminationComponent', () => {
     const c = fixture.componentInstance;
     c.catalog.set([{ id: 'fill', type: 1, name: 'Filling', code: 'F', defaultPrice: 100, isActive: true }, { id: 'crown', type: 5, name: 'Crown', code: 'C', defaultPrice: 500, isActive: true }]);
     c.selectedTeeth = [24, 36]; c.treatmentTeeth = [24, 36]; c.step.set(3);
-    c.toothService(24).catalogId = 'fill'; c.selectToothService(24);
+    c.toothService(24).catalogId = 'fill'; c.selectToothService(24); c.toothService(24).cariesClass = 1;
     c.toothService(36).catalogId = 'crown'; c.selectToothService(36);
     fixture.detectChanges(); expect(fixture.nativeElement.querySelectorAll('[data-tooth]').length).toBe(2);
     const pending = c.executeToothService(24);

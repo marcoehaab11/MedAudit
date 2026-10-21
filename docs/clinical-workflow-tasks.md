@@ -342,3 +342,11 @@ Visual validation: production build passed; verified the white summary in the is
 - Removed the duplicated chart heading in visits and repeated whole-mouth suffixes from service cards; replaced service symbols with consistent vector icons.
 - Allowed tooth buttons to fit their artwork and progress labels, removing vertical scroll clipping. Narrow screens retain horizontal chart scrolling to keep tooth targets readable.
 - Preserved chart artwork, dental selection, clinical progress and financial behavior. Validation: 73 existing chart/visit regression tests passed; production frontend build passed.
+
+
+### 21 October 2026 — regular filling procedure cards
+- Added illustrated Class I–VI radio cards and Composite, Amalgam, Glass Ionomer and Temporary material choices for regular fillings only.
+- Initializes the procedure class from the chart and keeps class/material drafts isolated per tooth. Composite is the displayed default material.
+- Validates class/material before creating a new filling; saves both in the treatment's existing persistent clinical notes alongside optional notes. Existing diagnostic chart classification is not rewritten.
+- Retained optional unfinished-treatment status in a collapsed follow-up section, existing service pricing, deferred billing and duplicate-safe retries.
+- Validation: 60 visit regression tests passed, including material persistence, validation and separate tooth drafts; frontend production build and responsive visual review completed.

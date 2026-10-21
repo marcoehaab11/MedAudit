@@ -3981,3 +3981,25 @@
   .intake-alert-preview > span { font-size:10px; padding:3px 6px; }
   .visit-quick-stats .stat-pill.balance { min-height:0; height:auto; line-height:1.4; padding:4px 8px; margin:0; }
 }
+
+.intake-redesign .filling-editor { display:grid; gap:22px; margin:16px 0 20px; }
+.intake-redesign .filling-choices { border:0; margin:0; padding:0; min-width:0; }
+.intake-redesign .filling-choices legend { margin-bottom:12px; font-size:14px; font-weight:600; color:#3c5665; }
+.intake-redesign .filling-choices legend > span { color:#cf4054; }
+.intake-redesign .filling-class-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; direction:ltr; }
+.intake-redesign .filling-material-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; direction:ltr; }
+.intake-redesign .filling-option { display:flex; flex-direction:row; align-items:center; justify-content:center; gap:10px; margin:0; min-height:72px; padding:12px; border:1px solid #dfe9e6; border-radius:10px; background:#fff; color:#294b50; cursor:pointer; box-sizing:border-box; font-size:13px; }
+.intake-redesign .filling-option.is-selected { background:#edf9f5; border-color:#229b86; box-shadow:0 0 0 1px #229b8620; }
+.intake-redesign .filling-option input[type="radio"] { flex:0 0 16px; width:16px; height:16px; margin:0; padding:0; accent-color:#078575; }
+.intake-redesign .filling-option svg { flex:0 0 36px; }
+.intake-redesign .filling-option:has(input:focus-visible) { outline:2px solid #087f74; outline-offset:3px; }
+.intake-redesign .filling-material-grid .filling-option { min-height:54px; justify-content:flex-start; }
+.intake-redesign .filling-followup { padding:10px 0; font-size:12px; color:#6c838d; }
+.intake-redesign .filling-followup summary { cursor:pointer; }
+@media(max-width:1150px) { .intake-redesign .filling-class-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media(max-width:650px) { .intake-redesign .filling-class-grid, .intake-redesign .filling-material-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .intake-redesign .filling-option { gap:7px; padding:10px; font-size:12px; } }
+
+.intake-redesign .tooth-service-row.filling-procedure > fieldset { display:block; }
+.intake-redesign .tooth-service-row.filling-procedure .filling-editor { width:100%; min-width:0; }
+.intake-redesign .tooth-service-row.filling-procedure .filling-choices { display:block; width:100%; box-sizing:border-box; }
+.intake-redesign .tooth-service-row.filling-procedure .procedure-notes { display:flex; flex-direction:column; gap:8px; width:100%; margin-top:14px; }
