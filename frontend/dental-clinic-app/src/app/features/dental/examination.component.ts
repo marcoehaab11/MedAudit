@@ -214,7 +214,7 @@ interface ToothServiceDraft {
   standalone: true,
   imports: [CommonModule, RouterLink, FormsModule, ReactiveFormsModule, DentalChartComponent, DateInputComponent, TagInputComponent, PatientVisitHistorySheetComponent, RootCanalEditorComponent, ExtractionEditorComponent],
   template: `
-    <div class="clinical-visit-container" [attr.dir]="t('ltr', 'rtl')" [class.intake-redesign]="step() === 1 && !!examination() && examination()!.status !== 2 && !loading()">
+    <div class="clinical-visit-container" [attr.dir]="t('ltr', 'rtl')" [class.intake-redesign]="!!examination() && examination()!.status !== 2 && !loading()">
       <!-- Top Navigation & Back -->
       <div class="visit-top-bar">
         <a class="back-link" routerLink="/appointments">
@@ -418,23 +418,23 @@ interface ToothServiceDraft {
         <!-- Patient Banner -->
         <header class="patient-visit-banner">
           <div class="patient-profile-snippet">
-            <div class="patient-avatar">{{ step() === 1 ? examination()!.patientName.slice(0, 1) : '👤' }}</div>
+            <div class="patient-avatar">{{ examination()!.patientName.slice(0, 1) }}</div>
             <div class="patient-info">
               <span class="patient-code">{{ examination()!.patientNumber }}</span>
               <h1 class="patient-name">{{ examination()!.patientName }}</h1>
               <p class="patient-meta">
-                <span>{{ step() === 1 ? '' : '👨‍⚕️ ' }}{{ examination()!.doctorName }}</span>
+                <span>{{ examination()!.doctorName }}</span>
                 @if (patient()?.phone) {
                   <span dir="ltr">{{ patient()!.phone }}</span>
                 }
                 @if (patient()?.gender !== undefined) {
                   <span>{{ patient()!.gender === 1 ? t('Male', 'ذكر') : t('Female', 'أنثى') }}</span>
                 }
-                @if (step() === 1 && patientAge() !== null) { <span>{{ patientAge() }} {{ t('years', 'سنة') }}</span> }
+                @if (patientAge() !== null) { <span>{{ patientAge() }} {{ t('years', 'سنة') }}</span> }
               </p>
             </div>
           </div>
-          @if (step() === 1) {
+          @if (examination()) {
             <button type="button" class="intake-history-shortcut" (click)="showVisitHistorySheet.set(true)">
               <span class="intake-icon">↺</span>{{ t('Patient visit history', 'تاريخ زيارات المريض') }} <span aria-hidden="true">‹</span>
             </button>
@@ -450,7 +450,7 @@ interface ToothServiceDraft {
                 <span class="pill-icon pulse-alert">🚨</span>
                 <span class="pill-text">{{ totalAlertsCount() }} {{ t('Medical Alerts', 'تنبيهات طبية حرجة') }}</span>
                 <span class="pill-badge-action">{{ t('Review', 'مراجعة') }} ‹</span>
-                @if (step() === 1) { <span class="intake-alert-preview">@for (item of patientAllergies.slice(0, 1); track item) { <span>{{ item }}</span> } @for (item of patientConditions.slice(0, 1); track item) { <span>{{ item }}</span> }</span> }
+                @if (examination()) { <span class="intake-alert-preview">@for (item of patientAllergies.slice(0, 1); track item) { <span>{{ item }}</span> } @for (item of patientConditions.slice(0, 1); track item) { <span>{{ item }}</span> }</span> }
               </button>
             }
             @if (balance()) {
@@ -466,7 +466,7 @@ interface ToothServiceDraft {
 
         <!-- Stepper Navigation Bar -->
         <nav class="visit-stepper-nav" aria-label="Visit Steps">
-          @if (step() === 1) { <a class="intake-brand" routerLink="/dashboard"><svg viewBox="0 0 32 36" fill="none" aria-hidden="true"><path d="M8 3C1 2 2 13 5 19L8 31C10 37 13 30 14 24C15 19 17 19 18 24C19 30 22 37 24 31L27 19C30 13 31 2 24 3C20 2 19 6 16 6C13 6 12 2 8 3Z" stroke="currentColor" stroke-width="2.3"/></svg>Planora</a> }
+          @if (examination()) { <a class="intake-brand" routerLink="/dashboard"><svg viewBox="0 0 32 36" fill="none" aria-hidden="true"><path d="M8 3C1 2 2 13 5 19L8 31C10 37 13 30 14 24C15 19 17 19 18 24C19 30 22 37 24 31L27 19C30 13 31 2 24 3C20 2 19 6 16 6C13 6 12 2 8 3Z" stroke="currentColor" stroke-width="2.3"/></svg>Planora</a> }
 
           <div class="stepper-track">
             @for (s of steps; track s.number) {
@@ -480,12 +480,12 @@ interface ToothServiceDraft {
                 <span class="step-num">{{ s.number }}</span>
                 <div class="step-label-wrap">
                   <span class="step-icon">{{ s.icon }}</span>
-                  <span class="step-title">{{ step() === 1 ? t(s.en, s.ar).slice(3) : t(s.en, s.ar) }}</span>
+                  <span class="step-title">{{ t(s.en, s.ar).slice(3) }}</span>
                 </div>
               </button>
             }
           </div>
-          @if (step() === 1) { <a class="intake-close" routerLink="/appointments">{{ t('Close', 'إغلاق') }} <span aria-hidden="true">×</span></a> }
+          @if (examination()) { <a class="intake-close" routerLink="/appointments">{{ t('Close', 'إغلاق') }} <span aria-hidden="true">×</span></a> }
         </nav>
 
         @if (error()) {
@@ -667,14 +667,14 @@ interface ToothServiceDraft {
               </div>
             </section>
             </aside></div>
-            <div class="step-navigation"><button type="button" class="button primary next-btn" (click)="setStep(3)">{{ t('Next: procedures & treatment plan', 'التالي: الإجراءات وخطة العلاج') }} {{ t('→', '←') }}</button></div>
+            <div class="step-navigation"><button type="button" class="button secondary prev-btn" (click)="setStep(1)">{{ t('Previous', 'السابق') }}</button><button type="button" class="button primary next-btn" (click)="setStep(3)">{{ t('Next: procedures & treatment plan', 'التالي: الإجراءات وخطة العلاج') }} {{ t('→', '←') }}</button></div>
           </section>
         }
 
         @if (step() === 3) {
           <section class="step-card procedures-plan-card">
             <div class="step-header-title">
-              <h2>{{ t('Medical procedures for this visit', 'الإجراءات الطبية للزيارة') }}</h2>
+              <h2>{{ t('Medical procedures for this visit', 'الإجراءات الطبية للزيارة') }}</h2><p>{{ t('Select teeth to view and record their procedures.', 'اختر الأسنان لعرض وتسجيل الإجراءات الطبية.') }}</p>
             </div>
 
             <!-- Split-View: Interactive Chart (Left) + Tooth Procedure Action Card (Right) -->
@@ -682,13 +682,13 @@ interface ToothServiceDraft {
             <div class="step3-selection-summary">
               <div class="chart-col">
                 <div class="treatment-selection-heading">
-                  <h3>{{ t('Select teeth for treatment', 'اختيار الأسنان للعلاج') }}</h3>
+                  <div><h3>{{ t('Teeth selected for treatment', 'الأسنان المحددة للعلاج') }}</h3><p>{{ t('Choose the teeth to treat during this visit.', 'اختر الأسنان التي ستعمل عليها خلال هذه الزيارة.') }}</p></div><span class="selection-count">{{ treatmentTeeth.length }} {{ t('selected', 'سن محدد') }}</span>
                   <button type="button" class="clear-treatment-selection" [disabled]="!treatmentTeeth.length || savingTreatment() || savingRootCanal()" (click)="treatmentTeeth = []">{{ t('Clear selection', 'إلغاء التحديد') }}</button>
                 </div>
                 <div class="today-teeth-picker">
                   @for (number of availableTreatmentTeeth(); track number) {
                     <button type="button" class="treatment-tooth-chip" [class.selected]="treatmentTeeth.includes(number)" [attr.aria-pressed]="treatmentTeeth.includes(number)" [disabled]="savingTreatment() || savingRootCanal() || !examination()!.canEdit" (click)="toggleTreatmentTooth(number)">
-                      <strong>#{{ number }}</strong><span class="tooth-chip-name" dir="ltr">{{ toothLabel(number) }}</span>
+                      <span class="chip-tooth-icon" aria-hidden="true"><svg viewBox="0 0 32 36" fill="none"><path d="M16 5C12 2 5 2 4 9c-1 6 3 10 4 15 1 4 1 9 4 9 2 0 1-12 4-12s2 12 4 12c3 0 3-5 4-9 1-5 5-9 4-15-1-7-8-7-12-4Z" stroke="currentColor" stroke-width="2"/></svg></span><strong>#{{ number }}</strong><span class="tooth-chip-name" dir="ltr">{{ toothLabel(number) }}</span><span class="chip-service-label">{{ treatmentSummaryLabels(number).join(' · ') }}</span>
                       @if (treatmentTeeth.includes(number)) { <span class="tooth-chip-check" aria-hidden="true">✓</span> }
                     </button>
                   } @empty { <p>{{ t('Record findings in the examination first.', 'سجل الأسنان ونتائج الكشف الأول.') }}</p> }
@@ -699,7 +699,7 @@ interface ToothServiceDraft {
               <aside class="tooth-action-col">
                 <div class="tooth-action-card">
                   <!-- Selected Tooth Header -->
-                  <div class="selected-treatment-summary">
+                  <div class="selected-treatment-summary" [class.has-procedures]="treatmentRowKeys().length > 0">
                     @for (number of treatmentTeeth; track number) {
                       <div class="selected-treatment-tooth">
                         <span class="selection-tooth-icon" aria-hidden="true">
@@ -714,7 +714,7 @@ interface ToothServiceDraft {
                           @for (label of treatmentSummaryLabels(number); track label) { <span class="selected-treatment-badge">{{ label }}</span> }
                         </div>
                       </div>
-                    } @empty { <p class="no-treatment-selection">{{ t('No tooth selected', 'لم يتم اختيار سن') }}</p> }
+                    } @empty { <div class="procedure-empty-state"><span aria-hidden="true"><svg viewBox="0 0 32 32" width="36" height="36" fill="none"><path d="M7 7h18l4 10v9H3v-9L7 7Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 17h8l2 4h6l2-4h8" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></span><h3>{{ t('No procedures to display yet', 'لا توجد إجراءات لعرضها حالياً') }}</h3><p>{{ t('Select a tooth above to view and record its procedure for this visit.', 'اختر سنًا من الأعلى لعرض تفاصيل الإجراء الطبي وتسجيل ما تم تنفيذه خلال هذه الزيارة.') }}</p></div> }
                   </div>
 
                   <!-- 2. Procedure Execution with Clinical Status -->
@@ -724,8 +724,8 @@ interface ToothServiceDraft {
                       @for (number of treatmentRowKeys(); track number) {
                         @let row = toothService(number);
                         <section class="catalog-select-box tooth-service-row" [class.regular-filling-card]="toothServiceIsFilling(number) || toothServiceIsExtraction(number)" tabindex="-1" [attr.data-tooth]="number">
-                          @if (!toothServiceIsRootCanal(number) && !toothServiceIsExtraction(number)) { <h3>{{ number <= 0 ? wholeMouthLabel(number) : '#' + number + ' · ' + toothLabel(number) }}</h3> }
-                          @if (number <= 0 && !toothServiceCatalog(number).length) { <p>{{ t('Add orthodontics, scaling/polishing and whitening services with their prices to the clinic service list first.', 'أضف خدمات التقويم وتنظيف الجير والتلميع والتبييض وأسعارها إلى قائمة خدمات العيادة أولًا.') }}</p> }
+                          <header class="procedure-row-heading"><h3>{{ number <= 0 ? wholeMouthLabel(number) : '#' + number + ' · ' + toothLabel(number) }}</h3>@if (number > 0) { <span>{{ treatmentSummaryLabels(number).join(' · ') }}</span> }</header>
+                          @if (number <= 0 && !toothServiceCatalog(number).length) { <p>{{ t('Add or activate this whole-mouth service and its price in the clinic service list first.', 'أضف خدمة الفم بالكامل المطلوبة وسعرها أو فعّلها من قائمة خدمات العيادة أولًا.') }}</p> }
                           @if (!toothServiceIsRootCanal(number)) {
                           <fieldset [disabled]="savingTreatment() || !!row.treatmentId">
                             @if (!row.catalogId) {
@@ -766,7 +766,7 @@ interface ToothServiceDraft {
                           <button type="button" class="btn-execute-procedure-modern" [disabled]="!row.catalogId || savingTreatment() || savingRootCanal() || row.price < 0" (click)="executeToothService(number)">{{ savingTreatment() ? t('Saving…', 'جارٍ الحفظ…') : row.treatmentId && toothServiceIsRootCanal(number) ? t('Save & continue existing treatment', 'حفظ واستكمال نفس العلاج') : number <= 0 ? t('Record whole-mouth service', 'تسجيل خدمة الفم بالكامل') : t('Record this tooth service', 'تسجيل إجراء هذا السن') }}</button>
                           }
                         </section>
-                      } @empty { <p>{{ t('Choose today’s treatment teeth above.', 'اختار أسنان علاج اليوم فوق.') }}</p> }
+                      }
 
                     }
                   </div>
@@ -1450,18 +1450,18 @@ interface ToothServiceDraft {
       <!-- ════════════════════════════════════════════════════════════════ -->
       @if (showMedicalAlertModal()) {
         <div class="modal-overlay alert-modal-overlay" (click)="closeMedicalAlertModal()">
-          <div class="modal-content medical-alert-modal" (click)="$event.stopPropagation()">
+          <div class="modal-content medical-alert-modal" role="dialog" aria-modal="true" aria-labelledby="medical-alert-title" (click)="$event.stopPropagation()">
             <div class="alert-modal-head">
               <div class="head-badge">
-                <span class="pulse-icon">🚨</span>
+                <span class="pulse-icon">!</span>
               </div>
               <div class="head-titles">
-                <h2 class="head-main-title">{{ t('CRITICAL MEDICAL ALERT', 'تنبيه طبي عاجل وهام!') }}</h2>
+                <h2 id="medical-alert-title" class="head-main-title">{{ t('Important medical alert', 'تنبيه طبي مهم') }}</h2>
                 <p class="head-sub-title">
                   {{ t('Review patient sensitivities, chronic illnesses, and medications before procedure.', 'يجب مراجعة الحساسية والأمراض المزمنة والأدوية قبل بدء الكشف أو التخدير أو الجراحة.') }}
                 </p>
               </div>
-              <button type="button" class="close-alert-btn" (click)="closeMedicalAlertModal()">&times;</button>
+              <button type="button" class="close-alert-btn" [attr.aria-label]="t('Close medical alert', 'إغلاق التنبيه الطبي')" (click)="closeMedicalAlertModal()">&times;</button>
             </div>
 
             <div class="patient-banner-mini">
@@ -1549,6 +1549,7 @@ interface ToothServiceDraft {
             </div>
 
             <div class="alert-modal-actions">
+              <button type="button" class="medical-details-button" (click)="closeMedicalAlertModal(); setStep(1); intakeMedicalEditing = true">{{ t('View medical details', 'عرض التفاصيل الطبية') }}</button>
               <button type="button" class="btn-confirm-alert" (click)="closeMedicalAlertModal()">
                 <span>✓ {{ t('I Understand & Acknowledge — Continue Examination', 'تم الاطلاع وتأكيد الحذر — متابعة الكشف') }}</span>
               </button>

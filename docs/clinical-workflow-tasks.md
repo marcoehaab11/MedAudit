@@ -327,3 +327,11 @@ Visual validation: production build passed; verified the white summary in the is
 - Tooth quick menu now contains regular filling, root canal treatment, extraction, implant and crown, in that order. Historical finding types remain supported.
 - Added removable dentures as a whole-mouth finding, catalog template and independent procedure row, without marking individual teeth as completed.
 - Validation: 73 frontend tests and 46 dental domain tests passed; frontend and API builds passed.
+
+
+### 21 October 2026 — unified six-step visit presentation
+- Applied the reception workspace header, patient summary and language-aware six-step navigation throughout the active visit, preserving the existing chart drawing and clinical forms.
+- Restyled procedure tooth choices with compact service-labelled cards, a selected count, an empty state and per-tooth procedure headings. Whole-mouth services retain their existing independent procedure rows.
+- Unified previous/next controls in a fixed bottom bar. Existing price approval, root-canal progress, prescription and visit completion rules remain unchanged.
+- Restyled the medical alert dialog around recorded patient information, with visible acknowledgement and medical-detail actions; no new clinical recommendations or warning rules were added.
+- Validation: 59 existing visit regression tests passed; production frontend build passed. Reviewed all six steps, Arabic/English direction and a 390px responsive layout against isolated test data.
