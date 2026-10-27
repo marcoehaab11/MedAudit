@@ -188,6 +188,8 @@ internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess ac
         };
         await permissions.EnsurePermissionAsync(permission, token); var item = await store.FindTreatmentAsync(id, true, token); if (item is null) return false;
         await access.EnsureDoctorAsync(item.DoctorProfileId, permission, token);
+        if (action == "complete" && item.Type == TreatmentType.Implant && await store.HasIncompleteImplantAsync(id, token))
+            throw new TreatmentStateException("Complete the implant workflow and record a follow-up before completing this treatment.");
         if (action == "complete" && item.Type == TreatmentType.RootCanal)
         {
             var chart = await dentalStore.GetChartAsync(item.PatientId, token);

@@ -22,4 +22,5 @@ builder.Services.AddHostedService<BookingReminderHost>();
 builder.Services.AddHostedService<ClinicOperationsAlertHost>();
 
 var host = builder.Build();
+await DentalClinic.Infrastructure.Persistence.DatabaseSecurityBootstrap.VerifyRuntimeAsync(host.Services);
 await host.RunAsync();

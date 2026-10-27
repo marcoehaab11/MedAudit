@@ -1,9 +1,8 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Subject, tap } from 'rxjs';
+import { Subject, catchError, finalize, map, Observable, of, shareReplay, tap } from 'rxjs';
 
 export interface LoginResponse {
-  accessToken: string;
   expiresAt: string;
   userId: string;
   displayName: string;
@@ -13,7 +12,6 @@ export interface LoginResponse {
   tenantName: string;
   clinics: ClinicAccessSummary[];
 }
-
 export interface ClinicAccessSummary { tenantId: string; name: string; accessible: boolean }
 
 @Injectable({ providedIn: 'root' })
@@ -21,107 +19,71 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly authReset$ = new Subject<void>();
   readonly onAuthReset$ = this.authReset$.asObservable();
+  readonly authenticated = signal(false);
+  readonly permissions = signal<string[]>([]);
+  readonly roles = signal<string[]>([]);
+  readonly userId = signal('');
+  readonly displayName = signal('User');
+  readonly tenantId = signal('');
+  readonly tenantName = signal('');
+  readonly clinics = signal<ClinicAccessSummary[]>([]);
+  private restoring?: Observable<boolean>;
 
-  readonly authenticated = signal(Boolean(localStorage.getItem('access_token')));
-  readonly permissions = signal<string[]>(this.readPermissions());
-  readonly roles = signal<string[]>(this.readRoles());
-  private readRoles(): string[] { try { const value = JSON.parse(localStorage.getItem('roles') || '[]'); return Array.isArray(value) ? value : []; } catch { return []; } }
-  readonly userId = signal<string>(localStorage.getItem('user_id') ?? '');
-  readonly displayName = signal<string>(localStorage.getItem('display_name') ?? 'User');
-  readonly tenantId = signal<string>(localStorage.getItem('tenant_id') ?? '');
-  readonly tenantName = signal<string>(localStorage.getItem('tenant_name') ?? '');
-  readonly clinics = signal<ClinicAccessSummary[]>(this.readClinics());
+  constructor() { this.removeLegacyIdentity(); }
 
-  hasPermission(permission: string): boolean {
-    return this.permissions().includes(permission);
+  hasPermission(permission: string): boolean { return this.permissions().includes(permission); }
+
+  restoreSession(): Observable<boolean> {
+    if (!this.restoring) this.restoring = this.http.get<LoginResponse>('/api/auth/session').pipe(
+      tap(result => this.applySession(result)), map(() => true),
+      catchError(() => { this.clearSession(); return of(false); }),
+      finalize(() => this.restoring = undefined), shareReplay({ bufferSize: 1, refCount: false }),
+    );
+    return this.restoring;
   }
 
   refreshPermissions() {
-    return this.http.get<string[]>('/api/auth/permissions').pipe(tap(value => {
-      localStorage.setItem('permissions', JSON.stringify(value));
-      this.permissions.set(value);
-    }));
+    return this.http.get<string[]>('/api/auth/permissions').pipe(tap(value => this.permissions.set(value)));
   }
-
   refreshClinics() {
-    return this.http.get<ClinicAccessSummary[]>('/api/auth/clinics').pipe(tap(value => {
-      localStorage.setItem('clinics', JSON.stringify(value));
-      this.clinics.set(value);
-    }));
+    return this.http.get<ClinicAccessSummary[]>('/api/auth/clinics').pipe(tap(value => this.clinics.set(value)));
   }
-
-  setDisplayName(name: string): void {
-    if (!name) return;
-    localStorage.setItem('display_name', name);
-    this.displayName.set(name);
-  }
+  setDisplayName(_name: string): void { this.restoreSession().subscribe(); }
 
   login(email: string, password: string) {
-    return this.http.post<LoginResponse>('/api/auth/login', { email, password, preferredTenantId: localStorage.getItem('last_tenant_id') }).pipe(
-      tap((result) => this.applySession(result)),
-    );
+    return this.http.post<LoginResponse>('/api/auth/login', { email, password }).pipe(tap(result => this.applySession(result)));
   }
-
   switchClinic(tenantId: string) {
-    return this.http.post<LoginResponse>('/api/auth/switch-clinic', { tenantId }).pipe(
-      tap(result => this.applySession(result)),
-    );
+    return this.http.post<LoginResponse>('/api/auth/switch-clinic', { tenantId }).pipe(tap(result => {
+      this.applySession(result); this.notifyOtherTabs();
+    }));
   }
-
+  logout(): Observable<void> {
+    return this.http.post<void>('/api/auth/logout', {}).pipe(tap(() => {
+      this.clearSession(); this.notifyOtherTabs();
+    }));
+  }
+  clearSession(): void {
+    const wasAuthenticated = this.authenticated();
+    this.removeLegacyIdentity();
+    this.roles.set([]); this.userId.set(''); this.displayName.set('User'); this.permissions.set([]);
+    this.tenantId.set(''); this.tenantName.set(''); this.clinics.set([]); this.authenticated.set(false);
+    if (wasAuthenticated) this.authReset$.next();
+  }
   private applySession(result: LoginResponse): void {
-    localStorage.setItem('access_token', result.accessToken);
-    localStorage.setItem('roles', JSON.stringify(result.roles));
-    this.roles.set(result.roles);
-    localStorage.setItem('user_id', result.userId);
-    localStorage.setItem('display_name', result.displayName);
-    localStorage.setItem('permissions', JSON.stringify(result.permissions));
-    localStorage.setItem('tenant_id', result.tenantId);
-    localStorage.setItem('last_tenant_id', result.tenantId);
-    localStorage.setItem('tenant_name', result.tenantName);
-    localStorage.setItem('clinics', JSON.stringify(result.clinics));
-    this.userId.set(result.userId);
-    this.displayName.set(result.displayName);
-    this.permissions.set(result.permissions);
-    this.tenantId.set(result.tenantId);
-    this.tenantName.set(result.tenantName);
-    this.clinics.set(result.clinics);
-    this.authenticated.set(true);
-    this.authReset$.next();
+    const changed = !this.authenticated() || this.userId() !== result.userId || this.tenantId() !== result.tenantId;
+    this.removeLegacyIdentity();
+    this.roles.set(result.roles); this.userId.set(result.userId); this.displayName.set(result.displayName);
+    this.permissions.set(result.permissions); this.tenantId.set(result.tenantId); this.tenantName.set(result.tenantName);
+    this.clinics.set(result.clinics); this.authenticated.set(true);
+    if (changed) this.authReset$.next();
   }
-
-  logout(): void {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user_id');
-    localStorage.removeItem('display_name');
-    localStorage.removeItem('permissions');
-    localStorage.removeItem('tenant_id');
-    localStorage.removeItem('tenant_name');
-    localStorage.removeItem('clinics');
-    this.roles.set([]);
-    localStorage.removeItem('roles');
-    this.userId.set('');
-    this.displayName.set('User');
-    this.permissions.set([]);
-    this.tenantId.set('');
-    this.tenantName.set('');
-    this.clinics.set([]);
-    this.authenticated.set(false);
-    this.authReset$.next();
-  }
-
-  private readPermissions(): string[] {
+  private removeLegacyIdentity(): void {
     try {
-      return JSON.parse(localStorage.getItem('permissions') ?? '[]') as string[];
-    } catch {
-      return [];
-    }
+      for (const key of ['access_token', 'roles', 'user_id', 'display_name', 'permissions', 'tenant_id', 'tenant_name', 'clinics', 'last_tenant_id']) localStorage.removeItem(key);
+    } catch { /* A browser blocking local storage must not disable server sessions. */ }
   }
-
-  private readClinics(): ClinicAccessSummary[] {
-    try { return JSON.parse(localStorage.getItem('clinics') ?? '[]') as ClinicAccessSummary[]; }
-    catch { return []; }
+  private notifyOtherTabs(): void {
+    try { localStorage.setItem('session_changed', String(Date.now())); } catch {}
   }
 }
-
-
-

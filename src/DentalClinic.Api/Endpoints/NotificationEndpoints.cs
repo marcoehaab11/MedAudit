@@ -64,11 +64,12 @@ internal static class NotificationEndpoints
             return Results.Ok(deliveries);
         });
 
-        group.MapGet("/channels", async (IPermissionService permissions, IConfiguration config, CancellationToken t) =>
+        group.MapGet("/channels", async (IPermissionService permissions, IConfiguration config, DentalClinic.Infrastructure.Services.PlatformMailService mail, CancellationToken t) =>
         {
             await permissions.EnsurePermissionAsync(Permissions.NotificationsManage, t);
-            var emailReady = !string.IsNullOrWhiteSpace(config["Smtp:Host"] ?? config["SMTP_HOST"])
-                && !string.IsNullOrWhiteSpace(config["Smtp:From"] ?? config["SMTP_FROM"]);
+            var settings = await mail.ReadSettingsAsync(t);
+            var emailReady = !string.IsNullOrWhiteSpace(settings?.Host ?? config["Smtp:Host"] ?? config["SMTP_HOST"])
+                && !string.IsNullOrWhiteSpace(settings?.FromEmail ?? config["Smtp:From"] ?? config["SMTP_FROM"]);
             return Results.Ok(new[] {
                 new { channel = "InApp", ready = true, detail = "Worker delivers notifications to the in-app inbox." },
                 new { channel = "Email", ready = emailReady, detail = emailReady ? "SMTP configured; delivery depends on server response." : "SMTP host and sender are missing." },

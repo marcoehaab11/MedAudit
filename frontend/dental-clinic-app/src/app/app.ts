@@ -58,7 +58,7 @@ export class App implements OnDestroy {
 
   @HostListener('window:storage', ['$event'])
   protected onSessionChangedInAnotherTab(event: StorageEvent): void {
-    if (event.key === 'tenant_id' || event.key === 'access_token') window.location.reload();
+    if (event.key === 'session_changed') window.location.reload();
   }
 
   protected onSidebarKeydown(event: KeyboardEvent): void {
@@ -93,10 +93,10 @@ export class App implements OnDestroy {
   }
 
   protected logout(): void {
-    this.auth.logout();
-    this.clinicTheme.reset();
-    this.mobileSidebarOpen.set(false);
-    void this.router.navigate(['/login']);
+    this.auth.logout().subscribe({
+      next: () => { this.clinicTheme.reset(); this.mobileSidebarOpen.set(false); window.location.assign('/login'); },
+      error: () => this.clinicSwitchError.set(this.t('Sign out could not be completed. Please try again.', 'تعذر إكمال تسجيل الخروج. حاول مرة أخرى.')),
+    });
   }
 
   protected switchClinic(event: Event): void {

@@ -6,34 +6,21 @@ using System.Net.Mail;
 
 namespace DentalClinic.Infrastructure.Notifications;
 
-public sealed class EmailNotificationProvider(IConfiguration configuration) : INotificationProvider
+public sealed class EmailNotificationProvider(DentalClinic.Infrastructure.Services.PlatformMailService mail) : INotificationProvider
 {
     public NotificationChannel Channel => NotificationChannel.Email;
     public string ProviderName => "SmtpEmailProvider";
 
     public async Task<NotificationProviderResult> SendAsync(NotificationDispatchContext context, CancellationToken cancellationToken)
     {
-        var host = configuration["Smtp:Host"] ?? configuration["SMTP_HOST"];
-        var from = configuration["Smtp:From"] ?? configuration["SMTP_FROM"];
-        if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(from))
-        {
-            return NotificationProviderResult.NotConfigured("SMTP host and sender are not configured.");
-        }
         try
         {
-            using var client = new SmtpClient(host, int.TryParse(configuration["Smtp:Port"] ?? configuration["SMTP_PORT"], out var port) ? port : 587)
-            {
-                EnableSsl = !string.Equals(configuration["Smtp:EnableSsl"] ?? configuration["SMTP_ENABLE_SSL"], "false", StringComparison.OrdinalIgnoreCase),
-            };
-            var user = configuration["Smtp:Username"] ?? configuration["SMTP_USERNAME"];
-            var password = configuration["Smtp:Password"] ?? configuration["SMTP_PASSWORD"];
-            if (!string.IsNullOrWhiteSpace(user)) client.Credentials = new NetworkCredential(user, password);
-            using var message = new MailMessage(from, context.Destination, context.Subject ?? "Planora appointment", context.Body);
-            await client.SendMailAsync(message, cancellationToken);
+            await mail.SendAsync(context.Destination, context.Subject ?? "Planora appointment", System.Net.WebUtility.HtmlEncode(context.Body).Replace("\n", "<br>", StringComparison.Ordinal), cancellationToken);
             return NotificationProviderResult.Success($"SMTP-{context.DeliveryId:N}");
         }
-        catch (FormatException ex) { return NotificationProviderResult.PermanentFailure("INVALID_ADDRESS", ex.Message); }
-        catch (SmtpException ex) { return NotificationProviderResult.TransientFailure("SMTP_ERROR", ex.Message); }
+        catch (InvalidOperationException) { return NotificationProviderResult.NotConfigured("SMTP is not configured."); }
+        catch (FormatException) { return NotificationProviderResult.PermanentFailure("INVALID_ADDRESS", "Invalid email address."); }
+        catch (SmtpException) { return NotificationProviderResult.TransientFailure("SMTP_ERROR", "SMTP delivery failed."); }
     }
 }
 

@@ -39,6 +39,7 @@ public sealed class ClinicBackupService(ApplicationDbContext db)
 
     public async Task<BackupFile> ExportClinicGroupAsync(Guid clinicId, string password, CancellationToken token)
     {
+        using var databaseAccess = db.Access.Backup();
         ValidatePassword(password);
         if (!await db.Tenants.AnyAsync(x => x.Id == clinicId && x.ParentClinicId == null, token))
             throw new KeyNotFoundException("Clinic not found.");
@@ -76,6 +77,7 @@ public sealed class ClinicBackupService(ApplicationDbContext db)
 
     public async Task<BackupFile> ExportAsync(Guid tenantId, IReadOnlyCollection<string> selectedModules, string password, CancellationToken token)
     {
+        using var databaseAccess = db.Access.Backup();
         ValidatePassword(password);
         var tables = Tables();
         var modules = selectedModules.Contains("all", StringComparer.OrdinalIgnoreCase)
@@ -98,6 +100,7 @@ public sealed class ClinicBackupService(ApplicationDbContext db)
                 using var zip = new ZipArchive(zipFile, ZipArchiveMode.Create, leaveOpen: true);
                 await db.Database.OpenConnectionAsync(token);
                 await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, token);
+                await db.RefreshDatabaseSecurityAsync(token);
                 var exported = new List<BackupTable>();
                 foreach (var table in selected)
                 {
@@ -218,6 +221,7 @@ public sealed class ClinicBackupService(ApplicationDbContext db)
                 ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, token) : null;
             var connection = (NpgsqlConnection)db.Database.GetDbConnection();
             var sqlTransaction = sharedTransaction ?? (NpgsqlTransaction)transaction!.GetDbTransaction();
+            await db.RefreshDatabaseSecurityAsync(token);
             var selectedNames = selected.Select(x => x.Name).ToHashSet(StringComparer.Ordinal);
             foreach (var dependent in allTables.Where(x => !selectedNames.Contains(x.Name) && x.Parents.Any(selectedNames.Contains)))
             {

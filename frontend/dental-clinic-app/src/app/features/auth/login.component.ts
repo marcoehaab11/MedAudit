@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { LocalizationService } from '../../core/localization.service';
 
@@ -8,7 +8,7 @@ import { LocalizationService } from '../../core/localization.service';
   styleUrl: './auth.scss',
 
   selector: 'app-login',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
   template: `
     <div class="auth-wrapper">
       <div class="auth-layout">
@@ -205,6 +205,7 @@ import { LocalizationService } from '../../core/localization.service';
                 </label>
               </div>
 
+              <a routerLink="/forgot-password">{{ i18n.language() === 'ar' ? 'نسيت كلمة السر؟' : 'Forgot password?' }}</a>
               <button class="primary submit-btn" type="submit" [disabled]="loading() || form.invalid">
                 @if (loading()) {
                   <span class="spinner" aria-hidden="true"></span>
@@ -260,8 +261,12 @@ export class LoginComponent {
     this.error.set('');
     this.auth.login(this.form.controls.email.value, this.form.controls.password.value).subscribe({
       next: () => void this.router.navigate(['/dashboard']),
-      error: () => {
+      error: (error) => {
         this.loading.set(false);
+        if (error.status === 429 || ['rate_limit_unavailable', 'session_unavailable'].includes(error.error?.code)) {
+          this.error.set(this.i18n.language() === 'en' ? error.error?.message || 'Too many requests. Please try again later.' : error.error?.messageAr || 'طلبات كثيرة جدًا. انتظر ثم حاول مرة أخرى.');
+          return;
+        }
         this.error.set(
           this.i18n.language() === 'en'
             ? 'Invalid email or password. Please verify your credentials and try again.'

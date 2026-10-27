@@ -325,10 +325,10 @@ interface ToothServiceDraft {
                     <tbody>
                       @for (tr of executedTreatments(); track tr.id) {
                         <tr>
-                          <td><strong>{{ tr.treatmentName }}</strong> @if (tr.notes) { <br><small>{{ tr.notes }}</small> }</td>
+                          <td><strong>{{ tr.treatmentName }}</strong> @if(tr.type === 3 && tr.status !== 5 && tr.toothNumbers.length === 1){<br><a [routerLink]="['/patients',examination()?.patientId || appointment()?.patientId,'implants',tr.toothNumbers[0]]" [queryParams]="{appointmentId:tr.appointmentId,treatmentId:tr.id}">{{t('Open implant plan','فتح خطة الزراعة')}}</a>} @if (tr.notes) { <br><small>{{ tr.notes }}</small> }</td>
                           <td><span class="tooth-table-pill">{{ tr.toothNumbers && tr.toothNumbers.length ? '#' + tr.toothNumbers.join(', #') : '—' }}</span></td>
                           <td><strong>{{ tr.price }} EGP</strong></td>
-                          <td><span class="status-tag done">{{ t('Completed', 'مكتمل ومرحل') }}</span></td>
+                          <td><span class="status-tag" [class.done]="tr.status === 4" [class.active]="tr.status === 3">{{ tr.status === 4 ? t('Completed', 'مكتمل ومرحل') : tr.status === 3 ? t('In progress', 'قيد العلاج') : tr.status === 5 ? t('Cancelled', 'ملغي') : t('Pending', 'لم يتم بعد') }}</span></td>
                         </tr>
                       }
                     </tbody>
@@ -783,7 +783,7 @@ interface ToothServiceDraft {
                                 </details>
                               }
                               @if (!toothServiceIsRootCanal(number)) {
-                              @if (!toothServiceIsExtraction(number) && !toothServiceIsFilling(number)) { <label>{{ t('Treatment status', 'حالة العلاج') }}<select [(ngModel)]="row.status"><option value="completed">{{ t('Completed today', 'تم الانتهاء اليوم') }}</option><option value="in_progress">{{ t('In progress — continue next visit', 'بدأ العلاج ولسه هنكمل') }}</option></select></label>
+                              @if (!toothServiceIsExtraction(number) && !toothServiceIsFilling(number) && !toothServiceIsImplant(number)) { <label>{{ t('Treatment status', 'حالة العلاج') }}<select [(ngModel)]="row.status"><option value="completed">{{ t('Completed today', 'تم الانتهاء اليوم') }}</option><option value="in_progress">{{ t('In progress — continue next visit', 'بدأ العلاج ولسه هنكمل') }}</option></select></label>
                               @if (row.status === 'in_progress') { <label>{{ t('Remaining work', 'العمل المتبقي') }}<input [(ngModel)]="row.remaining" maxlength="1000" /></label> }
                               } <label class="procedure-notes">{{ (toothServiceIsExtraction(number) || toothServiceIsFilling(number)) ? t('Notes (optional)', 'ملاحظات (اختياري)') : t('Notes', 'ملاحظات') }}<textarea [(ngModel)]="row.notes" maxlength="2000"></textarea></label>
                               }
@@ -801,7 +801,7 @@ interface ToothServiceDraft {
                           @if (toothServiceIsRootCanal(number) && row.confirmedCompleted) {
                             <p class="clinical-tag">✓ {{ t('Treatment completed', 'العلاج مكتمل') }}</p>
                           } @else {
-                          <button type="button" class="btn-execute-procedure-modern" [disabled]="!row.catalogId || savingTreatment() || savingRootCanal() || row.price < 0" (click)="executeToothService(number)">{{ savingTreatment() ? t('Saving…', 'جارٍ الحفظ…') : row.treatmentId && toothServiceIsRootCanal(number) ? t('Save & continue existing treatment', 'حفظ واستكمال نفس العلاج') : number <= 0 ? t('Record whole-mouth service', 'تسجيل خدمة الفم بالكامل') : t('Record this tooth service', 'تسجيل إجراء هذا السن') }}</button>
+                          <button type="button" class="btn-execute-procedure-modern" [disabled]="!row.catalogId || savingTreatment() || savingRootCanal() || row.price < 0" (click)="executeToothService(number)">{{ savingTreatment() ? t('Saving…', 'جارٍ الحفظ…') : toothServiceIsImplant(number) ? t('Start / continue implant plan', 'بدء / استكمال خطة الزراعة') : row.treatmentId && toothServiceIsRootCanal(number) ? t('Save & continue existing treatment', 'حفظ واستكمال نفس العلاج') : number <= 0 ? t('Record whole-mouth service', 'تسجيل خدمة الفم بالكامل') : t('Record this tooth service', 'تسجيل إجراء هذا السن') }}</button>
                           }
                         </section>
                       }
@@ -921,7 +921,7 @@ interface ToothServiceDraft {
                       <tbody>
                         @for (tr of executedTreatments(); track tr.id) {
                           <tr>
-                            <td><strong>{{ tr.treatmentName }}</strong> @if (tr.notes) { <br><small>{{ tr.notes }}</small> }</td>
+                            <td><strong>{{ tr.treatmentName }}</strong> @if(tr.type === 3 && tr.status !== 5 && tr.toothNumbers.length === 1){<br><a [routerLink]="['/patients',examination()?.patientId || appointment()?.patientId,'implants',tr.toothNumbers[0]]" [queryParams]="{appointmentId:tr.appointmentId,treatmentId:tr.id}">{{t('Open implant plan','فتح خطة الزراعة')}}</a>} @if (tr.notes) { <br><small>{{ tr.notes }}</small> }</td>
                             <td><span class="tooth-table-pill">{{ tr.toothNumbers && tr.toothNumbers.length ? '#' + tr.toothNumbers.join(', #') : '—' }}</span></td>
                             <td><strong>{{ tr.price }} EGP</strong></td>
                             <td>
@@ -2589,7 +2589,7 @@ export class ExaminationComponent {
   treatmentPriceTeeth(item: Treatment) { return (item.toothNumbers ?? []).map(number => this.toothLabel(number) + ' · #' + number).join(', '); }
   async recordAndApproveService(number: number) {
     const row = this.toothService(number);
-    await this.executeToothService(number);
+    await this.executeToothService(number, false);
     if (row.treatmentId && !this.error()) await this.confirmVisitPrice({id: row.treatmentId, price: row.price});
   }
   async confirmVisitPrice(item: Pick<Treatment, 'id' | 'price'>) {
@@ -2638,7 +2638,7 @@ export class ExaminationComponent {
       if (item) {
         const tier = parseCatalogItem(item).priceTiers[0];
         row.catalogId = item.id; row.tierId = tier?.id ?? 'base'; row.price = tier?.price ?? item.defaultPrice ?? 0;
-        if ([4,5].includes(item.type)) row.status = 'in_progress';
+        if ([3,4,5].includes(item.type)) row.status = 'in_progress';
       }
     }
     return row;
@@ -2784,14 +2784,15 @@ export class ExaminationComponent {
     const first = this.toothServiceTiers(number)[0];
     row.tierId = first?.id ?? 'base'; row.price = first?.price ?? 0;
     if (!this.toothServiceIsFilling(number)) row.cariesClass = null;
-    if (this.toothServiceIsRootCanal(number)) row.status = 'in_progress';
+    if (this.toothServiceIsRootCanal(number) || this.toothServiceIsImplant(number)) row.status = 'in_progress';
   }
   selectToothServiceTier(number: number) {
     const row = this.toothService(number);
     const tier = this.toothServiceTiers(number).find(tier => tier.id === row.tierId);
     if (tier) row.price = tier.price;
   }
-  async executeToothService(number: number) {
+  toothServiceIsImplant(number: number) { return this.catalog().find(item => item.id === this.toothService(number).catalogId)?.type === 3; }
+  async executeToothService(number: number, openImplant = true) {
     const exam = this.examination();
     const row = this.toothService(number);
     if (!exam?.canEdit || this.savingTreatment() || this.savingRootCanal() || !row.catalogId || !Number.isFinite(row.price) || row.price < 0) return;
@@ -2824,8 +2825,10 @@ export class ExaminationComponent {
       }
       if (this.toothServiceIsRootCanal(number)) await this.persistRootCanal(number);
       const treatment = await firstValueFrom(this.treatmentApi.treatment(row.treatmentId));
+      if (this.toothServiceIsImplant(number)) row.status = 'in_progress';
       const targetStatus = row.status === 'completed' ? 4 : 3;
       if (treatment.status !== targetStatus) await firstValueFrom(this.treatmentApi.treatmentAction(treatment.id, row.status === 'completed' ? 'complete' : 'start', treatment.version));
+      if (this.toothServiceIsImplant(number) && openImplant) { await this.router.navigate(['/patients', exam.patientId, 'implants', number], { queryParams: { appointmentId: this.appointmentId, treatmentId: row.treatmentId } }); return; }
       if (number <= 0) { this.wholeMouthTreatment = false; if (number < 0) this.recordedWholeMouth.add(number); }
       else if (row.status === 'completed') this.finishTooth(number);
       else this.treatmentTeeth = this.treatmentTeeth.filter(tooth => tooth !== number);

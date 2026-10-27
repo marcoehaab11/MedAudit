@@ -1,3 +1,4 @@
+using DentalClinic.Infrastructure.Security;
 using System.Globalization;
 using DentalClinic.Application;
 using DentalClinic.Application.Identity;
@@ -27,10 +28,21 @@ builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
     options.AccessDeniedPath = "/Account/Login";
+    options.Cookie.Name = "Planora.Admin.Session";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.ExpireTimeSpan = TimeSpan.FromHours(12);
+    options.SlidingExpiration = false;
+    options.EventsType = typeof(VerifiedSessionEvents);
 });
+
+builder.Services.AddVerifiedSessions(IdentityConstants.ApplicationScheme);
 
 builder.Services.AddAuthorization(options =>
 {
+    options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser().RequireAssertion(context => PlatformAccess.IsPlatformAdmin(context.User)).Build();
     options.AddPolicy(AuthConstants.PlatformAdminPolicy, policy =>
         policy.RequireAuthenticatedUser()
             .RequireAssertion(context => PlatformAccess.IsPlatformAdmin(context.User)));
@@ -42,16 +54,11 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizeFolder("/", AuthConstants.PlatformAdminPolicy);
 });
 
-builder.Services.Configure<ForwardedHeadersOptions>(options =>
-{
-    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.All;
-    options.KnownIPNetworks.Clear();
-    options.KnownProxies.Clear();
-});
+builder.Services.AddRequestProtection(builder.Configuration);
 
 var app = builder.Build();
 
-await DatabaseSeeder.SeedAsync(app.Services);
+await DatabaseSecurityBootstrap.VerifyRuntimeAsync(app.Services);
 
 app.UseForwardedHeaders();
 
@@ -68,7 +75,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseStaticFiles();
 app.UseRouting();
+app.UseMiddleware<SessionSecurityMiddleware>();
 app.UseAuthentication();
+app.UseMiddleware<RequestLimitMiddleware>(true);
 app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthorization();
 

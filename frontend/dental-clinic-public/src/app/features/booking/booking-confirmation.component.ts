@@ -36,7 +36,7 @@ export class BookingConfirmationComponent implements OnInit {
       this.managementToken.set(this.route.snapshot.queryParamMap.get('manage') || '');
       if (ref) {
         if (this.managementToken()) this.loadManagedBooking();
-        else this.loadConfirmation(ref);
+        else { this.error.set('Open the private management link supplied when you booked, or contact the clinic.'); this.loading.set(false); }
       }
     });
   }

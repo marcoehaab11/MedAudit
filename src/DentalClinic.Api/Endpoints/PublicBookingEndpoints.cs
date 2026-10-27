@@ -29,7 +29,8 @@ internal static partial class PublicBookingEndpoints
 
     public static IEndpointRouteBuilder MapPublicBookingEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var api = endpoints.MapGroup("/api/public").AllowAnonymous();
+        var api = endpoints.MapGroup("/api/public").AllowAnonymous()
+            .AddEndpointFilter(new DatabaseAccessFilter("booking"));
 
         api.MapGet("/clinics/{slug}/qr", async (string slug, HttpContext context,
             IPublicBookingService service, CancellationToken token) =>
@@ -51,7 +52,7 @@ internal static partial class PublicBookingEndpoints
             }
             catch (PublicBookingNotFoundException) { return Results.NotFound(); }
             catch (PublicBookingDisabledException) { return Results.NotFound(); }
-        }).RequireRateLimiting("public-read");
+        });
 
         api.MapGet("/clinics/{slug}", async (string slug, IPublicBookingService s, CancellationToken t) =>
         {
@@ -68,7 +69,7 @@ internal static partial class PublicBookingEndpoints
             {
                 return Results.BadRequest(new { title = ex.Message });
             }
-        }).RequireRateLimiting("public-read");
+        });
 
         api.MapPost("/clinics/{slug}/visits", async (string slug, VisitInput request,
             ApplicationDbContext db, IPublicBookingService service, CancellationToken token) =>
@@ -81,7 +82,7 @@ internal static partial class PublicBookingEndpoints
             db.BookingPageVisits.Add(new BookingPageVisit(tenantId, source, DateTimeOffset.UtcNow));
             await db.SaveChangesAsync(token);
             return Results.NoContent();
-        }).RequireRateLimiting("public-booking");
+        });
 
         api.MapGet("/clinics/{slug}/doctors", async (string slug, IPublicBookingService s, CancellationToken t) =>
         {
@@ -98,7 +99,7 @@ internal static partial class PublicBookingEndpoints
             {
                 return Results.BadRequest(new { title = ex.Message });
             }
-        }).RequireRateLimiting("public-read");
+        });
 
         api.MapGet("/clinics/{slug}/services", async (string slug, IPublicBookingService s, CancellationToken t) =>
         {
@@ -115,7 +116,7 @@ internal static partial class PublicBookingEndpoints
             {
                 return Results.BadRequest(new { title = ex.Message });
             }
-        }).RequireRateLimiting("public-read");
+        });
 
         api.MapGet("/clinics/{slug}/availability", async (
             string slug, Guid doctorId, DateOnly date, Guid? serviceId, IPublicBookingService s, CancellationToken t) =>
@@ -133,7 +134,7 @@ internal static partial class PublicBookingEndpoints
             {
                 return Results.BadRequest(new { title = ex.Message });
             }
-        }).RequireRateLimiting("public-read");
+        });
 
         api.MapPost("/clinics/{slug}/bookings", async (
             string slug, PublicBookingRequest request, IPublicBookingService s, ApplicationDbContext db,
@@ -184,7 +185,7 @@ internal static partial class PublicBookingEndpoints
             {
                 return Results.BadRequest(new { title = ex.Message });
             }
-        }).RequireRateLimiting("public-booking");
+        });
 
         api.MapPost("/clinics/{slug}/inquiries", async (string slug,
             PublicBookingInquiryRequest request, IPublicBookingService service, ApplicationDbContext db,
@@ -203,13 +204,16 @@ internal static partial class PublicBookingEndpoints
             catch (PublicBookingNotFoundException ex) { return Results.NotFound(new { title = ex.Message }); }
             catch (PublicBookingDisabledException ex) { return Results.BadRequest(new { title = ex.Message }); }
             catch (ArgumentException ex) { return Results.BadRequest(new { title = ex.Message }); }
-        }).RequireRateLimiting("public-booking");
+        });
 
-        api.MapGet("/bookings/confirmation/{reference}", async (string reference, IPublicBookingService s, CancellationToken t) =>
+        api.MapGet("/bookings/confirmation/{reference}", async (string reference, string? manage, ApplicationDbContext db, IPublicBookingService s, CancellationToken t) =>
         {
+            var booking = string.IsNullOrWhiteSpace(manage) ? null : await FindManagedBookingAsync(db, manage, t);
+            if (booking is null || !string.Equals(booking.BookingReference, reference, StringComparison.Ordinal))
+                return Results.NotFound(new { title = "Open the private management link supplied when you booked, or contact the clinic." });
             var confirmation = await s.GetBookingByReferenceAsync(reference, t);
             return confirmation != null ? Results.Ok(confirmation) : Results.NotFound(new { title = "Booking confirmation not found." });
-        }).RequireRateLimiting("public-read");
+        });
 
         api.MapGet("/bookings/manage/{managementToken}", async (string managementToken,
             ApplicationDbContext db, IPublicBookingService service, CancellationToken token) =>
@@ -218,7 +222,7 @@ internal static partial class PublicBookingEndpoints
             if (booking is null) return Results.NotFound();
             var confirmation = await service.GetBookingByReferenceAsync(booking.BookingReference!, token);
             return confirmation is null ? Results.NotFound() : Results.Ok(confirmation);
-        }).RequireRateLimiting("public-read");
+        });
 
         api.MapGet("/bookings/manage/{managementToken}/availability", async (string managementToken, DateOnly date,
             ApplicationDbContext db, IPublicBookingService service, CancellationToken token) =>
@@ -230,7 +234,7 @@ internal static partial class PublicBookingEndpoints
             try { return Results.Ok(await service.GetAvailabilityAsync(slug, booking.DoctorProfileId, date, booking.TreatmentCatalogItemId, token)); }
             catch (Exception ex) when (ex is PublicBookingNotFoundException or PublicBookingDisabledException)
             { return Results.Conflict(new { title = "Online rescheduling is unavailable." }); }
-        }).RequireRateLimiting("public-read");
+        });
 
         api.MapPost("/bookings/manage/{managementToken}/confirm", async (string managementToken,
             ApplicationDbContext db, IPublicBookingService service, CancellationToken token) =>
@@ -241,7 +245,7 @@ internal static partial class PublicBookingEndpoints
             booking.Confirm(DateTimeOffset.UtcNow);
             await db.SaveChangesAsync(token);
             return Results.Ok(await service.GetBookingByReferenceAsync(booking.BookingReference!, token));
-        }).RequireRateLimiting("public-booking");
+        });
 
         api.MapPost("/bookings/manage/{managementToken}/cancel", async (string managementToken,
             CancelManagedBooking request, ApplicationDbContext db, IPublicBookingService service,
@@ -262,7 +266,7 @@ internal static partial class PublicBookingEndpoints
                 $"Appointment {booking.BookingReference} was cancelled by the patient.",
                 "Appointment", booking.Id, $"booking-cancelled:{booking.Id:N}", token);
             return Results.Ok(await service.GetBookingByReferenceAsync(booking.BookingReference!, token));
-        }).RequireRateLimiting("public-booking");
+        });
 
         api.MapPost("/bookings/manage/{managementToken}/reschedule", async (string managementToken,
             RescheduleManagedBooking request, ApplicationDbContext db, IPublicBookingService service,
@@ -293,7 +297,7 @@ internal static partial class PublicBookingEndpoints
                 $"Appointment {booking.BookingReference} was moved to {booking.StartAt:yyyy-MM-dd HH:mm} UTC.",
                 "Appointment", booking.Id, $"booking-rescheduled:{booking.Id:N}:{booking.StartAt.ToUnixTimeSeconds()}", token);
             return Results.Ok(await service.GetBookingByReferenceAsync(booking.BookingReference!, token));
-        }).RequireRateLimiting("public-booking");
+        });
 
         return endpoints;
     }

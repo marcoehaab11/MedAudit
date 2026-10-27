@@ -11,7 +11,8 @@ namespace DentalClinic.PlatformAdmin.Pages.Account;
 
 [AllowAnonymous]
 public sealed class LoginModel(
-    UserManager<ApplicationUser> userManager) : PageModel
+    UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager,
+    DentalClinic.Infrastructure.Persistence.DatabaseAccessScope databaseAccess) : PageModel
 {
     [BindProperty]
     public InputModel Input { get; set; } = new();
@@ -35,6 +36,7 @@ public sealed class LoginModel(
 
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
+        using var access = databaseAccess.Authentication();
         returnUrl ??= Url.Content("~/");
 
         if (!ModelState.IsValid)
@@ -43,38 +45,25 @@ public sealed class LoginModel(
         }
 
         var user = await userManager.FindByEmailAsync(Input.Email);
-        if (user == null || !user.IsPlatformAdmin)
+        if (user == null || !user.IsPlatformAdmin || user.TenantId is not null)
         {
             ErrorMessage = "Invalid credentials or non-admin account.";
             return Page();
         }
 
-        var checkPassword = await userManager.CheckPasswordAsync(user, Input.Password);
-        if (!checkPassword)
+        var checkPassword = await signInManager.CheckPasswordSignInAsync(user, Input.Password, lockoutOnFailure: true);
+        if (!checkPassword.Succeeded)
         {
             ErrorMessage = "Invalid email or password.";
             return Page();
         }
 
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, user.Id.ToString("D")),
-            new(ClaimTypes.Email, user.Email ?? string.Empty),
-            new(ClaimTypes.Name, user.UserName ?? string.Empty),
-            new(ClaimTypes.Role, AuthConstants.PlatformAdminRole)
-        };
-
-        var claimsIdentity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
-        var authProperties = new AuthenticationProperties
-        {
-            IsPersistent = true,
-            ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
-        };
-
-        await HttpContext.SignInAsync(
-            IdentityConstants.ApplicationScheme,
-            new ClaimsPrincipal(claimsIdentity),
-            authProperties);
+        await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+        await signInManager.SignInWithClaimsAsync(user,
+            new AuthenticationProperties { IsPersistent = false, ExpiresUtc = DateTimeOffset.UtcNow.AddHours(12), AllowRefresh = false },
+            [new Claim(ClaimTypes.Role, AuthConstants.PlatformAdminRole),
+             new Claim(VerifiedSessionEvents.IdentityClaim, user.Id.ToString("D")),
+             new Claim(VerifiedSessionEvents.StampClaim, user.SecurityStamp!)]);
 
         return LocalRedirect(returnUrl);
     }

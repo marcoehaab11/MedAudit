@@ -43,6 +43,7 @@ public sealed partial class PlatformHealthMonitor(
             var (healthy, error) = await CheckAsync(target.Url!, token);
             await using var scope = services.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            using var databaseAccess = db.Access.Monitoring();
             var probe = await db.PlatformHealthProbes.SingleOrDefaultAsync(x => x.Key == target.Key, token);
             if (probe is null)
             {

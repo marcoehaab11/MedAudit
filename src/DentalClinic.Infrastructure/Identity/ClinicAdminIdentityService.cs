@@ -18,12 +18,14 @@ internal sealed class ClinicAdminIdentityService(
         string email,
         CancellationToken cancellationToken)
     {
+        using var databaseAccess = context.Access.Authentication();
         cancellationToken.ThrowIfCancellationRequested();
         return await CreateInvitedUserAsync(tenantId, email, cancellationToken);
     }
 
     public async Task<IdentityAccountLink> CreateInvitedUserAsync(Guid tenantId, string email, CancellationToken cancellationToken)
     {
+        using var databaseAccess = context.Access.Authentication();
         cancellationToken.ThrowIfCancellationRequested();
         var existing = await userManager.FindByEmailAsync(email);
         if (existing is not null)
@@ -57,6 +59,7 @@ internal sealed class ClinicAdminIdentityService(
 
     public async Task<Guid> CreateUserWithPasswordAsync(Guid tenantId, string email, string password, CancellationToken cancellationToken)
     {
+        using var databaseAccess = context.Access.Authentication();
         cancellationToken.ThrowIfCancellationRequested();
         var user = new ApplicationUser
         {
@@ -77,6 +80,7 @@ internal sealed class ClinicAdminIdentityService(
         string password,
         CancellationToken cancellationToken)
     {
+        using var databaseAccess = context.Access.Authentication();
         cancellationToken.ThrowIfCancellationRequested();
         using var scope = writeScope.Enter(tenantId);
         var clinicUser = await context.ClinicUsers.IgnoreQueryFilters()
@@ -114,9 +118,11 @@ internal sealed class ClinicAdminIdentityService(
 
     public async Task<bool> CheckPasswordAsync(Guid userId, string password, CancellationToken cancellationToken)
     {
+        using var databaseAccess = context.Access.Authentication();
         cancellationToken.ThrowIfCancellationRequested();
         var user = await context.Users.IgnoreQueryFilters().SingleOrDefaultAsync(x => x.Id == userId, cancellationToken);
-        return user is not null && await userManager.CheckPasswordAsync(user, password);
+        return user is not null && !user.IsPlatformAdmin &&
+            !await userManager.IsLockedOutAsync(user) && await userManager.CheckPasswordAsync(user, password);
     }
 
     private static void EnsureSucceeded(IdentityResult result, string propertyName)

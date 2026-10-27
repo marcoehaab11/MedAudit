@@ -35,6 +35,12 @@ internal sealed class GlobalExceptionHandler(
     {
         var (status, title, detail, errors) = exception switch
         {
+            Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.InsufficientPrivilege } or
+            Microsoft.EntityFrameworkCore.DbUpdateException { InnerException: Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.InsufficientPrivilege } } => (
+                StatusCodes.Status403Forbidden,
+                "Access denied",
+                "You do not have permission to access or change this record.",
+                null),
             ValidationException validation => (
                 StatusCodes.Status400BadRequest,
                 "Validation failed",

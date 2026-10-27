@@ -100,10 +100,7 @@ internal sealed class PublicBookingStore(ApplicationDbContext context) : IPublic
     public async Task<IReadOnlyCollection<AppointmentBusyPeriod>> GetBusyPeriodsAsync(
         Guid doctorProfileId, DateTimeOffset rangeStart, DateTimeOffset rangeEnd, CancellationToken token)
     {
-        return await context.Appointments.AsNoTracking().IgnoreQueryFilters()
-            .Where(x => x.DoctorProfileId == doctorProfileId && x.Status != AppointmentStatus.Cancelled &&
-                        x.StartAt < rangeEnd && x.EndAt > rangeStart)
-            .Select(x => new AppointmentBusyPeriod(x.StartAt, x.EndAt))
+        return await context.Database.SqlQuery<AppointmentBusyPeriod>($"SELECT * FROM clinic_security.busy_periods({doctorProfileId}, {rangeStart}, {rangeEnd})")
             .ToListAsync(token);
     }
 
@@ -137,25 +134,35 @@ internal sealed class PublicBookingStore(ApplicationDbContext context) : IPublic
 
     public async Task<Patient?> FindPatientByNormalizedPhoneAsync(Guid tenantId, string normalizedPhone, CancellationToken token)
     {
+        context.Access.MatchPatient(normalizedPhone);
+        // A phone number typed into a public form is not proof of ownership of an
+        // existing medical file. Only staff can link/merge an existing patient.
+        if (context.Access.Purpose == "booking") return null;
         return await context.Patients.AsNoTracking().IgnoreQueryFilters()
             .FirstOrDefaultAsync(p => p.TenantId == tenantId && p.Phone == normalizedPhone && p.Status == PatientStatus.Active, token);
     }
 
     public async Task AddPatientAsync(Patient patient, CancellationToken token)
     {
+        context.Access.CreatedPatient(patient.Id);
         await context.Patients.AddAsync(patient, token);
     }
 
     public async Task AddAppointmentAsync(Appointment appointment, CancellationToken token)
     {
+        context.Access.CreatedAppointment(appointment.Id);
         await context.Appointments.AddAsync(appointment, token);
     }
 
-    public async Task AddInquiryAsync(BookingInquiry inquiry, CancellationToken token) =>
+    public async Task AddInquiryAsync(BookingInquiry inquiry, CancellationToken token)
+    {
+        context.Access.CreatedInquiry(inquiry.Id);
         await context.BookingInquiries.AddAsync(inquiry, token);
+    }
 
     public async Task<PublicBookingIdempotencyRecord?> FindIdempotencyRecordAsync(Guid tenantId, string idempotencyKey, CancellationToken token)
     {
+        context.Access.MatchIdempotency(idempotencyKey);
         return await context.PublicBookingIdempotencyRecords.AsNoTracking().IgnoreQueryFilters()
             .FirstOrDefaultAsync(r => r.TenantId == tenantId && r.IdempotencyKey == idempotencyKey, token);
     }
@@ -212,6 +219,7 @@ internal sealed class PublicBookingStore(ApplicationDbContext context) : IPublic
             RETURNING "Prefix", "LastValue";
             """;
 
+        await context.RefreshDatabaseSecurityAsync(token);
         var connection = context.Database.GetDbConnection();
         if (connection.State != System.Data.ConnectionState.Open)
         {

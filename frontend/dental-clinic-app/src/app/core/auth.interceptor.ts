@@ -1,27 +1,17 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
+import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
+import { AuthService } from './auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
-  if (request.url === '/api/auth/login' || request.url.startsWith('/api/auth/invitations/')) return next(request);
-  
-  const token = localStorage.getItem('access_token');
-  const req = token ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : request;
-
-  return next(req).pipe(
-    catchError((error: HttpErrorResponse) => {
-      if (error.status === 401) {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user_id');
-        localStorage.removeItem('display_name');
-        localStorage.removeItem('permissions');
-        localStorage.removeItem('tenant_id');
-        localStorage.removeItem('tenant_name');
-        localStorage.removeItem('clinics');
-        window.location.assign('/login');
-      }
-      return throwError(() => error);
-    })
-  );
+  if (!request.url.startsWith('/api/')) return next(request);
+  const auth = inject(AuthService);
+  const req = request.clone({ setHeaders: { 'X-App-Request': '1' } });
+  return next(req).pipe(catchError((error: HttpErrorResponse) => {
+    if (error.status === 401) {
+      auth.clearSession();
+      if (!['/api/auth/login', '/api/auth/session'].includes(request.url) && !request.url.startsWith('/api/auth/invitations/')) window.location.assign('/login');
+    }
+    return throwError(() => error);
+  }));
 };
-
-

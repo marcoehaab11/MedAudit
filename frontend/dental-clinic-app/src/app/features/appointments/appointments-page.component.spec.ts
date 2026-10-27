@@ -1,3 +1,4 @@
+import { AuthService } from '../../core/auth.service';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -7,15 +8,11 @@ import { AppointmentsPageComponent } from './appointments-page.component';
 
 describe('AppointmentsPageComponent', () => {
   beforeEach(async () => {
-    localStorage.setItem('access_token', 'test');
-    localStorage.setItem(
-      'permissions',
-      JSON.stringify(['Appointments.View', 'Appointments.Create']),
-    );
     await TestBed.configureTestingModule({
       imports: [AppointmentsPageComponent],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     }).compileComponents();
+    TestBed.inject(AuthService).permissions.set(['Appointments.View', 'Appointments.Create']);
   });
 
   afterEach(() => TestBed.inject(HttpTestingController).verify());

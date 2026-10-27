@@ -20,15 +20,33 @@ using DentalClinic.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace DentalClinic.Infrastructure.Persistence;
 
 public sealed class ApplicationDbContext(
     DbContextOptions<ApplicationDbContext> options,
     ICurrentTenant currentTenant,
-    PlatformWriteScope? platformWriteScope = null)
+    PlatformWriteScope? platformWriteScope = null,
+    DatabaseAccessScope? databaseAccess = null,
+    DatabaseSecurityContext? databaseSecurity = null)
     : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>(options)
 {
+    public DatabaseAccessScope Access { get; } = databaseAccess ?? new();
+    public DbSet<ImplantRecord> ImplantRecords => Set<ImplantRecord>();
+    public DbSet<ImplantAttachment> ImplantAttachments => Set<ImplantAttachment>();
+
+    public async Task RefreshDatabaseSecurityAsync(CancellationToken token = default)
+    {
+        if (databaseSecurity is null) return; // Design-time and manually constructed test contexts.
+        if (Database.GetDbConnection().State != System.Data.ConnectionState.Open)
+            await Database.OpenConnectionAsync(token);
+        await databaseSecurity.ApplyAsync(Database.GetDbConnection(),
+            Database.CurrentTransaction?.GetDbTransaction(), token);
+    }
+    public DbSet<ClinicRegistration> ClinicRegistrations => Set<ClinicRegistration>();
+    public DbSet<PlatformMailSettings> PlatformMailSettings => Set<PlatformMailSettings>();
+    public DbSet<PlatformEmail> PlatformEmails => Set<PlatformEmail>();
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<TenantConfiguration> TenantConfigurations => Set<TenantConfiguration>();
     public DbSet<ClinicHours> ClinicHours => Set<ClinicHours>();
@@ -110,7 +128,44 @@ public sealed class ApplicationDbContext(
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
+        builder.Entity<ImplantRecord>(e =>
+        {
+            e.ToTable("implant_records"); e.HasKey(x => x.Id); e.HasAlternateKey(x => new { x.TenantId, x.Id });
+            e.Property(x => x.WorkflowJson).HasColumnType("jsonb"); e.Property(x => x.AppointmentLinksJson).HasColumnType("jsonb");
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.TenantId, x.PatientId, x.ToothNumber });
+            e.HasIndex(x => new { x.TenantId, x.TreatmentId }).IsUnique().HasFilter("\"TreatmentId\" IS NOT NULL");
+            e.HasOne<Patient>().WithMany().HasForeignKey(x => new { x.TenantId, x.PatientId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<DoctorProfile>().WithMany().HasForeignKey(x => new { x.TenantId, x.DoctorProfileId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Treatment>().WithMany().HasForeignKey(x => new { x.TenantId, x.TreatmentId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            e.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+        builder.Entity<ImplantAttachment>(e =>
+        {
+            e.ToTable("implant_attachments"); e.HasKey(x => x.Id);
+            e.Property(x => x.FileName).HasMaxLength(200); e.Property(x => x.ContentType).HasMaxLength(100); e.Property(x => x.Section).HasMaxLength(80);
+            e.HasOne<ImplantRecord>().WithMany().HasForeignKey(x => new { x.TenantId, x.ImplantRecordId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Cascade);
+            e.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
         base.OnModelCreating(builder);
+
+        builder.Entity<ClinicRegistration>(entity =>
+        {
+            entity.ToTable("clinic_registrations");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.IdentityUserId).IsUnique();
+            entity.HasIndex(x => x.TenantId).IsUnique();
+            entity.Property(x => x.Email).HasMaxLength(256);
+            entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.IdentityUserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+        });
+        builder.Entity<PlatformMailSettings>(entity => { entity.ToTable("platform_mail_settings"); entity.HasKey(x => x.Id); });
+        builder.Entity<PlatformEmail>(entity =>
+        {
+            entity.ToTable("platform_emails");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.Status, x.NextAttemptAt });
+        });
 
         builder.Entity<Tenant>(entity =>
         {

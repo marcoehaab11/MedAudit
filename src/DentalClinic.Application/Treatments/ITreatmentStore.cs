@@ -19,6 +19,7 @@ public interface ITreatmentStore
     Task<PagedResult<TreatmentPlanListItem>> SearchPlansAsync(TreatmentPlanSearch query, Guid? visibleDoctorId, CancellationToken token);
     Task<PlanExecutionSource?> FindPlanExecutionSourceAsync(Guid planItemId, CancellationToken token);
     Task<Treatment?> FindTreatmentAsync(Guid id, bool tracking, CancellationToken token);
+    Task<bool> HasIncompleteImplantAsync(Guid treatmentId, CancellationToken token);
     Task<TreatmentDetails?> GetTreatmentAsync(Guid id, Guid? visibleDoctorId, CancellationToken token);
     Task<PagedResult<TreatmentListItem>> SearchTreatmentsAsync(TreatmentSearch query, Guid? visibleDoctorId, CancellationToken token);
     void AddCatalog(TreatmentCatalogItem item);

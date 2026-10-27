@@ -20,7 +20,8 @@ public sealed class JwtAccessTokenIssuer(IConfiguration configuration) : IAccess
         var audience = configuration["Authentication:Jwt:Audience"] ?? "DentalClinic";
         var signingKey = configuration["Authentication:Jwt:SigningKey"]
             ?? configuration["Authentication__Jwt__SigningKey"]
-            ?? "SuperSecretDefaultSigningKeyForDockerBuild123!";
+            ?? throw new InvalidOperationException("Authentication:Jwt:SigningKey is required.");
+        if (signingKey.Length < 32) throw new InvalidOperationException("The signing key must have at least 32 characters.");
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKey));
         var expiresAt = DateTimeOffset.UtcNow.AddHours(12);

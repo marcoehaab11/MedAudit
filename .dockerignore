@@ -19,3 +19,6 @@
 **/*.sql
 **/*.backup
 **/*.log
+!src/DentalClinic.Infrastructure/Persistence/Migrations/RowLevelSecurity.sql
+.env
+.env.*

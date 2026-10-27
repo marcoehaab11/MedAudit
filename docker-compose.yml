@@ -39,8 +39,10 @@ services:
     environment: &backend-environment
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ASPNETCORE_HTTP_PORTS: 8080
-      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=meddentist_app;Password=${DATABASE_APP_PASSWORD:?DATABASE_APP_PASSWORD must be set}
       ConnectionStrings__Redis: redis:6379,abortConnect=false
+      RateLimiting__KeySecret: ${RATE_LIMIT_KEY_SECRET:?RATE_LIMIT_KEY_SECRET must be set}
+      RateLimiting__TrustedProxies: 172.30.74.10
       Authentication__Jwt__Issuer: ${JWT_ISSUER:-MedDentist}
       Authentication__Jwt__Audience: ${JWT_AUDIENCE:-MedDentist.Client}
       Authentication__Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY must be set}
@@ -48,15 +50,21 @@ services:
       Monitoring__ClinicAppUrl: http://clinic-app:80/
       Monitoring__BookingAppUrl: http://public-app:80/
       Monitoring__AlertEmail: ${MONITOR_ALERT_EMAIL:-}
+      DataProtection__KeyPath: /app/data-protection-keys
+      Onboarding__PublicAppUrl: ${PUBLIC_APP_URL:-https://medaudit.online}
+      Onboarding__ClinicAppUrl: ${CLINIC_APP_URL:-https://app.medaudit.online}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_FROM: ${SMTP_FROM:-}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_ENABLE_SSL: ${SMTP_ENABLE_SSL:-true}
+    volumes:
+      - data-protection-keys:/app/data-protection-keys
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
     healthcheck:
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health/live HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\n\\r\\n' >&3 && timeout 2 grep -q 'Healthy' <&3"]
       interval: 15s
@@ -69,9 +77,12 @@ services:
       context: .
       dockerfile: src/DentalClinic.PlatformAdmin/Dockerfile
     environment: *backend-environment
+    volumes:
+      - data-protection-keys:/app/data-protection-keys
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
     healthcheck:
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health/live HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\n\\r\\n' >&3 && timeout 2 grep -q 'Healthy' <&3"]
       interval: 15s
@@ -83,11 +94,32 @@ services:
     build:
       context: .
       dockerfile: src/DentalClinic.Worker/Dockerfile
-    environment: *backend-environment
+    environment:
+      <<: *backend-environment
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=meddentist_jobs;Password=${DATABASE_WORKER_PASSWORD:?DATABASE_WORKER_PASSWORD must be set}
+    volumes:
+      - data-protection-keys:/app/data-protection-keys
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
     restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      dockerfile: src/DentalClinic.Api/Dockerfile
+    command: ["--migrate"]
+    environment:
+      <<: *backend-environment
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      DatabaseSecurity__AppPassword: ${DATABASE_APP_PASSWORD:?DATABASE_APP_PASSWORD must be set}
+      DatabaseSecurity__WorkerPassword: ${DATABASE_WORKER_PASSWORD:?DATABASE_WORKER_PASSWORD must be set}
+    volumes:
+      - data-protection-keys:/app/data-protection-keys
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
 
   clinic-app:
     build: frontend/dental-clinic-app
@@ -109,6 +141,9 @@ services:
 
   reverse-proxy:
     image: nginx:1.29-alpine
+    networks:
+      default:
+        ipv4_address: 172.30.74.10
     ports:
       - "8080:80"
     volumes:
@@ -127,6 +162,9 @@ services:
 
   tunnel:
     image: cloudflare/cloudflared:latest
+    networks:
+      default:
+        ipv4_address: 172.30.74.11
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
@@ -138,3 +176,10 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  data-protection-keys:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.74.0/24

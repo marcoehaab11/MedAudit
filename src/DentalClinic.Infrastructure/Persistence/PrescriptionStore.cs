@@ -21,6 +21,7 @@ internal sealed class PrescriptionStore(ApplicationDbContext context) : IPrescri
             ON CONFLICT ("TenantId") DO UPDATE SET "LastValue" = prescription_number_sequences."LastValue" + 1
             RETURNING "LastValue";
             """;
+        await context.RefreshDatabaseSecurityAsync(token);
         var connection = context.Database.GetDbConnection(); if (connection.State != ConnectionState.Open) await connection.OpenAsync(token);
         await using var command = connection.CreateCommand(); command.CommandText = sql; command.Transaction = context.Database.CurrentTransaction?.GetDbTransaction();
         command.Parameters.Add(new NpgsqlParameter<Guid>("tenant_id", tenantId)); var value = (long)(await command.ExecuteScalarAsync(token) ?? throw new InvalidOperationException("Prescription number could not be reserved."));
