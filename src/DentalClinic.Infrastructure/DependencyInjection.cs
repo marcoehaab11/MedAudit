@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using DentalClinic.Application.Common.Interfaces;
 using DentalClinic.Application.Platform;
 using DentalClinic.Application.Tenants;
@@ -41,6 +42,11 @@ public static class DependencyInjection
         var redis = configuration.GetConnectionString("Redis")
             ?? throw new InvalidOperationException("ConnectionStrings:Redis is required.");
 
+        var keyDirectory = configuration["DataProtection:KeyPath"] ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Planora", "keys");
+        services.AddDataProtection().SetApplicationName("Planora").PersistKeysToFileSystem(new DirectoryInfo(keyDirectory));
+        services.Configure<DataProtectionTokenProviderOptions>(options => options.TokenLifespan = TimeSpan.FromHours(1));
+        services.AddScoped<PlatformMailService>();
+        services.AddScoped<ClinicOnboardingService>();
         services.AddScoped<CurrentTenant>();
         services.AddScoped<ICurrentTenant>(provider => provider.GetRequiredService<CurrentTenant>());
         services.AddScoped<PlatformWriteScope>();
@@ -63,6 +69,7 @@ public static class DependencyInjection
         services.AddScoped<IInventoryStore, InventoryStore>();
         services.AddScoped<IPharmacyStore, PharmacyStore>();
         services.AddScoped<ClinicBusinessService>();
+        services.AddScoped<ImplantService>();
         services.AddScoped<ClinicBackupService>();
         services.AddScoped<ISettingsStore, SettingsStore>();
         services.AddScoped<DentalClinic.Infrastructure.Notifications.INotificationProvider, DentalClinic.Infrastructure.Notifications.EmailNotificationProvider>();
@@ -84,9 +91,16 @@ public static class DependencyInjection
         services.AddScoped<IPlatformAccessContext, HttpPlatformAccessContext>();
         services.AddScoped<ICurrentUser, HttpCurrentUser>();
 
-        services.AddDbContext<ApplicationDbContext>(options =>
+        var connectionOptions = new NpgsqlConnectionStringBuilder(postgres);
+        if (connectionOptions.NoResetOnClose || connectionOptions.Multiplexing)
+            throw new InvalidOperationException("Row-level security requires connections that reset on close and do not multiplex requests.");
+        services.AddScoped<DatabaseAccessScope>();
+        services.AddScoped<DatabaseSecurityContext>();
+        services.AddScoped<DatabaseSecurityInterceptor>();
+        services.AddDbContext<ApplicationDbContext>((provider, options) =>
             options.UseNpgsql(postgres, npgsql =>
                 npgsql.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName))
+            .AddInterceptors(provider.GetRequiredService<DatabaseSecurityInterceptor>())
             .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
         services.AddIdentityCore<ApplicationUser>(options =>
@@ -100,7 +114,8 @@ public static class DependencyInjection
             })
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<ApplicationDbContext>()
-            .AddSignInManager();
+            .AddSignInManager()
+            .AddDefaultTokenProviders();
 
         services.AddSingleton(NpgsqlDataSource.Create(postgres));
         services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redis));

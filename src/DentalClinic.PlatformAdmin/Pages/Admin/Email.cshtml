@@ -1,0 +1,30 @@
+@page "/admin/email"
+@model DentalClinic.PlatformAdmin.Pages.Admin.EmailModel
+@{ ViewData["Title"] = "Platform email · SMTP"; }
+<h1>Platform email · SMTP</h1>
+<p>Confirmation, welcome, password reset and clinic notification emails use these settings.</p>
+@if (Model.Message is not null) { <div class="alert alert-info" role="status">@Model.Message</div> }
+<form method="post" class="card card-body mb-4">
+    <div class="row g-3">
+        <div class="col-md-6"><label asp-for="Input.Host" class="form-label">SMTP host</label><input asp-for="Input.Host" class="form-control" required /></div>
+        <div class="col-md-3"><label asp-for="Input.Port" class="form-label">Port · usually 587</label><input asp-for="Input.Port" class="form-control" min="1" max="65535" required /></div>
+        <div class="col-md-3"><label class="form-check mt-4"><input asp-for="Input.EnableSsl" class="form-check-input" /> STARTTLS encryption</label></div>
+        <div class="col-md-6"><label asp-for="Input.Username" class="form-label">Username</label><input asp-for="Input.Username" class="form-control" autocomplete="off" /></div>
+        <div class="col-md-6"><label asp-for="Password" class="form-label">Password · leave blank to keep saved password</label><input asp-for="Password" type="password" class="form-control" autocomplete="new-password" />@if (Model.HasPassword) { <small>Saved password is encrypted.</small> }</div>
+        <div class="col-md-6"><label asp-for="Input.FromEmail" class="form-label">Sender email</label><input asp-for="Input.FromEmail" type="email" class="form-control" required /></div>
+        <div class="col-md-6"><label asp-for="Input.FromName" class="form-label">Sender name</label><input asp-for="Input.FromName" class="form-control" required /></div>
+        <div class="col-md-6"><label asp-for="Input.PublicAppUrl" class="form-label">Landing page URL · https://…</label><input asp-for="Input.PublicAppUrl" type="url" class="form-control" required /></div>
+        <div class="col-md-6"><label asp-for="Input.ClinicAppUrl" class="form-label">Clinic app URL · https://app.…</label><input asp-for="Input.ClinicAppUrl" type="url" class="form-control" required /></div>
+    </div>
+    <p class="text-muted mt-3">Use STARTTLS (usually port 587). Port 465 with implicit TLS is not supported. Save the settings before sending a test.</p>
+    <button class="btn btn-primary align-self-start">Save settings</button>
+</form>
+<form method="post" asp-page-handler="Test" class="d-flex gap-2 mb-4"><input name="TestEmail" type="email" class="form-control" placeholder="Test recipient email" required /><button class="btn btn-outline-primary text-nowrap">Send test email</button></form>
+<h2>Email delivery</h2>
+<div class="table-responsive"><table class="table"><thead><tr><th>Recipient</th><th>Type</th><th>Status</th><th>Attempts</th><th>Last result</th><th></th></tr></thead><tbody>
+@foreach (var email in Model.Emails) {
+    <tr><td>@email.Destination</td><td>@email.Kind</td><td>@email.Status</td><td>@email.Attempts</td><td>@(email.SentAt?.ToString("dd/MM/yyyy HH:mm") ?? email.LastError ?? "Waiting for delivery")</td><td>
+        @if (email.Status == "Failed") { <form method="post" asp-page-handler="Retry"><input type="hidden" name="id" value="@email.Id" /><button class="btn btn-sm btn-outline-primary">Retry</button></form> }
+    </td></tr>
+}
+</tbody></table></div>

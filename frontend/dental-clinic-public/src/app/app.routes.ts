@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
+  { path: 'register', loadComponent: () => import('./features/registration/clinic-registration.component').then(m => m.ClinicRegistrationComponent) },
+  { path: 'confirm-email', loadComponent: () => import('./features/registration/clinic-registration.component').then(m => m.ClinicRegistrationComponent) },
   {
     path: 'book/:clinicSlug',
     loadComponent: () =>

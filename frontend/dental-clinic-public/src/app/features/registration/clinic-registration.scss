@@ -1,0 +1,35 @@
+:host { display: block; color: #17332d; }
+.signup { max-width: 1120px; margin: 36px auto; display: grid; grid-template-columns: .8fr 1.2fr; gap: 32px; align-items: start; }
+.signup-intro { padding: 32px 16px; }
+.eyebrow { color: #188a70; font-weight: 700; }
+h1 { font-size: clamp(32px, 4vw, 48px); line-height: 1.3; margin: 18px 0; }
+p { line-height: 1.8; color: #546a63; }
+.trial-badge { display: flex; gap: 18px; align-items: center; background: #e2f5ed; border-radius: 20px; padding: 24px; margin: 24px 0; }
+.trial-badge strong { font-size: 32px; white-space: nowrap; }
+li { margin: 18px 0; }
+.signup-card { background: white; padding: 32px; border: 1px solid #dde9e2; border-radius: 24px; box-shadow: 0 16px 45px #17332d0d; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+label { display: flex; flex-direction: column; gap: 8px; font-weight: 600; }
+input:not([type=checkbox]) { width: 100%; min-width: 0; box-sizing: border-box; padding: 12px; border: 1px solid #c9dcd2; border-radius: 10px; font: inherit; }
+input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid #a5ddc9; outline-offset: 3px; }
+.wide { grid-column: 1 / -1; }
+small { font-weight: 400; color: #637b70; }
+.logo-field img { width: 90px; height: 90px; object-fit: contain; border: 1px solid #d9e5df; border-radius: 12px; }
+.consent { flex-direction: row; align-items: start; font-size: 13px; line-height: 1.8; margin: 24px 0; }
+.consent input { margin-top: 6px; }
+.primary, .secondary { display: inline-block; padding: 14px 22px; border-radius: 12px; font: inherit; text-decoration: none; cursor: pointer; border: 1px solid #17664e; }
+.primary { background: #17664e; color: white; width: 100%; box-sizing: border-box; text-align: center; }
+.secondary { background: white; color: #17664e; margin: 12px 0; }
+button:disabled { opacity: .55; cursor: wait; }
+.notice { padding: 16px; border-radius: 12px; background: #eaf8f0; }
+.notice.error { color: #9c3030; background: #fff0f0; }
+a { color: #17664e; }
+details { margin-top: 22px; }
+details label { margin-top: 16px; }
+@media (max-width: 780px) { .signup { grid-template-columns: 1fr; margin: 16px auto; gap: 8px; } .signup-intro { padding: 12px; } .signup-card { padding: 22px; } }
+@media (max-width: 440px) { .fields { grid-template-columns: 1fr; } }
+
+.signup-intro { color: #f5faf7; }
+.signup-intro p { color: #c2d9d0; }
+.signup-intro .eyebrow, .signup-intro a { color: #80dfba; }
+.signup-intro .trial-badge { color: #17332d; }

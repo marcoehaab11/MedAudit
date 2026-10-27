@@ -93,7 +93,7 @@
 </div>
 
 <div class="card shadow-sm border-0 mb-4">
-    <div class="card-header bg-white py-3 px-4 border-bottom"><h5 class="fw-bold mb-0">Subscription &amp; clinic access</h5></div>
+    <div class="card-header bg-white py-3 px-4 border-bottom"><h5 class="fw-bold mb-0">Subscription &amp; clinic access @if (Model.IsTrial) { <span class="badge bg-info text-dark">15-day trial</span> }</h5></div>
     <div class="card-body p-4">
         <div class="row g-3 align-items-end">
             <div class="col-md-3"><span class="text-muted small d-block">Started (UTC)</span><strong>@Model.Clinic.SubscriptionStartsAt.ToString("dd/MM/yyyy HH:mm")</strong></div>

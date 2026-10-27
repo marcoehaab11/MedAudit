@@ -185,3 +185,24 @@ editor.addEventListener('submit', event => {
   selectTooth(selectedNumber);
   editButton.focus();
 });
+
+// Only approved clinics are returned by the public endpoint.
+fetch('/api/public/clinics/customers').then(response => {
+  if (!response.ok) throw new Error('Customers unavailable');
+  return response.json();
+}).then(clinics => {
+  if (!Array.isArray(clinics) || !clinics.length) return;
+  const grid = document.querySelector('#customer-grid');
+  for (const clinic of clinics) {
+    const card = document.createElement('article'); card.className = 'customer-card';
+    if (clinic.logoReference) {
+      const url = new URL(clinic.logoReference, location.origin);
+      if (url.origin === location.origin || url.protocol === 'https:') {
+        const logo = document.createElement('img'); logo.src = url.href; logo.alt = clinic.name; logo.loading = 'lazy'; logo.referrerPolicy = 'no-referrer'; card.append(logo);
+      }
+    }
+    const name = document.createElement('strong'); name.textContent = clinic.name; card.append(name);
+    const city = document.createElement('span'); city.textContent = clinic.city; card.append(city); grid.append(card);
+  }
+  document.querySelector('#customers').hidden = false;
+}).catch(() => {});

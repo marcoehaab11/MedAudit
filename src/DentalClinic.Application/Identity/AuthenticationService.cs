@@ -8,7 +8,6 @@ namespace DentalClinic.Application.Identity;
 internal sealed class AuthenticationService(
     IIdentityStore store,
     IIdentityCredentialService credentials,
-    IAccessTokenIssuer tokenIssuer,
     ISystemClock clock) : IAuthenticationService
 {
     public async Task<LoginResult?> LoginAsync(LoginCommand command, CancellationToken cancellationToken)
@@ -55,11 +54,8 @@ internal sealed class AuthenticationService(
         var roles = await store.GetRoleNamesForUserAsync(account.TenantId, account.UserId, cancellationToken);
         var permissions = await store.GetEffectivePermissionsForUserAsync(
             account.TenantId, account.UserId, cancellationToken);
-        var issued = tokenIssuer.Issue(
-            account.UserId, account.TenantId, account.DisplayName, roles, permissions);
         return new LoginResult(
-            issued.Token,
-            issued.ExpiresAt,
+            clock.UtcNow.AddHours(12),
             account.UserId,
             account.DisplayName,
             roles,

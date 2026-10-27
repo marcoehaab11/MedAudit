@@ -12,6 +12,7 @@ namespace DentalClinic.Infrastructure.Persistence;
 
 internal sealed class TreatmentStore(ApplicationDbContext context) : ITreatmentStore
 {
+    public async Task<bool> HasIncompleteImplantAsync(Guid treatmentId, CancellationToken token) => !await context.ImplantRecords.AnyAsync(x => x.TreatmentId == treatmentId && x.CompletedStep == 7, token);
     public Task<TreatmentPatient?> FindPatientAsync(Guid id, CancellationToken token) => context.Patients.AsNoTracking().Where(x => x.Id == id)
         .Select(x => new TreatmentPatient(x.Id, x.FirstName + " " + x.LastName, x.Status == PatientStatus.Active)).SingleOrDefaultAsync(token);
     public Task<TreatmentDoctor?> FindDoctorAsync(Guid id, CancellationToken token) => context.DoctorProfiles.AsNoTracking().Where(x => x.Id == id)

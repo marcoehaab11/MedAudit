@@ -15,6 +15,7 @@ RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
+RUN mkdir -p /app/data-protection-keys && chown "$APP_UID" /app/data-protection-keys
 USER $APP_UID
 COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "DentalClinic.Worker.dll"]

@@ -29,7 +29,8 @@ internal static class BranchEndpoints
 
     public static IEndpointRouteBuilder MapBranchEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var branches = endpoints.MapGroup("/api/branches").RequireAuthorization(AuthConstants.TenantMemberPolicy);
+        var branches = endpoints.MapGroup("/api/branches").RequireAuthorization(AuthConstants.TenantMemberPolicy)
+            .AddEndpointFilter(new DatabaseAccessFilter("branches"));
         branches.MapGet("/", ListAsync);
         branches.MapGet("/summary", SummaryAsync);
         branches.MapGet("/theme", GetThemeAsync);

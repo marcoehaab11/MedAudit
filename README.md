@@ -16,7 +16,7 @@ DentalClinic.Infrastructure  EF Core, PostgreSQL, Identity, Redis, tenant resolu
 Api / PlatformAdmin / Worker composition roots
 ```
 
-- `DentalClinic.Api`: REST host, JWT validation, structured errors, correlation IDs, and health endpoints.
+- `DentalClinic.Api`: REST host, verified server sessions, structured errors, correlation IDs, and health endpoints.
 - `DentalClinic.PlatformAdmin`: Razor Pages shell protected by a platform-only authorization policy.
 - `DentalClinic.Worker`: tenant-aware background processing host; no business jobs are registered yet.
 - `dental-clinic-app`: Angular clinic shell with English/Arabic and LTR/RTL behavior.
@@ -79,7 +79,7 @@ $env:Authentication__Jwt__SigningKey = "<at-least-32-random-characters>"
 dotnet run --project src/DentalClinic.Api
 ```
 
-JWT tenant users carry a trusted `tenant_id` GUID claim issued after an active account successfully authenticates. Platform administrators carry the `PlatformAdmin` role and must not carry a tenant claim.
+Clinic users now use HttpOnly session cookies backed by Redis. Every private request rechecks the account, clinic membership, subscription and database permissions. Platform administrators use a separate server session and their administrator flag is checked on every request. Old browser JWTs are no longer accepted. See [the authentication report](docs/authentication-hardening.md) for public routes, deployment requirements and manual tests.
 
 Run either frontend from its directory with Node 24.15.0:
 

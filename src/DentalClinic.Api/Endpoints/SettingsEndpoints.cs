@@ -6,7 +6,7 @@ public static class SettingsEndpoints
 {
     public static IEndpointRouteBuilder MapSettingsEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var group = endpoints.MapGroup("/api/settings").WithTags("Settings");
+        var group = endpoints.MapGroup("/api/settings").RequireAuthorization(DentalClinic.Infrastructure.Identity.AuthConstants.TenantMemberPolicy).WithTags("Settings");
 
         group.MapGet("/", async (ISettingsService service, CancellationToken token) =>
         {

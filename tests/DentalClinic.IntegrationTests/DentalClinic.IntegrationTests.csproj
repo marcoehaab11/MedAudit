@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\DentalClinic.Api\DentalClinic.Api.csproj" />
     <ProjectReference Include="..\..\src\DentalClinic.Infrastructure\DentalClinic.Infrastructure.csproj" />
   </ItemGroup>
 

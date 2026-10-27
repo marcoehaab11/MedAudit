@@ -52,6 +52,7 @@ import { DentalChartComponent } from './dental-chart.component';
               <section><h3>{{ t('Treatment progress', 'ما تم وما لم يتم بعد') }}</h3>
                 @for (work of tooth?.treatmentProgress ?? []; track work.id) {
                   <p><strong>{{ work.status === 4 ? '✓ ' : '◷ ' }}{{ work.name }}</strong> · {{ work.status === 4 ? t('Done', 'تم') : work.status === 3 ? t('In progress', 'قيد العلاج') : work.status === 5 ? t('Cancelled', 'ملغي') : t('Pending', 'لم يتم بعد') }}</p>
+                  @if(work.type === 3 && work.status !== 5){<a [routerLink]="['/patients',patientId,'implants',selected]" [queryParams]="{treatmentId:work.id}">{{t('Open implant plan','فتح خطة الزراعة')}}</a>}
                 } @empty { <p>{{ t('No treatment execution recorded. Findings remain for review.', 'لا يوجد تنفيذ علاج مسجل. التشخيصات محفوظة للمراجعة.') }}</p> }
               </section>
           @if (tooth?.hasEndodonticRecord) {

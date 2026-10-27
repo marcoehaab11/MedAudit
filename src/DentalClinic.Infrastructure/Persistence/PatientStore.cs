@@ -31,6 +31,7 @@ internal sealed class PatientStore(ApplicationDbContext context) : IPatientStore
             RETURNING "Prefix", "LastValue";
             """;
 
+        await context.RefreshDatabaseSecurityAsync(cancellationToken);
         var connection = context.Database.GetDbConnection();
         if (connection.State != ConnectionState.Open)
         {

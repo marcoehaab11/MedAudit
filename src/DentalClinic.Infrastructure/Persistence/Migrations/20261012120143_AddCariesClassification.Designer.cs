@@ -15,6 +15,7 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
     [Migration("20261012120143_AddCariesClassification")]
     partial class AddCariesClassification
     {
+        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
@@ -2775,6 +2776,76 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.ToTable("pharmacy_dispensing_reversals", (string)null);
                 });
 
+            modelBuilder.Entity("DentalClinic.Domain.Platform.ClinicRegistration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClinicName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("IdentityUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("LastConfirmationSentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("Logo")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("LogoContentType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("OwnerName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("ShowcaseConsent")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdentityUserId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId")
+                        .IsUnique();
+
+                    b.ToTable("clinic_registrations", (string)null);
+                });
+
             modelBuilder.Entity("DentalClinic.Domain.Platform.PlatformAuditLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2810,6 +2881,57 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "OccurredAt");
 
                     b.ToTable("platform_audit_logs", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Platform.PlatformEmail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Destination")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ProtectedBody")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("RegistrationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status", "NextAttemptAt");
+
+                    b.ToTable("platform_emails", (string)null);
                 });
 
             modelBuilder.Entity("DentalClinic.Domain.Platform.PlatformHealthEvent", b =>
@@ -2873,6 +2995,51 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.HasKey("Key");
 
                     b.ToTable("platform_health_probes", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Platform.PlatformMailSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClinicAppUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("EnableSsl")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("FromEmail")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FromName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Host")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Port")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProtectedPassword")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PublicAppUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("platform_mail_settings", (string)null);
                 });
 
             modelBuilder.Entity("DentalClinic.Domain.Prescriptions.MedicationCatalogItem", b =>
@@ -3303,6 +3470,15 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<DateTimeOffset?>("EmailVerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsSelfRegistered")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsTrial")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("LogoReference")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
@@ -3319,6 +3495,15 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("ShowcaseConsent")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("ShowcaseOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("ShowcasePublished")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Slug")
                         .IsRequired()
@@ -4771,6 +4956,20 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.HasOne("DentalClinic.Domain.Pharmacy.PharmacyDispensing", null)
                         .WithMany("Items")
                         .HasForeignKey("PharmacyDispensingId");
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Platform.ClinicRegistration", b =>
+                {
+                    b.HasOne("DentalClinic.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("IdentityUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("DentalClinic.Domain.Platform.PlatformAuditLog", b =>

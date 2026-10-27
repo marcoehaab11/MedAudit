@@ -40,6 +40,33 @@ public sealed partial class Tenant : Entity
         SubscriptionExpiresAt = createdAt.AddMonths(subscriptionMonths);
     }
 
+    public bool IsTrial { get; private set; }
+    public bool IsSelfRegistered { get; private set; }
+    public DateTimeOffset? EmailVerifiedAt { get; private set; }
+    public bool ShowcaseConsent { get; private set; }
+    public bool ShowcasePublished { get; private set; }
+    public int ShowcaseOrder { get; private set; }
+
+    public void StartVerifiedTrial(DateTimeOffset now, bool showcaseConsent)
+    {
+        if (IsSelfRegistered) throw new InvalidOperationException("The registration trial has already started.");
+        IsTrial = true;
+        IsSelfRegistered = true;
+        EmailVerifiedAt = now;
+        SubscriptionStartsAt = now;
+        SubscriptionExpiresAt = now.AddDays(15);
+        ShowcaseConsent = showcaseConsent;
+        UpdatedAt = now;
+    }
+
+    public void SetShowcase(bool consent, bool published, int order)
+    {
+        if (published && !consent) throw new ArgumentException("Clinic consent is required before publication.");
+        ShowcaseConsent = consent;
+        ShowcasePublished = published;
+        ShowcaseOrder = order;
+    }
+
     public string Name { get; private set; } = string.Empty;
     public Guid? ParentClinicId { get; private set; }
     public Guid ClinicId => ParentClinicId ?? Id;
@@ -69,6 +96,7 @@ public sealed partial class Tenant : Entity
     public void ExtendSubscription(int months, DateTimeOffset now)
     {
         if (months < 1 || months > 120) throw new ArgumentOutOfRangeException(nameof(months));
+        IsTrial = false;
         if (SubscriptionExpiresAt <= now) SubscriptionStartsAt = now;
         SubscriptionExpiresAt = (SubscriptionExpiresAt > now ? SubscriptionExpiresAt : now).AddMonths(months);
         UpdatedAt = now;

@@ -572,7 +572,7 @@ export class PatientDossierModalComponent implements OnInit, OnChanges {
   }
 
   tenantName(): string {
-    const saved = localStorage.getItem('display_name');
+    const saved = this.auth.tenantName();
     return saved || (this.i18n.language() === 'ar' ? 'عيادة الأسنان المتطورة' : 'Advanced Dental Clinic');
   }
 

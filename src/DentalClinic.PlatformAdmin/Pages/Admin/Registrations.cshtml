@@ -1,0 +1,25 @@
+@page "/admin/registrations"
+@model DentalClinic.PlatformAdmin.Pages.Admin.RegistrationsModel
+@{ ViewData["Title"] = "Registrations, trials and customers"; }
+<h1>Registrations, trials and customers</h1>
+@if (Model.Message is not null) { <div class="alert alert-info" role="status">@Model.Message</div> }
+<h2>Landing page registrations</h2><p>The 15-day trial starts only after email confirmation. Pending registrations cannot access the clinic app.</p>
+<div class="table-responsive"><table class="table"><thead><tr><th>Clinic</th><th>Owner</th><th>Email / Phone</th><th>Email confirmation</th><th>Clinic</th></tr></thead><tbody>
+@foreach (var registration in Model.Registrations) {
+    <tr><td>@if (registration.Logo is not null) { <img src="?handler=Logo&amp;id=@registration.Id" alt="@registration.ClinicName" width="48" height="48" style="object-fit:contain" /> } @registration.ClinicName<br /><small>@registration.City · @registration.Address</small></td><td>@registration.OwnerName</td><td>@registration.Email<br />@registration.Phone</td><td>@(registration.VerifiedAt.HasValue ? "Confirmed · " + registration.VerifiedAt.Value.ToString("dd/MM/yyyy HH:mm") : "Pending confirmation")</td><td>@if (registration.TenantId.HasValue) { <a asp-page="/Admin/Clinics/Details" asp-route-id="@registration.TenantId">Open clinic</a> }</td></tr>
+}
+</tbody></table></div>
+<h2>Trials and customer section</h2><p>A clinic appears on the landing page only with consent, publication approval and an active subscription. Existing clinics can be listed once their consent is obtained.</p>
+<div class="table-responsive"><table class="table"><thead><tr><th>Clinic</th><th>Subscription</th><th>Ends</th><th>Customer section controls</th></tr></thead><tbody>
+@foreach (var clinic in Model.Clinics) {
+    <tr><td><a asp-page="/Admin/Clinics/Details" asp-route-id="@clinic.Id">@clinic.Name</a></td><td>@(clinic.IsTrial ? "15-day trial" : "Subscription")<br />@(clinic.SubscriptionExpiresAt <= Model.Now ? "Expired" : Math.Ceiling((clinic.SubscriptionExpiresAt - Model.Now).TotalDays) + " days left")</td><td>@clinic.SubscriptionExpiresAt.ToString("dd/MM/yyyy HH:mm") UTC</td><td>
+        <form method="post" asp-page-handler="Showcase" class="d-flex flex-wrap gap-2 align-items-center">
+            <input type="hidden" name="id" value="@clinic.Id" />
+            <label><input type="checkbox" name="consent" value="true" checked="@clinic.ShowcaseConsent" /> Consent obtained</label>
+            <label><input type="checkbox" name="published" value="true" checked="@clinic.ShowcasePublished" /> Publish</label>
+            <label>Order <input type="number" name="order" value="@clinic.ShowcaseOrder" style="width:70px" /></label>
+            <button class="btn btn-sm btn-primary">Save</button>
+        </form>
+    </td></tr>
+}
+</tbody></table></div>

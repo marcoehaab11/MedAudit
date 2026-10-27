@@ -36,6 +36,8 @@ public sealed partial class DetailsModel(IClinicManagementService clinics, IPlat
         int Patients, int Appointments, decimal Revenue, decimal Payments, decimal Expenses);
     public UsageStats Usage { get; private set; } = new(0, 0, 0, 0, 0, 0, 0, null);
     public IReadOnlyList<BranchStats> Branches { get; private set; } = [];
+    public bool IsTrial { get; private set; }
+    public DateTimeOffset? EmailVerifiedAt { get; private set; }
     public ClinicDetails Clinic { get; private set; } = null!;
     public PagedResult<UserListItem> Users { get; private set; } = null!;
     public DateTimeOffset Now { get; private set; }
@@ -51,6 +53,8 @@ public sealed partial class DetailsModel(IClinicManagementService clinics, IPlat
         var clinic = await clinics.GetAsync(id, cancellationToken);
         if (clinic is null) return NotFound();
         Clinic = clinic;
+        var onboarding = await db.Tenants.AsNoTracking().Where(x => x.Id == id).Select(x => new { x.IsTrial, x.EmailVerifiedAt }).SingleAsync(cancellationToken);
+        IsTrial = onboarding.IsTrial; EmailVerifiedAt = onboarding.EmailVerifiedAt;
         Users = await users.SearchAsync(id, new UserSearchQuery(Page: userPage, PageSize: 20), cancellationToken);
         Now = DateTimeOffset.UtcNow;
         var since = Now.AddDays(-30);

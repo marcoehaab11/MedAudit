@@ -1,18 +1,18 @@
+using DentalClinic.Infrastructure.Security;
 using System.Globalization;
-using System.Threading.RateLimiting;
 using DentalClinic.Api.Endpoints;
 using DentalClinic.Api.Extensions;
-using DentalClinic.Api.Identity;
+using DentalClinic.Infrastructure.Identity;
 using DentalClinic.Api.Middleware;
 using DentalClinic.Application;
 using DentalClinic.Application.Identity;
 using DentalClinic.Infrastructure;
 using DentalClinic.Infrastructure.Tenancy;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.RateLimiting;
 using Serilog;
 
-var builder = WebApplication.CreateBuilder(args);
+var migrateDatabase = args.Contains("--migrate", StringComparer.Ordinal);
+var builder = WebApplication.CreateBuilder(args.Where(arg => arg != "--migrate").ToArray());
 
 builder.Host.UseSerilog((context, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
@@ -20,6 +20,7 @@ builder.Host.UseSerilog((context, configuration) => configuration
     .Enrich.WithProperty("Service", "DentalClinic.Api")
     .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture));
 
+builder.Services.AddHostedService<DentalClinic.Infrastructure.Services.PlatformMailQueueHost>();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApiAuthentication(builder.Configuration);
@@ -27,59 +28,18 @@ builder.Services.AddApiAuthorization();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(options =>
-{
-    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.All;
-    options.KnownIPNetworks.Clear();
-    options.KnownProxies.Clear();
-});
-
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddPolicy("auth-login", httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 60,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0
-            }));
-
-    options.AddPolicy("public-booking", httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 30,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0
-            }));
-
-    options.AddPolicy("tenant-export", httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            httpContext.User.FindFirst("tenant_id")?.Value ?? "anonymous",
-            _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 60,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0
-            }));
-
-    options.AddFixedWindowLimiter("public-read", opt =>
-    {
-        opt.Window = TimeSpan.FromMinutes(1);
-        opt.PermitLimit = 200;
-        opt.QueueLimit = 0;
-    });
-});
+builder.Services.AddRequestProtection(builder.Configuration);
 
 var app = builder.Build();
 
 app.UseForwardedHeaders();
 
-await DentalClinic.Infrastructure.Persistence.DatabaseSeeder.SeedAsync(app.Services);
+if (migrateDatabase)
+{
+    await DentalClinic.Infrastructure.Persistence.DatabaseSecurityBootstrap.MigrateAsync(app.Services, builder.Configuration);
+    return;
+}
+await DentalClinic.Infrastructure.Persistence.DatabaseSecurityBootstrap.VerifyRuntimeAsync(app.Services);
 
 app.Use(async (context, next) =>
 {
@@ -98,10 +58,12 @@ if (app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+app.UseRouting();
+app.UseMiddleware<SessionSecurityMiddleware>();
 app.UseAuthentication();
+app.UseMiddleware<RequestLimitMiddleware>(false);
 app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthorization();
-app.UseRateLimiter();
 
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
@@ -116,10 +78,12 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 }).AllowAnonymous();
 
 app.MapIdentityEndpoints();
+app.MapOnboardingEndpoints();
 app.MapPatientEndpoints();
 app.MapDoctorEndpoints();
 app.MapAppointmentEndpoints();
 app.MapDentalEndpoints();
+app.MapImplantEndpoints();
 app.MapTreatmentEndpoints();
 app.MapPrescriptionEndpoints();
 app.MapCrmEndpoints();

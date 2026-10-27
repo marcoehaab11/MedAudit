@@ -1,3 +1,5 @@
+using IAuthenticationService = DentalClinic.Application.Identity.IAuthenticationService;
+using Microsoft.AspNetCore.Authentication;
 using DentalClinic.Application.Identity;
 using DentalClinic.Application.Identity.Models;
 using DentalClinic.Contracts.Identity;
@@ -12,15 +14,29 @@ internal static class IdentityEndpoints
 {
     public static IEndpointRouteBuilder MapIdentityEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var auth = endpoints.MapGroup("/api/auth").AllowAnonymous();
-        auth.MapPost("/login", LoginAsync).RequireRateLimiting("auth-login");
+        var auth = endpoints.MapGroup("/api/auth");
+        auth.MapPost("/login", LoginAsync).AllowAnonymous().AddEndpointFilter(new DatabaseAccessFilter("identity"));
+        auth.MapGet("/session", (HttpContext context, ClinicSessionService sessions) => sessions.ReadAsync(context))
+            .AddEndpointFilter(new DatabaseAccessFilter("identity"));
+        auth.MapPost("/logout", async (HttpContext context) =>
+        {
+            await context.SignOutAsync(VerifiedSessionEvents.ClinicScheme);
+            return Results.NoContent();
+        });
+        auth.MapGet("/page-access", async (HttpContext context, IPermissionService permissions, CancellationToken token) =>
+        {
+            var page = ClinicPageAccess.RequiredPermission(context.Request.Headers["X-Original-URI"].ToString());
+            if (page is null) return Results.StatusCode(403);
+            if (page.Length > 0 && !await permissions.HasPermissionAsync(page, token)) return Results.StatusCode(403);
+            return Results.NoContent();
+        });
         endpoints.MapPost("/api/auth/switch-clinic", SwitchClinicAsync)
-            .RequireAuthorization(AuthConstants.TenantMemberPolicy).RequireRateLimiting("auth-login");
+            .RequireAuthorization(AuthConstants.TenantMemberPolicy).AddEndpointFilter(new DatabaseAccessFilter("identity"));
         endpoints.MapGet("/api/auth/clinics", async (IAuthenticationService service, ICurrentTenant tenant, ICurrentUser user, CancellationToken token) =>
             await service.GetClinicsAsync(tenant.RequireTenantId(), user.UserId!.Value, token))
-            .RequireAuthorization(AuthConstants.TenantMemberPolicy);
-        auth.MapPost("/invitations/inspect", InspectInvitationAsync).RequireRateLimiting("public-read");
-        auth.MapPost("/invitations/accept", AcceptInvitationAsync).RequireRateLimiting("auth-login");
+            .RequireAuthorization(AuthConstants.TenantMemberPolicy).AddEndpointFilter(new DatabaseAccessFilter("identity"));
+        auth.MapPost("/invitations/inspect", InspectInvitationAsync).AllowAnonymous().AddEndpointFilter(new DatabaseAccessFilter("identity"));
+        auth.MapPost("/invitations/accept", AcceptInvitationAsync).AllowAnonymous().AddEndpointFilter(new DatabaseAccessFilter("identity"));
         endpoints.MapGet("/api/auth/permissions", async (IIdentityStore store, ICurrentTenant tenant, ICurrentUser user, CancellationToken token) =>
             await store.GetEffectivePermissionsForUserAsync(tenant.RequireTenantId(), user.UserId!.Value, token))
             .RequireAuthorization(AuthConstants.TenantMemberPolicy);
@@ -51,26 +67,32 @@ internal static class IdentityEndpoints
 
     private static async Task<IResult> LoginAsync(
         LoginRequest request,
+        HttpContext context,
+        ClinicSessionService sessions,
         IAuthenticationService service,
         CancellationToken cancellationToken)
     {
         var result = await service.LoginAsync(new LoginCommand(request.Email, request.Password, request.PreferredTenantId), cancellationToken);
-        return result is null
-            ? Results.Json(new { message = "Invalid email or password." }, statusCode: StatusCodes.Status401Unauthorized)
-            : Results.Ok(result);
+        if (result is null) return Results.Json(new { message = "Invalid email or password." }, statusCode: StatusCodes.Status401Unauthorized);
+        await sessions.SignInAsync(context, result);
+        return Results.Ok(result);
     }
 
     private sealed record SwitchClinicRequest(Guid TenantId);
 
     private static async Task<IResult> SwitchClinicAsync(
         SwitchClinicRequest request,
+        HttpContext context,
+        ClinicSessionService sessions,
         IAuthenticationService service,
         ICurrentTenant tenant,
         ICurrentUser user,
         CancellationToken cancellationToken)
     {
         var result = await service.SwitchClinicAsync(tenant.RequireTenantId(), user.UserId!.Value, request.TenantId, cancellationToken);
-        return result is null ? Results.Forbid() : Results.Ok(result);
+        if (result is null) return Results.Forbid();
+        await sessions.SignInAsync(context, result);
+        return Results.Ok(result);
     }
 
     private static Task<InvitationPreview> InspectInvitationAsync(

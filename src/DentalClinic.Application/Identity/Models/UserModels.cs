@@ -58,7 +58,6 @@ public sealed record InvitationPreview(
     bool UsesExistingAccount = false);
 
 public sealed record LoginResult(
-    string AccessToken,
     DateTimeOffset ExpiresAt,
     Guid UserId,
     string DisplayName,
