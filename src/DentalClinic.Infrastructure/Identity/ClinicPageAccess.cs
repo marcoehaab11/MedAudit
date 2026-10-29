@@ -29,6 +29,7 @@ public static class ClinicPageAccess
         ["treatment-plans/:id/edit"] = "TreatmentPlans.Edit",
         ["treatments"] = "Treatments.View",
         ["treatments/:id"] = "Treatments.View",
+        ["treatments/:id/clinical"] = "Dental.View",
         ["treatment-catalog"] = "TreatmentCatalog.View",
         ["medications-catalog"] = "Prescriptions.View",
         ["prescriptions"] = "Prescriptions.View",

@@ -3907,6 +3907,50 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.ToTable("tenant_configurations", (string)null);
                 });
 
+            modelBuilder.Entity("DentalClinic.Domain.Treatments.ClinicalPhoto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TreatmentId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "TreatmentId");
+
+                    b.ToTable("clinical_photos", (string)null);
+                });
+
             modelBuilder.Entity("DentalClinic.Domain.Treatments.Treatment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3914,6 +3958,9 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("AppointmentId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("ClinicalWorkflowJson")
+                        .HasColumnType("jsonb");
 
                     b.Property<DateTimeOffset?>("CompletedAt")
                         .HasColumnType("timestamp with time zone");
@@ -5245,6 +5292,16 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("ParentClinicId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Treatments.ClinicalPhoto", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Treatments.Treatment", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "TreatmentId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("DentalClinic.Domain.Treatments.Treatment", b =>

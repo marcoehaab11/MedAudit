@@ -35,6 +35,7 @@ public sealed class ApplicationDbContext(
     public DatabaseAccessScope Access { get; } = databaseAccess ?? new();
     public DbSet<ImplantRecord> ImplantRecords => Set<ImplantRecord>();
     public DbSet<ImplantAttachment> ImplantAttachments => Set<ImplantAttachment>();
+    public DbSet<ClinicalPhoto> ClinicalPhotos => Set<ClinicalPhoto>();
 
     public async Task RefreshDatabaseSecurityAsync(CancellationToken token = default)
     {
@@ -148,6 +149,13 @@ public sealed class ApplicationDbContext(
             e.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
         });
         base.OnModelCreating(builder);
+        builder.Entity<ClinicalPhoto>(e =>
+        {
+            e.ToTable("clinical_photos");e.HasKey(x=>x.Id);
+            e.Property(x=>x.Category).HasMaxLength(10);e.Property(x=>x.FileName).HasMaxLength(200);e.Property(x=>x.ContentType).HasMaxLength(50);
+            e.HasOne<Treatment>().WithMany().HasForeignKey(x=>new{x.TenantId,x.TreatmentId}).HasPrincipalKey(x=>new{x.TenantId,x.Id}).OnDelete(DeleteBehavior.Restrict);
+            e.HasQueryFilter(x=>currentTenant.IsAvailable && x.TenantId==currentTenant.TenantId);
+        });
 
         builder.Entity<ClinicRegistration>(entity =>
         {
@@ -627,6 +635,7 @@ public sealed class ApplicationDbContext(
             entity.HasAlternateKey(x => new { x.TenantId, x.Id }); entity.Property(x => x.Type).HasConversion<int>();
             entity.Property(x => x.TreatmentName).HasMaxLength(200).IsRequired(); entity.Property(x => x.Status).HasConversion<int>();
             entity.Property(x => x.Price).HasPrecision(18, 2); entity.Property(x => x.Notes).HasMaxLength(4000); entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.Property(x => x.ClinicalWorkflowJson).HasColumnType("jsonb");
             entity.HasIndex(x => new { x.TenantId, x.PatientId, x.CreatedAt }); entity.HasIndex(x => new { x.TenantId, x.DoctorProfileId, x.Status, x.CreatedAt });
             entity.HasIndex(x => new { x.TenantId, x.AppointmentId }); entity.HasIndex(x => new { x.TenantId, x.TreatmentPlanItemId });
             entity.HasOne<Patient>().WithMany().HasForeignKey(x => new { x.TenantId, x.PatientId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);

@@ -64,6 +64,7 @@ export class DentalChartComponent implements OnChanges {
   @Input() teeth: ToothChartSummary[] = [];
   @Input() showSearch = true;
   @Input() showHeading = true;
+  @Input() primaryTeeth = false;
   @Input() selectedNumber = 0;
   @Input() completedHighlights: number[] = [];
   @Input() multiSelect = false;
@@ -76,7 +77,11 @@ export class DentalChartComponent implements OnChanges {
   @Output() readonly toothFindingSelected = new EventEmitter<{ toothNumber: number; type: number }>();
   readonly findingAppearance = FINDING_APPEARANCE;
   readonly quickFindingTypes = QUICK_TOOTH_FINDING_TYPES;
-  readonly jaws = [
+  get jaws() { return this.primaryTeeth ? [
+    { labelEn:'Upper primary arch',labelAr:'الفك العلوي — أسنان لبنية',lower:false,teeth:[55,54,53,52,51,61,62,63,64,65] },
+    { labelEn:'Lower primary arch',labelAr:'الفك السفلي — أسنان لبنية',lower:true,teeth:[85,84,83,82,81,71,72,73,74,75] },
+  ] : this.permanentJaws; }
+  private readonly permanentJaws = [
     { labelEn: 'Upper jaw', labelAr: 'الفك العلوي', lower: false, teeth: [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28] },
     { labelEn: 'Lower jaw', labelAr: 'الفك السفلي', lower: true, teeth: [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38] },
   ];
@@ -88,7 +93,7 @@ export class DentalChartComponent implements OnChanges {
   private readonly artCache = new Map<string, SafeHtml>();
   constructor(private readonly i18n: LocalizationService, private readonly sanitizer: DomSanitizer) {}
   t(en: string, ar: string) { return this.i18n.language() === 'ar' ? ar : en; }
-  name(number: number, short = false) { return toothName(number, this.i18n.language(), short); }
+  name(number: number, short = false) { return number>=51 ? 'Primary '+toothName(number-40,this.i18n.language(),short) : toothName(number, this.i18n.language(), short); }
   private individualWork(number: number) {
     return (this.find(number)?.treatmentProgress ?? []).filter(work => !(work.type === 6 && /denture|أطقم|اطقم|scal|polish|whiten|bleach|clean|ortho|braces|aligner|retainer|تنظيف|تنضيف|جير|تلميع|تبييض|تبيض|تقويم/i.test(work.name)));
   }
@@ -190,7 +195,7 @@ export class DentalChartComponent implements OnChanges {
       status: tooth?.findings.some(x => [8,9,10,11,17].includes(x)) ? 'planned' : 'existing', surfaces: ['O'], caries: this.isCaries(tooth), endo: this.isEndo(tooth), crown: this.isCrown(tooth) };
     const key = JSON.stringify([number, lower, record]);
     let art = this.artCache.get(key);
-    if (!art) { art = this.sanitizer.bypassSecurityTrustHtml(renderPlanoraTooth(number, record, lower)); this.artCache.set(key, art); }
+    if (!art) { const artNumber=number>=51?number-40+(number%10>=4?2:0):number;art = this.sanitizer.bypassSecurityTrustHtml(renderPlanoraTooth(artNumber, record, lower)); this.artCache.set(key, art); }
     return art;
   }
   planoraAccent(number: number) { const tooth = this.find(number); return this.isMissing(tooth) ? '#94a3b8' : this.isCaries(tooth) ? '#fb923c' : this.isEndo(tooth) ? '#9333ea' : this.isCrown(tooth) ? '#eab308' : tooth?.findings.some(x => [3,14].includes(x)) ? '#f43f5e' : tooth?.findings.includes(15) ? '#10b9c5' : tooth?.findings.includes(5) ? '#06b6d4' : tooth?.procedures.some(x => [1,3].includes(x)) ? '#10b9c5' : '#d4dcde'; }

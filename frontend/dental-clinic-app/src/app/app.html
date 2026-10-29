@@ -1,4 +1,4 @@
-@if (!auth.authenticated()) {
+@if (!auth.authenticated() || standaloneClinical()) {
   <router-outlet />
 } @else {
   <div

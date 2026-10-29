@@ -23,6 +23,7 @@ export class App implements OnDestroy {
 
   protected readonly sidebarCollapsed = signal(false);
   protected readonly mobileSidebarOpen = signal(false);
+  protected readonly standaloneClinical = signal(/^\/treatments\/[^/]+\/clinical(?:[/?]|$)/.test(this.router.url));
   protected readonly displayName = this.auth.displayName;
   protected readonly switchingClinic = signal(false);
   protected readonly clinicSwitchError = signal('');
@@ -40,6 +41,7 @@ export class App implements OnDestroy {
     this.navSub = this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe(() => {
+        this.standaloneClinical.set(/^\/treatments\/[^/]+\/clinical(?:[/?]|$)/.test(this.router.url));
         this.closeMobileSidebar();
       });
   }

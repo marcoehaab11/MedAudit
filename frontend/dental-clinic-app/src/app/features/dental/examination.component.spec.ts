@@ -340,9 +340,9 @@ describe('ExaminationComponent', () => {
     expect(c.toothService(-18).catalogId).toBe('dentures');
     expect(c.sidebarToothFindings()).toEqual([]);
     expect(c.matchingToothServices(-13).map(x=>x.id)).toEqual(['white']);
-    const pending=c.executeToothService(-12);const create=http.expectOne('/api/treatments');expect(create.request.body.toothNumbers.length).toBe(32);expect(create.request.body.price).toBe(200);create.flush({id:'clean-work'});
+    const pending=c.executeToothService(-12,false);const create=http.expectOne('/api/treatments');expect(create.request.body.toothNumbers.length).toBe(32);expect(create.request.body.price).toBe(200);create.flush({id:'clean-work'});
     await Promise.resolve();await Promise.resolve();http.expectOne('/api/treatments/clean-work').flush({id:'clean-work',status:2,version:'v1'});
-    await Promise.resolve();await Promise.resolve();http.expectOne('/api/treatments/clean-work/complete').flush(null);
+    await Promise.resolve();await Promise.resolve();http.expectOne('/api/treatments/clean-work/start').flush(null);
     await pending;flushAuxiliary(http);expect(c.treatmentRowKeys()).toEqual([-13,-16,-18]);expect(c.recentlyCompletedTeeth()).toEqual([]);
   });
   it('removes a completed tooth from treatment choices without deleting its diagnostic history',()=>{

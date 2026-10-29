@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ImplantData, ImplantField, ImplantValue } from './implant-fields';
 import { ImplantIconComponent } from './implant-icon.component';
 @Component({selector:'app-implant-field',standalone:true,imports:[FormsModule,ImplantIconComponent],template:`
-  <fieldset class="implant-card" [class.notes-card]="field().kind === 'notes'" [class.compact-field]="compact()">
+  <fieldset class="implant-card" [class.notes-card]="field().kind === 'notes'" [class.compact-field]="compact()" [class.horizontal]="horizontal()">
     <legend><app-implant-icon class="field-symbol" [name]="field().kind === 'date' ? 'date' : field().kind === 'notes' ? 'notes' : field().key === 'hygiene' ? 'shield' : field().key === 'component' || field().key === 'coping' ? 'implant' : 'tooth'"/><span>{{field().en}} @if(field().required){<i>*</i>}<small lang="ar" dir="rtl">{{field().ar}}</small></span></legend>
     @switch(field().kind) {
       @case('radio') { <div class="choices">@for(option of field().options;track option.value){<label class="choice"><input type="radio" [name]="group() + field().key" [value]="option.value" [ngModel]="data()[field().key]" (ngModelChange)="set($event)"><span>{{option.en}}<small lang="ar" dir="rtl">{{option.ar}}</small></span></label>}</div> }
@@ -17,6 +17,7 @@ import { ImplantIconComponent } from './implant-icon.component';
 export class ImplantFieldComponent {
   readonly field = input.required<ImplantField>(); readonly data = input.required<ImplantData>(); readonly group = input.required<string>();
   readonly compact=input(false);
+  readonly horizontal=input(false);
   readonly changed=output<string>();
   suggestions():string[] { switch(this.field().key){case 'brand':return ['Straumann','Nobel Biocare','Astra Tech','Osstem','Dentium','Neodent','Zimmer'];case 'system':return ['BLX','BLT','Tissue Level','NobelActive','NobelParallel','Astra EV','TSIII'];case 'connection':return ['RC (Regular CrossFit)','NC (Narrow CrossFit)','BLX','Conical connection','Internal hex'];case 'shade':return ['A1','A2','A3','A3.5','A4','B1','B2','B3','B4','C1','C2','C3','C4','D2','D3','D4'];default:return [];} }
   set(value:ImplantValue) { this.data()[this.field().key] = value; this.changed.emit(this.field().key); }

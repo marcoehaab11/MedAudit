@@ -37,6 +37,67 @@ namespace DentalClinic.IntegrationTests;
 public sealed class RowLevelSecurityTests(RowSecurityDatabase database) : IClassFixture<RowSecurityDatabase>
 {
     private static readonly string[] AllBackupModules = ["all"];
+    private static readonly string[] ClinicalProductConcentrations = ["Label value"];
+    [Fact]
+    public async Task BleachingCannotCompleteBeforeEveryDistinctPlannedVisitIsSaved()
+    {
+        using var scope=database.Scope(database.AdminA);var db=scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();var now=DateTimeOffset.UtcNow;
+        var catalog=new TreatmentCatalogItem(database.TenantA,TreatmentType.Other,"Bleaching","BLEACH",null,0,now);db.TreatmentCatalogItems.Add(catalog);
+        var appointmentIds=new List<Guid>();
+        for(var day=26;day<=27;day++)
+        {
+            var id=await scope.ServiceProvider.GetRequiredService<DentalClinic.Application.Appointments.ICreateAppointment>().ExecuteAsync(new(database.PatientA,database.DoctorA,DentalClinic.Domain.Appointments.AppointmentType.FollowUp,new(DateOnly.FromDateTime(now.AddDays(day).DateTime),new TimeOnly(12,0),30),"Bleaching test"),CancellationToken.None);
+            appointmentIds.Add(id);var appointment=await db.Appointments.SingleAsync(x=>x.Id==id);appointment.CheckIn(now);appointment.Start(now);
+            db.Examinations.Add(new DentalClinic.Domain.Dental.Examination(database.TenantA,database.PatientA,id,database.MemberA,database.AdminA,now));
+        }
+        var treatment=new Treatment(database.TenantA,database.PatientA,database.DoctorA,appointmentIds[0],null,null,catalog.Id,null,TreatmentType.Other,"Bleaching",[26],0,null,now,priceConfirmed:false);db.Treatments.Add(treatment);await db.SaveChangesAsync();
+        var service=scope.ServiceProvider.GetRequiredService<DentalClinic.Infrastructure.Services.ClinicalWorkflowService>();
+        var treatments=scope.ServiceProvider.GetRequiredService<DentalClinic.Application.Treatments.ITreatmentService>();
+        var plan=JsonSerializer.SerializeToElement(new{plannedSessions=2,baselineShade="A3",treatmentType="in-office",products=new[]{new{name="Test product",concentrations=ClinicalProductConcentrations}}});
+        var data=JsonSerializer.SerializeToElement(new{brand="Test product",concentration="Label value",durationMinutes=20,shadeAfter="B1",sensitivity="none"});
+        var first=Guid.NewGuid();var record=await service.SaveAsync(treatment.Id,new(treatment.Version,"bleaching",plan,first,appointmentIds[0],data,true),CancellationToken.None);
+        await Assert.ThrowsAsync<TreatmentStateException>(()=>treatments.TransitionAsync(treatment.Id,"complete",record.Version,CancellationToken.None));
+        record=await service.SaveAsync(treatment.Id,new(record.Version,"bleaching",plan,first,appointmentIds[0],data,true),CancellationToken.None);
+        Assert.Equal(1,ClinicalWorkflow.CompletedCount(System.Text.Json.Nodes.JsonNode.Parse(record.WorkflowJson!)!.AsObject()));
+        record=await service.SaveAsync(treatment.Id,new(record.Version,"bleaching",plan,Guid.NewGuid(),appointmentIds[1],data,true),CancellationToken.None);
+        Assert.True(await treatments.TransitionAsync(treatment.Id,"complete",record.Version,CancellationToken.None));
+        Assert.Equal(TreatmentStatus.Completed,(await db.Treatments.SingleAsync(x=>x.Id==treatment.Id)).Status);
+    }
+    [Fact]
+    public async Task ClinicalSessionsPhotosAndReceptionRequestPersistWithoutDuplicatesAndRejectOtherClinics()
+    {
+        using var scope=database.Scope(database.AdminA);
+        var db=scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();var now=DateTimeOffset.UtcNow;
+        var role=new TenantRole(database.TenantA,SystemRoleDefinitions.Receptionist,"Reception",true,now);
+        db.TenantRoles.Add(role);db.UserRoleAssignments.Add(new UserRoleAssignment(database.TenantA,database.ColleagueA,role.Id,now));
+        var catalog=new TreatmentCatalogItem(database.TenantA,TreatmentType.Other,"Scaling and polishing","SCALING",null,0,now);db.TreatmentCatalogItems.Add(catalog);
+        var appointmentId=await scope.ServiceProvider.GetRequiredService<DentalClinic.Application.Appointments.ICreateAppointment>().ExecuteAsync(
+            new(database.PatientA,database.DoctorA,DentalClinic.Domain.Appointments.AppointmentType.FollowUp,new(DateOnly.FromDateTime(now.AddDays(25).DateTime),new TimeOnly(11,0),30),"Scaling workflow test"),CancellationToken.None);
+        var appointment=await db.Appointments.SingleAsync(x=>x.Id==appointmentId);appointment.CheckIn(now);appointment.Start(now);
+        db.Examinations.Add(new DentalClinic.Domain.Dental.Examination(database.TenantA,database.PatientA,appointmentId,database.MemberA,database.AdminA,now));
+        var treatment=new Treatment(database.TenantA,database.PatientA,database.DoctorA,appointmentId,null,null,catalog.Id,null,TreatmentType.Other,"Scaling and polishing",[36],0,null,now,priceConfirmed:false);
+        db.Treatments.Add(treatment);await db.SaveChangesAsync();
+        var service=scope.ServiceProvider.GetRequiredService<DentalClinic.Infrastructure.Services.ClinicalWorkflowService>();
+        var sessionId=Guid.NewGuid();var data=JsonSerializer.SerializeToElement(new{scope="full",calculus="moderate",gingivalStatus="mild",scalingPerformed=true,pocketMapping="no",polishing="no",sensitivity="none",requestRecall=true,recallDate=DateOnly.FromDateTime(now.AddDays(55).DateTime).ToString("yyyy-MM-dd",System.Globalization.CultureInfo.InvariantCulture),recallReason="Review after scaling"});
+        var plan=JsonSerializer.SerializeToElement(new{});
+        var record=await service.SaveAsync(treatment.Id,new(treatment.Version,"scaling",plan,sessionId,appointmentId,data,true),CancellationToken.None);
+        record=await service.SaveAsync(treatment.Id,new(record.Version,"scaling",plan,sessionId,appointmentId,data,true),CancellationToken.None);
+        Assert.Single(await db.FollowUps.Where(x=>x.RelatedTreatmentId==treatment.Id).ToListAsync());
+        Assert.Equal(1,ClinicalWorkflow.CompletedCount(System.Text.Json.Nodes.JsonNode.Parse(record.WorkflowJson!)!.AsObject()));
+        var photo=await service.AddPhotoAsync(treatment.Id,sessionId,"before","test.png",[137,80,78,71,13,10,26,10,0],CancellationToken.None);
+        Assert.Single(await service.PhotosAsync(treatment.Id,CancellationToken.None));
+        using(var other=database.Scope(database.MemberB)){
+            var otherDb=other.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            Assert.Empty(await otherDb.ClinicalPhotos.IgnoreQueryFilters().Where(x=>x.Id==photo.Id).ToListAsync());
+            Assert.Equal(0,await otherDb.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM clinical_photos WHERE \"Id\"={photo.Id}"));
+        }
+        using var restored=database.Scope(database.AdminA);
+        var restoredService=restored.ServiceProvider.GetRequiredService<DentalClinic.Infrastructure.Services.ClinicalWorkflowService>();
+        Assert.Equal("test.png",(await restoredService.PhotoAsync(treatment.Id,photo.Id,CancellationToken.None)).FileName);
+        await restoredService.DeletePhotoAsync(treatment.Id,photo.Id,CancellationToken.None);
+        await using var app=await database.HttpAppAsync();using var client=app.GetTestClient();
+        Assert.Equal(HttpStatusCode.Unauthorized,(await client.GetAsync($"/api/treatments/{treatment.Id}/clinical-workflow")).StatusCode);
+    }
     [Fact]
     public async Task ImplantCompletionUsesTheExistingTreatmentWorkflowAndCannotBypassClinicalSteps()
     {
@@ -270,15 +331,15 @@ public sealed class RowLevelSecurityTests(RowSecurityDatabase database) : IClass
     }
 
     [Fact]
-    public async Task All90TablesAreForcedAndRuntimeCannotOwnOrBypassThem()
+    public async Task All91TablesAreForcedAndRuntimeCannotOwnOrBypassThem()
     {
         await DatabaseSecurityBootstrap.VerifyRuntimeAsync(database.Services);
         await using var connection = new NpgsqlConnection(database.OwnerConnection);
         await connection.OpenAsync();
         await using var command = new NpgsqlCommand("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='r' AND c.relrowsecurity AND c.relforcerowsecurity", connection);
-        Assert.Equal(90L, await command.ExecuteScalarAsync());
+        Assert.Equal(91L, await command.ExecuteScalarAsync());
         command.CommandText = "SELECT count(*) FROM pg_policies WHERE schemaname='public'";
-        Assert.Equal(370L, await command.ExecuteScalarAsync());
+        Assert.Equal(374L, await command.ExecuteScalarAsync());
     }
 
     [Fact]
@@ -559,7 +620,7 @@ public sealed class RowSecurityDatabase : IAsyncLifetime
         var app = builder.Build();
         app.UseExceptionHandler(); app.UseRouting(); app.UseMiddleware<SessionSecurityMiddleware>();
         app.UseAuthentication(); app.UseMiddleware<TenantResolutionMiddleware>(); app.UseAuthorization();
-        app.MapImplantEndpoints(); app.MapIdentityEndpoints(); app.MapPatientEndpoints(); app.MapPublicBookingEndpoints(); app.MapOnboardingEndpoints(); app.MapBranchEndpoints(); app.MapBackupEndpoints();
+        app.MapClinicalWorkflowEndpoints(); app.MapImplantEndpoints(); app.MapIdentityEndpoints(); app.MapPatientEndpoints(); app.MapPublicBookingEndpoints(); app.MapOnboardingEndpoints(); app.MapBranchEndpoints(); app.MapBackupEndpoints();
         await app.StartAsync();
         return app;
     }

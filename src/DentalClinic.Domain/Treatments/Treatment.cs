@@ -36,6 +36,7 @@ public sealed class Treatment : TenantOwnedEntity
     public decimal Price { get; private set; }
     public bool PriceConfirmed { get; private set; }
     public string? Notes { get; private set; }
+    public string? ClinicalWorkflowJson { get; private set; }
     public DateTimeOffset? StartedAt { get; private set; }
     public DateTimeOffset? CompletedAt { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
@@ -52,14 +53,27 @@ public sealed class Treatment : TenantOwnedEntity
     { EnsureVersion(expectedVersion); EnsureMutable(); Notes = TreatmentRules.Optional(notes, nameof(notes), 4000); Touch(now); }
     public void Start(Guid expectedVersion, DateTimeOffset now)
     { EnsureVersion(expectedVersion); if (Status is not (TreatmentStatus.Planned or TreatmentStatus.Scheduled)) throw new TreatmentStateException("Only planned or scheduled treatment can start."); Status = TreatmentStatus.InProgress; StartedAt = now; Touch(now); }
+    public void SaveClinicalWorkflow(string kind, string planJson, Guid visitId, Guid appointmentId, Guid doctorUserId,
+        DateOnly visitDate, string visitJson, bool performed, Guid expectedVersion, DateTimeOffset now)
+    {
+        EnsureVersion(expectedVersion); EnsureMutable();
+        if (Status == TreatmentStatus.Cancelled || Type != TreatmentType.Other) throw new TreatmentStateException("This treatment does not support a scaling or bleaching workflow.");
+        ClinicalWorkflowJson = ClinicalWorkflow.Save(ClinicalWorkflowJson, kind, planJson, visitId, appointmentId, DoctorProfileId, doctorUserId, visitDate, visitJson, performed, now);
+        Touch(now);
+    }
     public void Complete(Guid expectedVersion, DateTimeOffset now)
     {
         EnsureVersion(expectedVersion);
+        if(ClinicalWorkflowJson is null && Type==TreatmentType.Other && "scal|polish|clean|whiten|bleach|تنظيف|تنضيف|جير|تبييض|تبيض".Split('|').Any(term=>TreatmentName.Contains(term,StringComparison.OrdinalIgnoreCase)))
+            throw new TreatmentStateException("Open and complete the scaling or bleaching workflow before completing this treatment.");
+        if (ClinicalWorkflowJson is not null) ClinicalWorkflow.EnsureComplete(ClinicalWorkflowJson);
         if (Type == TreatmentType.Filling && (Notes?.Split('·', StringSplitOptions.TrimEntries).Any(part => part.Equals("Filling material: Temporary", StringComparison.OrdinalIgnoreCase)) ?? false))
             throw new TreatmentStateException("Temporary filling is unfinished. Record the permanent filling before completing treatment.");
         if (Status is not (TreatmentStatus.InProgress or TreatmentStatus.Scheduled or TreatmentStatus.Planned)) throw new TreatmentStateException("Treatment must be planned, scheduled, or in progress.");
         if (StartedAt is null) StartedAt = now; Status = TreatmentStatus.Completed; CompletedAt = now; Touch(now);
     }
+    public void RetractClinicalSession(Guid sessionId,Guid actor,string reason,Guid expectedVersion,DateTimeOffset now)
+    { EnsureVersion(expectedVersion);EnsureMutable();if(Status==TreatmentStatus.Cancelled || ClinicalWorkflowJson is null)throw new TreatmentStateException("This treatment cannot be corrected.");ClinicalWorkflowJson=ClinicalWorkflow.Retract(ClinicalWorkflowJson,sessionId,actor,reason,now);Touch(now); }
     public void Cancel(Guid expectedVersion, DateTimeOffset now)
     { EnsureVersion(expectedVersion); if (Status is TreatmentStatus.Completed or TreatmentStatus.Cancelled) throw new TreatmentStateException("This treatment cannot be cancelled."); Status = TreatmentStatus.Cancelled; Touch(now); }
     private void EnsureMutable() { if (Status == TreatmentStatus.Completed) throw new TreatmentStateException("Completed treatments are immutable."); }

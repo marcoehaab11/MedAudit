@@ -3,6 +3,7 @@ import { authGuard } from './core/auth.guard';
 import { permissionGuard } from './core/permission.guard';
 
 export const routes: Routes = [
+  { path:'treatments/:id/clinical',canActivate:[authGuard,permissionGuard],canDeactivate:[(component:{canLeave:()=>boolean})=>component.canLeave()],loadComponent:()=>import('./features/dental/clinical-workflow.component').then(m=>m.ClinicalWorkflowComponent) },
   { path: 'patients/:patientId/implants/:tooth', canActivate: [authGuard, permissionGuard], loadComponent: () => import('./features/dental/implant-workflow.component').then(m => m.ImplantWorkflowComponent) },
   { path: 'forgot-password', loadComponent: () => import('./features/auth/password-recovery.component').then(m => m.PasswordRecoveryComponent) },
   { path: 'reset-password', loadComponent: () => import('./features/auth/password-recovery.component').then(m => m.PasswordRecoveryComponent) },

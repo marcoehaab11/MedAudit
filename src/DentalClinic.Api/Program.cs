@@ -84,6 +84,7 @@ app.MapDoctorEndpoints();
 app.MapAppointmentEndpoints();
 app.MapDentalEndpoints();
 app.MapImplantEndpoints();
+app.MapClinicalWorkflowEndpoints();
 app.MapTreatmentEndpoints();
 app.MapPrescriptionEndpoints();
 app.MapCrmEndpoints();

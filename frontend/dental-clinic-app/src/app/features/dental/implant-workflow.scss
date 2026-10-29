@@ -1,4 +1,5 @@
 :host { display:block; color:#19185c; font-family:inherit; }
+.horizontal .choices{flex-direction:row;flex-wrap:wrap;gap:8px}.horizontal .choice{flex:1;min-width:90px;padding:12px;border:1px solid #e1dcec;border-radius:6px}.horizontal .choice:has(input:checked){border-color:#43b6ae;background:#edf9f6}
 * { box-sizing:border-box; }
 .implant-workspace { background:linear-gradient(120deg,#fbfffe,#fff 60%,#f5fcfb); border:1px solid #e1f0ef; border-radius:16px; padding:22px; max-width:1600px; margin:auto; }
 button,input,select,textarea { font:inherit; }
