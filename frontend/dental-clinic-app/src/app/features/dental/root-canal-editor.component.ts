@@ -20,7 +20,7 @@ import { CrownEditorComponent } from './crown-editor.component';
 @if(currentStage.value===2){<div class="canal-grid" dir="ltr">@for(canal of selectedCanals;track canal.name){<div class="canal-card"><strong>{{canal.name}}</strong><label>Working length (mm)<input type="number" min="0.01" max="50" step="0.01" [(ngModel)]="canal.lengthMm" (ngModelChange)="scheduleSave()"/></label><label>Final file size<input maxlength="50" [(ngModel)]="canal.finalFileSize" (ngModelChange)="scheduleSave()"/></label></div>}</div>}
 @if(currentStage.value===4){
  <div class="obturation-grid" dir="ltr">@for(canal of selectedCanals;track canal.name){<div class="obturation-card"><strong>{{canal.name}}</strong><label>Master size<input [value]="canal.finalFileSize || '—'" readonly/></label><label>Length (mm)<input [value]="canal.lengthMm ?? '—'" readonly/></label></div>}</div>
- <label class="stage-check"><input type="checkbox" [(ngModel)]="workflow.obturationDone" (ngModelChange)="scheduleSave()"/>Operation done</label>
+ <button type="button" class="obturation-button" [class.done]="workflow.obturationDone" [attr.aria-pressed]="workflow.obturationDone" (click)="toggleObturation()">{{workflow.obturationDone ? 'Obturation done' : 'Obturation'}}</button>
  <section class="clinical-option"><div class="choice-toggle"><strong>Post recommendation</strong><div><button type="button" [class.active]="!workflow.needsPost" (click)="setPost(false)">{{english?'No':'لا'}}</button><button type="button" [class.active]="workflow.needsPost" (click)="setPost(true)">{{english?'Yes':'نعم'}}</button></div></div>
  @if(workflow.needsPost){<div class="post-fields" dir="ltr"><label>Post canal<select [(ngModel)]="draft.postCanal" (ngModelChange)="scheduleSave()"><option [ngValue]="null">Select canal</option>@for(canal of selectedCanals;track canal.name){<option [value]="canal.name">{{canal.name}}</option>}</select></label><label>Post type<select [(ngModel)]="draft.postType" (ngModelChange)="scheduleSave()"><option [ngValue]="null">Select type</option><option value="fiber">Fiber post</option><option value="metal">Metal post</option><option value="custom">Custom post</option></select></label><label>Post size<input [(ngModel)]="workflow.postSize" maxlength="50" (ngModelChange)="scheduleSave()"/></label></div>}</section>
 }
@@ -61,6 +61,10 @@ import { CrownEditorComponent } from './crown-editor.component';
     .root-stage-timeline li.done::before,.root-stage-timeline li.active::before{background:#57af9b}
     @media(max-width:600px){.root-stage-timeline li{flex-basis:105px}.root-canal-card{padding:12px}}
     button{padding:10px;border:0;border-radius:8px;background:#168a82;color:white;font-weight:700;cursor:pointer}
+    .obturation-button{justify-self:start;min-width:170px;padding:12px 22px;background:#087f74;color:white;transition:background-color .15s,color .15s}
+    .obturation-button.done{background:#e2e5e8;color:#4b5563}
+    .obturation-button:focus-visible{outline:3px solid #54b8a6;outline-offset:3px}
+    .obturation-button:disabled{cursor:not-allowed;opacity:.65}
   `],
 })
 export class RootCanalEditorComponent implements OnDestroy {
@@ -75,6 +79,7 @@ export class RootCanalEditorComponent implements OnDestroy {
  get currentStage(){return this.stages.find(s=>s.value===this.draft.stage) ?? this.stages.find(s=>s.value===(this.draft.stage===7?4:2)) ?? this.stages[0];}
  get currentStageIndex(){return this.stages.findIndex(s=>s.value===this.currentStage.value);}
  scheduleSave(){if(this.disabled)return;this.pendingSave=true;if(this.saveTimer)clearTimeout(this.saveTimer);this.saveTimer=setTimeout(()=>{this.saveTimer=undefined;this.pendingSave=false;this.changed.emit();},600);}
+ toggleObturation(){if(this.disabled)return;this.workflow.obturationDone=!this.workflow.obturationDone;this.stageError='';this.scheduleSave();}
  ngOnDestroy(){if(this.saveTimer){clearTimeout(this.saveTimer);this.changed.emit();}}
  private persist(){if(this.saveTimer)clearTimeout(this.saveTimer);this.saveTimer=undefined;this.pendingSave=false;if(this.canSave)this.save.emit();else this.changed.emit();}
  toggleCanal(c:RootCanalDraft['canals'][number]){if(this.disabled)return;c.enabled=c.enabled===false;if(c.enabled===false&&this.draft.postCanal===c.name)this.draft.postCanal=null;this.scheduleSave();}

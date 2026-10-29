@@ -8,6 +8,18 @@ public sealed class TreatmentDomainTests
     private static readonly DateTimeOffset Now = new(2026, 8, 15, 8, 0, 0, TimeSpan.Zero);
 
     [Fact]
+    public void TemporaryFillingStaysUnfinishedUntilPermanentMaterialIsRecorded()
+    {
+        var treatment = new Treatment(Tenant, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null, null, Guid.NewGuid(), null,
+            TreatmentType.Filling, "Filling", [26], 200m, "Filling material: Temporary · Class II · (متبقي: حشو دائم)", Now);
+        treatment.Start(treatment.Version, Now);
+        Assert.Throws<TreatmentStateException>(() => treatment.Complete(treatment.Version, Now));
+        Assert.Equal(TreatmentStatus.InProgress, treatment.Status); Assert.Null(treatment.CompletedAt);
+        treatment.UpdateNotes("Filling material: Composite · Class II", treatment.Version, Now.AddDays(7));
+        treatment.Complete(treatment.Version, Now.AddDays(7));
+        Assert.Equal(TreatmentStatus.Completed, treatment.Status); Assert.Equal(200m, treatment.Price);
+    }
+    [Fact]
     public void ClinicalWorkCanFinishBeforeDoctorApprovesThePrice()
     {
         var treatment = new Treatment(Tenant, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), null, null, Guid.NewGuid(), null, TreatmentType.Filling, "Composite", [24], 200m, null, Now, priceConfirmed: false);

@@ -211,6 +211,9 @@ export class TreatmentApiService {
   treatment(id: string) {
     return this.http.get<Treatment>(`/api/treatments/${id}`);
   }
+  updateTreatmentNotes(id: string, notes: string, version: string) {
+    return this.http.put<void>(`/api/treatments/${id}`, { notes, version });
+  }
   createTreatment(value: {
     patientId: string;
     doctorProfileId: string;

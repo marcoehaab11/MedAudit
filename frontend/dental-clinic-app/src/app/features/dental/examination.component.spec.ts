@@ -353,6 +353,37 @@ describe('ExaminationComponent', () => {
     c.treatmentTeeth=[];c.toggleTreatmentTooth(36);expect(c.treatmentTeeth).toEqual([]);
     c.step.set(3);fixture.detectChanges();expect(fixture.nativeElement.querySelector('.today-teeth-picker').textContent).not.toContain('#36');
   });
+  it('keeps teeth completed in an earlier appointment out of a new visit after history is reloaded',()=>{
+    const fixture=TestBed.createComponent(ExaminationComponent),c=fixture.componentInstance,http=TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());flushAuxiliary(http);
+    c.treatmentTeeth=[36];c.selectedTeeth=[36];c.loadTreatmentHistory('p1');
+    http.expectOne(r=>r.url==='/api/treatments' && r.method==='GET').flush({items:[{id:'previous-done',appointmentId:'previous-visit',toothNumbers:[36],status:4,completedAt:'2026-08-16T10:00:00Z'}],totalPages:1});
+    expect(c.recentlyCompletedTeeth()).toEqual([]);expect(c.surveyTeeth()).toContain(36);
+    expect(c.availableTreatmentTeeth()).not.toContain(36);expect(c.treatmentTeeth).not.toContain(36);
+    c.step.set(3);fixture.detectChanges();expect(fixture.nativeElement.querySelector('.today-teeth-picker').textContent).not.toContain('#36');
+  });
+  it('also hides completed teeth from the persistent chart while keeping unfinished services available',()=>{
+    const fixture=TestBed.createComponent(ExaminationComponent),c=fixture.componentInstance,http=TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());flushAuxiliary(http);
+    c.patientChart.set({patientId:'p1',patientName:'Mona',patientNumber:'P-1',recentExaminations:[],teeth:[{toothId:'t36',toothNumber:36,findings:[2],procedures:[1],hasEndodonticRecord:false,treatmentProgress:[{id:'done',name:'Filling',type:1,status:4,completedAt:'2026-08-16T10:00:00Z'}]}]});
+    expect(c.availableTreatmentTeeth()).not.toContain(36);
+    c.executedTreatments.set([{id:'unfinished',appointmentId:'previous-visit',toothNumbers:[36],status:3} as any]);
+    expect(c.availableTreatmentTeeth()).toContain(36);
+    c.executedTreatments.set([{id:'cancelled',appointmentId:'previous-visit',toothNumbers:[36],status:5} as any]);
+    expect(c.availableTreatmentTeeth()).not.toContain(36);
+  });
+  it('allows a new diagnosis after completion without reviving older copied findings or whole-mouth work',()=>{
+    const fixture=TestBed.createComponent(ExaminationComponent),c=fixture.componentInstance,http=TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());flushAuxiliary(http);
+    c.executedTreatments.set([{id:'done',appointmentId:'previous-visit',toothNumbers:[36],status:4,completedAt:'2026-08-16T10:00:00Z'} as any]);
+    c.examination.update(exam=>({...exam!,findings:exam!.findings.map(f=>({...f,createdAt:'2026-08-15T10:00:00Z'}))}));
+    expect(c.availableTreatmentTeeth()).not.toContain(36);
+    c.examination.update(exam=>({...exam!,findings:exam!.findings.map(f=>({...f,createdAt:'2026-08-17T10:00:00Z'}))}));
+    expect(c.availableTreatmentTeeth()).toContain(36);
+    c.executedTreatments.set([{id:'mouth',appointmentId:'previous-visit',toothNumbers:Array.from({length:4},(_,q)=>Array.from({length:8},(_,i)=>(q+1)*10+i+1)).flat(),status:4} as any]);
+    c.patientChart.set({patientId:'p1',patientName:'Mona',patientNumber:'P-1',recentExaminations:[],teeth:[{toothId:'t36',toothNumber:36,findings:[2],procedures:[],hasEndodonticRecord:false,treatmentProgress:[{id:'mouth',name:'Scaling',type:6,status:4}]}]});
+    expect(c.availableTreatmentTeeth()).toContain(36);
+  });
   it('hides treatment status for extraction and keeps caries choices on the chart only',()=>{
     const fixture=TestBed.createComponent(ExaminationComponent),c=fixture.componentInstance,http=TestBed.inject(HttpTestingController);
     http.expectOne('/api/appointments/a1/examination').flush(examination());flushAuxiliary(http);
@@ -373,6 +404,35 @@ describe('ExaminationComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('[data-tooth="24"] .filling-class-grid input')).toHaveLength(6);
     expect(fixture.nativeElement.querySelectorAll('[data-tooth="24"] .filling-material-grid input')).toHaveLength(4);
     c.toothService(24).fillingMaterial='invalid'; await c.executeToothService(24); http.expectNone('/api/treatments');
+  });
+  it('records temporary filling as unfinished even if the draft was marked complete and restores it next visit',async()=>{
+    const c=TestBed.createComponent(ExaminationComponent).componentInstance,http=TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());flushAuxiliary(http);
+    c.catalog.set([{id:'fill',code:'F',name:'Filling',type:1,defaultPrice:100,isActive:true}]);
+    c.selectedTeeth=[36];c.treatmentTeeth=[36];Object.assign(c.toothService(36),{catalogId:'fill',cariesClass:2,fillingMaterial:'Temporary',status:'completed'});
+    const saving=c.executeToothService(36);const create=http.expectOne('/api/treatments');
+    expect(create.request.body.notes).toContain('Filling material: Temporary');expect(create.request.body.notes).toContain('متبقي:');create.flush({id:'temporary'});
+    await Promise.resolve();await Promise.resolve();http.expectOne('/api/treatments/temporary').flush({id:'temporary',status:2,version:'v1'});
+    await Promise.resolve();await Promise.resolve();http.expectOne('/api/treatments/temporary/start').flush(null);http.expectNone('/api/treatments/temporary/complete');
+    await saving;flushAuxiliary(http);expect(c.recentlyCompletedTeeth()).not.toContain(36);
+    c.executedTreatments.set([{id:'temporary',appointmentId:'earlier-visit',catalogItemId:'fill',type:1,treatmentName:'Filling',toothNumbers:[36],price:100,status:3,notes:'Filling material: Temporary · Class II · (متبقي: حشو دائم)'} as any]);
+    expect(c.availableTreatmentTeeth()).toContain(36);
+    expect(c.toothService(36)).toMatchObject({treatmentId:'temporary',fillingMaterial:'Temporary',cariesClass:2,status:'in_progress',price:100});
+  });
+  it('replaces temporary material and completes the same saved filling without creating or charging another treatment',async()=>{
+    const fixture=TestBed.createComponent(ExaminationComponent),c=fixture.componentInstance,http=TestBed.inject(HttpTestingController);
+    http.expectOne('/api/appointments/a1/examination').flush(examination());flushAuxiliary(http);
+    c.catalog.set([{id:'fill',code:'F',name:'Filling',type:1,defaultPrice:500,isActive:true}]);
+    const original={id:'temporary',patientId:'p1',appointmentId:'earlier-visit',catalogItemId:'fill',type:1,treatmentName:'Filling',toothNumbers:[36],price:100,status:3,notes:'Filling material: Temporary · Class II · (متبقي: حشو دائم)',version:'v1'};
+    c.executedTreatments.set([original as any]);c.selectedTeeth=[36];c.treatmentTeeth=[36];c.step.set(3);fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.filling-editor input[type=radio]:disabled')).toBeNull();
+    expect(c.toothService(36).treatmentId).toBe('temporary');c.toothService(36).fillingMaterial='Composite';c.fillingMaterialChanged(36);
+    const saving=c.executeToothService(36);http.expectOne('/api/treatments/temporary').flush(original);
+    await Promise.resolve();await Promise.resolve();const update=http.expectOne(r=>r.method==='PUT' && r.url==='/api/treatments/temporary');
+    expect(update.request.body.notes).toContain('Filling material: Composite');expect(update.request.body.notes).not.toContain('Temporary');expect(update.request.body).not.toHaveProperty('price');update.flush(null);
+    await Promise.resolve();await Promise.resolve();http.expectOne('/api/treatments/temporary').flush({...original,notes:'Filling material: Composite · Class II',version:'v2'});
+    await Promise.resolve();await Promise.resolve();const complete=http.expectOne('/api/treatments/temporary/complete');expect(complete.request.body.version).toBe('v2');complete.flush(null);
+    http.expectNone(r=>r.method==='POST' && r.url==='/api/treatments');await saving;flushAuxiliary(http);expect(c.recentlyCompletedTeeth()).toContain(36);
   });
   it('routes a standalone crown through a crown-only workflow and retains pending root restorations',()=>{
     const c=TestBed.createComponent(ExaminationComponent).componentInstance,http=TestBed.inject(HttpTestingController);

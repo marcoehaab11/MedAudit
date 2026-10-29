@@ -53,7 +53,13 @@ public sealed class Treatment : TenantOwnedEntity
     public void Start(Guid expectedVersion, DateTimeOffset now)
     { EnsureVersion(expectedVersion); if (Status is not (TreatmentStatus.Planned or TreatmentStatus.Scheduled)) throw new TreatmentStateException("Only planned or scheduled treatment can start."); Status = TreatmentStatus.InProgress; StartedAt = now; Touch(now); }
     public void Complete(Guid expectedVersion, DateTimeOffset now)
-    { EnsureVersion(expectedVersion); if (Status is not (TreatmentStatus.InProgress or TreatmentStatus.Scheduled or TreatmentStatus.Planned)) throw new TreatmentStateException("Treatment must be planned, scheduled, or in progress."); if (StartedAt is null) StartedAt = now; Status = TreatmentStatus.Completed; CompletedAt = now; Touch(now); }
+    {
+        EnsureVersion(expectedVersion);
+        if (Type == TreatmentType.Filling && (Notes?.Split('·', StringSplitOptions.TrimEntries).Any(part => part.Equals("Filling material: Temporary", StringComparison.OrdinalIgnoreCase)) ?? false))
+            throw new TreatmentStateException("Temporary filling is unfinished. Record the permanent filling before completing treatment.");
+        if (Status is not (TreatmentStatus.InProgress or TreatmentStatus.Scheduled or TreatmentStatus.Planned)) throw new TreatmentStateException("Treatment must be planned, scheduled, or in progress.");
+        if (StartedAt is null) StartedAt = now; Status = TreatmentStatus.Completed; CompletedAt = now; Touch(now);
+    }
     public void Cancel(Guid expectedVersion, DateTimeOffset now)
     { EnsureVersion(expectedVersion); if (Status is TreatmentStatus.Completed or TreatmentStatus.Cancelled) throw new TreatmentStateException("This treatment cannot be cancelled."); Status = TreatmentStatus.Cancelled; Touch(now); }
     private void EnsureMutable() { if (Status == TreatmentStatus.Completed) throw new TreatmentStateException("Completed treatments are immutable."); }

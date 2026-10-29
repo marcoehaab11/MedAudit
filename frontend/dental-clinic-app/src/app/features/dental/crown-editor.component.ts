@@ -4,7 +4,7 @@ import { CrownDraft } from './root-canal';
 @Component({selector:'app-crown-editor',imports:[FormsModule],template:`
 <section class="crown-editor" [attr.dir]="english ? 'ltr':'rtl'">
   <fieldset [disabled]="disabled"><div class="crown-meta" dir="ltr">
-    <label>Crown type<input [(ngModel)]="draft.type" (ngModelChange)="changed.emit()" list="crown-types" maxlength="100" placeholder="Select crown type"/><datalist id="crown-types"><option>Full crown</option><option>Partial crown</option><option>Bridge retainer</option></datalist></label>
+    <label>Crown type<input [(ngModel)]="draft.type" (ngModelChange)="changed.emit()" list="crown-types" maxlength="100" placeholder="Select crown type"/><datalist id="crown-types"><option>Crown</option><option>Overlay</option><option>Inlay</option><option>Onlay</option><option>Veneer</option></datalist></label>
     <label>Material<input [(ngModel)]="draft.material" (ngModelChange)="changed.emit()" list="crown-materials" maxlength="100" placeholder="Select material"/><datalist id="crown-materials"><option>Zirconia</option><option>E.max</option><option>PFM</option><option>Metal</option><option>Resin</option></datalist></label>
     <label>Shade<input [(ngModel)]="draft.shade" (ngModelChange)="changed.emit()" list="crown-shades" maxlength="50" placeholder="Select shade"/><datalist id="crown-shades">@for(s of shades;track s){<option>{{s}}</option>}</datalist></label>
     <label>Laboratory<input [(ngModel)]="draft.laboratory" (ngModelChange)="changed.emit()" maxlength="100" placeholder="Laboratory name"/></label>
