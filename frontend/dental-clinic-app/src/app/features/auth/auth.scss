@@ -1,3 +1,58 @@
+.account-options {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.new-account-option {
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: #f0faf9;
+  text-align: center;
+
+  h2 { margin: 0 0 0.5rem; font-size: 1.2rem; }
+  p { margin: 0 0 1.25rem; line-height: 1.7; }
+}
+
+.create-account-btn,
+.existing-account-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-block-size: 3rem;
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius-md);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:focus-visible { outline: 3px solid #00b4d8; outline-offset: 3px; }
+}
+
+.create-account-btn {
+  background: #087f80;
+  color: white;
+  font-weight: 700;
+  &:hover { background: #06686a; }
+}
+
+.existing-account-btn {
+  inline-size: 100%;
+  background: white;
+  color: var(--ink);
+  border: 1px solid var(--border);
+  strong { color: #087f80; }
+  &:hover { background: #f0faf9; }
+}
+
+.signup-link {
+  text-align: center;
+  line-height: 1.8;
+  a { color: #087f80; font-weight: 700; }
+}
+
 .auth-wrapper {
   inline-size: 100%;
   display: flex;

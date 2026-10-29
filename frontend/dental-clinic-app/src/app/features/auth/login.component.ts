@@ -100,16 +100,31 @@ import { LocalizationService } from '../../core/localization.service';
                 </svg>
                 <span>{{ i18n.language() === 'en' ? 'Planora' : 'منظومة Planora' }}</span>
               </div>
-              <h1>{{ i18n.language() === 'en' ? 'Welcome back' : 'مرحباً بعودتك' }}</h1>
+              <h1>{{ showSignIn() ? (i18n.language() === 'en' ? 'Welcome back' : 'مرحباً بعودتك') : (i18n.language() === 'en' ? 'Welcome to Planora' : 'أهلًا بك في Planora') }}</h1>
               <p class="subtitle">
                 {{
-                  i18n.language() === 'en'
+                  !showSignIn()
+                    ? (i18n.language() === 'en' ? 'Create your clinic account, or sign in if you already have one.' : 'ابدأ بإنشاء حساب لعيادتك، أو سجّل الدخول لو عندك حساب بالفعل.')
+                    : i18n.language() === 'en'
                     ? 'Enter your clinic credentials to access your workspace.'
                     : 'أدخل بيانات حسابك للمتابعة إلى لوحة التحكم.'
                 }}
               </p>
             </div>
 
+            @if (!showSignIn()) {
+              <div class="account-options">
+                <div class="new-account-option">
+                  <h2>{{ i18n.language() === 'en' ? 'New to Planora?' : 'معندكش حساب؟' }}</h2>
+                  <p>{{ i18n.language() === 'en' ? 'Register your clinic and create your account.' : 'سجّل عيادتك وابدأ حسابك الجديد.' }}</p>
+                  <a class="create-account-btn" [href]="registrationUrl">{{ i18n.language() === 'en' ? 'Create a new account' : 'إنشاء حساب جديد' }}</a>
+                </div>
+                <button type="button" class="existing-account-btn" (click)="showSignIn.set(true)">
+                  <span>{{ i18n.language() === 'en' ? 'Already have an account?' : 'عندك حساب بالفعل؟' }}</span>
+                  <strong>{{ i18n.language() === 'en' ? 'Sign in' : 'تسجيل الدخول' }}</strong>
+                </button>
+              </div>
+            } @else {
             @if (error()) {
               <div class="alert error" role="alert">
                 <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -220,6 +235,12 @@ import { LocalizationService } from '../../core/localization.service';
               </button>
             </form>
 
+            <p class="signup-link">
+              {{ i18n.language() === 'en' ? 'Don’t have an account?' : 'معندكش حساب؟' }}
+              <a [href]="registrationUrl">{{ i18n.language() === 'en' ? 'Create a new account' : 'إنشاء حساب جديد' }}</a>
+            </p>
+            }
+
             <footer class="security-note">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
@@ -241,6 +262,8 @@ export class LoginComponent {
   readonly loading = signal(false);
   readonly error = signal('');
   readonly showPassword = signal(false);
+  readonly showSignIn = signal(false);
+  readonly registrationUrl = `${location.protocol}//${location.host.replace(/^app\./, '')}/register`;
 
   readonly form = inject(FormBuilder).nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
