@@ -45,6 +45,26 @@ describe('Scaling and bleaching clinical sessions',()=>{
   http.expectOne('/api/treatments/t1/clinical-workflow').flush({detail:'Check the concentration'},{status:400,statusText:'Bad request'});await saving;
   expect(c.completed).toBe(0);expect(c.data.brand).toBe('Custom');expect(c.error()).toContain('concentration');
  });
+ it('keeps the baseline locked after all sessions are corrected and requires approval of changed instructions',async()=>{
+  const workflow={kind:'bleaching',baselineLocked:true,plan:{plannedSessions:2,products:[],baselineShade:'A3'},visits:[{id:'corrected',appointmentId:'a1',performed:false,correctedAt:'2026-10-29T12:00:00Z',data:{instructionsText:'Old instructions',instructionsStatus:'manual-handoff'}}]};
+  const {c,fixture}=await load('bleaching',JSON.stringify(workflow));expect(c.completed).toBe(0);expect(c.baselineLocked).toBe(true);
+  expect(fixture.nativeElement.querySelector('.bleaching-grid select').disabled).toBe(true);
+  c.consent=true;c.data.instructionsText='Reviewed text changed';c.instructionsEdited();
+  expect(c.data.instructionsStatus).toBe('draft');expect(c.consent).toBe(false);
+ });
+ it('renders the one-page bleaching layout, template dropdown, and exactly three bottom actions',async()=>{
+  const {fixture}=await load('bleaching');const root=fixture.nativeElement as HTMLElement;
+  expect(root.querySelector('.clinical-stepper')).toBeNull();expect(root.querySelectorAll('footer button')).toHaveLength(3);
+  expect(root.querySelector('select[aria-label="نموذج التعليمات"]')?.textContent).toContain('Standard Bleaching Instructions');
+  expect(root.querySelector('.bleaching-sensitivity textarea')).not.toBeNull();
+  expect(root.querySelector('button[aria-label="تسجيل جلسة تبييض منفذة"]')).not.toBeNull();
+ });
+ it('shows the saved approved instructions and their time independently from the edited draft',async()=>{
+  const workflow={kind:'bleaching',plan:{plannedSessions:2,products:[]},visits:[{id:'session',appointmentId:'a1',performed:false,data:{instructionsText:'New draft',instructionsLanguage:'ar'},instructionApprovals:[{text:'Approved copy',language:'en',preparedAt:'2026-10-29T12:00:00Z'}]}]};
+  const {fixture,c}=await load('bleaching',JSON.stringify(workflow));expect(c.data.instructionsText).toBe('New draft');
+  const history=fixture.nativeElement.querySelector('.approved-instructions');expect(history.textContent).toContain('Approved copy');expect(history.textContent).toContain('2026-10-29T12:00:00Z');
+  expect(history.textContent).toContain('لا يتوفر تأكيد إرسال أو وصول');
+ });
  it('shows only concentrations configured for the selected product',async()=>{
   const {c}=await load('bleaching');c.plan.products=[{name:'Product A',concentrations:['Label A']},{name:'Product B',concentrations:['Label B']}];
   c.data.brand='Product A';expect(c.concentrations).toEqual(['Label A']);c.data.brand='Product B';expect(c.concentrations).toEqual(['Label B']);

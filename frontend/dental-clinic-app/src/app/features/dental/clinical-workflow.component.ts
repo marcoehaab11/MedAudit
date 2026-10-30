@@ -9,8 +9,8 @@ import { DentalChartComponent } from './dental-chart.component';
 import { ImplantData, ImplantField, followupDate } from './implant-fields';
 import { bleachingFields, instructionTemplates, pocketFields, scalingAssessment, scalingFinal, vitaShades } from './clinical-workflow-fields';
 
-interface ClinicalVisit {id:string;appointmentId:string;doctorProfileId:string;doctorUserId:string;date:string;performed:boolean;data:any;revisions?:any[];}
-interface ClinicalRecord {kind:'scaling'|'bleaching';plan:any;visits:ClinicalVisit[];}
+interface ClinicalVisit {id:string;appointmentId:string;doctorProfileId:string;doctorUserId:string;date:string;performed:boolean;data:any;revisions?:any[];correctedAt?:string;instructionApprovals?:{text:string;language:string;preparedAt:string}[];}
+interface ClinicalRecord {kind:'scaling'|'bleaching';plan:any;visits:ClinicalVisit[];baselineLocked?:boolean;}
 interface ClinicalDetails {treatmentId:string;patientId:string;doctorProfileId:string;version:string;workflowJson:string|null;}
 @Component({selector:'app-clinical-workflow',standalone:true,imports:[FormsModule,ImplantFieldComponent,DentalChartComponent],templateUrl:'./clinical-workflow.component.html',styleUrl:'./clinical-workflow.scss'})
 export class ClinicalWorkflowComponent implements OnInit {
@@ -21,13 +21,16 @@ export class ClinicalWorkflowComponent implements OnInit {
  record:ClinicalRecord={kind:this.kind,plan:{plannedSessions:1,products:[]},visits:[]};details!:ClinicalDetails;patient:any={};appointment:any={};treatment:any={};
  data:any={};sessionId:string=crypto.randomUUID();step=0;historical=false;selectedTooth=16;primary=false;pocket:any={tooth:16};
  readonly sites=['MB','B','DB','ML','L','DL'];readonly shades=vitaShades;readonly pocketFields=pocketFields;readonly bleachingFields=bleachingFields;
+ readonly bleachingSessionFields=bleachingFields.filter(field=>field.key==='durationMinutes'||field.key==='shadeAfter');
  preview=false;consent=false;productName='';productConcentrations='';previewText='';pendingDelete:number|null=null;
  private timer?:ReturnType<typeof setTimeout>;private queue:Promise<void>=Promise.resolve();private signature='';private urls:string[]=[];private leaving=false;private pendingSaves=0;
  constructor(){inject(DestroyRef).onDestroy(()=>{if(this.timer)clearTimeout(this.timer);this.urls.forEach(url=>URL.revokeObjectURL(url));});}
  get readonly(){return this.historical || !this.auth.hasPermission('Dental.Edit') || !this.auth.hasPermission('Examination.Edit') || this.treatment.status===4 || this.treatment.status===5;}
  get plan(){return this.record.plan;}
  get completed(){return this.record.visits.filter(v=>v.performed).length;}
+ get baselineLocked(){return !!this.record.baselineLocked || this.record.visits.some(v=>v.performed || v.correctedAt || v.revisions?.some(r=>r.performed));}
  get currentVisit(){return this.record.visits.find(v=>v.appointmentId===this.appointmentId);}
+ get instructionApprovals(){return this.record.visits.find(v=>v.id===this.sessionId)?.instructionApprovals??[];}
  get visibleSteps(){return this.data.pocketMapping==='yes'?[0,1,2]:[0,2];}
  get fields():ImplantField[]{return (this.step===0?scalingAssessment:scalingFinal).filter(f=>!f.when || this.data[f.when[0]]===f.when[1]);}
  get scopeTeeth(){return ['UR','UL','LL','LR'].flatMap((quadrant,q)=>Array.from({length:8},(_,i)=>{const angle=(q===0?Math.PI:q===1?1.5*Math.PI:q===2?0:.5*Math.PI)+(i+.5)/8*Math.PI/2;return {id:quadrant+i,x:100+67*Math.cos(angle),y:83+65*Math.sin(angle),selected:(this.data.quadrants??[]).includes(quadrant)};}));}
@@ -64,7 +67,7 @@ export class ClinicalWorkflowComponent implements OnInit {
   const snapshot=this.serialize();let ok=false;this.pendingSaves++;this.saving.set(true);this.error.set('');
   const run=this.queue.then(async()=>{try{
    const result=await firstValueFrom(this.http.put<ClinicalDetails>(`/api/treatments/${this.id}/clinical-workflow`,{version:this.details.version,kind:this.kind,plan,sessionId:this.sessionId,appointmentId:this.appointmentId,data,performed:performed||!!this.currentVisit?.performed}));
-   this.details=result;const stored:ClinicalRecord=JSON.parse(result.workflowJson!);this.record.visits=stored.visits;this.signature=snapshot;this.saved.set(performed?'تم تسجيل الجلسة المنفذة وحفظها':'تم حفظ المسودة');ok=true;
+   this.details=result;const stored:ClinicalRecord=JSON.parse(result.workflowJson!);this.record.visits=stored.visits;this.record.baselineLocked=stored.baselineLocked;this.signature=snapshot;this.saved.set(performed?'تم تسجيل الجلسة المنفذة وحفظها':'تم الحفظ');ok=true;
   }catch(error){this.fail(error);}});this.queue=run.catch(()=>{});await run;this.pendingSaves--;this.saving.set(this.pendingSaves>0);return ok;
  }
  async next(){
@@ -91,7 +94,8 @@ export class ClinicalWorkflowComponent implements OnInit {
   if(this.pocket.treatment&&!this.pocket.treatmentStatus){this.error.set('حدد حالة علاج الجيب: مخطط أم تم اليوم.');return;}
   const previous=structuredClone(this.pockets);this.data.pockets=[...this.pockets.filter(p=>p.tooth!==this.pocket.tooth),structuredClone(this.pocket)];if(!await this.save()){this.data.pockets=previous;return;}this.saved.set('تم حفظ قياسات السن.');}
  async deleteTooth(tooth?:number){if(!confirm(tooth?'حذف قياسات هذا السن من الزيارة الحالية؟':'حذف كل قياسات الزيارة الحالية؟'))return;const previous=structuredClone(this.pockets);this.data.pockets=tooth?this.pockets.filter(p=>p.tooth!==tooth):[];if(!await this.save())this.data.pockets=previous;else this.pocket={tooth:this.selectedTooth};}
- templateChanged(){if(this.data.instructionsText&&!confirm('استبدال التعليمات الحالية بنص النموذج؟'))return;this.data.instructionsText=instructionTemplates[this.kind][this.data.instructionsLanguage==='en'?'en':'ar'];this.data.instructionsStatus='draft';this.changed();}
+ instructionsEdited(){this.data.instructionsStatus='draft';this.consent=false;this.changed();}
+ templateChanged(value='standard'){if(!value)return;if(this.data.instructionsText&&!confirm('استبدال التعليمات الحالية بنص النموذج؟'))return;this.data.instructionsTemplate=value;this.data.instructionsText=instructionTemplates[this.kind][this.data.instructionsLanguage==='en'?'en':'ar'];this.instructionsEdited();}
  showPreview(){this.previewText=this.data.instructionsText??'';this.preview=true;}
  print(){const frame=document.createElement('iframe');frame.style.display='none';document.body.appendChild(frame);const doc=frame.contentDocument!;doc.open();doc.write('<!doctype html><html><head><title>Planora — Patient instructions</title></head><body></body></html>');doc.close();doc.body.dir=this.data.instructionsLanguage==='en'?'ltr':'rtl';const heading=doc.createElement('h1');heading.textContent='Planora — '+(this.patient.firstName??'');const text=doc.createElement('pre');text.style.whiteSpace='pre-wrap';text.textContent=this.data.instructionsText??'';doc.body.append(heading,text);frame.contentWindow?.focus();frame.contentWindow?.print();setTimeout(()=>frame.remove(),1000);}
  async whatsapp(){if(!this.consent||!this.data.instructionsText?.trim()){this.error.set('اعتمد نص التعليمات وأكد موافقة المريض أولًا.');return;}const phone=String(this.patient.phone??'').replace(/[^0-9]/g,'');if(!phone){this.error.set('لا يوجد رقم للمريض.');return;}

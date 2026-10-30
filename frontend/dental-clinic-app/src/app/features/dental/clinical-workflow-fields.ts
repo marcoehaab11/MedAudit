@@ -27,8 +27,8 @@ export const pocketFields:ImplantField[]=[
  {key:'notes',en:'Treatment notes (optional)',ar:'ملاحظات علاج السن',kind:'notes'},
 ];
 export const bleachingFields:ImplantField[]=[
- {key:'durationMinutes',en:'Session duration (minutes)',ar:'مدة هذه الجلسة بالدقائق',kind:'number',required:true,min:1,max:480},
- {key:'shadeAfter',en:'Shade after bleaching',ar:'لون الأسنان بعد هذه الجلسة',kind:'select',required:true,options:vitaShades.map(s=>({value:s,en:s,ar:s}))},
+ {key:'durationMinutes',en:'5. Session duration (minutes)',ar:'مدة هذه الجلسة بالدقائق',kind:'number',required:true,min:1,max:480},
+ {key:'shadeAfter',en:'6. Shade after bleaching',ar:'لون الأسنان بعد هذه الجلسة',kind:'select',required:true,options:vitaShades.map(s=>({value:s,en:s,ar:s}))},
  radio('sensitivity','Post-bleaching sensitivity','الحساسية بعد التبييض','none|None|لا توجد','mild|Mild|بسيطة','moderate|Moderate|متوسطة','severe|Severe|شديدة'),
  {key:'sensitivityNotes',en:'Notes (optional)',ar:'الأعراض أو الإجراءات المتخذة (اختياري)',kind:'notes'},
 ];

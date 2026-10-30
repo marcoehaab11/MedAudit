@@ -25,7 +25,11 @@ public static class ClinicalWorkflow
         var alreadyPerformed = old?["performed"]?.GetValue<bool>() == true;
         if (alreadyPerformed && !performed) throw new ArgumentException("A performed session cannot be changed into a draft.");
         var completed = CompletedCount(root) + (performed && !alreadyPerformed ? 1 : 0);
-        ValidatePlan(plan, CompletedCount(root) > 0 ? root["plan"] as JsonObject : null, kind, completed);
+        var baselineLocked = root["baselineLocked"]?.GetValue<bool>() == true || visits.Any(v =>
+            v?["performed"]?.GetValue<bool>() == true || v?["correctedAt"] is not null ||
+            v?["revisions"] is JsonArray history && history.Any(r => r?["performed"]?.GetValue<bool>() == true));
+        ValidatePlan(plan, baselineLocked ? root["plan"] as JsonObject : null, kind, completed);
+        ValidateInstructions(data);
         if (performed) ValidateVisit(plan, data, kind);
         var visit = new JsonObject
         {
@@ -38,6 +42,21 @@ public static class ClinicalWorkflow
             ["savedAt"] = now.ToString("O", CultureInfo.InvariantCulture),
             ["data"] = data
         };
+        var approvals = old?["instructionApprovals"]?.DeepClone().AsArray() ?? new JsonArray();
+        var previousInstructions = old?["data"] as JsonObject;
+        if (Text(data, "instructionsStatus") == "manual-handoff" && (previousInstructions is null ||
+            Text(previousInstructions, "instructionsStatus") != "manual-handoff" ||
+            Text(previousInstructions, "instructionsText") != Text(data, "instructionsText") ||
+            Text(previousInstructions, "instructionsLanguage") != Text(data, "instructionsLanguage")))
+            approvals.Add(new JsonObject
+            {
+                ["text"] = Text(data, "instructionsText"),
+                ["language"] = Text(data, "instructionsLanguage"),
+                ["status"] = "manual-handoff-prepared",
+                ["preparedAt"] = now.ToString("O", CultureInfo.InvariantCulture),
+                ["preparedBy"] = doctorUserId.ToString()
+            });
+        if (approvals.Count > 0) visit["instructionApprovals"] = approvals;
         if (old is not null)
         {
             var revisions = old["revisions"]?.DeepClone().AsArray() ?? new JsonArray();
@@ -50,6 +69,7 @@ public static class ClinicalWorkflow
         }
         else visits.Add(visit);
         root["plan"] = plan;
+        if (kind == "bleaching" && (baselineLocked || performed)) root["baselineLocked"] = true;
         var result = root.ToJsonString();
         if (result.Length > 1_000_000) throw new ArgumentException("The clinical record is too large.");
         return result;
@@ -64,7 +84,10 @@ public static class ClinicalWorkflow
             throw new TreatmentStateException("Complete and save all planned bleaching sessions first.");
         if (completed == 0) throw new TreatmentStateException("Record a performed clinical session first.");
         foreach (var visit in root["visits"]!.AsArray().Where(x => x!["performed"]?.GetValue<bool>() == true))
+        {
             ValidateVisit(plan, visit!["data"]!.AsObject(), kind, false);
+            ValidateInstructions(visit["data"]!.AsObject());
+        }
     }
 
     public static int CompletedCount(JsonObject root) => root["visits"]!.AsArray().Count(x => x!["performed"]?.GetValue<bool>() == true);
@@ -116,9 +139,16 @@ public static class ClinicalWorkflow
             Choice(data, "sensitivity", "none|mild|moderate|severe");
             if (Text(data, "pocketMapping") == "yes") ValidatePockets(data);
         }
+    }
+    private static void ValidateInstructions(JsonObject data)
+    {
         if (Text(data, "instructionsText").Length > 4000) throw new ArgumentException("Patient instructions are too long.");
         if (Text(data, "instructionsStatus").Length > 0) Choice(data, "instructionsStatus", "draft|manual-handoff");
         if (Text(data, "instructionsLanguage").Length > 0) Choice(data, "instructionsLanguage", "ar|en");
+        if (Text(data, "instructionsStatus") == "manual-handoff")
+        {
+            Required(data, "instructionsText"); Choice(data, "instructionsLanguage", "ar|en");
+        }
     }
     private static void ValidatePockets(JsonObject data)
     {

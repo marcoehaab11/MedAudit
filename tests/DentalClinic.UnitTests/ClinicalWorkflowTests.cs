@@ -40,6 +40,38 @@ public sealed class ClinicalWorkflowTests
         json = Save(json, session, appointment, false); root = JsonNode.Parse(json)!.AsObject(); Assert.Equal("Recorded against the wrong session", root["visits"]![0]!["correctionReason"]!.ToString());
     }
     [Fact]
+    public void OriginalBaselineStaysLockedAfterCorrectingEveryPerformedSession()
+    {
+        var session = Guid.NewGuid(); var appointment = Guid.NewGuid();
+        var json = Save(null, session, appointment);
+        json = ClinicalWorkflow.Retract(json, session, Actor, "Corrected session entry", Now);
+        Assert.Equal(0, ClinicalWorkflow.CompletedCount(JsonNode.Parse(json)!.AsObject()));
+        Assert.Throws<TreatmentStateException>(() => Save(json, session, appointment, false,
+            BleachingPlan.Replace("A3", "A2", StringComparison.Ordinal)));
+        var legacy = JsonNode.Parse(json)!.AsObject(); legacy.Remove("baselineLocked");
+        Assert.Throws<TreatmentStateException>(() => Save(legacy.ToJsonString(), session, appointment, false,
+            BleachingPlan.Replace("A3", "A2", StringComparison.Ordinal)));
+    }
+    [Fact]
+    public void ApprovedInstructionsKeepServerStampedCopiesAfterEditingAndRetrying()
+    {
+        var session = Guid.NewGuid(); var appointment = Guid.NewGuid();
+        string Store(string? existing, string text, string status) => ClinicalWorkflow.Save(existing, "bleaching", BleachingPlan,
+            session, appointment, Doctor, Actor, new DateOnly(2026, 10, 29),
+            new JsonObject { ["instructionsText"] = text, ["instructionsLanguage"] = "ar", ["instructionsStatus"] = status }.ToJsonString(), false, Now);
+        var json = Store(null, "Approved instructions", "manual-handoff");
+        json = Store(json, "Approved instructions", "manual-handoff");
+        Assert.Single(JsonNode.Parse(json)!["visits"]![0]!["instructionApprovals"]!.AsArray());
+        json = Store(json, "Edited instructions", "draft");
+        json = Store(json, "Edited instructions", "manual-handoff");
+        var copies = JsonNode.Parse(json)!["visits"]![0]!["instructionApprovals"]!.AsArray();
+        Assert.Equal(2, copies.Count); Assert.Equal("Approved instructions", copies[0]!["text"]!.ToString());
+        Assert.Equal("Edited instructions", copies[1]!["text"]!.ToString());
+        Assert.Equal(Actor.ToString(), copies[1]!["preparedBy"]!.ToString());
+        Assert.Equal(Now, DateTimeOffset.Parse(copies[1]!["preparedAt"]!.ToString(), System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Throws<ArgumentException>(() => Store(json, "", "manual-handoff"));
+    }
+    [Fact]
     public void DuplicateVisitAndOverrunningPlanAndChangingBaselineAreRejected()
     {
         var session = Guid.NewGuid(); var appointment = Guid.NewGuid();
