@@ -85,7 +85,7 @@ internal sealed class DentalStore(ApplicationDbContext context) : IDentalStore
         context.Treatments.AnyAsync(item => item.AppointmentId == appointmentId && !item.PriceConfirmed && item.Status != DentalClinic.Domain.Treatments.TreatmentStatus.Cancelled, token);
     public Task<bool> IsRootCanalTreatmentAsync(Guid treatmentId, Guid patientId, int toothNumber, Guid doctorUserId, CancellationToken cancellationToken, bool crownOnly = false) =>
         context.Treatments.AnyAsync(x => x.Id == treatmentId && x.PatientId == patientId && x.Type == (crownOnly ? DentalClinic.Domain.Treatments.TreatmentType.Crown : DentalClinic.Domain.Treatments.TreatmentType.RootCanal)
-            && x.Status != DentalClinic.Domain.Treatments.TreatmentStatus.Cancelled && x.Teeth.Any(t => t.ToothNumber == toothNumber)
+            && !x.IsClinicalFlowContainer && !x.ParentTreatmentId.HasValue && x.Status != DentalClinic.Domain.Treatments.TreatmentStatus.Cancelled && x.Teeth.Any(t => t.ToothNumber == toothNumber)
             && context.DoctorProfiles.Any(d => d.Id == x.DoctorProfileId && d.ClinicUserId == doctorUserId), cancellationToken);
     public void Add(Examination examination) => context.Examinations.Add(examination);
     public void AddAudit(PlatformAuditLog audit) => context.PlatformAuditLogs.Add(audit);

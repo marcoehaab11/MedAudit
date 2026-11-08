@@ -636,6 +636,10 @@ public sealed class ApplicationDbContext(
             entity.Property(x => x.TreatmentName).HasMaxLength(200).IsRequired(); entity.Property(x => x.Status).HasConversion<int>();
             entity.Property(x => x.Price).HasPrecision(18, 2); entity.Property(x => x.Notes).HasMaxLength(4000); entity.Property(x => x.Version).IsConcurrencyToken();
             entity.Property(x => x.ClinicalWorkflowJson).HasColumnType("jsonb");
+            entity.Property(x => x.FlowComponentKey).HasMaxLength(100);
+            entity.HasIndex(x => new { x.TenantId, x.ParentTreatmentId, x.FlowComponentKey }).IsUnique();
+            entity.HasOne<Treatment>().WithMany().HasForeignKey(x => new { x.TenantId, x.ParentTreatmentId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(x => new { x.TenantId, x.PatientId, x.CreatedAt }); entity.HasIndex(x => new { x.TenantId, x.DoctorProfileId, x.Status, x.CreatedAt });
             entity.HasIndex(x => new { x.TenantId, x.AppointmentId }); entity.HasIndex(x => new { x.TenantId, x.TreatmentPlanItemId });
             entity.HasOne<Patient>().WithMany().HasForeignKey(x => new { x.TenantId, x.PatientId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);

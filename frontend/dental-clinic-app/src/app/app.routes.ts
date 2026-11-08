@@ -110,12 +110,14 @@ export const routes: Routes = [
   {
     path: 'appointments/:appointmentId/examination',
     canActivate: [authGuard, permissionGuard],
+    canDeactivate: [(component:{canLeave:()=>boolean})=>component.canLeave()],
     loadComponent: () =>
       import('./features/dental/examination.component').then((x) => x.ExaminationComponent),
   },
   {
     path: 'appointments/:appointmentId/visit',
     canActivate: [authGuard, permissionGuard],
+    canDeactivate: [(component:{canLeave:()=>boolean})=>component.canLeave()],
     loadComponent: () =>
       import('./features/dental/examination.component').then((x) => x.ExaminationComponent),
   },

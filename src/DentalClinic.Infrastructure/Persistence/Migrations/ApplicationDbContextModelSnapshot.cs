@@ -3971,9 +3971,19 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("DoctorProfileId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("FlowComponentKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsClinicalFlowContainer")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Notes")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
+
+                    b.Property<Guid?>("ParentTreatmentId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uuid");
@@ -4032,6 +4042,9 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "TreatmentPlanId");
 
                     b.HasIndex("TenantId", "TreatmentPlanItemId");
+
+                    b.HasIndex("TenantId", "ParentTreatmentId", "FlowComponentKey")
+                        .IsUnique();
 
                     b.HasIndex("TenantId", "PatientId", "CreatedAt");
 
@@ -5318,6 +5331,12 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Treatments.Treatment", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ParentTreatmentId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("DentalClinic.Domain.Patients.Patient", null)
                         .WithMany()

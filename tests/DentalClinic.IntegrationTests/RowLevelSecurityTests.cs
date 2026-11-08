@@ -34,7 +34,7 @@ using Testcontainers.PostgreSql;
 namespace DentalClinic.IntegrationTests;
 
 // These tests deliberately bypass application query filters and use a real, non-owner login.
-public sealed class RowLevelSecurityTests(RowSecurityDatabase database) : IClassFixture<RowSecurityDatabase>
+public sealed partial class RowLevelSecurityTests(RowSecurityDatabase database) : IClassFixture<RowSecurityDatabase>
 {
     private static readonly string[] AllBackupModules = ["all"];
     private static readonly string[] ClinicalProductConcentrations = ["Label value"];

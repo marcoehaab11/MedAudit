@@ -139,7 +139,7 @@ public sealed class EndodonticRecord : TenantOwnedEntity
         if (restorationType is not (null or "composite" or "post-core" or "post-core-crown" or "crown" or "crown-only")) throw new ArgumentException("Invalid restoration type.");
         if (postType is not (null or "fiber" or "metal" or "custom")) throw new ArgumentException("Invalid post type.");
         if (stage == RootCanalStage.Completed && restorationType is "post-core" or "post-core-crown" && postType is null) throw new ArgumentException("Post type is required.");
-        var cleanWorkflow = DentalText.Optional(workflowJson ?? WorkflowJson, nameof(workflowJson), 16000);
+        var cleanWorkflow = DentalText.Optional(workflowJson ?? WorkflowJson, nameof(workflowJson), 64000);
         if (cleanWorkflow is not null) {
             System.Text.Json.JsonDocument parsedWorkflow;
             try { parsedWorkflow = System.Text.Json.JsonDocument.Parse(cleanWorkflow); } catch (System.Text.Json.JsonException error) { throw new ArgumentException("Invalid clinical workflow JSON.", nameof(workflowJson), error); }

@@ -37,7 +37,8 @@ public sealed record FinanceNamedAmount(Guid? Id, string Name, decimal Amount);
 public sealed record FinanceDailyAmount(DateOnly Date, decimal Amount);
 public sealed record FinancePatient(Guid Id, string Name, bool IsActive);
 public sealed record FinanceTreatment(Guid Id, Guid PatientId, Guid DoctorProfileId, Guid? TreatmentPlanId,
-    string Name, TreatmentStatus Status, decimal Amount, DateTimeOffset? CompletedAt, DateTimeOffset CreatedAt = default);
+    string Name, TreatmentStatus Status, decimal Amount, DateTimeOffset? CompletedAt, DateTimeOffset CreatedAt = default,
+    TreatmentType Type = TreatmentType.Other, bool IsClinicalFlowContainer = false, bool IsFlowComponent = false, bool PriceConfirmed = true);
 public sealed record FinanceDoctorRule(Guid Id, CompensationType Type, decimal? FixedAmount, decimal? Percentage,
     DateOnly EffectiveFrom, DateOnly? EffectiveTo);
 public sealed record CompensationResult(decimal Amount, decimal? Percentage, string Snapshot);

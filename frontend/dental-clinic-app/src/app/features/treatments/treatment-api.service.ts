@@ -120,6 +120,8 @@ export interface TreatmentPlanList {
   createdAt: string;
 }
 export interface Treatment {
+  parentTreatmentId?: string | null;
+  isClinicalFlowContainer?: boolean;
   appointmentId?: string | null;
   priceConfirmed?: boolean;
   catalogItemId?: string;

@@ -61,8 +61,8 @@ internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock cl
     public Task<FinanceTreatment?> FindTreatmentAsync(Guid id, CancellationToken token)
     {
         var tracked = context.ChangeTracker.Entries<Domain.Treatments.Treatment>().Select(x => x.Entity).SingleOrDefault(x => x.Id == id);
-        if (tracked is not null) return Task.FromResult<FinanceTreatment?>(new(tracked.Id, tracked.PatientId, tracked.DoctorProfileId, tracked.TreatmentPlanId, tracked.TreatmentName, tracked.Status, tracked.Price, tracked.CompletedAt, tracked.CreatedAt));
-        return context.Treatments.AsNoTracking().Where(x => x.Id == id).Select(x => new FinanceTreatment(x.Id, x.PatientId, x.DoctorProfileId, x.TreatmentPlanId, x.TreatmentName, x.Status, x.Price, x.CompletedAt, x.CreatedAt)).SingleOrDefaultAsync(token);
+        if (tracked is not null) return Task.FromResult<FinanceTreatment?>(new(tracked.Id, tracked.PatientId, tracked.DoctorProfileId, tracked.TreatmentPlanId, tracked.TreatmentName, tracked.Status, tracked.Price, tracked.CompletedAt, tracked.CreatedAt, tracked.Type, tracked.IsClinicalFlowContainer, tracked.ParentTreatmentId.HasValue, tracked.PriceConfirmed));
+        return context.Treatments.AsNoTracking().Where(x => x.Id == id).Select(x => new FinanceTreatment(x.Id, x.PatientId, x.DoctorProfileId, x.TreatmentPlanId, x.TreatmentName, x.Status, x.Price, x.CompletedAt, x.CreatedAt, x.Type, x.IsClinicalFlowContainer, x.ParentTreatmentId.HasValue, x.PriceConfirmed)).SingleOrDefaultAsync(token);
     }
     public Task<FinanceDoctorRule?> FindCompensationRuleAsync(Guid doctorId, DateOnly treatmentDate, CancellationToken token) => context.DoctorCompensations.AsNoTracking().Where(x => x.DoctorProfileId == doctorId && x.EffectiveFrom <= treatmentDate && (!x.EffectiveTo.HasValue || x.EffectiveTo >= treatmentDate)).OrderByDescending(x => x.EffectiveFrom).Select(x => new FinanceDoctorRule(x.Id, x.CompensationType, x.FixedAmount, x.Percentage, x.EffectiveFrom, x.EffectiveTo)).FirstOrDefaultAsync(token);
     public Task<FinancialCategory?> FindCategoryAsync(Guid id, bool tracking, CancellationToken token) => (tracking ? context.FinancialCategories.AsQueryable() : context.FinancialCategories.AsNoTracking()).SingleOrDefaultAsync(x => x.Id == id, token);
@@ -154,7 +154,7 @@ internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock cl
         }
 
         var unbilledTreatments = await context.Treatments
-            .Where(t => t.PatientId == patientId && t.PriceConfirmed && t.Price > 0 && t.Status != Domain.Treatments.TreatmentStatus.Cancelled && !context.Revenues.Any(r => r.TreatmentId == t.Id))
+            .Where(t => t.PatientId == patientId && t.PriceConfirmed && t.Price > 0 && !t.IsClinicalFlowContainer && t.Status != Domain.Treatments.TreatmentStatus.Cancelled && ((t.Type != Domain.Treatments.TreatmentType.RootCanal && t.Type != Domain.Treatments.TreatmentType.Crown && !t.ParentTreatmentId.HasValue) || t.Status == Domain.Treatments.TreatmentStatus.Completed) && !context.Revenues.Any(r => r.TreatmentId == t.Id))
             .ToListAsync(token);
         if (unbilledTreatments.Count > 0)
         {

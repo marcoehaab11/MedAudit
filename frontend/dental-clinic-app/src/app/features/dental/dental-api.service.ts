@@ -109,6 +109,7 @@ export interface EndodonticRequest {
 
 @Injectable({ providedIn: 'root' })
 export class DentalApiService {
+  saveRootFlow(id:string,tooth:number,request:unknown){return this.http.put<{treatmentId:string;examinationVersion:string;workflowJson:string;stage:number;price?:number}>(`/api/examinations/${id}/root-flow/${tooth}`,request);}
   private readonly http = inject(HttpClient);
   chart(patientId: string) {
     return this.http.get<PatientDentalChart>(`/api/patients/${patientId}/dental`);

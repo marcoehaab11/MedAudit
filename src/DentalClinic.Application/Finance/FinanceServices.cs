@@ -145,6 +145,8 @@ internal sealed class TreatmentRevenueCreator(IFinanceStore store, IDoctorCompen
         if (await store.FindRevenueByTreatmentAsync(treatmentId, token) is not null) return;
         var treatment = await store.FindTreatmentAsync(treatmentId, token) ?? throw new FinanceNotFoundException("Treatment was not found.");
         if (treatment.Status == TreatmentStatus.Cancelled) return;
+        if (treatment.IsClinicalFlowContainer || !treatment.PriceConfirmed || treatment.Amount <= 0 ||
+            (treatment.Type is TreatmentType.RootCanal or TreatmentType.Crown || treatment.IsFlowComponent) && treatment.Status != TreatmentStatus.Completed) return;
         var category = await store.FindCategoryByCodeAsync("TREATMENT_REVENUE", FinancialCategoryType.Revenue, token)
             ?? await store.FindCategoryByCodeAsync("GENERAL_REVENUE", FinancialCategoryType.Revenue, token);
         if (category is null)

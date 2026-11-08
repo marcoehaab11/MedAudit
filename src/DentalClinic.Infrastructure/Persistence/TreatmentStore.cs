@@ -65,7 +65,7 @@ internal sealed class TreatmentStore(ApplicationDbContext context) : ITreatmentS
         var value = await context.Treatments.AsNoTracking().Include(x => x.Teeth).SingleOrDefaultAsync(x => x.Id == id && (!visibleDoctorId.HasValue || x.DoctorProfileId == visibleDoctorId), token); if (value is null) return null;
         return new(value.Id, value.PatientId, await context.Patients.Where(x => x.Id == value.PatientId).Select(x => x.FirstName + " " + x.LastName).SingleAsync(token), value.DoctorProfileId,
             await DoctorName(value.DoctorProfileId).SingleAsync(token), value.AppointmentId, value.TreatmentPlanId, value.TreatmentPlanItemId, value.TreatmentCatalogItemId, value.SourceDentalProcedureId,
-            value.Type, value.TreatmentName, value.Teeth.OrderBy(x => x.ToothNumber).Select(x => x.ToothNumber).ToArray(), value.Status, value.Price, value.Notes, value.StartedAt, value.CompletedAt, value.CreatedAt, value.UpdatedAt, value.Version, value.PriceConfirmed);
+            value.Type, value.TreatmentName, value.Teeth.OrderBy(x => x.ToothNumber).Select(x => x.ToothNumber).ToArray(), value.Status, value.Price, value.Notes, value.StartedAt, value.CompletedAt, value.CreatedAt, value.UpdatedAt, value.Version, value.PriceConfirmed, value.ParentTreatmentId, value.IsClinicalFlowContainer);
     }
     public async Task<PagedResult<TreatmentListItem>> SearchTreatmentsAsync(TreatmentSearch request, Guid? visibleDoctorId, CancellationToken token)
     {
@@ -75,7 +75,7 @@ internal sealed class TreatmentStore(ApplicationDbContext context) : ITreatmentS
         var count = await query.CountAsync(token); var items = await query.OrderByDescending(x => x.CreatedAt).Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
             .Select(x => new TreatmentListItem(x.Id, x.PatientId, context.Patients.Where(p => p.Id == x.PatientId).Select(p => p.FirstName + " " + p.LastName).Single(), x.DoctorProfileId,
                 context.DoctorProfiles.Where(d => d.Id == x.DoctorProfileId).SelectMany(d => context.ClinicUsers.Where(u => u.Id == d.ClinicUserId).Select(u => u.DisplayName)).Single(), x.Type, x.TreatmentName,
-                x.Teeth.OrderBy(t => t.ToothNumber).Select(t => t.ToothNumber).ToArray(), x.Status, x.Price, x.CreatedAt, x.CompletedAt, x.Notes, x.PriceConfirmed, x.AppointmentId, x.TreatmentCatalogItemId)).ToListAsync(token);
+                x.Teeth.OrderBy(t => t.ToothNumber).Select(t => t.ToothNumber).ToArray(), x.Status, x.Price, x.CreatedAt, x.CompletedAt, x.Notes, x.PriceConfirmed, x.AppointmentId, x.TreatmentCatalogItemId, x.ParentTreatmentId, x.IsClinicalFlowContainer)).ToListAsync(token);
         return new(items, request.Page, request.PageSize, count);
     }
     public void AddCatalog(TreatmentCatalogItem item) => context.TreatmentCatalogItems.Add(item);

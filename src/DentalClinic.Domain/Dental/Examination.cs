@@ -90,7 +90,12 @@ public sealed class Examination : TenantOwnedEntity
         Guid expectedVersion, DateTimeOffset now, RootCanalStage? stage = null, Guid? treatmentId = null, string? restorationType = null, string? postType = null, string? postCanal = null, string? workflowJson = null)
     { EnsureEditable(expectedVersion); Find(endodonticRecords, id).Update(notes, canals, now, stage, treatmentId, restorationType, postType, postCanal, workflowJson); Touch(now); }
     public void RemoveEndodonticRecord(Guid id, Guid expectedVersion, DateTimeOffset now)
-    { EnsureEditable(expectedVersion); endodonticRecords.Remove(Find(endodonticRecords, id)); Touch(now); }
+    {
+        EnsureEditable(expectedVersion); var record = Find(endodonticRecords, id);
+        if (record.WorkflowJson is not null && RootTreatmentFlow.Parse(record.WorkflowJson)["flowVersion"]?.ToString() == "2")
+            throw new DentalStateException("Saved treatment-flow history cannot be deleted. Cancel unperformed treatment while retaining its clinical record.");
+        endodonticRecords.Remove(record); Touch(now);
+    }
 
     public void Complete(Guid expectedVersion, DateTimeOffset now)
     { EnsureEditable(expectedVersion); Status = ExaminationStatus.Completed; CompletedAt = now; Touch(now); }

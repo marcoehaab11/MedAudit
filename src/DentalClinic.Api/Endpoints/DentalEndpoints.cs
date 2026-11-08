@@ -3,6 +3,7 @@ using DentalClinic.Application.Identity;
 using DentalClinic.Contracts.Dental;
 using DentalClinic.Domain.Dental;
 using DentalClinic.Infrastructure.Identity;
+using DentalClinic.Infrastructure.Services;
 
 namespace DentalClinic.Api.Endpoints;
 
@@ -11,6 +12,9 @@ internal static class DentalEndpoints
     public static IEndpointRouteBuilder MapDentalEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var tenant = endpoints.MapGroup("/api").RequireAuthorization(AuthConstants.TenantMemberPolicy);
+        tenant.MapPut("/examinations/{id:guid}/root-flow/{tooth:int}",
+            (Guid id, int tooth, SaveRootTreatmentFlowRequest request, RootTreatmentFlowService service, CancellationToken token) => service.SaveAsync(id, tooth, request, token))
+            .RequireAuthorization(Permissions.ExaminationEdit, Permissions.DentalEdit);
         tenant.MapGet("/patients/{patientId:guid}/dental", ChartAsync).RequireAuthorization(Permissions.DentalView);
         tenant.MapGet("/patients/{patientId:guid}/examinations", HistoryAsync).RequireAuthorization(Permissions.DentalHistoryView);
         tenant.MapGet("/examinations/{id:guid}", GetAsync).RequireAuthorization(Permissions.ExaminationView);

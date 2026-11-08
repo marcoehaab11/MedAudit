@@ -312,7 +312,7 @@ interface ToothServiceDraft {
               <!-- Executed treatments for this patient -->
               <div class="completed-treatments-section">
                 <h3>⚡ {{ t('Executed Treatments & Procedures', 'الإجراءات والعلاجات المسجلة للمريض') }}</h3>
-                @if (executedTreatments().length > 0) {
+                @if (billableTreatments().length > 0) {
                   <table class="simple-table">
                     <thead>
                       <tr>
@@ -323,7 +323,7 @@ interface ToothServiceDraft {
                       </tr>
                     </thead>
                     <tbody>
-                      @for (tr of executedTreatments(); track tr.id) {
+                      @for (tr of billableTreatments(); track tr.id) {
                         <tr>
                           <td><strong>{{ tr.treatmentName }}</strong> @if(tr.type === 3 && tr.status !== 5 && tr.toothNumbers.length === 1){<br><a [routerLink]="['/patients',examination()?.patientId || appointment()?.patientId,'implants',tr.toothNumbers[0]]" [queryParams]="{appointmentId:tr.appointmentId,treatmentId:tr.id}">{{t('Open implant plan','فتح خطة الزراعة')}}</a>} @if (tr.notes) { <br><small>{{ tr.notes }}</small> }</td>
                           <td><span class="tooth-table-pill">{{ tr.toothNumbers && tr.toothNumbers.length ? '#' + tr.toothNumbers.join(', #') : '—' }}</span></td>
@@ -512,13 +512,13 @@ interface ToothServiceDraft {
         }
         @if (getUnfinishedTreatments().length > 0) {
           <section class="step-card continuing-work" aria-label="Ongoing patient treatment">
-            <h2>{{ t('Where treatment stopped — work to continue', 'آخر ما وصل إليه العلاج — المطلوب استكماله') }}</h2>
+            <h2>{{ t('Treatment Follow-up', 'متابعة العلاج') }}</h2>
             @for (work of getUnfinishedTreatments(); track work.id) {
               <article>
                 <strong>{{ work.treatmentName }}</strong>
                 <span>{{ work.status === 3 ? t('In progress', 'قيد العلاج') : work.status === 2 ? t('Scheduled', 'مجدول') : t('Planned', 'مخطط') }}</span>
-                <p>@for (number of work.toothNumbers; track number) { <span>#{{ number }} · {{ toothLabel(number) }} </span> }</p>
-                @if (work.notes) { <p class="remaining-work-notes">{{ work.notes }}</p> }
+                <p>@for (number of work.toothNumbers; track number) { @if([4,5].includes(work.type) && examination()!.canEdit){<button type="button" [disabled]="savingRootCanal()" (click)="resumeRootCanal(work)">#{{number}} · {{toothLabel(number)}}</button>}@else{<span>#{{ number }} · {{ toothLabel(number) }} </span>} }</p>
+                @if ([4,5].includes(work.type)) { <p class="remaining-work-notes">{{ rootTreatmentPhase(work) }}</p> } @if (work.notes) { <p class="remaining-work-notes">{{ work.notes }}</p> }
                 @if(work.type === 6 && clinicalKindForName(work.treatmentName)){<a [routerLink]="['/treatments',work.id,'clinical']" [queryParams]="{appointmentId:appointmentId,kind:clinicalKindForName(work.treatmentName)}">{{t('Continue same treatment','استكمال نفس العلاج')}}</a>} @else if (work.type === 1 && work.toothNumbers.length === 1 && examination()!.canEdit) {
                   <button type="button" class="resume-saved-treatment" [disabled]="savingTreatment() || savingRootCanal()" (click)="resumeFilling(work)">{{ t('Continue existing filling', 'استكمال نفس الحشو') }} ←</button>
                 } @else if ([4,5].includes(work.type) && work.toothNumbers.length === 1 && examination()!.canEdit) {
@@ -794,7 +794,7 @@ interface ToothServiceDraft {
                           </fieldset>
                           }
                           @if (number > 0 && toothServiceIsRootCanal(number)) {
-                            <app-root-canal-editor [draft]="rootCanalFor(number)" [previous]="previousRootCanals(number)" [saveState]="rootCanalAutoStatus()[number] || ''" [saveFailed]="rootCanalAutoErrors().includes(number)" (changed)="autoSaveRootCanal(number)" [canSave]="!!row.treatmentId" [english]="t('en','ar') === 'en'" [disabled]="savingTreatment() || savingRootCanal() || !!row.confirmedCompleted" (save)="saveRootCanal(number)" />
+                            <app-root-canal-editor [catalog]="catalog()" [draft]="rootCanalFor(number)" [previous]="previousRootCanals(number)" [saveState]="rootCanalAutoStatus()[number] || ''" [saveFailed]="rootCanalAutoErrors().includes(number)" (changed)="autoSaveRootCanal(number)" [canSave]="!!row.treatmentId" [english]="t('en','ar') === 'en'" [disabled]="savingTreatment() || savingRootCanal() || rootCanalPending().includes(number) || !!row.confirmedCompleted" (save)="saveRootCanal(number)" />
                             @if (row.treatmentId) {
                               <p>{{ row.treatmentName }} · {{ t('Existing treatment — no new charge', 'استكمال نفس العلاج — بدون تكلفة جديدة') }}</p>
 
@@ -892,7 +892,7 @@ interface ToothServiceDraft {
                 }
               }
             </div>
-            @for (item of executedTreatments(); track item.id) {
+            @for (item of billableTreatments(); track item.id) {
               @if (item.priceConfirmed === false && item.status !== 5) {
                 <section class="billing-service-price">
                   <strong>{{ item.treatmentName }} · {{ treatmentPriceTeeth(item) }}</strong>
@@ -911,7 +911,7 @@ interface ToothServiceDraft {
                 </div>
 
                 <div class="executed-list-wrap">
-                  @if (executedTreatments().length > 0) {
+                  @if (billableTreatments().length > 0) {
                     <table class="simple-table">
                       <thead>
                         <tr>
@@ -922,7 +922,7 @@ interface ToothServiceDraft {
                         </tr>
                       </thead>
                       <tbody>
-                        @for (tr of executedTreatments(); track tr.id) {
+                        @for (tr of billableTreatments(); track tr.id) {
                           <tr>
                             <td><strong>{{ tr.treatmentName }}</strong> @if(tr.type === 3 && tr.status !== 5 && tr.toothNumbers.length === 1){<br><a [routerLink]="['/patients',examination()?.patientId || appointment()?.patientId,'implants',tr.toothNumbers[0]]" [queryParams]="{appointmentId:tr.appointmentId,treatmentId:tr.id}">{{t('Open implant plan','فتح خطة الزراعة')}}</a>} @if (tr.notes) { <br><small>{{ tr.notes }}</small> }</td>
                             <td><span class="tooth-table-pill">{{ tr.toothNumbers && tr.toothNumbers.length ? '#' + tr.toothNumbers.join(', #') : '—' }}</span></td>
@@ -1885,7 +1885,7 @@ export class ExaminationComponent {
   );
 
   todayProceduresTotal = computed(() => {
-    return this.executedTreatments().reduce((sum, tr) => sum + (tr.price || 0), 0);
+    return this.billableTreatments().reduce((sum, tr) => sum + (tr.price || 0), 0);
   });
 
   totalDue = computed(() => {
@@ -2727,6 +2727,12 @@ export class ExaminationComponent {
   }
   readonly savingRootCanal = signal(false);
   readonly rootCanalDrafts = new Map<number, { treatmentId?: string; draft: RootCanalDraft }>();
+  private readonly rootSavedSignatures=new Map<number,string>();
+  private leavingVisit=false;
+  private rootDraftSignature(draft:RootCanalDraft){return JSON.stringify({...draft,workflow:workflowFor(draft)});}
+  private rootDraftsDirty(){return [...this.rootCanalDrafts].some(([number,item])=>this.rootDraftSignature(item.draft)!==this.rootSavedSignatures.get(number));}
+  canLeave(){if(!this.auth.authenticated()){this.leavingVisit=true;return true;}if(this.rootCanalWrites){this.error.set(this.t('Wait for treatment progress to finish saving.','انتظر حتى ينتهي حفظ تقدم العلاج.'));return false;}const leave=!this.rootDraftsDirty()||confirm(this.t('Some treatment changes are not saved. Leave this visit?','توجد تعديلات علاجية غير محفوظة. هل تريد مغادرة الزيارة؟'));this.leavingVisit=leave;return leave;}
+  @HostListener('window:beforeunload',['$event']) protectRootDrafts(event:BeforeUnloadEvent){if(this.auth.authenticated()&&(this.rootCanalWrites||this.rootDraftsDirty())){event.preventDefault();event.returnValue='';}}
   toothServiceIsRootCanal(number: number) {
     const row = this.toothService(number);
     return number > 0 && [4,5].includes(row.treatmentType ?? this.catalog().find(item => item.id === row.catalogId)?.type ?? 0);
@@ -2746,11 +2752,11 @@ export class ExaminationComponent {
     const draft = rootCanalDraft(number, record);
     if (crownOnly) { draft.restorationType = 'crown-only'; draft.canals = []; if (!record) draft.stage = 8; }
     if (!draft.restorationType) {
-      const finding = this.examination()?.findings.filter(f => f.toothNumber === number && [8,10,11,17].includes(f.type)).at(-1)?.type ?? this.patientChart()?.teeth.find(t => t.toothNumber === number)?.findings.filter(type => [8,10,11,17].includes(type)).at(-1);
-      const name = this.toothService(number).treatmentName ?? this.catalog().find(c => c.id === this.toothService(number).catalogId)?.name ?? '';
-      draft.restorationType = finding === 11 ? 'post-core-crown' : finding === 17 ? 'post-core' : finding === 10 ? 'crown' : finding === 8 ? 'composite' : /post|دعامة|دعامه/i.test(name) ? /crown|كراون|تاج/i.test(name) ? 'post-core-crown' : 'post-core' : 'composite';
+      const finding=this.examination()?.findings.filter(f=>f.toothNumber===number&&[8,10,11,17].includes(f.type)).at(-1)?.type??this.patientChart()?.teeth.find(t=>t.toothNumber===number)?.findings.filter(type=>[8,10,11,17].includes(type)).at(-1);
+      draft.restorationType=finding===11?'post-core-crown':finding===17?'post-core':finding===10?'crown':'composite';
     }
     this.rootCanalDrafts.set(number, { treatmentId, draft });
+    this.rootSavedSignatures.set(number,this.rootDraftSignature(draft));
     return draft;
   }
   validRootCanal(number: number) {
@@ -2786,6 +2792,9 @@ export class ExaminationComponent {
   private rootCanalWrites: Promise<void> | null = null;
   readonly rootCanalAutoStatus = signal<Record<number, string>>({});
   readonly rootCanalAutoErrors = signal<number[]>([]);
+  readonly rootCanalPending = signal<number[]>([]);
+  private readonly rootPendingCounts=new Map<number,number>();
+  private markRootPending(number:number,delta:number){const count=(this.rootPendingCounts.get(number)??0)+delta;if(count>0)this.rootPendingCounts.set(number,count);else this.rootPendingCounts.delete(number);this.rootCanalPending.set([...this.rootPendingCounts.keys()]);}
   private persistRootCanal(number: number) {
     const write = this.rootCanalWrites ? this.rootCanalWrites.then(() => this.writeRootCanal(number)) : this.writeRootCanal(number);
     const settled = write.catch(() => {});
@@ -2794,10 +2803,12 @@ export class ExaminationComponent {
     return write;
   }
   async autoSaveRootCanal(number: number) {
-    if (!this.examination()?.canEdit || !this.toothServiceIsRootCanal(number) || this.toothService(number).confirmedCompleted) return;
+    if (this.leavingVisit || !this.examination()?.canEdit || !this.toothServiceIsRootCanal(number) || this.toothService(number).confirmedCompleted) return;
     this.rootCanalAutoStatus.update(state => ({...state, [number]: this.t('Saving…', 'جارٍ الحفظ التلقائي…')}));
+    this.markRootPending(number,1);
     try {
       await this.persistRootCanal(number);
+      this.loadTreatments(this.examination()!.patientId); this.loadBalance(this.examination()!.patientId);
       if (this.rootCanalFor(number).stage === 6 && this.toothService(number).treatmentId) { await this.syncRootCanalStatus(number); this.loadTreatments(this.examination()!.patientId); }
       this.rootCanalAutoErrors.update(items => items.filter(item => item !== number));
       this.rootCanalAutoStatus.update(state => ({...state, [number]: this.t('Saved automatically', 'تم الحفظ تلقائيًا')}));
@@ -2805,13 +2816,23 @@ export class ExaminationComponent {
       this.rootCanalAutoErrors.update(items => [...new Set([...items, number])]);
       this.rootCanalAutoStatus.update(state => ({...state, [number]: this.t('Not saved — retry', 'لم يتم الحفظ — أعد المحاولة')}));
     }
+    finally {this.markRootPending(number,-1);}
   }
   private async writeRootCanal(number: number) {
     const exam = this.examination()!;
     const row = this.toothService(number), draft = this.rootCanalFor(number);
+    const beforeSignature=this.rootDraftSignature(draft);
     const existing = exam.endodonticRecords.find(record => record.toothNumber === number && (!record.treatmentId || record.treatmentId === row.treatmentId));
-    const request = { workflowJson: serializeWorkflow(draft), restorationType: draft.restorationType, postType: workflowFor(draft).needsPost ? draft.postType : null, postCanal: workflowFor(draft).needsPost ? draft.postCanal : null, toothNumber: number, treatmentId: row.treatmentId, stage: draft.stage, notes: draft.notes || undefined, canals: draft.canals.filter(c=>c.enabled!==false).map(c => ({ ...c, finalFileSize: c.finalFileSize || undefined })), version: exam.version };
-    await firstValueFrom(existing ? this.api.updateEndodontic(exam.id, existing.id, request) : this.api.addEndodontic(exam.id, request));
+    const request = { workflowJson: serializeWorkflow(draft), catalogItemId:row.catalogId,priceTierId:row.tierId, postType: workflowFor(draft).needsPost ? draft.postType : null, postCanal: workflowFor(draft).needsPost ? draft.postCanal : null, treatmentId: row.treatmentId, notes: draft.notes || undefined, canals: draft.canals.filter(c=>c.enabled!==false).map(c => ({ ...c, finalFileSize: c.finalFileSize || undefined })), version: exam.version };
+    try {
+      const saved=await firstValueFrom(this.api.saveRootFlow(exam.id,number,request));
+      const changedWhileSaving=this.rootDraftSignature(draft)!==beforeSignature;
+      row.treatmentId=saved.treatmentId;if(saved.price!==undefined)row.price=saved.price;draft.workflow=JSON.parse(saved.workflowJson);draft.stage=saved.stage;
+      this.rootCanalDrafts.set(number,{treatmentId:saved.treatmentId,draft});
+      if(changedWhileSaving)this.rootSavedSignatures.delete(number);else this.rootSavedSignatures.set(number,this.rootDraftSignature(draft));
+      this.rootCanalAutoErrors.update(items=>items.filter(item=>item!==number));
+      this.applyRootCanalStatus(number);
+    }catch(error){draft.stage=existing?.stage??this.previousRootCanals(number)[0]?.stage??(draft.restorationType==='crown-only'?8:1);throw error;}
     this.examination.set(await firstValueFrom(this.api.examination(exam.id)));
     this.loadPatient(exam.patientId);
   }
@@ -2824,6 +2845,7 @@ export class ExaminationComponent {
   }
   private async syncRootCanalStatus(number: number) {
     const row = this.toothService(number), target = this.rootCanalFor(number).stage === 6 ? 4 : 3;
+    if(workflowFor(this.rootCanalFor(number)).flowVersion===2){this.applyRootCanalStatus(number);row.confirmedCompleted=target===4;if(target===4)this.finishTooth(number);return;}
     const treatment = await firstValueFrom(this.treatmentApi.treatment(row.treatmentId!));
     if (treatment.status !== target) await firstValueFrom(this.treatmentApi.treatmentAction(treatment.id, target === 4 ? 'complete' : 'start', treatment.version));
     this.applyRootCanalStatus(number); row.confirmedCompleted = target === 4;
@@ -2832,7 +2854,7 @@ export class ExaminationComponent {
   async saveRootCanal(number: number) {
     if (!this.examination()?.canEdit || !this.toothService(number).treatmentId || !this.toothServiceIsRootCanal(number) || this.savingTreatment() || this.savingRootCanal() || !this.validRootCanal(number)) return;
     this.savingRootCanal.set(true); this.error.set('');
-    try { await this.persistRootCanal(number); await this.syncRootCanalStatus(number); this.loadTreatments(this.examination()!.patientId); this.success.set(this.t('Session progress saved without an additional charge.', 'تم حفظ تقدم الجلسة بدون إضافة تكلفة.')); }
+    try { await this.persistRootCanal(number); await this.syncRootCanalStatus(number); this.loadTreatments(this.examination()!.patientId); this.loadBalance(this.examination()!.patientId); this.success.set(this.t('Progress saved. Only completed procedures are billed, once each.', 'تم حفظ التقدم. الإجراءات المكتملة فقط تُضاف للحساب، مرة واحدة لكل إجراء.')); }
     catch (error) { if (error instanceof HttpErrorResponse) this.fail(error); else this.error.set(parseApiError(error, this.t('Could not save root canal details.', 'تعذر حفظ تفاصيل حشو العصب.'))); }
     finally { this.savingRootCanal.set(false); }
   }
@@ -2871,6 +2893,7 @@ export class ExaminationComponent {
     const continuingFilling = !!row.treatmentId && this.toothServiceIsFilling(number);
     this.savingTreatment.set(true); this.error.set('');
     try {
+      if(this.toothServiceIsRootCanal(number)){await this.persistRootCanal(number);await this.syncRootCanalStatus(number);this.success.set(this.t('Treatment progress and completed procedures saved.','تم حفظ تقدم العلاج والإجراءات المنفذة.'));return;}
       const appointment = this.appointment() ?? await firstValueFrom(this.appointmentApi.appointment(this.appointmentId));
       this.appointment.set(appointment);
       if (!row.treatmentId) {
@@ -3014,14 +3037,18 @@ export class ExaminationComponent {
 
   getUnfinishedTreatments(): Treatment[] {
     return this.executedTreatments().filter(
-      (t) => t.status === 3 || t.status === 1 || t.status === 2,
+      (t) => !t.parentTreatmentId && (t.status === 3 || t.status === 1 || t.status === 2),
     );
   }
+  rootTreatmentPhase(work:Treatment){
+    const record=[...(this.examination()?.endodonticRecords??[]),...(this.patientChart()?.endodonticRecords??[])].filter(r=>r.treatmentId===work.id).sort((a,b)=>(b.updatedAt??b.createdAt).localeCompare(a.updatedAt??a.createdAt))[0];
+    const labels:Record<number,[string,string]>={1:['Access opening','فتح حجرة العصب'],2:['Working length and final files','الأطوال والملفات'],3:['Working length and final files','الأطوال والملفات'],4:['Obturation','حشو القنوات'],5:['Permanent core build-up','استكمال الحشو الخارجي الدائم'],7:['Post','تنفيذ الدعامة'],8:['Crown — next unfinished step','الكراون — أول خطوة غير مكتملة'],9:['Choose Post / Crown','تحديد الاحتياج للدعامة والكراون']};
+    const label=labels[record?.stage??(work.type===5?8:1)];return label?this.t('Next: ','المطلوب استكماله: ')+this.t(...label):'';
+  }
+  billableTreatments(){return this.executedTreatments().filter(item=>!item.isClinicalFlowContainer&&item.status!==5&&(!item.parentTreatmentId&&![4,5].includes(item.type)||item.status===4&&item.appointmentId===this.appointmentId));}
 
   hasUnfinishedWork(): boolean {
-    const hasUnfinishedTreatments = this.executedTreatments().some(
-      (t) => t.status === 3 || t.status === 1 || t.status === 2,
-    );
+    const hasUnfinishedTreatments = this.getUnfinishedTreatments().length>0;
     const hasActivePlans = this.treatmentPlans().some((p) => p.status === 1);
     return hasUnfinishedTreatments || hasActivePlans;
   }
@@ -3439,6 +3466,11 @@ export class ExaminationComponent {
   }
 
   async completeVisit() {
+    try {
+      if(this.rootCanalWrites)await this.rootCanalWrites;
+      for(const [number,item] of this.rootCanalDrafts)if(this.rootDraftSignature(item.draft)!==this.rootSavedSignatures.get(number))await this.persistRootCanal(number);
+    }catch(error){this.error.set(parseApiError(error,this.t('Save treatment progress successfully before ending the visit.','تعذر حفظ تقدم العلاج. راجع البيانات قبل إنهاء الزيارة.')));this.step.set(3);return;}
+    if(this.rootCanalAutoErrors().length){this.error.set(this.t('Retry the failed clinical saves before ending the visit.','أعد حفظ بيانات العلاج التي تعذر حفظها قبل إنهاء الزيارة.'));this.step.set(3);return;}
     if (this.hasPendingVisitPrices()) { this.error.set(this.t('Approve the service prices in Accounting first.', 'اعتمد أسعار الإجراءات في خطوة الحساب أولًا.')); this.setStep(4); return; }
     const e = this.examination();
     if (!e) return;

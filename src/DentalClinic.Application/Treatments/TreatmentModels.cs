@@ -34,10 +34,10 @@ public sealed record TreatmentDetails(Guid Id, Guid PatientId, string PatientNam
     Guid CatalogItemId, Guid? SourceDentalProcedureId, TreatmentType Type, string TreatmentName,
     IReadOnlyCollection<int> ToothNumbers, TreatmentStatus Status, decimal Price, string? Notes,
     DateTimeOffset? StartedAt, DateTimeOffset? CompletedAt, DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt, Guid Version, bool PriceConfirmed = true);
+    DateTimeOffset UpdatedAt, Guid Version, bool PriceConfirmed = true, Guid? ParentTreatmentId = null, bool IsClinicalFlowContainer = false);
 public sealed record TreatmentListItem(Guid Id, Guid PatientId, string PatientName, Guid DoctorProfileId,
     string DoctorName, TreatmentType Type, string TreatmentName, IReadOnlyCollection<int> ToothNumbers,
-    TreatmentStatus Status, decimal Price, DateTimeOffset CreatedAt, DateTimeOffset? CompletedAt, string? Notes = null, bool PriceConfirmed = true, Guid? AppointmentId = null, Guid? CatalogItemId = null);
+    TreatmentStatus Status, decimal Price, DateTimeOffset CreatedAt, DateTimeOffset? CompletedAt, string? Notes = null, bool PriceConfirmed = true, Guid? AppointmentId = null, Guid? CatalogItemId = null, Guid? ParentTreatmentId = null, bool IsClinicalFlowContainer = false);
 public sealed record TreatmentSearch(Guid? PatientId = null, Guid? DoctorProfileId = null,
     TreatmentType? Type = null, TreatmentStatus? Status = null, DateOnly? From = null,
     DateOnly? To = null, int? ToothNumber = null, int Page = 1, int PageSize = 20);

@@ -6,18 +6,21 @@ export const ROOT_CANAL_STAGES = [
   { value: 1, number: 1, en: 'Access cavity' },
   { value: 2, number: 2, en: 'Working length and final file size' },
   { value: 4, number: 3, en: 'Obturation' },
-  { value: 5, number: 4, en: 'Final restoration' },
+  { value: 5, number: 4, en: 'Core build-up' },
+  { value: 9, number: 5, en: 'Next procedures — Post / Crown' },
 ];
 
 export type RestorationType = 'composite' | 'post-core' | 'post-core-crown' | 'crown' | 'crown-only';
 export function rootCanalStages(mode: RestorationType = 'composite') {
   if (mode === 'crown-only') return [{value:8,number:1,en:'Crown'}];
-  return [...ROOT_CANAL_STAGES, ...(['crown','post-core-crown'].includes(mode) ? [{value:8,number:5,en:'Crown'}] : [])];
+  return [...ROOT_CANAL_STAGES, ...(['post-core','post-core-crown'].includes(mode) ? [{value:7,number:6,en:'Post'}] : []), ...(['crown','post-core-crown'].includes(mode) ? [{value:8,number:7,en:'Crown'}] : [])].map((step,index)=>({...step,number:index+1}));
 }
 export interface CrownDraft { type:string; material:string; shade:string; laboratory:string; step:number; completed:boolean[]; dates:string[]; notes:string[]; temporary:boolean; }
-export interface ClinicalWorkflow { version:1; finalMaterial:string|null; needsPost:boolean; postSize:string; needsCrown:boolean; obturationDone:boolean; crown:CrownDraft; unselectedCanals?:RootCanalDraft['canals']; }
+export interface RootStepProgress {completed:boolean;completedAt?:string;recordedAt?:string;visitDate?:string;appointmentId?:string;doctorUserId?:string;legacyImported?:boolean;details?:unknown;}
+export interface ClinicalWorkflow { version:1; flowVersion?:2;revision?:string;progress?:Record<string,RootStepProgress>;billingCatalogIds?:Record<string,string>;decisionsMade?:boolean;postDone?:boolean;temporaryRequested?:boolean;finalMaterial:string|null; needsPost:boolean; postSize:string; needsCrown:boolean; obturationDone:boolean; crown:CrownDraft; unselectedCanals?:RootCanalDraft['canals']; }
 export function workflowFor(draft:RootCanalDraft):ClinicalWorkflow {
-  return draft.workflow ??= {version:1,finalMaterial:draft.stage===6?'composite':null,needsPost:!!draft.postType || ['post-core','post-core-crown'].includes(draft.restorationType ?? ''),postSize:'',needsCrown:['crown','post-core-crown','crown-only'].includes(draft.restorationType ?? ''),obturationDone:draft.stage>=5,crown:{type:'',material:'',shade:'',laboratory:'',step:1,completed:Array(5).fill(draft.stage===6),dates:Array(5).fill(''),notes:Array(5).fill(''),temporary:false}};
+  const flow=draft.workflow ??= {version:1,flowVersion:2,progress:{},billingCatalogIds:{},decisionsMade:false,postDone:false,finalMaterial:draft.stage===6?'composite':null,needsPost:['post-core','post-core-crown'].includes(draft.restorationType??''),postSize:'',needsCrown:['crown','post-core-crown','crown-only'].includes(draft.restorationType??''),obturationDone:[5,6,7,8,9].includes(draft.stage),crown:{type:'',material:'',shade:'',laboratory:'',step:1,completed:Array(5).fill(draft.stage===6),dates:Array(5).fill(''),notes:Array(5).fill(''),temporary:false}};
+  flow.progress??={};flow.billingCatalogIds??={};return flow;
 }
 export function serializeWorkflow(draft:RootCanalDraft) { return JSON.stringify({...workflowFor(draft),unselectedCanals:draft.canals.filter(c=>c.enabled===false)}); }
 export interface RootCanalDraft {

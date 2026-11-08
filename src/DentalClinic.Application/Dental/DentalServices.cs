@@ -95,6 +95,16 @@ internal sealed class ExaminationCommands(
     {
         await permissions.EnsurePermissionAsync(Permissions.DentalEdit, token);
         await permissions.EnsurePermissionAsync(Permissions.ExaminationEdit, token);
+        if (input.WorkflowJson is not null)
+        {
+            System.Text.Json.JsonDocument document;
+            try { document = System.Text.Json.JsonDocument.Parse(input.WorkflowJson); }
+            catch (System.Text.Json.JsonException error) { throw new ArgumentException("Invalid clinical workflow JSON.", nameof(input), error); }
+            using var submitted = document;
+            if (submitted.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object) throw new ArgumentException("Clinical workflow must be an object.");
+            if (submitted.RootElement.TryGetProperty("flowVersion", out var flowVersion) && flowVersion.ToString() == "2")
+                throw new DentalStateException("Save this treatment using the root/crown clinical flow.");
+        }
         var e = await store.FindExaminationAsync(id, true, token);
         if (e is null) return false;
         await EnsureExaminationVisibleAsync(e, token);

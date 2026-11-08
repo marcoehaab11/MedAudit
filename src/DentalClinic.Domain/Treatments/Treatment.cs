@@ -37,6 +37,9 @@ public sealed class Treatment : TenantOwnedEntity
     public bool PriceConfirmed { get; private set; }
     public string? Notes { get; private set; }
     public string? ClinicalWorkflowJson { get; private set; }
+    public bool IsClinicalFlowContainer { get; private set; }
+    public Guid? ParentTreatmentId { get; private set; }
+    public string? FlowComponentKey { get; private set; }
     public DateTimeOffset? StartedAt { get; private set; }
     public DateTimeOffset? CompletedAt { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
@@ -66,7 +69,12 @@ public sealed class Treatment : TenantOwnedEntity
         EnsureVersion(expectedVersion);
         if(ClinicalWorkflowJson is null && Type==TreatmentType.Other && "scal|polish|clean|whiten|bleach|تنظيف|تنضيف|جير|تبييض|تبيض".Split('|').Any(term=>TreatmentName.Contains(term,StringComparison.OrdinalIgnoreCase)))
             throw new TreatmentStateException("Open and complete the scaling or bleaching workflow before completing this treatment.");
-        if (ClinicalWorkflowJson is not null) ClinicalWorkflow.EnsureComplete(ClinicalWorkflowJson);
+        if (IsClinicalFlowContainer)
+        {
+            if (ClinicalWorkflowJson is null || RootTreatmentFlow.NextStage(RootTreatmentFlow.Parse(ClinicalWorkflowJson)) != 6)
+                throw new TreatmentStateException("Complete the remaining clinical steps first.");
+        }
+        else if (ClinicalWorkflowJson is not null) ClinicalWorkflow.EnsureComplete(ClinicalWorkflowJson);
         if (Type == TreatmentType.Filling && (Notes?.Split('·', StringSplitOptions.TrimEntries).Any(part => part.Equals("Filling material: Temporary", StringComparison.OrdinalIgnoreCase)) ?? false))
             throw new TreatmentStateException("Temporary filling is unfinished. Record the permanent filling before completing treatment.");
         if (Status is not (TreatmentStatus.InProgress or TreatmentStatus.Scheduled or TreatmentStatus.Planned)) throw new TreatmentStateException("Treatment must be planned, scheduled, or in progress.");
@@ -76,6 +84,29 @@ public sealed class Treatment : TenantOwnedEntity
     { EnsureVersion(expectedVersion);EnsureMutable();if(Status==TreatmentStatus.Cancelled || ClinicalWorkflowJson is null)throw new TreatmentStateException("This treatment cannot be corrected.");ClinicalWorkflowJson=ClinicalWorkflow.Retract(ClinicalWorkflowJson,sessionId,actor,reason,now);Touch(now); }
     public void Cancel(Guid expectedVersion, DateTimeOffset now)
     { EnsureVersion(expectedVersion); if (Status is TreatmentStatus.Completed or TreatmentStatus.Cancelled) throw new TreatmentStateException("This treatment cannot be cancelled."); Status = TreatmentStatus.Cancelled; Touch(now); }
+    public void SaveRootFlow(string json, Guid expectedVersion, DateTimeOffset now)
+    {
+        EnsureVersion(expectedVersion); EnsureMutable();
+        if (Status == TreatmentStatus.Cancelled || ParentTreatmentId.HasValue || Type is not (TreatmentType.RootCanal or TreatmentType.Crown))
+            throw new TreatmentStateException("This treatment cannot own a root/crown flow.");
+        IsClinicalFlowContainer = true; ClinicalWorkflowJson = json; PriceConfirmed = true; Touch(now);
+    }
+    public void LinkFlowComponent(Guid parentId, string key)
+    {
+        if (parentId == Guid.Empty || ParentTreatmentId.HasValue || string.IsNullOrWhiteSpace(key) || key.Length > 100)
+            throw new ArgumentException("A valid, permanent flow component link is required.");
+        ParentTreatmentId = parentId; FlowComponentKey = key;
+    }
+    public void CompleteFlowComponent(Guid appointmentId, Guid expectedVersion, DateTimeOffset now, Guid? sourceDentalProcedureId = null)
+    {
+        if (!ParentTreatmentId.HasValue || appointmentId == Guid.Empty) throw new TreatmentStateException("A verified visit and parent treatment are required.");
+        EnsureVersion(expectedVersion); EnsureMutable(); AppointmentId = appointmentId; SourceDentalProcedureId = sourceDentalProcedureId; Complete(expectedVersion, now);
+    }
+    public void ReplanFlowComponent(DateTimeOffset now)
+    {
+        if (!ParentTreatmentId.HasValue || Status != TreatmentStatus.Cancelled) throw new TreatmentStateException("Only an unperformed linked procedure can be replanned.");
+        Status = TreatmentStatus.Planned; Touch(now);
+    }
     private void EnsureMutable() { if (Status == TreatmentStatus.Completed) throw new TreatmentStateException("Completed treatments are immutable."); }
     private void EnsureVersion(Guid version) { if (version == Guid.Empty || version != Version) throw new TreatmentConcurrencyException("The treatment changed. Reload it before continuing."); }
     private void Touch(DateTimeOffset now) { UpdatedAt = now; Version = Guid.NewGuid(); }

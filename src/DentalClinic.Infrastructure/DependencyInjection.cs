@@ -71,6 +71,7 @@ public static class DependencyInjection
         services.AddScoped<ClinicBusinessService>();
         services.AddScoped<ImplantService>();
         services.AddScoped<ClinicalWorkflowService>();
+        services.AddScoped<RootTreatmentFlowService>();
         services.AddScoped<ClinicBackupService>();
         services.AddScoped<ISettingsStore, SettingsStore>();
         services.AddScoped<DentalClinic.Infrastructure.Notifications.INotificationProvider, DentalClinic.Infrastructure.Notifications.EmailNotificationProvider>();
