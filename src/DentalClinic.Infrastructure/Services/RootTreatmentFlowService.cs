@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 namespace DentalClinic.Infrastructure.Services;
 
 public sealed record SaveRootTreatmentFlowRequest(Guid Version, Guid? TreatmentId, Guid CatalogItemId,
-    string? Notes, IReadOnlyCollection<EndodonticCanalInput> Canals, string WorkflowJson, string? PostType, string? PostCanal, string? PriceTierId = null);
+    string? Notes, IReadOnlyCollection<EndodonticCanalInput> Canals, string WorkflowJson, string? PostType, string? PostCanal, string? PriceTierId = null, Guid? NewExecutionId = null);
 public sealed record RootTreatmentFlowResult(Guid TreatmentId, Guid ExaminationVersion, string WorkflowJson, RootCanalStage Stage, decimal Price);
 
 public sealed class RootTreatmentFlowService(ApplicationDbContext db, IPermissionService permissions, ICurrentUser user,
@@ -40,17 +40,11 @@ public sealed class RootTreatmentFlowService(ApplicationDbContext db, IPermissio
         if (catalog.Type is not (TreatmentType.RootCanal or TreatmentType.Crown)) throw new ArgumentException("Choose root canal or crown treatment.");
         var lockKey = $"root-flow:{examination.PatientId}:{tooth}:{(int)catalog.Type}";
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({lockKey},0))", token);
-        Treatment? parent;
-        if (request.TreatmentId.HasValue)
-            parent = await db.Treatments.Include(t => t.Teeth).SingleOrDefaultAsync(t => t.Id == request.TreatmentId, token);
-        else
-        {
-            var active = await db.Treatments.Include(t => t.Teeth).Where(t => t.PatientId == examination.PatientId &&
-                t.DoctorProfileId == appointment.DoctorProfileId && t.Type == catalog.Type && t.ParentTreatmentId == null &&
-                t.Status != TreatmentStatus.Completed && t.Status != TreatmentStatus.Cancelled && t.Teeth.Any(x => x.ToothNumber == tooth)).ToListAsync(token);
-            if (active.Count > 1) throw new ArgumentException("More than one treatment exists for this tooth. Open the intended treatment from follow-up.");
-            parent = active.SingleOrDefault();
-        }
+        // A tooth is not an execution identity. Only an explicit record ID resumes prior work.
+        var executionId = request.TreatmentId ?? request.NewExecutionId;
+        var parent = executionId.HasValue
+            ? await db.Treatments.Include(t => t.Teeth).SingleOrDefaultAsync(t => t.Id == executionId, token)
+            : null;
         var now = clock.UtcNow;
         if (parent is null)
         {
@@ -59,7 +53,7 @@ public sealed class RootTreatmentFlowService(ApplicationDbContext db, IPermissio
             if (catalog.Type == TreatmentType.RootCanal && BundledRootTerms.Any(term => catalog.Name.Contains(term, StringComparison.OrdinalIgnoreCase)))
                 throw new ArgumentException("اختر بند حشو عصب مستقلًا من قائمة الأسعار؛ الحشو الخارجي والدعامة والكراون تحتاج بنود أسعار مستقلة حتى لا تتكرر تكلفة الباقة.");
             parent = new Treatment(examination.TenantId, examination.PatientId, appointment.DoctorProfileId, appointment.Id,
-                null, null, catalog.Id, null, catalog.Type, catalog.Name, [tooth], RootPrice(catalog, request.PriceTierId), request.Notes, now, true);
+                null, null, catalog.Id, null, catalog.Type, catalog.Name, [tooth], RootPrice(catalog, request.PriceTierId), request.Notes, now, true, request.NewExecutionId);
             db.Treatments.Add(parent);
         }
         if (parent.PatientId != examination.PatientId || parent.DoctorProfileId != appointment.DoctorProfileId || parent.ParentTreatmentId.HasValue ||
@@ -99,7 +93,7 @@ public sealed class RootTreatmentFlowService(ApplicationDbContext db, IPermissio
         }
         if (state["temporaryFillings"] is JsonArray temporaryHistory)
             foreach (var entry in temporaryHistory.Where(t => t?["examinationId"]?.ToString() == examination.Id.ToString())) entry!["visitDate"] = visitDate;
-        var planAlreadyBilled = parent.TreatmentPlanId.HasValue && await db.Revenues.AnyAsync(r => r.TreatmentPlanId == parent.TreatmentPlanId, token);
+        var planAlreadyBilled = parent.TreatmentPlanId.HasValue && await db.Revenues.AnyAsync(r => r.TreatmentPlanId == parent.TreatmentPlanId && r.TreatmentId == null, token);
         var rootAlreadyBilled = planAlreadyBilled || await db.Revenues.AnyAsync(r => r.TreatmentId == parent.Id, token);
         var bundledLegacy = previous["billingReviewRequired"]?.ToString() == "true" || planAlreadyBilled || !parent.IsClinicalFlowContainer && parent.Type == TreatmentType.RootCanal && BundledRootTerms.Any(term => parent.TreatmentName.Contains(term, StringComparison.OrdinalIgnoreCase));
         state["billingReviewRequired"] = bundledLegacy;

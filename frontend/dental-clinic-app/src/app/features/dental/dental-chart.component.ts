@@ -41,7 +41,7 @@ import { toothName } from './tooth-labels';
                 <span class="planora-number">#{{ number }}</span>
                 @if (toothState(number) === 'implant') { <span class="restoration-label">{{ t('Implant', 'زراعة') }}</span> }
                 @if (toothState(number) === 'extracted') { <span class="restoration-label">{{ t('Extracted', 'تم الخلع') }}</span> }
-                @if (completedWork(number)) { <small [title]="t('Completed treatment recorded', 'يوجد علاج تم')">✓</small> }
+                @if (completedWork(number)) { <small [title]="t('Completed procedure in history — new procedures are allowed', 'إجراء مكتمل في السجل — يمكن إضافة إجراءات جديدة')">✓</small> }
                 @if (pendingWork(number)) { <small [title]="t('Pending or ongoing treatment / findings to review', 'علاج متبقي أو تشخيصات للمراجعة')">◷</small> }
               </button>
               @if (showQuickFindings && menuTooth === number) {
@@ -57,7 +57,7 @@ import { toothName } from './tooth-labels';
         </div></div>
       }
     </div>
-    <div class="chart-legend"><span>{{ t('Orange: caries · Purple: root canal · Gold: crown · Missing: hidden tooth', 'برتقالي: تسوس · بنفسجي: علاج جذور · ذهبي: كراون · فقد: سن مخفي') }}</span><span>{{ t('Screw: completed implant · ✓ Completed · ◷ Pending', 'مسمار: زراعة منفذة · ✓ علاج تم · ◷ علاج متبقي') }}</span></div>
+    <div class="chart-legend"><span>{{ t('Orange: caries · Purple: root canal · Gold: crown · Missing: hidden tooth', 'برتقالي: تسوس · بنفسجي: علاج جذور · ذهبي: كراون · فقد: سن مخفي') }}</span><span>{{ t('Screw: completed implant · ✓ Completed history · ◷ Pending plan', 'مسمار: زراعة منفذة · ✓ إجراء سابق مكتمل · ◷ خطة غير مكتملة') }}</span></div>
   </section>`,
 })
 export class DentalChartComponent implements OnChanges {

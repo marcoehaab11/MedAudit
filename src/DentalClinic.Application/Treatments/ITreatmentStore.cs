@@ -54,5 +54,5 @@ public interface ITreatmentService
     Task<TreatmentDetails?> GetAsync(Guid id, CancellationToken token);
     Task<Guid> CreateAsync(CreateTreatmentCommand command, CancellationToken token);
     Task<bool> UpdateNotesAsync(Guid id, string? notes, Guid version, CancellationToken token);
-    Task<bool> TransitionAsync(Guid id, string action, Guid version, CancellationToken token);
+    Task<bool> TransitionAsync(Guid id, string action, Guid version, CancellationToken token, Guid? completionAppointmentId = null);
 }

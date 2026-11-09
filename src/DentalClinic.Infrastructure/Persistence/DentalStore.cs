@@ -82,7 +82,7 @@ internal sealed class DentalStore(ApplicationDbContext context) : IDentalStore
                 context.ClinicUsers.Where(u => u.Id == x.DoctorUserId).Select(u => u.DisplayName).Single(), x.CreatedAt, x.CompletedAt))
             .ToListAsync(token);
     public Task<bool> HasUnapprovedVisitPricesAsync(Guid appointmentId, CancellationToken token) =>
-        context.Treatments.AnyAsync(item => item.AppointmentId == appointmentId && !item.PriceConfirmed && item.Status != DentalClinic.Domain.Treatments.TreatmentStatus.Cancelled, token);
+        context.Treatments.AnyAsync(item => item.AppointmentId == appointmentId && !item.IsClinicalFlowContainer && !item.PriceConfirmed && item.Status == DentalClinic.Domain.Treatments.TreatmentStatus.Completed, token);
     public Task<bool> IsRootCanalTreatmentAsync(Guid treatmentId, Guid patientId, int toothNumber, Guid doctorUserId, CancellationToken cancellationToken, bool crownOnly = false) =>
         context.Treatments.AnyAsync(x => x.Id == treatmentId && x.PatientId == patientId && x.Type == (crownOnly ? DentalClinic.Domain.Treatments.TreatmentType.Crown : DentalClinic.Domain.Treatments.TreatmentType.RootCanal)
             && !x.IsClinicalFlowContainer && !x.ParentTreatmentId.HasValue && x.Status != DentalClinic.Domain.Treatments.TreatmentStatus.Cancelled && x.Teeth.Any(t => t.ToothNumber == toothNumber)

@@ -101,13 +101,13 @@ public sealed partial class RowLevelSecurityTests
         var parents = await context.Treatments.Where(t => t.TreatmentCatalogItemId == catalogId && t.ParentTreatmentId == null).ToListAsync();
         Assert.Single(parents); Assert.Equal(940, parents[0].Price); Assert.False(await context.Revenues.AnyAsync(r => r.TreatmentId == parents[0].Id));
     }
-    private async Task<Examination> RootVisitAsync(IServiceProvider provider, ApplicationDbContext db, int days)
+    private async Task<Examination> RootVisitAsync(IServiceProvider provider, ApplicationDbContext db, int days, Guid? patientId = null)
     {
         var now = DateTimeOffset.UtcNow;
-        var id = await provider.GetRequiredService<ICreateAppointment>().ExecuteAsync(new(database.PatientA, database.DoctorA,
+        var id = await provider.GetRequiredService<ICreateAppointment>().ExecuteAsync(new(patientId ?? database.PatientA, database.DoctorA,
             AppointmentType.FollowUp, new(DateOnly.FromDateTime(now.AddDays(days).DateTime), new TimeOnly(12, 0), 30), "Root flow test"), CancellationToken.None);
         var appointment = await db.Appointments.SingleAsync(a => a.Id == id); appointment.CheckIn(now); appointment.Start(now);
-        var examination = new Examination(database.TenantA, database.PatientA, id, database.MemberA, database.AdminA, now);
+        var examination = new Examination(database.TenantA, patientId ?? database.PatientA, id, database.MemberA, database.AdminA, now);
         db.Examinations.Add(examination); await db.SaveChangesAsync(); return examination;
     }
 }

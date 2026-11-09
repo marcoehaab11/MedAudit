@@ -144,9 +144,10 @@ internal sealed class TreatmentRevenueCreator(IFinanceStore store, IDoctorCompen
     {
         if (await store.FindRevenueByTreatmentAsync(treatmentId, token) is not null) return;
         var treatment = await store.FindTreatmentAsync(treatmentId, token) ?? throw new FinanceNotFoundException("Treatment was not found.");
-        if (treatment.Status == TreatmentStatus.Cancelled) return;
-        if (treatment.IsClinicalFlowContainer || !treatment.PriceConfirmed || treatment.Amount <= 0 ||
-            (treatment.Type is TreatmentType.RootCanal or TreatmentType.Crown || treatment.IsFlowComponent) && treatment.Status != TreatmentStatus.Completed) return;
+        if (treatment.Status != TreatmentStatus.Completed) return;
+        if (treatment.IsClinicalFlowContainer || !treatment.PriceConfirmed || treatment.Amount <= 0) return;
+        if (treatment.TreatmentPlanId.HasValue && await store.FindRevenueByPlanAsync(treatment.TreatmentPlanId.Value, token) is { TreatmentId: null })
+            throw new FinanceConflictException("هذه الخطة لها فاتورة مجمعة قديمة. راجع الحسابات قبل إضافة تكلفة إجراء مستقل لتجنب التحصيل مرتين.");
         var category = await store.FindCategoryByCodeAsync("TREATMENT_REVENUE", FinancialCategoryType.Revenue, token)
             ?? await store.FindCategoryByCodeAsync("GENERAL_REVENUE", FinancialCategoryType.Revenue, token);
         if (category is null)
@@ -167,34 +168,7 @@ internal sealed class TreatmentRevenueCreator(IFinanceStore store, IDoctorCompen
         if (result.Amount > 0) { var cost = new DoctorCompensationCost(revenue.TenantId, treatment.Id, treatment.DoctorProfileId, result.Amount, currency, result.Snapshot, occurredAt, now); store.AddDoctorCost(cost); store.AddTransaction(new(cost.TenantId, FinancialTransactionType.DoctorCompensation, cost.Amount, cost.Currency, cost.OccurredAt, FinancialSourceType.DoctorCompensation, cost.Id, "Treatment percentage compensation", now)); store.AddAudit(new(cost.TenantId, user.UserId, PlatformAuditAction.DoctorCompensationRecorded, nameof(DoctorCompensationCost), cost.Id, now, null)); }
     }
 
-    public async Task EnsureForTreatmentPlanAsync(Guid planId, CancellationToken token)
-    {
-        var existing = await store.FindRevenueByPlanAsync(planId, token);
-        var plan = await store.FindPlanForRevenueAsync(planId, token);
-        if (plan is null) return;
-        if (existing is not null)
-        {
-            if (existing.Amount != plan.Total)
-            {
-                existing.UpdateAmount(plan.Total, plan.Title);
-                await store.SaveChangesAsync(token);
-            }
-            return;
-        }
-        var category = await store.FindCategoryByCodeAsync("TREATMENT_REVENUE", FinancialCategoryType.Revenue, token)
-            ?? await store.FindCategoryByCodeAsync("GENERAL_REVENUE", FinancialCategoryType.Revenue, token);
-        if (category is null)
-        {
-            var firstCat = (await store.CategoriesAsync(false, FinancialCategoryType.Revenue, token)).FirstOrDefault();
-            if (firstCat is not null) category = await store.FindCategoryAsync(firstCat.Id, false, token);
-        }
-        if (category is null) return;
-        var currency = await store.CurrencyAsync(token);
-        var now = clock.UtcNow;
-        var revenue = new Revenue(tenant.RequireTenantId(), category.Id, plan.PatientId, null, plan.Id, plan.DoctorProfileId, plan.Total, currency, plan.Title, plan.CreatedAt, now);
-        store.AddRevenue(revenue);
-        store.AddTransaction(new(revenue.TenantId, FinancialTransactionType.Revenue, revenue.Amount, revenue.Currency, revenue.OccurredAt, FinancialSourceType.Revenue, revenue.Id, revenue.Description, now));
-        store.AddAudit(new(revenue.TenantId, user.UserId, PlatformAuditAction.RevenueCreated, nameof(Revenue), revenue.Id, now, null));
-        await store.SaveChangesAsync(token);
-    }
+    // A plan is an estimate. Its individual completed treatments create invoice lines.
+    // Keep existing invoices unchanged; editing a plan must never rewrite historical charges.
+    public Task EnsureForTreatmentPlanAsync(Guid planId, CancellationToken token) => Task.CompletedTask;
 }

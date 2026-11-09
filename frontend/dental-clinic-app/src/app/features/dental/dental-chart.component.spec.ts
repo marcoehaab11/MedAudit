@@ -8,6 +8,16 @@ describe('DentalChartComponent', () => {
     expect(fixture.componentInstance.quickFindingTypes).toEqual([2,8,14,15,9]);
   });
 
+  it('allows selecting an extracted tooth with completed history and a future implant plan without changing either', () => {
+    const fixture=TestBed.createComponent(DentalChartComponent),c=fixture.componentInstance;
+    const records=[{id:'extraction',name:'Extraction',type:2,status:4,completedAt:'2026-10-19T10:00:00Z'},{id:'implant-plan',name:'Implant',type:3,status:1}];
+    fixture.componentRef.setInput('teeth',[{toothId:'t36',toothNumber:36,findings:[4],procedures:[2],treatmentProgress:records}]);
+    fixture.detectChanges();
+    const tooth=fixture.nativeElement.querySelector('button[aria-label*="#36"]') as HTMLButtonElement;
+    expect(tooth.disabled).toBe(false);expect(c.toothState(36)).toBe('extracted');expect(c.completedWork(36)).toBe(true);expect(c.pendingWork(36)).toBe(true);
+    tooth.click();expect(c.selectedNumber).toBe(36);expect(c.find(36)!.treatmentProgress).toEqual(records);
+  });
+
   beforeEach(async () => {
     try { window.localStorage.removeItem('medaudit.language'); } catch {}
     await TestBed.configureTestingModule({ imports: [DentalChartComponent] }).compileComponents();

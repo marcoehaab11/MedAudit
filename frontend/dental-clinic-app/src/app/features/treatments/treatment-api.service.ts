@@ -227,14 +227,15 @@ export class TreatmentApiService {
     notes?: string;
     price?: number;
     deferBilling?: boolean;
+    newExecutionId?: string;
   }) {
     return this.http.post<{ id: string }>('/api/treatments', value);
   }
   confirmTreatmentPrice(id: string, price: number, version: string) {
     return this.http.post<void>(`/api/treatments/${id}/price`, {price, version});
   }
-  treatmentAction(id: string, action: string, version: string) {
-    return this.http.post<void>(`/api/treatments/${id}/${action}`, { version });
+  treatmentAction(id: string, action: string, version: string, appointmentId?: string) {
+    return this.http.post<void>(`/api/treatments/${id}/${action}`, { version, appointmentId });
   }
 }
 

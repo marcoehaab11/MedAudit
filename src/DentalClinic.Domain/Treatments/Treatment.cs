@@ -10,10 +10,12 @@ public sealed class Treatment : TenantOwnedEntity
     public Treatment(Guid tenantId, Guid patientId, Guid doctorProfileId, Guid? appointmentId,
         Guid? treatmentPlanId, Guid? treatmentPlanItemId, Guid catalogItemId, Guid? sourceDentalProcedureId,
         TreatmentType type, string treatmentName, IEnumerable<int> toothNumbers, decimal price, string? notes,
-        DateTimeOffset createdAt, bool priceConfirmed = true)
+        DateTimeOffset createdAt, bool priceConfirmed = true, Guid? executionId = null)
     {
         if (tenantId == Guid.Empty || patientId == Guid.Empty || doctorProfileId == Guid.Empty || catalogItemId == Guid.Empty)
             throw new ArgumentException("Tenant, patient, doctor, and catalog IDs are required.");
+        if (executionId == Guid.Empty) throw new ArgumentException("Execution ID must not be empty.", nameof(executionId));
+        if (executionId.HasValue) Id = executionId.Value;
         TenantId = tenantId; PatientId = patientId; DoctorProfileId = doctorProfileId; AppointmentId = appointmentId;
         TreatmentPlanId = treatmentPlanId; TreatmentPlanItemId = treatmentPlanItemId; TreatmentCatalogItemId = catalogItemId;
         SourceDentalProcedureId = sourceDentalProcedureId; Type = type; TreatmentName = TreatmentRules.Required(treatmentName, nameof(treatmentName), 200);
@@ -64,7 +66,7 @@ public sealed class Treatment : TenantOwnedEntity
         ClinicalWorkflowJson = ClinicalWorkflow.Save(ClinicalWorkflowJson, kind, planJson, visitId, appointmentId, DoctorProfileId, doctorUserId, visitDate, visitJson, performed, now);
         Touch(now);
     }
-    public void Complete(Guid expectedVersion, DateTimeOffset now)
+    public void Complete(Guid expectedVersion, DateTimeOffset now, Guid? completionAppointmentId = null)
     {
         EnsureVersion(expectedVersion);
         if(ClinicalWorkflowJson is null && Type==TreatmentType.Other && "scal|polish|clean|whiten|bleach|تنظيف|تنضيف|جير|تبييض|تبيض".Split('|').Any(term=>TreatmentName.Contains(term,StringComparison.OrdinalIgnoreCase)))
@@ -78,6 +80,7 @@ public sealed class Treatment : TenantOwnedEntity
         if (Type == TreatmentType.Filling && (Notes?.Split('·', StringSplitOptions.TrimEntries).Any(part => part.Equals("Filling material: Temporary", StringComparison.OrdinalIgnoreCase)) ?? false))
             throw new TreatmentStateException("Temporary filling is unfinished. Record the permanent filling before completing treatment.");
         if (Status is not (TreatmentStatus.InProgress or TreatmentStatus.Scheduled or TreatmentStatus.Planned)) throw new TreatmentStateException("Treatment must be planned, scheduled, or in progress.");
+        if (completionAppointmentId.HasValue) { if (completionAppointmentId == Guid.Empty) throw new ArgumentException("A valid completion visit is required."); AppointmentId = completionAppointmentId; }
         if (StartedAt is null) StartedAt = now; Status = TreatmentStatus.Completed; CompletedAt = now; Touch(now);
     }
     public void RetractClinicalSession(Guid sessionId,Guid actor,string reason,Guid expectedVersion,DateTimeOffset now)

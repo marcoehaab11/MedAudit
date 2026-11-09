@@ -76,7 +76,7 @@ internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock cl
     { var q = context.FinancialCategories.AsNoTracking(); if (!includeInactive) q = q.Where(x => x.IsActive); if (type.HasValue) q = q.Where(x => x.Type == type); return await q.OrderBy(x => x.Type).ThenBy(x => x.Name).Select(x => new FinancialCategoryItem(x.Id, x.Name, x.Code, x.Type, x.ParentId, context.FinancialCategories.Where(p => p.Id == x.ParentId).Select(p => p.Name).FirstOrDefault(), x.IsActive, x.CreatedAt, x.UpdatedAt, x.Version)).ToListAsync(token); }
     public Task<Revenue?> FindRevenueAsync(Guid id, CancellationToken token) => context.Revenues.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, token);
     public Task<Revenue?> FindRevenueByTreatmentAsync(Guid treatmentId, CancellationToken token) => context.Revenues.AsNoTracking().SingleOrDefaultAsync(x => x.TreatmentId == treatmentId, token);
-    public Task<Revenue?> FindRevenueByPlanAsync(Guid planId, CancellationToken token) => context.Revenues.SingleOrDefaultAsync(x => x.TreatmentPlanId == planId, token);
+    public Task<Revenue?> FindRevenueByPlanAsync(Guid planId, CancellationToken token) => context.Revenues.SingleOrDefaultAsync(x => x.TreatmentPlanId == planId && x.TreatmentId == null, token);
     public Task<Domain.Treatments.TreatmentPlan?> FindPlanForRevenueAsync(Guid planId, CancellationToken token) => context.TreatmentPlans.SingleOrDefaultAsync(x => x.Id == planId, token);
     public async Task<Revenue?> FindLatestOutstandingRevenueByPatientAsync(Guid patientId, CancellationToken token)
     {
@@ -132,29 +132,8 @@ internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock cl
     {
         if (!await context.Patients.AnyAsync(x => x.Id == patientId, token)) return null;
 
-        var unbilledPlans = await context.TreatmentPlans
-            .Where(p => p.PatientId == patientId && p.Total > 0 && !context.Revenues.Any(r => r.TreatmentPlanId == p.Id))
-            .ToListAsync(token);
-        if (unbilledPlans.Count > 0)
-        {
-            var category = await context.FinancialCategories.FirstOrDefaultAsync(c => c.Code == "TREATMENT_REVENUE" && c.Type == FinancialCategoryType.Revenue && c.IsActive, token)
-                ?? await context.FinancialCategories.FirstOrDefaultAsync(c => c.Type == FinancialCategoryType.Revenue && c.IsActive, token);
-            if (category is not null)
-            {
-                var currency = await CurrencyAsync(token);
-                var now = clock.UtcNow;
-                foreach (var plan in unbilledPlans)
-                {
-                    var rev = new Revenue(currentTenant.RequireTenantId(), category.Id, plan.PatientId, null, plan.Id, plan.DoctorProfileId, plan.Total, currency, plan.Title, plan.CreatedAt, now);
-                    context.Revenues.Add(rev);
-                    context.FinancialTransactions.Add(new(rev.TenantId, FinancialTransactionType.Revenue, rev.Amount, rev.Currency, rev.OccurredAt, FinancialSourceType.Revenue, rev.Id, rev.Description, now));
-                }
-                await context.SaveChangesAsync(token);
-            }
-        }
-
         var unbilledTreatments = await context.Treatments
-            .Where(t => t.PatientId == patientId && t.PriceConfirmed && t.Price > 0 && !t.IsClinicalFlowContainer && t.Status != Domain.Treatments.TreatmentStatus.Cancelled && ((t.Type != Domain.Treatments.TreatmentType.RootCanal && t.Type != Domain.Treatments.TreatmentType.Crown && !t.ParentTreatmentId.HasValue) || t.Status == Domain.Treatments.TreatmentStatus.Completed) && !context.Revenues.Any(r => r.TreatmentId == t.Id))
+            .Where(t => t.PatientId == patientId && t.PriceConfirmed && t.Price > 0 && !t.IsClinicalFlowContainer && t.Status == Domain.Treatments.TreatmentStatus.Completed && (!t.TreatmentPlanId.HasValue || !context.Revenues.Any(r => r.TreatmentPlanId == t.TreatmentPlanId && r.TreatmentId == null)) && !context.Revenues.Any(r => r.TreatmentId == t.Id))
             .ToListAsync(token);
         if (unbilledTreatments.Count > 0)
         {

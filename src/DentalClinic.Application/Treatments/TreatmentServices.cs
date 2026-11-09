@@ -154,8 +154,25 @@ internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess ac
         { var appointment = await store.FindAppointmentAsync(command.AppointmentId.Value, token); if (appointment is null || appointment.PatientId != command.PatientId || appointment.DoctorProfileId != command.DoctorProfileId) throw new ArgumentException("Appointment does not match treatment patient and doctor."); }
         if (command.SourceDentalProcedureId.HasValue)
         { var procedure = await store.FindDentalProcedureAsync(command.SourceDentalProcedureId.Value, token); if (procedure is null || procedure.PatientId != command.PatientId || (teeth.Count > 0 && !teeth.Contains(procedure.ToothNumber))) throw new ArgumentException("Dental procedure does not match treatment patient and tooth."); if (teeth.Count == 0) teeth.Add(procedure.ToothNumber); }
+        // Retrying one save keeps its ID. A deliberate new procedure uses a fresh ID, even on the same tooth.
+        if (command.NewExecutionId.HasValue)
+        {
+            if (command.NewExecutionId == Guid.Empty) throw new ArgumentException("A valid execution ID is required.");
+            var existing = await store.FindTreatmentAsync(command.NewExecutionId.Value, false, token);
+            if (existing is not null)
+            {
+                if (existing.PatientId != command.PatientId || existing.DoctorProfileId != command.DoctorProfileId ||
+                    existing.TreatmentCatalogItemId != catalog.Id || existing.AppointmentId != command.AppointmentId ||
+                    existing.TreatmentPlanItemId != command.TreatmentPlanItemId || existing.SourceDentalProcedureId != command.SourceDentalProcedureId ||
+                    existing.IsClinicalFlowContainer || existing.ParentTreatmentId.HasValue ||
+                    !existing.Teeth.Select(t => t.ToothNumber).Order().SequenceEqual(teeth.Distinct().Order()) ||
+                    existing.Notes != command.Notes || command.Price.HasValue && existing.Price != command.Price.Value)
+                    throw new TreatmentStateException("This save ID belongs to another procedure. Resume its saved record or start a new independent procedure.");
+                return existing.Id;
+            }
+        }
         var treatment = new Treatment(tenant.RequireTenantId(), command.PatientId, command.DoctorProfileId, command.AppointmentId,
-            planId, command.TreatmentPlanItemId, catalog.Id, command.SourceDentalProcedureId, catalog.Type, catalog.Name, teeth, price, command.Notes, clock.UtcNow, !command.DeferBilling);
+            planId, command.TreatmentPlanItemId, catalog.Id, command.SourceDentalProcedureId, catalog.Type, catalog.Name, teeth, price, command.Notes, clock.UtcNow, !command.DeferBilling, command.NewExecutionId);
         store.AddTreatment(treatment); Audit(PlatformAuditAction.TreatmentCreated, treatment.Id); await store.SaveChangesAsync(token);
         if (treatment.PriceConfirmed) await revenueCreator.EnsureForCompletedTreatmentAsync(treatment.Id, token);
         return treatment.Id;
@@ -177,7 +194,7 @@ internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess ac
     }
     public async Task<bool> UpdateNotesAsync(Guid id, string? notes, Guid version, CancellationToken token)
     { await permissions.EnsurePermissionAsync(Permissions.TreatmentsEdit, token); var item = await store.FindTreatmentAsync(id, true, token); if (item is null) return false; await access.EnsureDoctorAsync(item.DoctorProfileId, Permissions.TreatmentsEdit, token); item.UpdateNotes(notes, version, clock.UtcNow); Audit(PlatformAuditAction.TreatmentUpdated, id); await store.SaveChangesAsync(token); return true; }
-    public async Task<bool> TransitionAsync(Guid id, string action, Guid version, CancellationToken token)
+    public async Task<bool> TransitionAsync(Guid id, string action, Guid version, CancellationToken token, Guid? completionAppointmentId = null)
     {
         var permission = action switch
         {
@@ -189,6 +206,12 @@ internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess ac
         await permissions.EnsurePermissionAsync(permission, token); var item = await store.FindTreatmentAsync(id, true, token); if (item is null) return false;
         await access.EnsureDoctorAsync(item.DoctorProfileId, permission, token);
         if (item.ParentTreatmentId.HasValue) throw new TreatmentStateException("Save linked procedures from the clinical treatment flow.");
+        if (action == "complete" && completionAppointmentId.HasValue)
+        {
+            var visit = await store.FindAppointmentAsync(completionAppointmentId.Value, token);
+            if (visit is null || visit.PatientId != item.PatientId || visit.DoctorProfileId != item.DoctorProfileId)
+                throw new TreatmentStateException("The completion visit must belong to this patient and treating doctor.");
+        }
         if (action == "complete" && item.Type == TreatmentType.Implant && await store.HasIncompleteImplantAsync(id, token))
             throw new TreatmentStateException("Complete the implant workflow and record a follow-up before completing this treatment.");
         if (action == "complete" && item.Type == TreatmentType.RootCanal)
@@ -201,7 +224,7 @@ internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess ac
         }
         var audit = action == "start" ? PlatformAuditAction.TreatmentStarted : action == "complete" ? PlatformAuditAction.TreatmentCompleted : PlatformAuditAction.TreatmentCancelled;
         if (action == "start") { item.Start(version, clock.UtcNow); if (item.PriceConfirmed) await revenueCreator.EnsureForCompletedTreatmentAsync(id, token); }
-        else if (action == "complete") { item.Complete(version, clock.UtcNow); if (item.PriceConfirmed) await revenueCreator.EnsureForCompletedTreatmentAsync(id, token); }
+        else if (action == "complete") { item.Complete(version, clock.UtcNow, completionAppointmentId); if (item.PriceConfirmed) await revenueCreator.EnsureForCompletedTreatmentAsync(id, token); }
         else item.Cancel(version, clock.UtcNow);
         Audit(audit, id); await store.SaveChangesAsync(token); return true;
     }
