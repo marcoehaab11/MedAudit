@@ -73,6 +73,7 @@ export class TreatmentDetailsComponent {
   readonly auth = inject(AuthService);
   readonly i18n = inject(LocalizationService);
   readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id')!;
+  readonly completionAppointmentId = inject(ActivatedRoute).snapshot.queryParamMap?.get('appointmentId') ?? undefined;
   readonly item = signal<Treatment | null>(null);
   readonly loading = signal(true);
   readonly error = signal('');
@@ -101,7 +102,7 @@ export class TreatmentDetailsComponent {
   action(a: string) {
     if (a === 'cancel' && !confirm(this.t('Cancel this treatment?', 'هل تريد إلغاء هذا العلاج؟')))
       return;
-    this.api.treatmentAction(this.id, a, this.item()!.version).subscribe({
+    this.api.treatmentAction(this.id, a, this.item()!.version, a === 'complete' ? this.completionAppointmentId : undefined).subscribe({
       next: () => {
         this.message.set(this.t('Treatment updated.', 'تم تحديث العلاج.'));
         this.load();

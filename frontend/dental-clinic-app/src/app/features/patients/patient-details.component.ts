@@ -1,3 +1,4 @@
+import { PatientClinicalHistoryComponent } from './patient-clinical-history.component';
 import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
@@ -17,11 +18,12 @@ import { MedicalAlertModalComponent } from '../../shared/medical-alert-modal/med
 import { TreatmentApiService } from '../treatments/treatment-api.service';
 import { AuthService } from '../../core/auth.service';
 
-type Tab = 'overview' | 'contact' | 'medical' | 'notes';
+type Tab = 'timeline' | 'overview' | 'contact' | 'medical' | 'notes';
 @Component({
   selector: 'app-patient-details',
   standalone: true,
   imports: [
+    PatientClinicalHistoryComponent,
     RouterLink,
     DatePipe,
     ReactiveFormsModule,
@@ -140,7 +142,7 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
       }
       <nav class="tabs" [attr.aria-label]="t('Patient sections', 'أقسام ملف المريض')">
         @for (item of tabs; track item.id) {
-          @if (item.id !== 'medical' || auth.hasPermission('Patients.ViewMedicalHistory')) {
+          @if (!['medical','timeline'].includes(item.id) || auth.hasPermission('Patients.ViewMedicalHistory')) {
           <button type="button" [class.active]="tab() === item.id" (click)="tab.set(item.id)">
             {{ t(item.en, item.ar) }}
           </button>
@@ -148,6 +150,7 @@ type Tab = 'overview' | 'contact' | 'medical' | 'notes';
         }
       </nav>
       @switch (tab()) {
+        @case ('timeline') { @if(patient()!.canViewMedicalInformation) { <app-patient-clinical-history [patientId]="id" /> } }
         @case ('overview') {
           <div class="detail-grid">
             <section class="panel">
@@ -403,8 +406,9 @@ export class PatientDetailsComponent {
   readonly showDossierModal = signal(false);
   readonly showMedicalAlertModal = signal(false);
   private alertModalAutoShown = false;
-  readonly tab = signal<Tab>('overview');
+  readonly tab = signal<Tab>(this.auth.hasPermission('Patients.ViewMedicalHistory') ? 'timeline' : 'overview');
   readonly tabs: { id: Tab; en: string; ar: string }[] = [
+    { id: 'timeline', en: 'Medical timeline', ar: 'التاريخ الطبي الزمني' },
     { id: 'overview', en: 'Overview', ar: 'نظرة عامة' },
     { id: 'contact', en: 'Contact', ar: 'الاتصال' },
     { id: 'medical', en: 'Medical history', ar: 'السجل الطبي' },

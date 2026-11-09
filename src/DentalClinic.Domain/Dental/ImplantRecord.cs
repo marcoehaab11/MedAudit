@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using DentalClinic.Domain.Common;
 
 namespace DentalClinic.Domain.Dental;
@@ -19,13 +20,15 @@ public sealed class ImplantRecord : TenantOwnedEntity
     public Guid DoctorProfileId { get; private set; }
     public Guid? TreatmentId { get; private set; }
     public string WorkflowJson { get; private set; } = "{}";
+    public string ExecutedStepsJson { get; private set; } = "[]";
     public string AppointmentLinksJson { get; private set; } = "{}";
     public int CompletedStep { get; private set; }
     public Guid Version { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
-    public void Save(string json, int? completeStep, Guid expectedVersion, DateTimeOffset now)
+    public void Save(string json, int? completeStep, Guid expectedVersion, DateTimeOffset now,
+        string? confirmedVisitId = null, int? confirmedVisitStage = null, Guid? appointmentId = null)
     {
         if (Version != expectedVersion) throw new DentalConcurrencyException("The implant record changed. Reload before saving.");
         if (json.Length > 200_000) throw new ArgumentException("Implant notes are too large. Upload photographs separately.");
@@ -37,12 +40,40 @@ public sealed class ImplantRecord : TenantOwnedEntity
         if (completeStep is < 1 or > 7 || completeStep > CompletedStep + 1) throw new ArgumentException("Complete the preceding implant stage first.");
         var target = Math.Max(CompletedStep, completeStep ?? 0);
         using var previous = JsonDocument.Parse(WorkflowJson);
+        foreach (var saved in JsonNode.Parse(ExecutedStepsJson)!.AsArray().Where(e => e?["step"]?.ToString() is "implant-healing" or "implant-followup"))
+        {
+            var stage = saved!["step"]!.ToString() == "implant-healing" ? 3 : 7;
+            var id = saved["key"]!.ToString()["visit:".Length..];
+            if (!root.TryGetProperty(stage == 3 ? "healingVisits" : "followupVisits", out var visits))
+                throw new ArgumentException("Keep the previously performed implant visits.");
+            var kept = visits.EnumerateArray().SingleOrDefault(v => Text(v,"id") == id);
+            if (kept.ValueKind != JsonValueKind.Object) throw new ArgumentException("Keep the previously performed implant visits.");
+            ValidateVisit(kept,stage);
+        }
         for (var stage = 1; stage <= target; stage++)
         {
             if (stage is 3 or 7 && CompletedStep >= stage && completeStep != stage)
                 ValidateSavedVisits(previous.RootElement, root, stage);
             else ValidateStage(root, stage);
         }
+        var history = ExecutedStepsJson;
+        if (completeStep.HasValue && completeStep > CompletedStep && completeStep is not (3 or 7))
+            history = ExecutedClinicalSteps.Append(history, $"stage:{completeStep}", $"implant-{completeStep}", now, appointmentId,
+                completeStep == 1 ? null : Text(root.GetProperty(completeStep switch { 2 => "placement", 4 => "abutment", 5 => "scan", _ => "fixation" }), "date"));
+        if (confirmedVisitId is not null)
+        {
+            if (confirmedVisitStage is not (3 or 7) || target < (confirmedVisitStage == 3 ? 2 : 6))
+                throw new ArgumentException("Complete the preceding implant stages before recording this visit.");
+            var visits = root.GetProperty(confirmedVisitStage == 3 ? "healingVisits" : "followupVisits");
+            var visit = visits.EnumerateArray().SingleOrDefault(v => Text(v, "id") == confirmedVisitId);
+            if (visit.ValueKind != JsonValueKind.Object) throw new ArgumentException("Choose the saved follow-up visit.");
+            ValidateVisit(visit, confirmedVisitStage.Value);
+            history = ExecutedClinicalSteps.Append(history, $"visit:{confirmedVisitId}", confirmedVisitStage == 3 ? "implant-healing" : "implant-followup", now, appointmentId, Text(visit, "date"));
+        }
+        else if (completeStep is 3 or 7)
+            foreach (var visit in root.GetProperty(completeStep == 3 ? "healingVisits" : "followupVisits").EnumerateArray())
+                history = ExecutedClinicalSteps.Append(history, $"visit:{Text(visit, "id")}", completeStep == 3 ? "implant-healing" : "implant-followup", now, appointmentId, Text(visit, "date"));
+        ExecutedStepsJson = history;
         WorkflowJson = root.GetRawText(); CompletedStep = target; UpdatedAt = now; Version = Guid.NewGuid();
     }
 

@@ -1205,6 +1205,12 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("DoctorProfileId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ExecutedStepsJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("[]");
+
                     b.Property<Guid>("PatientId")
                         .HasColumnType("uuid");
 
@@ -3970,6 +3976,12 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("DoctorProfileId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("ExecutedStepsJson")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValue("[]");
 
                     b.Property<string>("FlowComponentKey")
                         .HasMaxLength(100)

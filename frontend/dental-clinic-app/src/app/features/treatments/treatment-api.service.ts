@@ -213,8 +213,8 @@ export class TreatmentApiService {
   treatment(id: string) {
     return this.http.get<Treatment>(`/api/treatments/${id}`);
   }
-  updateTreatmentNotes(id: string, notes: string, version: string) {
-    return this.http.put<void>(`/api/treatments/${id}`, { notes, version });
+  updateTreatmentNotes(id: string, notes: string, version: string, appointmentId?: string, executedStep?: string) {
+    return this.http.put<void>(`/api/treatments/${id}`, { notes, version, appointmentId, executedStep });
   }
   createTreatment(value: {
     patientId: string;
@@ -228,6 +228,7 @@ export class TreatmentApiService {
     price?: number;
     deferBilling?: boolean;
     newExecutionId?: string;
+    executedStep?: string;
   }) {
     return this.http.post<{ id: string }>('/api/treatments', value);
   }

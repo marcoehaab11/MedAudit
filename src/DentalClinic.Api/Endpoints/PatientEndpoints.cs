@@ -16,6 +16,13 @@ internal static class PatientEndpoints
 
         patients.MapGet("/", SearchAsync).RequireAuthorization(Permissions.PatientsView);
         patients.MapGet("/{id:guid}", GetAsync).RequireAuthorization(Permissions.PatientsView);
+        patients.MapGet("/{id:guid}/clinical-history", async (Guid id, DentalClinic.Infrastructure.Services.PatientClinicalHistoryService service,
+            HttpContext context, CancellationToken token, int page = 1, int pageSize = 100) =>
+            {
+                context.Response.Headers.CacheControl = "no-store";
+                return await service.GetAsync(id, page, pageSize, token) is { } history ? Results.Ok(history) : Results.NotFound();
+            })
+            .RequireAuthorization(Permissions.PatientsViewMedicalHistory, Permissions.DentalView);
         patients.MapPost("/", CreateAsync).RequireAuthorization(Permissions.PatientsCreate);
         patients.MapPut("/{id:guid}", UpdateAsync).RequireAuthorization(Permissions.PatientsEdit);
         patients.MapPost("/{id:guid}/archive", ArchiveAsync).RequireAuthorization(Permissions.PatientsArchive);

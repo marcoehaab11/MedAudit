@@ -132,6 +132,7 @@ public sealed class ApplicationDbContext(
         builder.Entity<ImplantRecord>(e =>
         {
             e.ToTable("implant_records"); e.HasKey(x => x.Id); e.HasAlternateKey(x => new { x.TenantId, x.Id });
+            e.Property(x => x.ExecutedStepsJson).HasColumnType("jsonb").HasDefaultValue("[]");
             e.Property(x => x.WorkflowJson).HasColumnType("jsonb"); e.Property(x => x.AppointmentLinksJson).HasColumnType("jsonb");
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasIndex(x => new { x.TenantId, x.PatientId, x.ToothNumber });
@@ -636,6 +637,7 @@ public sealed class ApplicationDbContext(
             entity.Property(x => x.TreatmentName).HasMaxLength(200).IsRequired(); entity.Property(x => x.Status).HasConversion<int>();
             entity.Property(x => x.Price).HasPrecision(18, 2); entity.Property(x => x.Notes).HasMaxLength(4000); entity.Property(x => x.Version).IsConcurrencyToken();
             entity.Property(x => x.ClinicalWorkflowJson).HasColumnType("jsonb");
+            entity.Property(x => x.ExecutedStepsJson).HasColumnType("jsonb").HasDefaultValue("[]");
             entity.Property(x => x.FlowComponentKey).HasMaxLength(100);
             entity.HasIndex(x => new { x.TenantId, x.ParentTreatmentId, x.FlowComponentKey }).IsUnique();
             entity.HasOne<Treatment>().WithMany().HasForeignKey(x => new { x.TenantId, x.ParentTreatmentId })

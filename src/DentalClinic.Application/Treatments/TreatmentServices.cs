@@ -166,13 +166,20 @@ internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess ac
                     existing.TreatmentPlanItemId != command.TreatmentPlanItemId || existing.SourceDentalProcedureId != command.SourceDentalProcedureId ||
                     existing.IsClinicalFlowContainer || existing.ParentTreatmentId.HasValue ||
                     !existing.Teeth.Select(t => t.ToothNumber).Order().SequenceEqual(teeth.Distinct().Order()) ||
-                    existing.Notes != command.Notes || command.Price.HasValue && existing.Price != command.Price.Value)
+                    existing.Notes != command.Notes || command.Price.HasValue && existing.Price != command.Price.Value ||
+                    command.ExecutedStep is not null && !DentalClinic.Domain.Common.ExecutedClinicalSteps.Contains(existing.ExecutedStepsJson,$"{command.AppointmentId}:{command.ExecutedStep}"))
                     throw new TreatmentStateException("This save ID belongs to another procedure. Resume its saved record or start a new independent procedure.");
                 return existing.Id;
             }
         }
         var treatment = new Treatment(tenant.RequireTenantId(), command.PatientId, command.DoctorProfileId, command.AppointmentId,
             planId, command.TreatmentPlanItemId, catalog.Id, command.SourceDentalProcedureId, catalog.Type, catalog.Name, teeth, price, command.Notes, clock.UtcNow, !command.DeferBilling, command.NewExecutionId);
+        if (command.ExecutedStep is not null)
+        {
+            await permissions.EnsurePermissionAsync(Permissions.DentalEdit, token);
+            await permissions.EnsurePermissionAsync(Permissions.ExaminationEdit, token);
+            treatment.RecordFillingStep(command.ExecutedStep, command.AppointmentId ?? throw new TreatmentStateException("A verified visit is required for performed steps."), clock.UtcNow);
+        }
         store.AddTreatment(treatment); Audit(PlatformAuditAction.TreatmentCreated, treatment.Id); await store.SaveChangesAsync(token);
         if (treatment.PriceConfirmed) await revenueCreator.EnsureForCompletedTreatmentAsync(treatment.Id, token);
         return treatment.Id;
@@ -192,8 +199,23 @@ internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess ac
         await transaction.CommitAsync(token);
         return true;
     }
-    public async Task<bool> UpdateNotesAsync(Guid id, string? notes, Guid version, CancellationToken token)
-    { await permissions.EnsurePermissionAsync(Permissions.TreatmentsEdit, token); var item = await store.FindTreatmentAsync(id, true, token); if (item is null) return false; await access.EnsureDoctorAsync(item.DoctorProfileId, Permissions.TreatmentsEdit, token); item.UpdateNotes(notes, version, clock.UtcNow); Audit(PlatformAuditAction.TreatmentUpdated, id); await store.SaveChangesAsync(token); return true; }
+    public async Task<bool> UpdateNotesAsync(Guid id, string? notes, Guid version, CancellationToken token, Guid? appointmentId = null, string? executedStep = null)
+    {
+        await permissions.EnsurePermissionAsync(Permissions.TreatmentsEdit, token);
+        var item = await store.FindTreatmentAsync(id, true, token); if (item is null) return false;
+        await access.EnsureDoctorAsync(item.DoctorProfileId, Permissions.TreatmentsEdit, token);
+        if (executedStep is not null)
+        {
+            await permissions.EnsurePermissionAsync(Permissions.DentalEdit, token);
+            await permissions.EnsurePermissionAsync(Permissions.ExaminationEdit, token);
+            var visit = appointmentId.HasValue ? await store.FindAppointmentAsync(appointmentId.Value, token) : null;
+            if (visit is null || visit.PatientId != item.PatientId || visit.DoctorProfileId != item.DoctorProfileId)
+                throw new TreatmentStateException("Choose this patient's verified treatment visit.");
+        }
+        item.UpdateNotes(notes, version, clock.UtcNow);
+        if (executedStep is not null) item.RecordFillingStep(executedStep, appointmentId!.Value, clock.UtcNow);
+        Audit(PlatformAuditAction.TreatmentUpdated, id); await store.SaveChangesAsync(token); return true;
+    }
     public async Task<bool> TransitionAsync(Guid id, string action, Guid version, CancellationToken token, Guid? completionAppointmentId = null)
     {
         var permission = action switch

@@ -15,7 +15,7 @@ namespace DentalClinic.Infrastructure.Services;
 
 public sealed record ImplantDetails(Guid Id, Guid PatientId, string PatientName, string PatientNumber, int ToothNumber,
     Guid DoctorProfileId, string DoctorName, Guid? TreatmentId, JsonElement Workflow, int CompletedStep, Guid Version, int PatientAge);
-public sealed record SaveImplantRequest(Guid Version, JsonElement Workflow, int? CompleteStep = null);
+public sealed record SaveImplantRequest(Guid Version, JsonElement Workflow, int? CompleteStep = null, string? ConfirmedVisitId = null, int? ConfirmedVisitStage = null, Guid? AppointmentId = null);
 public sealed record ImplantFileInfo(Guid Id, string Section, string FileName, string ContentType);
 
 public sealed class ImplantService(ApplicationDbContext db, ICurrentTenant tenant, ICurrentUser actor,
@@ -62,7 +62,10 @@ public sealed class ImplantService(ApplicationDbContext db, ICurrentTenant tenan
         var record = await db.ImplantRecords.FromSqlInterpolated($"SELECT * FROM implant_records WHERE \"Id\"={id} FOR UPDATE").SingleOrDefaultAsync(token)
             ?? throw new KeyNotFoundException("Implant record not found.");
         await EnsureDoctorAsync(record.DoctorProfileId, token);
-        record.Save(request.Workflow.GetRawText(), request.CompleteStep, request.Version, DateTimeOffset.UtcNow);
+        if (request.AppointmentId.HasValue && !await db.Appointments.AnyAsync(a => a.Id == request.AppointmentId && a.PatientId == record.PatientId && a.DoctorProfileId == record.DoctorProfileId, token))
+            throw new ArgumentException("The clinical visit must match this implant's patient and doctor.");
+        record.Save(request.Workflow.GetRawText(), request.CompleteStep, request.Version, DateTimeOffset.UtcNow,
+            request.ConfirmedVisitId, request.ConfirmedVisitStage, request.AppointmentId);
         await SynchronizeAppointmentsAsync(record, request.Workflow, token);
         if (request.CompleteStep == 7 && record.TreatmentId.HasValue)
         {

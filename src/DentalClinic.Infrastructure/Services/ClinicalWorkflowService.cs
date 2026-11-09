@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 namespace DentalClinic.Infrastructure.Services;
 
 public sealed record SaveClinicalWorkflowRequest(Guid Version, string Kind, JsonElement Plan, Guid SessionId,
-    Guid AppointmentId, JsonElement Data, bool Performed);
+    Guid AppointmentId, JsonElement Data, bool Performed, string? ApprovedStep = null);
 public sealed record ClinicalWorkflowDetails(Guid TreatmentId, Guid PatientId, Guid DoctorProfileId, Guid Version,
     string? WorkflowJson);
 
@@ -51,7 +51,7 @@ public sealed class ClinicalWorkflowService(ApplicationDbContext db, IPermission
         {
             treatment.SaveClinicalWorkflow(request.Kind, request.Plan.GetRawText(), request.SessionId, appointment.Id,
                 actor.UserId ?? throw new ForbiddenAccessException("Sign in before recording a clinical session."), visitDate,
-                request.Data.GetRawText(), request.Performed, request.Version, DateTimeOffset.UtcNow);
+                request.Data.GetRawText(), request.Performed, request.Version, DateTimeOffset.UtcNow, request.ApprovedStep);
         }
         catch (InvalidOperationException) { throw new ArgumentException("Check the format of the clinical fields."); }
         if (request.Kind == "scaling" && request.Performed && request.Data.TryGetProperty("requestRecall", out var recall) && recall.ValueKind == JsonValueKind.True)

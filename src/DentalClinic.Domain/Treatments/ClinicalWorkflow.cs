@@ -6,6 +6,16 @@ namespace DentalClinic.Domain.Treatments;
 // Counts and clinical visit identity are generated on the server, never accepted from browser counters.
 public static class ClinicalWorkflow
 {
+    public static IReadOnlyCollection<string> ExecutedOnAdvance(string kind, string dataJson, string? approvedStep)
+    {
+        if (approvedStep is null) return [];
+        if (kind != "scaling" || approvedStep is not ("scaling" or "pocket-mapping")) throw new ArgumentException("Unknown approved clinical step.");
+        var data = Parse(dataJson);
+        if (approvedStep == "scaling") return data["scalingPerformed"]?.ToString() == "true" ? ["scaling"] : [];
+        ValidatePockets(data);
+        return data["pockets"]!.AsArray().Any(p => Text(p!, "treatmentStatus") == "performed" && Text(p!, "treatment").Length > 0)
+            ? ["pocket-mapping", "pocket-treatment"] : ["pocket-mapping"];
+    }
     public static string Save(string? existing, string kind, string planJson, Guid visitId, Guid appointmentId,
         Guid doctorProfileId, Guid doctorUserId, DateOnly visitDate, string visitJson, bool performed, DateTimeOffset now)
     {

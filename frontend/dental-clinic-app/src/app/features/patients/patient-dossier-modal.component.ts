@@ -1,3 +1,4 @@
+import { PatientClinicalHistoryComponent } from './patient-clinical-history.component';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, OnInit, Output, inject, signal } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
@@ -19,7 +20,7 @@ import { PatientApiService, PatientDetails } from './patient-api.service';
 @Component({
   selector: 'app-patient-dossier-modal',
   standalone: true,
-  imports: [CommonModule, DatePipe],
+  imports: [CommonModule, DatePipe, PatientClinicalHistoryComponent],
   template: `
     <div class="dossier-backdrop" (click)="close.emit()">
       <div class="dossier-modal-window" (click)="$event.stopPropagation()">
@@ -93,6 +94,7 @@ import { PatientApiService, PatientDetails } from './patient-api.service';
             </div>
           }
 
+          @if (auth.hasPermission('Patients.ViewMedicalHistory')) { <app-patient-clinical-history [patientId]="patientId" /> }
           <!-- SECTION 1: Patient Demographics -->
           <section class="doc-section">
             <div class="section-title-bar">
@@ -511,7 +513,7 @@ export class PatientDossierModalComponent implements OnInit, OnChanges {
   private readonly rxApi = inject(PrescriptionApiService);
   private readonly crmApi = inject(CrmApiService);
   private readonly financeApi = inject(FinanceApiService);
-  private readonly auth = inject(AuthService);
+  readonly auth = inject(AuthService);
   readonly i18n = inject(LocalizationService);
 
   readonly patient = signal<PatientDetails | null>(null);

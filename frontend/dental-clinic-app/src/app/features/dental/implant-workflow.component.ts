@@ -79,7 +79,7 @@ export class ImplantWorkflowComponent implements OnInit {
     const completeStep=advance && !continueHealing ? this.step+1 : undefined;
     this.busy.set(true);
     try {
-      const result=await firstValueFrom(this.api.save(record,this.workflow,completeStep)); this.accept(result);
+      const result=await firstValueFrom(this.api.save(record,this.workflow,completeStep,advance && [2,6].includes(this.step) ? String(this.data['id']) : undefined, advance && [2,6].includes(this.step) ? this.step+1 : undefined,this.sourceAppointmentId??undefined)); this.accept(result);
       this.success.set(continueHealing ? 'تم حفظ زيارة الالتئام. يمكنك إضافة زيارة جديدة لاحقًا.' : advance && this.step===6 ? 'تم حفظ المتابعة وإكمال خطة الزراعة.' : 'تم الحفظ بنجاح.');
       if(advance && !continueHealing && this.step<6) { this.busy.set(false); this.open(this.step+1); this.success.set('تم حفظ المرحلة السابقة بنجاح.'); }
     } catch(error) { this.fail(error); } finally { this.busy.set(false); }

@@ -60,13 +60,13 @@ export class ClinicalWorkflowComponent implements OnInit {
  canLeave(){if(this.leaving || !this.details || this.loading())return true;return !this.saving() && (this.serialize()===this.signature&&!(this.step===1&&this.pocketDirty()) || confirm('توجد تعديلات أو قياسات غير محفوظة. هل تريد المغادرة؟'));}
  @HostListener('window:beforeunload',['$event']) beforeUnload(event:BeforeUnloadEvent){if(this.details && (this.saving() || this.serialize()!==this.signature || this.step===1&&this.pocketDirty())){event.preventDefault();event.returnValue='';}}
  async back(){if(this.canLeave()){this.leaving=true;await this.router.navigate(['/appointments',this.appointmentId,'visit']);}}
- async save(performed=false):Promise<boolean>{
+ async save(performed=false,approvedStep?:string):Promise<boolean>{
   if(this.readonly || !this.details)return false;if(this.timer){clearTimeout(this.timer);this.timer=undefined;}
   const data=structuredClone(this.data);data.uiStep=this.step;const plan=structuredClone(this.plan);
   if(data.scope!=='quadrants')delete data.quadrants;if(data.pocketMapping!=='yes')delete data.pockets;if(data.polishing!=='yes')delete data.polishingMaterial;
   const snapshot=this.serialize();let ok=false;this.pendingSaves++;this.saving.set(true);this.error.set('');
   const run=this.queue.then(async()=>{try{
-   const result=await firstValueFrom(this.http.put<ClinicalDetails>(`/api/treatments/${this.id}/clinical-workflow`,{version:this.details.version,kind:this.kind,plan,sessionId:this.sessionId,appointmentId:this.appointmentId,data,performed:performed||!!this.currentVisit?.performed}));
+   const result=await firstValueFrom(this.http.put<ClinicalDetails>(`/api/treatments/${this.id}/clinical-workflow`,{version:this.details.version,kind:this.kind,plan,sessionId:this.sessionId,appointmentId:this.appointmentId,data,approvedStep,performed:performed||!!this.currentVisit?.performed}));
    this.details=result;const stored:ClinicalRecord=JSON.parse(result.workflowJson!);this.record.visits=stored.visits;this.record.baselineLocked=stored.baselineLocked;this.signature=snapshot;this.saved.set(performed?'تم تسجيل الجلسة المنفذة وحفظها':'تم الحفظ');ok=true;
   }catch(error){this.fail(error);}});this.queue=run.catch(()=>{});await run;this.pendingSaves--;this.saving.set(this.pendingSaves>0);return ok;
  }
@@ -75,9 +75,9 @@ export class ClinicalWorkflowComponent implements OnInit {
    if(this.data.scope==='quadrants'&&!this.data.quadrants?.length){this.error.set('اختر ربعًا واحدًا على الأقل.');return;}}
   if(this.step===1 && this.pocketDirty()){this.error.set('احفظ بيانات السن الحالي قبل الانتقال للخطوة التالية.');return;}
   if(this.step===1 && !this.pockets.length){this.error.set('احفظ قياسات سن واحد على الأقل، أو غيّر اختيار الجيوب في التقييم.');return;}
-  if(await this.save()){this.step=this.step===0&&this.data.pocketMapping==='yes'?1:2;this.changed();}
+  if(await this.save(false,this.step===0?'scaling':'pocket-mapping')){this.step=this.step===0&&this.data.pocketMapping==='yes'?1:2;this.changed();}
  }
- async previous(){if(this.step===1&&this.pocketDirty()&&!confirm('قياسات السن الحالي لم تحفظ. الرجوع دون حفظها؟'))return;if(await this.save()){this.step=this.step===2&&this.data.pocketMapping==='yes'?1:0;this.changed();}}
+ async previous(){if(this.step===1&&this.pocketDirty()&&!confirm('قياسات السن الحالي لم تحفظ. الرجوع دون حفظها؟'))return;if(await this.save(false,this.step===0?'scaling':'pocket-mapping')){this.step=this.step===2&&this.data.pocketMapping==='yes'?1:0;this.changed();}}
  async complete(){if(this.kind==='bleaching'&&this.completed!==Number(this.plan.plannedSessions)){this.error.set('يجب تسجيل وحفظ كل الجلسات المخططة قبل إكمال التبييض.');return;}
   if(!await this.save(this.kind==='scaling'))return;this.saving.set(true);
   try{await firstValueFrom(this.http.post(`/api/treatments/${this.id}/complete`,{version:this.details.version}));this.treatment.status=4;this.saved.set('تم إكمال العلاج وحفظ بياناته.');}catch(error){this.fail(error);}finally{this.saving.set(false);}}

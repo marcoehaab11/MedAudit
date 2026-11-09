@@ -17,6 +17,29 @@ public sealed class ImplantRecordTests
          "followupVisits":[{"id":"00000000-0000-0000-0000-000000000002","date":"2027-09-22","healing":"excellent","crown":"stable","occlusion":"satisfactory","hygiene":"good","outcome":"successful"}]}
         """)!.AsObject();
     [Fact]
+    public void MedicalHistoryRecordsApprovedStepsAndHealingVisitsWithoutTreatingDraftsAsPerformed()
+    {
+        var record=Record();var workflow=Workflow();
+        record.Save(workflow.ToJsonString(),null,record.Version,Now);
+        Assert.Empty(DentalClinic.Application.Patients.ClinicalTimeline.ImplantEvents(record));
+        record.Save(workflow.ToJsonString(),1,record.Version,Now);
+        record.Save(workflow.ToJsonString(),1,record.Version,Now.AddHours(1));
+        Assert.Equal("implant-1",Assert.Single(DentalClinic.Application.Patients.ClinicalTimeline.ImplantEvents(record)).Step);
+        record.Save(workflow.ToJsonString(),2,record.Version,Now.AddDays(1));
+        workflow["healingVisits"]![0]!["nextPlan"]="continue";
+        var visitId=workflow["healingVisits"]![0]!["id"]!.ToString();
+        record.Save(workflow.ToJsonString(),null,record.Version,Now.AddDays(2),visitId,3);
+        Assert.Equal(2,record.CompletedStep);
+        var history=DentalClinic.Application.Patients.ClinicalTimeline.ImplantEvents(record).ToArray();
+        Assert.Equal(3,history.Length);Assert.Equal("implant-healing",history.Last().Step);Assert.Equal(Now.AddDays(2),history.Last().PerformedAt);
+        var next=workflow["healingVisits"]![0]!.DeepClone();next["id"]=Guid.NewGuid().ToString();workflow["healingVisits"]!.AsArray().Add(next);
+        record.Save(workflow.ToJsonString(),null,record.Version,Now.AddDays(3));
+        Assert.Equal(3,DentalClinic.Application.Patients.ClinicalTimeline.ImplantEvents(record).Count());
+        Assert.Throws<ArgumentException>(()=>record.Save(workflow.ToJsonString(),null,record.Version,Now.AddDays(3),visitId,7));
+        workflow["healingVisits"]!.AsArray().RemoveAt(0);
+        Assert.Throws<ArgumentException>(()=>record.Save(workflow.ToJsonString(),null,record.Version,Now.AddDays(4)));
+    }
+    [Fact]
     public void AllSevenStagesPersistAndCannotBeSkipped()
     {
         var record = Record(); var workflow = Workflow().ToJsonString();

@@ -53,6 +53,6 @@ public interface ITreatmentService
     Task<PagedResult<TreatmentListItem>> SearchAsync(TreatmentSearch query, CancellationToken token);
     Task<TreatmentDetails?> GetAsync(Guid id, CancellationToken token);
     Task<Guid> CreateAsync(CreateTreatmentCommand command, CancellationToken token);
-    Task<bool> UpdateNotesAsync(Guid id, string? notes, Guid version, CancellationToken token);
+    Task<bool> UpdateNotesAsync(Guid id, string? notes, Guid version, CancellationToken token, Guid? appointmentId = null, string? executedStep = null);
     Task<bool> TransitionAsync(Guid id, string action, Guid version, CancellationToken token, Guid? completionAppointmentId = null);
 }

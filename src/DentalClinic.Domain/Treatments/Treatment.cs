@@ -39,6 +39,15 @@ public sealed class Treatment : TenantOwnedEntity
     public bool PriceConfirmed { get; private set; }
     public string? Notes { get; private set; }
     public string? ClinicalWorkflowJson { get; private set; }
+    public string ExecutedStepsJson { get; private set; } = "[]";
+    public void RecordFillingStep(string step, Guid appointmentId, DateTimeOffset now)
+    {
+        EnsureMutable();
+        if (Type != TreatmentType.Filling || ParentTreatmentId.HasValue || Status == TreatmentStatus.Cancelled || appointmentId == Guid.Empty ||
+            step is not ("caries-removal" or "temporary-filling")) throw new TreatmentStateException("Choose a performed filling step and a verified visit.");
+        ExecutedStepsJson = ExecutedClinicalSteps.Append(ExecutedStepsJson, $"{appointmentId}:{step}", step, now, appointmentId);
+        Touch(now);
+    }
     public bool IsClinicalFlowContainer { get; private set; }
     public Guid? ParentTreatmentId { get; private set; }
     public string? FlowComponentKey { get; private set; }
@@ -59,11 +68,15 @@ public sealed class Treatment : TenantOwnedEntity
     public void Start(Guid expectedVersion, DateTimeOffset now)
     { EnsureVersion(expectedVersion); if (Status is not (TreatmentStatus.Planned or TreatmentStatus.Scheduled)) throw new TreatmentStateException("Only planned or scheduled treatment can start."); Status = TreatmentStatus.InProgress; StartedAt = now; Touch(now); }
     public void SaveClinicalWorkflow(string kind, string planJson, Guid visitId, Guid appointmentId, Guid doctorUserId,
-        DateOnly visitDate, string visitJson, bool performed, Guid expectedVersion, DateTimeOffset now)
+        DateOnly visitDate, string visitJson, bool performed, Guid expectedVersion, DateTimeOffset now, string? approvedStep = null)
     {
         EnsureVersion(expectedVersion); EnsureMutable();
         if (Status == TreatmentStatus.Cancelled || Type != TreatmentType.Other) throw new TreatmentStateException("This treatment does not support a scaling or bleaching workflow.");
-        ClinicalWorkflowJson = ClinicalWorkflow.Save(ClinicalWorkflowJson, kind, planJson, visitId, appointmentId, DoctorProfileId, doctorUserId, visitDate, visitJson, performed, now);
+        var saved = ClinicalWorkflow.Save(ClinicalWorkflowJson, kind, planJson, visitId, appointmentId, DoctorProfileId, doctorUserId, visitDate, visitJson, performed, now);
+        var history = ExecutedStepsJson;
+        foreach (var step in ClinicalWorkflow.ExecutedOnAdvance(kind, visitJson, approvedStep))
+            history = ExecutedClinicalSteps.Append(history, $"{visitId}:{step}", step, now, appointmentId);
+        ClinicalWorkflowJson = saved; ExecutedStepsJson = history;
         Touch(now);
     }
     public void Complete(Guid expectedVersion, DateTimeOffset now, Guid? completionAppointmentId = null)
@@ -81,7 +94,10 @@ public sealed class Treatment : TenantOwnedEntity
             throw new TreatmentStateException("Temporary filling is unfinished. Record the permanent filling before completing treatment.");
         if (Status is not (TreatmentStatus.InProgress or TreatmentStatus.Scheduled or TreatmentStatus.Planned)) throw new TreatmentStateException("Treatment must be planned, scheduled, or in progress.");
         if (completionAppointmentId.HasValue) { if (completionAppointmentId == Guid.Empty) throw new ArgumentException("A valid completion visit is required."); AppointmentId = completionAppointmentId; }
-        if (StartedAt is null) StartedAt = now; Status = TreatmentStatus.Completed; CompletedAt = now; Touch(now);
+        if (StartedAt is null) StartedAt = now; Status = TreatmentStatus.Completed; CompletedAt = now;
+        if (!IsClinicalFlowContainer && ClinicalWorkflowJson is null)
+            ExecutedStepsJson = ExecutedClinicalSteps.Append(ExecutedStepsJson, "completed", "procedure-completed", now, AppointmentId);
+        Touch(now);
     }
     public void RetractClinicalSession(Guid sessionId,Guid actor,string reason,Guid expectedVersion,DateTimeOffset now)
     { EnsureVersion(expectedVersion);EnsureMutable();if(Status==TreatmentStatus.Cancelled || ClinicalWorkflowJson is null)throw new TreatmentStateException("This treatment cannot be corrected.");ClinicalWorkflowJson=ClinicalWorkflow.Retract(ClinicalWorkflowJson,sessionId,actor,reason,now);Touch(now); }

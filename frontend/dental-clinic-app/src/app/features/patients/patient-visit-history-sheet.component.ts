@@ -1,3 +1,5 @@
+import { AuthService } from '../../core/auth.service';
+import { PatientClinicalHistoryComponent } from './patient-clinical-history.component';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, OnInit, Output, inject, signal } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
@@ -23,7 +25,7 @@ export interface VisitHistoryStageData {
 @Component({
   selector: 'app-patient-visit-history-sheet',
   standalone: true,
-  imports: [CommonModule, DatePipe],
+  imports: [CommonModule, DatePipe, PatientClinicalHistoryComponent],
   template: `
     <div class="sheet-backdrop" (click)="close.emit()">
       <div class="sheet-modal-window" (click)="$event.stopPropagation()">
@@ -88,6 +90,7 @@ export interface VisitHistoryStageData {
             </div>
           </header>
 
+          @if (auth.hasPermission('Patients.ViewMedicalHistory')) { <app-patient-clinical-history [patientId]="patientId" /> }
           <!-- Patient Summary & Medical Alerts Banner -->
           <section class="patient-summary-card">
             <div class="summary-top-row">
@@ -1076,6 +1079,7 @@ export class PatientVisitHistorySheetComponent implements OnInit, OnChanges {
   @Input({ required: true }) patientId!: string;
   @Output() close = new EventEmitter<void>();
 
+  readonly auth = inject(AuthService);
   private readonly patientApi = inject(PatientApiService);
   private readonly appointmentApi = inject(AppointmentApiService);
   private readonly dentalApi = inject(DentalApiService);
