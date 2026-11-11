@@ -27,6 +27,8 @@ import { LocalizationService } from '../../core/localization.service';
   template: `
     <div
       class="date-input-container"
+      role="group"
+      [attr.aria-label]="label || t('Date', 'التاريخ')"
       [class.disabled]="disabled"
       [class.is-invalid]="isInvalid"
       (click)="onContainerClick($event)"
@@ -38,6 +40,7 @@ import { LocalizationService } from '../../core/localization.service';
           inputmode="numeric"
           pattern="[0-9]*"
           maxlength="2"
+          [attr.aria-label]="(label || t('Date', 'التاريخ')) + ' — ' + t('Day', 'اليوم')"
           [placeholder]="t('DD', 'يوم')"
           [disabled]="disabled"
           [(ngModel)]="dayVal"
@@ -47,13 +50,14 @@ import { LocalizationService } from '../../core/localization.service';
           (blur)="onBlur()"
           class="date-part day"
         />
-        <span class="date-sep">/</span>
+        <span class="date-sep" aria-hidden="true">/</span>
         <input
           #monthInput
           type="text"
           inputmode="numeric"
           pattern="[0-9]*"
           maxlength="2"
+          [attr.aria-label]="(label || t('Date', 'التاريخ')) + ' — ' + t('Month', 'الشهر')"
           [placeholder]="t('MM', 'شهر')"
           [disabled]="disabled"
           [(ngModel)]="monthVal"
@@ -63,13 +67,14 @@ import { LocalizationService } from '../../core/localization.service';
           (blur)="onBlur()"
           class="date-part month"
         />
-        <span class="date-sep">/</span>
+        <span class="date-sep" aria-hidden="true">/</span>
         <input
           #yearInput
           type="text"
           inputmode="numeric"
           pattern="[0-9]*"
           maxlength="4"
+          [attr.aria-label]="(label || t('Date', 'التاريخ')) + ' — ' + t('Year', 'السنة')"
           [placeholder]="t('YYYY', 'سنة')"
           [disabled]="disabled"
           [(ngModel)]="yearVal"
@@ -86,7 +91,7 @@ import { LocalizationService } from '../../core/localization.service';
         class="btn-cal-picker"
         [disabled]="disabled"
         (click)="triggerNativePicker($event)"
-        tabindex="-1"
+        [attr.aria-label]="t('Pick from calendar', 'اختيار من التقويم')"
         [attr.title]="t('Pick from calendar', 'اختيار من التقويم')"
       >
         <svg
@@ -111,6 +116,8 @@ import { LocalizationService } from '../../core/localization.service';
         #nativeDatePicker
         type="date"
         class="hidden-native-date"
+        [attr.aria-label]="label || t('Date', 'التاريخ')"
+        aria-hidden="true"
         [max]="max"
         [min]="min"
         [disabled]="disabled"
@@ -279,6 +286,7 @@ import { LocalizationService } from '../../core/localization.service';
 export class DateInputComponent implements ControlValueAccessor, Validator {
   readonly i18n = inject(LocalizationService);
 
+  @Input() label = '';
   @Input() min = '1900-01-01';
   @Input() max = '2099-12-31';
   @Input() isInvalid = false;

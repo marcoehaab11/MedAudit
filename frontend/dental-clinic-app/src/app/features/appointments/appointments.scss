@@ -1,3 +1,6 @@
+@use "../../shared/styles/workspace-intake";
+@use '../../shared/styles/workspace-calendar';
+
 // ──────────────────────────────────────────────────────────────
 //  Appointments Page Styles (MedAudit Theme)
 // ──────────────────────────────────────────────────────────────
@@ -1724,3 +1727,7 @@ button.primary {
 .slot-available { display: block; margin-top: 6px; font-size: .78rem; color: #17845d; }
 .slot-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
 @media (max-width: 600px) { .appointment-choice-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+@include workspace-calendar.controls;
+
+@include workspace-intake.forms;

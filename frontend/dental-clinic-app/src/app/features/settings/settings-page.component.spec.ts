@@ -1,3 +1,5 @@
+import { provideRouter } from '@angular/router';
+import { ClinicThemeService, DEFAULT_CLINIC_THEME } from '../../core/clinic-theme.service';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { SettingsPageComponent } from './settings-page.component';
 import { SettingsApiService } from '../../core/settings-api.service';
@@ -87,6 +89,8 @@ describe('SettingsPageComponent', () => {
     await TestBed.configureTestingModule({
       imports: [SettingsPageComponent],
       providers: [
+        provideRouter([]),
+        { provide: ClinicThemeService, useValue: { load: () => of({ ...DEFAULT_CLINIC_THEME, canManage: true }) } },
         { provide: SettingsApiService, useValue: mockSettingsApi },
         { provide: LocalizationService, useValue: mockLocalizationService },
         { provide: AuthService, useValue: mockAuthService }

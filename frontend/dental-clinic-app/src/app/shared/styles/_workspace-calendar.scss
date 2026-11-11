@@ -1,0 +1,69 @@
+@mixin controls {
+  // Schedule pilot: controls retain their native behavior with visible labels.
+  .panel.calendar-toolbar.workspace-filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: end;
+    gap: 1rem;
+    box-shadow: none;
+    padding: 1.25rem;
+    .workspace-filter-field {
+      flex: 1 1 145px;
+    }
+    .schedule-date {
+      flex-basis: 235px;
+    }
+    .date-nav,
+    .view-toggle,
+    .quick-day-shortcuts {
+      block-size: 44px;
+      inline-size: 100%;
+    }
+    .date-nav input[type='date'] {
+      min-inline-size: 0;
+      inline-size: 100%;
+    }
+    .date-nav button {
+      min-inline-size: 44px;
+    }
+    .view-toggle button,
+    .quick-day-shortcuts button {
+      flex: 1;
+    }
+    select {
+      min-inline-size: 0;
+      inline-size: 100%;
+      block-size: 44px;
+    }
+    .view-toggle button.active,
+    .btn-shortcut.active {
+      background: var(--brand);
+      box-shadow: none;
+    }
+  }
+  @media (max-width: 640px) {
+    .panel.calendar-toolbar.workspace-filters {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      padding: 1rem;
+      .schedule-date {
+        grid-column: 1 / -1;
+      }
+      .workspace-filter-field:last-child {
+        grid-column: 1 / -1;
+      }
+    }
+  }
+
+  @media (max-width: 640px) {
+    .panel.calendar-toolbar.workspace-filters .quick-day-shortcuts .btn-shortcut {
+      padding-inline: 0.4rem;
+      font-size: 0.8rem;
+    }
+  }
+  @media (max-width: 360px) {
+    .panel.calendar-toolbar.workspace-filters {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}

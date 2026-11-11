@@ -10,23 +10,30 @@ import { planStatus } from './treatment-labels';
 
   selector: 'app-treatment-plan-details',
   imports: [RouterLink, DatePipe],
-  template: `@if (plan()) {
-      <a class="back" [routerLink]="['/patients', plan()!.patientId]">← {{ t('Back to patient', 'العودة لملف المريض') }}</a>
+  template: `<div class="workspace-records plan-details">
+    @if (plan()) {
+      <a class="back" [routerLink]="['/patients', plan()!.patientId]"
+        >← {{ t('Back to patient', 'العودة لملف المريض') }}</a
+      >
     } @else {
       <a class="back" routerLink="/treatment-plans">← {{ t('Back to plans', 'العودة للخطط') }}</a>
     }
     @if (message()) {
-      <div class="alert success">{{ message() }}</div>
+      <div class="alert success" role="status">{{ message() }}</div>
     }
     @if (error()) {
-      <div class="alert error">{{ error() }}</div>
+      <div class="alert error" role="alert">{{ error() }}</div>
     }
     @if (loading()) {
-      <div class="state">{{ t('Loading plan…', 'جارٍ تحميل الخطة…') }}</div>
+      <div class="state" role="status">{{ t('Loading plan…', 'جارٍ تحميل الخطة…') }}</div>
+    } @else if (!plan() && error()) {
+      <div class="state">
+        <button type="button" (click)="load()">{{ t('Try again', 'حاول مرة أخرى') }}</button>
+      </div>
     } @else if (plan()) {
-      <section class="page-head">
+      <section class="workspace-page-head">
         <div>
-          <p class="eyebrow">{{ status(plan()!.status) }}</p>
+
           <h1>{{ plan()!.title }}</h1>
           <p>{{ plan()!.patientName }} · {{ plan()!.doctorName }}</p>
         </div>
@@ -40,37 +47,69 @@ import { planStatus } from './treatment-labels';
             }}</a>
           }
           @for (a of actions(); track a) {
-            <button [class.danger]="a === 'cancel' || a === 'reject'" (click)="action(a)">
+            <button
+              type="button"
+              [disabled]="!!pendingAction()"
+              [attr.aria-busy]="pendingAction() === a"
+              [class.danger]="a === 'cancel' || a === 'reject'"
+              (click)="action(a)"
+            >
               {{ label(a) }}
             </button>
           }
         </div>
       </section>
-      <section class="panel">
-        <div class="table-responsive"><table>
-          <thead>
-            <tr>
-              <th>{{ t('Treatment', 'العلاج') }}</th>
-              <th>{{ t('Tooth', 'السن') }}</th>
-              <th>{{ t('Qty', 'الكمية') }}</th>
-              <th>{{ t('Unit price', 'سعر الوحدة') }}</th>
-              <th>{{ t('Discount', 'الخصم') }}</th>
-              <th>{{ t('Total', 'الإجمالي') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (x of plan()!.items; track x.id) {
+      @if (versionConflict()) {
+        <div class="conflict-recovery">
+          <p>
+            {{
+              t(
+                'Reload the latest plan before trying the action again.',
+                'أعد تحميل أحدث نسخة من الخطة قبل المحاولة مجددًا.'
+              )
+            }}
+          </p>
+          <button type="button" (click)="load()">
+            {{ t('Reload plan', 'إعادة تحميل الخطة') }}
+          </button>
+        </div>
+      }
+      <section class="panel workspace-results">
+        <header class="workspace-results-head">
+          <h2>{{ t('Planned treatment items', 'بنود العلاج المخططة') }}</h2>
+          <span>{{ plan()!.items.length }} {{ t('items', 'بند') }}</span>
+        </header>
+        <div class="table-responsive">
+          <table>
+            <caption class="sr-only">
+              {{
+                t('Planned procedures and cost breakdown', 'الإجراءات المخططة وتفاصيل التكلفة')
+              }}
+            </caption>
+            <thead>
               <tr>
-                <td>{{ x.treatmentName }}</td>
-                <td>{{ x.toothNumber || '—' }}</td>
-                <td>{{ x.quantity }}</td>
-                <td>{{ x.unitPrice }}</td>
-                <td>{{ x.discountAmount }}</td>
-                <td>{{ x.total }}</td>
+                <th>{{ t('Treatment', 'العلاج') }}</th>
+                <th>{{ t('Tooth', 'السن') }}</th>
+                <th>{{ t('Qty', 'الكمية') }}</th>
+                <th>{{ t('Unit price', 'سعر الوحدة') }}</th>
+                <th>{{ t('Discount', 'الخصم') }}</th>
+                <th>{{ t('Total', 'الإجمالي') }}</th>
               </tr>
-            }
-          </tbody>
-        </table></div>
+            </thead>
+            <tbody>
+              @for (x of plan()!.items; track x.id) {
+                <tr>
+                  <td>{{ x.treatmentName }}</td>
+                  <td>{{ x.toothNumber || '—' }}</td>
+                  <td>{{ x.quantity }}</td>
+                  <td>{{ x.unitPrice }}</td>
+                  <td>{{ x.discountAmount }}</td>
+                  <td>{{ x.total }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
         <div class="totals">
           <span>{{ t('Subtotal', 'المجموع') }}: {{ plan()!.subtotal }}</span
           ><span>{{ t('Discount', 'الخصم') }}: {{ plan()!.discountAmount }}</span
@@ -80,10 +119,13 @@ import { planStatus } from './treatment-labels';
       <section class="panel">
         <h2>{{ t('Notes', 'ملاحظات') }}</h2>
         <p>{{ plan()!.notes || '—' }}</p>
-        <small>{{ t('Last updated', 'آخر تحديث') }} {{ plan()!.updatedAt | date: 'dd/MM/yyyy hh:mm a' }}</small>
+        <small
+          >{{ t('Last updated', 'آخر تحديث') }}
+          {{ plan()!.updatedAt | date: 'dd/MM/yyyy hh:mm a' }}</small
+        >
       </section>
-    }`,
-
+    }
+  </div>`,
 })
 export class TreatmentPlanDetailsComponent {
   private readonly api = inject(TreatmentApiService);
@@ -93,11 +135,16 @@ export class TreatmentPlanDetailsComponent {
   readonly plan = signal<TreatmentPlan | null>(null);
   readonly loading = signal(true);
   readonly error = signal('');
-  readonly message = signal(history.state.message ?? '');
+  readonly pendingAction = signal<string | null>(null);
+  readonly versionConflict = signal(false);
+  readonly message = signal(history.state?.message ?? '');
   constructor() {
     this.load();
   }
   load() {
+    this.loading.set(true);
+    this.error.set('');
+    this.versionConflict.set(false);
     this.api.plan(this.id).subscribe({
       next: (x) => {
         this.plan.set(x);
@@ -113,28 +160,45 @@ export class TreatmentPlanDetailsComponent {
   }
   actions() {
     const s = this.plan()?.status;
-    return s === 1
-      ? ['propose', 'cancel']
-      : s === 2
-        ? ['accept', 'reject', 'cancel']
-        : s === 3
-          ? ['start', 'cancel']
-          : s === 5
-            ? ['complete']
-            : [];
+    const available =
+      s === 1
+        ? ['propose', 'cancel']
+        : s === 2
+          ? ['accept', 'reject', 'cancel']
+          : s === 3
+            ? ['start', 'cancel']
+            : s === 5
+              ? ['complete']
+              : [];
+    const permissions: Record<string, string> = {
+      propose: 'TreatmentPlans.Propose',
+      accept: 'TreatmentPlans.Accept',
+      reject: 'TreatmentPlans.Reject',
+      cancel: 'TreatmentPlans.Cancel',
+      start: 'TreatmentPlans.Edit',
+      complete: 'TreatmentPlans.Edit',
+    };
+    return available.filter((action) => this.auth.hasPermission(permissions[action]));
   }
   action(a: string) {
+    if (this.pendingAction() || !this.actions().includes(a)) return;
     if (
       (a === 'cancel' || a === 'reject') &&
       !confirm(this.t('Confirm this status change?', 'هل تؤكد تغيير الحالة؟'))
     )
       return;
+    this.pendingAction.set(a);
+    this.error.set('');
+    this.message.set('');
     this.api.planAction(this.id, a, this.plan()!.version).subscribe({
       next: () => {
+        this.pendingAction.set(null);
         this.message.set(this.t('Plan status updated.', 'تم تحديث حالة الخطة.'));
         this.load();
       },
-      error: (e) =>
+      error: (e) => {
+        this.pendingAction.set(null);
+        this.versionConflict.set(e.status === 409);
         this.error.set(
           e.status === 409
             ? this.t(
@@ -142,7 +206,8 @@ export class TreatmentPlanDetailsComponent {
                 'تغيرت الخطة. أعد التحميل وحاول مجددًا.',
               )
             : this.t('Status change failed.', 'فشل تغيير الحالة.'),
-        ),
+        );
+      },
     });
   }
   status(x: number) {
@@ -164,5 +229,3 @@ export class TreatmentPlanDetailsComponent {
     return this.i18n.language() === 'en' ? en : ar;
   }
 }
-
-

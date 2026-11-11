@@ -28,6 +28,7 @@ import { DoctorApiService, DoctorLookupItem } from '../features/doctors/doctor-a
         display: block;
         position: relative;
         inline-size: 100%;
+        min-inline-size: 0;
       }
 
       .picker-wrapper {
@@ -96,6 +97,10 @@ import { DoctorApiService, DoctorLookupItem } from '../features/doctors/doctor-a
       }
 
       .placeholder-text {
+        min-inline-size: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         color: var(--muted);
         font-size: 0.88rem;
         font-weight: 500;
@@ -236,15 +241,77 @@ import { DoctorApiService, DoctorLookupItem } from '../features/doctors/doctor-a
         color: var(--muted);
         font-size: 0.84rem;
       }
+
+      button.selected-display {
+        inline-size: 100%;
+        min-block-size: 44px;
+        text-align: start;
+        font: inherit;
+        box-shadow: none;
+        padding-inline-end: 3.5rem;
+      }
+      button.selected-display:hover {
+        transform: none;
+        box-shadow: none;
+        background: white;
+      }
+      .clear-picker {
+        position: absolute;
+        inset-inline-end: 1.8rem;
+        inset-block-start: 5px;
+        min-inline-size: 34px;
+        block-size: 34px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--ink-secondary);
+        box-shadow: none;
+        z-index: 1;
+      }
+      .options-list li {
+        padding: 0;
+        display: block;
+      }
+      .options-list .picker-option {
+        inline-size: 100%;
+        block-size: auto;
+        min-block-size: 48px;
+        padding: 0.65rem 0.85rem;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        text-align: start;
+        justify-content: start;
+        white-space: normal;
+      }
+      .options-list .picker-option:hover {
+        background: var(--brand-surface);
+        transform: none;
+        box-shadow: none;
+      }
+      :is(button, input):focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: -2px;
+      }
     `,
   ],
   template: `
-    <div class="picker-wrapper">
-      <div
+    <div class="picker-wrapper" (keydown.escape)="closeDropdown($event)">
+      <button
+        type="button"
         class="selected-display"
         [class.active]="isOpen()"
         [class.invalid]="isInvalid"
         [class.disabled]="disabled"
+        [disabled]="disabled"
+        aria-haspopup="dialog"
+        [attr.aria-expanded]="isOpen()"
+        [attr.aria-controls]="isOpen() ? popupId : null"
+        [attr.aria-label]="
+          (i18n.language() === 'ar' ? 'الطبيب: ' : 'Doctor: ') +
+          (selectedDoctor()?.displayName || resolvedPlaceholder())
+        "
         (click)="toggleDropdown($event)"
       >
         @if (selectedDoctor()) {
@@ -257,27 +324,36 @@ import { DoctorApiService, DoctorLookupItem } from '../features/doctors/doctor-a
         }
 
         <div class="picker-actions">
-          @if (allowClear && selectedDoctor() && !disabled) {
-            <button
-              type="button"
-              class="clear-btn"
-              (click)="clearSelection($event)"
-              title="Clear selection"
-            >
-              ×
-            </button>
-          }
           <span class="dropdown-arrow" [class.open]="isOpen()">▼</span>
         </div>
-      </div>
+      </button>
 
+      @if (allowClear && selectedDoctor() && !disabled) {
+        <button
+          type="button"
+          class="clear-picker"
+          (click)="clearSelection($event)"
+          [attr.aria-label]="
+            i18n.language() === 'ar' ? 'إلغاء اختيار الطبيب' : 'Clear doctor selection'
+          "
+        >
+          ×
+        </button>
+      }
       @if (isOpen()) {
         <div class="dropdown-backdrop" (click)="closeDropdown($event)"></div>
-        <div class="dropdown-menu" (click)="$event.stopPropagation()">
+        <div
+          class="dropdown-menu"
+          [id]="popupId"
+          role="dialog"
+          [attr.aria-label]="i18n.language() === 'ar' ? 'اختيار الطبيب' : 'Choose doctor'"
+          (click)="$event.stopPropagation()"
+        >
           <div class="search-box">
             <input
               #searchInput
               type="text"
+              [attr.aria-label]="i18n.language() === 'ar' ? 'البحث عن الطبيب' : 'Search doctors'"
               [placeholder]="
                 i18n.language() === 'ar'
                   ? 'ابحث بالاسم أو التخصص…'
@@ -285,32 +361,42 @@ import { DoctorApiService, DoctorLookupItem } from '../features/doctors/doctor-a
               "
               [(ngModel)]="searchQuery"
               (input)="onSearchChange()"
-              (keydown.escape)="closeDropdown($event)"
             />
           </div>
 
           <ul class="options-list">
             @if (allowClear && !searchQuery.trim()) {
-              <li (click)="selectDoctor(null, $event)" [class.selected]="!selectedDoctor()">
-                <div class="doctor-row">
-                  <span class="doctor-name">{{
-                    i18n.language() === 'ar'
-                      ? '— كل الأطباء (بدون تحديد) —'
-                      : '— All doctors (no filter) —'
-                  }}</span>
-                </div>
+              <li [class.selected]="!selectedDoctor()">
+                <button
+                  type="button"
+                  class="picker-option"
+                  (click)="selectDoctor(null, $event)"
+                  [attr.aria-pressed]="!selectedDoctor()"
+                >
+                  <div class="doctor-row">
+                    <span class="doctor-name">{{
+                      i18n.language() === 'ar'
+                        ? '— كل الأطباء (بدون تحديد) —'
+                        : '— All doctors (no filter) —'
+                    }}</span>
+                  </div>
+                </button>
               </li>
             }
 
             @for (d of filteredDoctors(); track d.id) {
-              <li
-                (click)="selectDoctor(d, $event)"
-                [class.selected]="selectedDoctor()?.id === d.id"
-              >
-                <div class="doctor-row">
-                  <span class="doctor-name">{{ d.displayName }}</span>
-                  <span class="doctor-sub">{{ d.specialization }}</span>
-                </div>
+              <li [class.selected]="selectedDoctor()?.id === d.id">
+                <button
+                  type="button"
+                  class="picker-option"
+                  (click)="selectDoctor(d, $event)"
+                  [attr.aria-pressed]="selectedDoctor()?.id === d.id"
+                >
+                  <div class="doctor-row">
+                    <span class="doctor-name">{{ d.displayName }}</span>
+                    <span class="doctor-sub">{{ d.specialization }}</span>
+                  </div>
+                </button>
               </li>
             } @empty {
               <div class="empty-results">
@@ -328,6 +414,8 @@ import { DoctorApiService, DoctorLookupItem } from '../features/doctors/doctor-a
   `,
 })
 export class DoctorSelectComponent implements OnInit, ControlValueAccessor {
+  private static nextId = 0;
+  readonly popupId = 'doctor-picker-' + DoctorSelectComponent.nextId++;
   @Input() placeholder = '';
   @Input() allowClear = true;
   @Input() isInvalid = false;
@@ -350,6 +438,12 @@ export class DoctorSelectComponent implements OnInit, ControlValueAccessor {
 
   ngOnInit() {
     this.loadDoctors();
+  }
+
+  @HostListener('focusout', ['$event'])
+  onPickerFocusOut(event: FocusEvent) {
+    if (event.relatedTarget && !this.elementRef.nativeElement.contains(event.relatedTarget))
+      this.closeDropdown();
   }
 
   resolvedPlaceholder() {
@@ -410,6 +504,8 @@ export class DoctorSelectComponent implements OnInit, ControlValueAccessor {
     if (event) event.stopPropagation();
     this.isOpen.set(false);
     this.onTouched();
+    if (event?.type === 'keydown')
+      this.elementRef.nativeElement.querySelector('.selected-display')?.focus();
   }
 
   selectDoctor(d: DoctorLookupItem | null, event?: Event) {
@@ -419,6 +515,7 @@ export class DoctorSelectComponent implements OnInit, ControlValueAccessor {
     this.onChange(this.currentValue);
     this.onTouched();
     this.isOpen.set(false);
+    this.elementRef.nativeElement.querySelector('.selected-display')?.focus();
   }
 
   clearSelection(event: MouseEvent) {

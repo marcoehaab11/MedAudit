@@ -3,3 +3,22 @@
 .bleaching-sensitivity .choices{gap:6px;margin-bottom:16px}.bleaching-sensitivity .choice{flex:1;padding:10px 7px;min-width:0}.bleaching-sensitivity .choice span{font-size:11px}.bleaching-sensitivity small{font-size:10px}
 @media(min-width:1001px){.photo-row{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .approved-instructions{margin-top:14px}.approved-instructions article{padding:12px 0;border-bottom:1px solid #dfeeea}.approved-instructions pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px}
+
+/* Shared clinical reading and input affordances. Tooth and procedure geometry is unchanged. */
+:host { min-inline-size: 0; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid var(--brand, #087b68); outline-offset: 3px; }
+input:not([type=checkbox]):not([type=radio]), select { min-block-size: 44px; max-inline-size: 100%; }
+textarea { min-block-size: 96px; max-inline-size: 100%; }
+.clinical-grid > *, .implant-workspace > *, .stage-main, .stage-content { min-inline-size: 0; }
+.history-bar, .visit-toolbar, .stage-heading { flex-wrap: wrap; }
+.clinical-stepper { overflow-x: auto; scrollbar-width: thin; }
+.clinical-stepper button { min-block-size: 44px; }
+@media (max-width: 600px) {
+  input, select, textarea { font-size: 16px; }
+  .implant-workspace { padding: 12px; border-radius: 10px; }
+  .implant-header { flex-wrap: wrap; }
+  .implant-header > * { min-inline-size: 0; max-inline-size: 100%; }
+  .visit-toolbar { gap: 12px; }
+  .clinical-stepper { justify-content: flex-start; }
+  .clinical-stepper > * { min-inline-size: 120px; }
+}

@@ -15,7 +15,7 @@ import { AuthService } from '../../core/auth.service';
   template: `
     <section class="page-head">
       <div class="head-info">
-        <p class="eyebrow">{{ text('Clinic Team & Access', 'فريق العيادة والصلاحيات') }}</p>
+
         <h1>{{ text('Staff & Users', 'المستخدمون وفريق العمل') }}</h1>
         <p class="subtitle">
           {{
@@ -120,26 +120,26 @@ import { AuthService } from '../../core/auth.service';
           <circle cx="11" cy="11" r="8"/>
           <line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
-        <input
+        <label class="workspace-filter-field"><span>{{ text('Search by name, email, or phone…', 'ابحث بالاسم، البريد، أو الهاتف…') }}</span><input
           formControlName="search"
           [placeholder]="text('Search by name, email, or phone…', 'ابحث بالاسم، البريد، أو الهاتف…')"
-        />
+        /></label>
       </div>
 
       <div class="select-group">
-        <select formControlName="roleId">
+        <label class="workspace-filter-field"><span>{{ i18n.language() === 'en' ? 'Role' : 'الدور' }}</span><select formControlName="roleId">
           <option value="">{{ text('All roles', 'كل الأدوار والصلاحيات') }}</option>
           @for (role of roles(); track role.id) {
             <option [value]="role.id">{{ role.name }}</option>
           }
-        </select>
+        </select></label>
 
-        <select formControlName="status">
+        <label class="workspace-filter-field"><span>{{ i18n.language() === 'en' ? 'Status' : 'الحالة' }}</span><select formControlName="status">
           <option value="">{{ text('All statuses', 'كل الحالات') }}</option>
           <option value="2">{{ text('Active', 'نشط') }}</option>
           <option value="1">{{ text('Invited', 'مدعو') }}</option>
           <option value="3">{{ text('Inactive', 'غير نشط') }}</option>
-        </select>
+        </select></label>
 
         <button type="submit" class="button search-submit">
           <span>{{ text('Search', 'بحث') }}</span>
@@ -288,7 +288,7 @@ import { AuthService } from '../../core/auth.service';
                 <button type="button" class="button" [class.primary]="inviteMode()" (click)="setInviteMode(true)">{{ text('Invite to this branch', 'دعوة لهذا الفرع') }}</button>
               </div>
               @if (modalError()) {
-                <div class="alert error" style="margin: 0;">{{ modalError() }}</div>
+                <div class="alert error" role="alert" style="margin: 0;">{{ modalError() }}</div>
               }
 
               <div class="form-grid">

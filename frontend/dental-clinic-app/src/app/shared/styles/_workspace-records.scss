@@ -1,0 +1,418 @@
+@mixin records {
+  .workspace-records {
+    min-inline-size: 0;
+    .workspace-page-head {
+      align-items: flex-start;
+    }
+    .workspace-page-head h1 {
+      overflow-wrap: anywhere;
+    }
+    .workspace-page-head > div {
+      min-inline-size: 0;
+    }
+    .back,
+    .back-link {
+      min-block-size: 44px;
+      display: inline-flex;
+      align-items: center;
+    }
+    .head-actions,
+    .form-actions,
+    .form-bottom-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+    }
+    .head-actions :is(a, button),
+    .form-actions :is(a, button),
+    .form-bottom-actions :is(a, button) {
+      min-block-size: 44px;
+      white-space: normal;
+    }
+    .panel {
+      box-shadow: none;
+      border-color: var(--border);
+      border-radius: var(--radius-lg);
+      min-inline-size: 0;
+    }
+    .panel h2,
+    .section-title-bar h2 {
+      color: var(--ink);
+      font-size: 1.05rem;
+      margin-block: 0 0.75rem;
+    }
+    .panel :is(p, dd) {
+      overflow-wrap: anywhere;
+    }
+    .panel.workspace-filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+      align-items: end;
+      gap: 1rem;
+      padding: 1.25rem;
+    }
+    .workspace-filters :is(input, select) {
+      min-inline-size: 0;
+      inline-size: 100%;
+      min-block-size: 44px;
+      flex: none;
+      padding-inline-start: 0.85rem;
+    }
+    .filter-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .filter-actions button {
+      min-block-size: 44px;
+      white-space: normal;
+      box-shadow: none;
+    }
+    .filter-reset {
+      background: white;
+      color: var(--ink-secondary);
+      border: 1px solid var(--border);
+    }
+    .workspace-results {
+      position: relative;
+      padding: 0;
+      overflow: hidden;
+    }
+    .table-responsive,
+    .table-scroll {
+      position: relative;
+      overflow-x: auto;
+      max-inline-size: 100%;
+    }
+    table {
+      inline-size: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    th {
+      padding: 0.85rem 1rem;
+      background: var(--surface);
+      color: var(--ink-secondary);
+      font-size: 0.75rem;
+      text-align: start;
+      white-space: nowrap;
+      letter-spacing: 0;
+    }
+    td {
+      padding: 1rem;
+      border-block-start: 1px solid var(--border);
+      text-align: start;
+      vertical-align: middle;
+    }
+    td small {
+      display: block;
+      color: var(--ink-secondary);
+    }
+    td :is(a, button) {
+      min-block-size: 44px;
+      display: inline-flex;
+      align-items: center;
+    }
+    td.number,
+    td .number {
+      white-space: nowrap;
+    }
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 1rem;
+      border-block-start: 1px solid var(--border);
+    }
+    .pagination button {
+      min-block-size: 44px;
+    }
+    .state,
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 2.5rem 1rem;
+      text-align: center;
+      color: var(--ink-secondary);
+    }
+    .state strong {
+      color: var(--ink);
+    }
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      padding-block: 0.25rem;
+      margin-block-end: 1.25rem;
+      border-block-end: 1px solid var(--border);
+    }
+    .tabs button {
+      min-block-size: 48px;
+      padding: 0.65rem 0.9rem;
+      box-shadow: none;
+      color: var(--ink-secondary);
+    }
+    .tabs button.active {
+      background: var(--brand-surface);
+      color: var(--brand-dark);
+      border-block-end-color: var(--brand);
+    }
+    .form-grid,
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+    }
+    form.form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    form label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      min-inline-size: 0;
+      color: var(--ink-secondary);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    form :is(input, select, textarea) {
+      min-inline-size: 0;
+      inline-size: 100%;
+    }
+    .mode-card,
+    .tier-select-card {
+      block-size: auto;
+      min-block-size: 96px;
+      white-space: normal;
+      text-align: start;
+      font-family: inherit;
+      box-shadow: none;
+    }
+    .mode-card.active,
+    .tier-select-card.active {
+      background: var(--brand-surface);
+      border-color: var(--brand);
+    }
+    .totals {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: end;
+      gap: 1rem;
+      padding: 1.25rem;
+      border-block-start: 1px solid var(--border);
+      color: var(--ink-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+    .totals strong {
+      color: var(--brand-dark);
+    }
+    .conflict-recovery {
+      padding: 1rem;
+      margin-block-end: 1rem;
+      border: 1px solid #e8c88a;
+      border-radius: var(--radius-md);
+      background: #fff9ec;
+    }
+    .section-head p {
+      color: var(--ink-secondary);
+      font-size: 0.85rem;
+    }
+    .schedule-list article {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .schedule-list :is(input, select) {
+      min-inline-size: 0;
+      inline-size: 100%;
+      min-block-size: 44px;
+    }
+    .schedule-list label {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      font-size: 0.8rem;
+    }
+    .schedule-list .breaks {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr) auto;
+    }
+    .schedule-list .breaks > button:last-child {
+      grid-column: 1 / -1;
+      justify-self: start;
+    }
+    :is(a, button, input, select, textarea, summary):focus-visible {
+      outline: 2px solid var(--brand);
+      outline-offset: 3px;
+    }
+  }
+  .workspace-records.plan-editor {
+    max-inline-size: none;
+    margin: 0;
+    gap: 1rem;
+    .form-section-panel {
+      padding: 1.5rem;
+    }
+    .main-info-grid,
+    .treatment-grid-3 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .field-item,
+    .item-builder-container,
+    .wizard-step-section {
+      min-inline-size: 0;
+    }
+    .item-builder-container {
+      background: var(--brand-surface);
+      border: 1px solid var(--border);
+      box-shadow: none;
+    }
+    .category-pills-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .btn-cat-pill {
+      min-block-size: 44px;
+      white-space: normal;
+    }
+    .btn-cat-pill.active {
+      background: var(--brand);
+      border-color: var(--brand);
+      box-shadow: none;
+    }
+    .price-tiers-grid {
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+    }
+    .estimated-total-highlight-card {
+      background: var(--brand-dark);
+      box-shadow: none;
+      border: 0;
+      border-radius: var(--radius-md);
+    }
+    .form-bottom-actions {
+      border-block-start: 1px solid var(--border);
+      padding-block-start: 1.25rem;
+    }
+  }
+  @media (max-width: 640px) {
+    .workspace-records {
+      .form-grid,
+      .detail-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .head-actions,
+      .form-bottom-actions {
+        inline-size: 100%;
+      }
+      .head-actions > :is(a, button),
+      .form-bottom-actions > :is(a, button) {
+        flex: 1;
+        justify-content: center;
+        padding-inline: 0.7rem;
+      }
+      .panel {
+        padding: 1rem;
+      }
+      .workspace-results {
+        padding: 0;
+      }
+      .workspace-filters .filter-actions > button {
+        flex: 1;
+        padding-inline: 0.65rem;
+      }
+      .tabs {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .tabs button {
+        white-space: normal;
+      }
+      .schedule-list article {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 1rem;
+      }
+      .schedule-list .breaks {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .schedule-list .breaks > :is(span, button) {
+        grid-column: 1 / -1;
+      }
+      .totals {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.5rem;
+      }
+      dl div {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.3rem;
+      }
+    }
+    .workspace-records.plan-editor {
+      .form-section-panel {
+        padding: 1rem;
+      }
+      .main-info-grid,
+      .treatment-grid-3,
+      .mode-cards-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .calc-details,
+      .calc-amount {
+        min-inline-size: 0;
+        overflow-wrap: anywhere;
+      }
+      .estimated-total-highlight-card {
+        flex-wrap: wrap;
+      }
+    }
+    .workspace-records.doctor-form-page .mode-cards-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
+
+// Keep account mode choices readable without decorative emoji columns.
+@mixin doctor-mode-polish {
+  .workspace-records.doctor-form-page .mode-card {
+    min-block-size: 110px;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+  .workspace-records.doctor-form-page .mode-card-icon {
+    display: none;
+  }
+  .workspace-records.doctor-form-page .mode-card-content {
+    flex: 1;
+    min-inline-size: 0;
+  }
+}
+
+@mixin final-polish {
+  .workspace-records .head-actions :is(a, button),
+  .workspace-records .form-bottom-actions :is(a, button) {
+    block-size: auto;
+    min-block-size: 44px;
+    line-height: 1.5;
+  }
+  .workspace-records .form-bottom-actions :is(a, button) {
+    padding-block: 0.75rem;
+  }
+  .workspace-records.plan-editor .estimated-total-highlight-card .calc-label,
+  .workspace-records.plan-editor .estimated-total-highlight-card .calc-amount,
+  .workspace-records.plan-editor .estimated-total-highlight-card .calc-amount strong,
+  .workspace-records.plan-editor .estimated-total-highlight-card .currency-tag {
+    color: #fff;
+  }
+  .workspace-records.plan-editor .estimated-total-highlight-card .calc-breakdown {
+    color: #d2eeea;
+  }
+}

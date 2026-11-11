@@ -37,97 +37,183 @@ type Tab = 'timeline' | 'overview' | 'contact' | 'medical' | 'notes';
     PatientVisitHistorySheetComponent,
     MedicalAlertModalComponent,
   ],
-  template: ` <a class="back" routerLink="/patients"
-      >← {{ t('Back to patients', 'العودة إلى المرضى') }}</a
+  template: ` <div class="patient-details-page">
+    <a class="back" routerLink="/patients"
+      ><span aria-hidden="true">{{ i18n.language() === 'ar' ? '→' : '←' }}</span>
+      {{ t('Back to patients', 'العودة إلى المرضى') }}</a
     >
     @if (loading()) {
       <div class="loading" role="status">{{ t('Loading patient…', 'جارٍ تحميل المريض…') }}</div>
     } @else if (error()) {
-      <div class="alert error" role="alert">{{ error() }}</div>
+      <div class="panel patient-load-error" role="alert">
+        <h1>{{ t('Patient file unavailable', 'تعذر عرض ملف المريض') }}</h1>
+        <p>{{ error() }}</p>
+        <button type="button" (click)="load()">{{ t('Try again', 'حاول مرة أخرى') }}</button>
+      </div>
     } @else if (patient()) {
-      <section class="page-head">
-        <div>
-          <p class="eyebrow">{{ patient()!.patientNumber }}</p>
-          <h1>{{ patient()!.firstName }} {{ patient()!.middleName }} {{ patient()!.lastName }}</h1>
-          <p>{{ patient()!.phone }} · {{ patient()!.email || t('No email', 'لا يوجد بريد') }}</p>
+      <header class="workspace-page-head patient-profile-header">
+        <div class="patient-identity">
+          <div class="patient-avatar" aria-hidden="true">
+            {{ patient()!.firstName.charAt(0) }}{{ patient()!.lastName.charAt(0) }}
+          </div>
+          <div class="patient-identity-copy">
+
+            <h1>
+              {{ patient()!.firstName }} {{ patient()!.middleName }} {{ patient()!.lastName }}
+            </h1>
+            <div class="patient-contact-line">
+              <bdi>{{ patient()!.phone }}</bdi
+              ><span aria-hidden="true">·</span
+              ><bdi>{{ patient()!.email || t('No email recorded', 'لا يوجد بريد مسجل') }}</bdi>
+            </div>
+            <div class="patient-statuses">
+              <span class="badge clinical-lifecycle-badge {{ patientClinicalStatus() }}">
+                @if (patientClinicalStatus() === 'in_treatment') {
+                  {{ t('Under treatment', 'قيد العلاج') }}
+                } @else if (patientClinicalStatus() === 'completed') {
+                  {{ t('Treatment completed', 'مكتمل العلاج') }}
+                } @else {
+                  {{ t('New patient', 'مريض جديد') }}
+                }
+              </span>
+              <span class="badge status-{{ patient()!.status }}">{{
+                patient()!.status === 1 ? t('Active', 'نشط') : t('Archived', 'مؤرشف')
+              }}</span>
+            </div>
+          </div>
         </div>
-        <div class="head-actions">
-          @if (auth.hasPermission('Lab.View')) { <a class="button secondary" routerLink="/lab" [queryParams]="{ patientId: id }">{{ t('Lab cases', 'طلبات المعمل') }}</a> }
-          @if (auth.hasPermission('Insurance.View')) { <a class="button secondary" routerLink="/insurance" [queryParams]="{ patientId: id }">{{ t('Insurance claims', 'مطالبات التأمين') }}</a> }
-          @if (auth.hasPermission('Patients.ViewMedicalHistory') && hasMedicalAlerts()) {
-            <button
-              type="button"
-              class="stat-pill-btn danger"
-              (click)="openMedicalAlertModal()"
-              [title]="t('Click to review critical medical alerts', 'اضغط لمراجعة التنبيهات الطبية والتحذيرات')"
+        <div class="patient-primary-actions">
+          @if (patient()!.status === 1 && auth.hasPermission('Appointments.Create')) {
+            <a
+              class="button primary"
+              routerLink="/appointments/create"
+              [queryParams]="{ patientId: id }"
+              >{{ t('Book appointment', 'حجز موعد') }}</a
             >
-              <span class="pill-icon pulse-alert">🚨</span>
-              <span class="pill-text">{{ totalAlertsCount() }} {{ t('Medical Alerts', 'تنبيهات طبية حرجة') }}</span>
-              <span class="pill-badge-action">⚠️ {{ t('Review', 'مراجعة') }}</span>
-            </button>
           }
-          @if (auth.hasPermission('Patients.ViewMedicalHistory')) { <button
-            type="button"
-            class="button"
-            (click)="showVisitHistorySheet.set(true)"
-            style="display: inline-flex; align-items: center; gap: 0.4rem; background: #0284c7; color: #fff; border-color: #0284c7;"
-          >
-            <span>📑</span>
-            <span>{{ t('Past Visits Sheet (5 Stages)', 'ورقة السجل والزيارات (5 مراحل)') }}</span>
-          </button> }
-          <button
-            type="button"
-            class="button secondary"
-            (click)="showDossierModal.set(true)"
-            style="display: inline-flex; align-items: center; gap: 0.4rem;"
-          >
-            <span>🗂️</span>
-            <span>{{ t('Full Dossier & PDF', 'الملف الشامل و PDF') }}</span>
-          </button>
-          <span class="badge clinical-lifecycle-badge {{ patientClinicalStatus() }}">
-            @if (patientClinicalStatus() === 'in_treatment') {
-              🩺 {{ t('Under Treatment', 'قيد العلاج') }}
-            } @else if (patientClinicalStatus() === 'completed') {
-              ✓ {{ t('Treatment Completed', 'مكتمل العلاج') }}
-            } @else {
-              ✨ {{ t('New Patient', 'مريض جديد') }}
-            }
-          </span>
-          <span class="badge status-{{ patient()!.status }}">{{
-            patient()!.status === 1 ? t('Active', 'نشط') : t('Archived', 'مؤرشف')
-          }}</span>
           @if (patient()!.status === 1 && auth.hasPermission('Patients.Edit')) {
-            <a class="button" [routerLink]="['/patients', id, 'edit']">{{ t('Edit', 'تعديل') }}</a
-            >
-          }
-          @if (patient()!.status === 1 && auth.hasPermission('Patients.Archive')) {
-            <button class="danger" type="button" (click)="archive()">
-              {{ t('Archive', 'أرشفة') }}
-            </button>
+            <a class="button" [routerLink]="['/patients', id, 'edit']">{{
+              t('Edit patient', 'تعديل بيانات المريض')
+            }}</a>
           }
         </div>
-      </section>
+      </header>
+      @if (auth.hasPermission('Patients.ViewMedicalHistory') && hasMedicalAlerts()) {
+        <section
+          class="patient-alert-summary"
+          [attr.aria-label]="t('Medical alerts', 'التنبيهات الطبية')"
+        >
+          <div>
+            <strong
+              >{{ totalAlertsCount() }}
+              {{ t('medical alerts to review', 'تنبيهات طبية للمراجعة') }}</strong
+            >
+            <p>
+              {{
+                t(
+                  'Review recorded allergies, conditions and medications before care.',
+                  'راجع الحساسية والحالات المرضية والأدوية المسجلة قبل العلاج.'
+                )
+              }}
+            </p>
+          </div>
+          <button type="button" (click)="openMedicalAlertModal()">
+            {{ t('Review alerts', 'مراجعة التنبيهات') }}
+          </button>
+        </section>
+      }
+      <nav class="patient-tools" [attr.aria-label]="t('Patient tools', 'أدوات ملف المريض')">
+        @if (auth.hasPermission('Patients.ViewMedicalHistory')) {
+          <button type="button" (click)="showVisitHistorySheet.set(true)">
+            {{ t('Past visits', 'الزيارات السابقة') }}
+          </button>
+        }
+        <button type="button" (click)="showDossierModal.set(true)">
+          {{ t('Full dossier & PDF', 'الملف الشامل و PDF') }}
+        </button>
+        @if (
+          auth.hasPermission('Lab.View') ||
+          auth.hasPermission('Insurance.View') ||
+          (patient()!.status === 1 && auth.hasPermission('Patients.Archive'))
+        ) {
+          <details class="patient-more-actions">
+            <summary>{{ t('More actions', 'إجراءات أخرى') }}</summary>
+            <div>
+              @if (auth.hasPermission('Lab.View')) {
+                <a class="button" routerLink="/lab" [queryParams]="{ patientId: id }">{{
+                  t('Lab cases', 'طلبات المعمل')
+                }}</a>
+              }
+              @if (auth.hasPermission('Insurance.View')) {
+                <a class="button" routerLink="/insurance" [queryParams]="{ patientId: id }">{{
+                  t('Insurance claims', 'مطالبات التأمين')
+                }}</a>
+              }
+              @if (patient()!.status === 1 && auth.hasPermission('Patients.Archive')) {
+                <button class="danger" type="button" (click)="archive()">
+                  {{ t('Archive patient', 'أرشفة المريض') }}
+                </button>
+              }
+            </div>
+          </details>
+        }
+      </nav>
       @if (transferHistory() && auth.hasPermission('Patients.ViewMedicalHistory')) {
-        <section class="alert" style="background:#eaf7f6;border:1px solid #b8e5e0;color:#174a4a;margin:14px 0;padding:16px;border-radius:12px">
-          <strong>{{ t('Transferred from', 'تم النقل من') }} {{ transferHistory().sourceBranch }}</strong>
-          <p>{{ t('Previous clinical history is read-only. Old visits and payments remain in the original branch.', 'التاريخ الطبي السابق للقراءة فقط. الزيارات والدفعات القديمة باقية في الفرع الأصلي.') }}</p>
-          <details><summary>{{ t('View previous clinical history', 'عرض التاريخ الطبي السابق') }}</summary>
-            @if (transferHistory().medicalNotes) { <p><strong>{{ t('Medical notes', 'ملاحظات طبية') }}:</strong> {{ transferHistory().medicalNotes }}</p> }
-            <p>{{ t('Allergies', 'الحساسية') }}: {{ transferHistory().allergies?.length || 0 }} · {{ t('Past visits', 'الزيارات السابقة') }}: {{ transferHistory().appointments?.length || 0 }} · {{ t('Treatments', 'العلاجات') }}: {{ transferHistory().treatments?.length || 0 }}</p>
-            @for (item of transferHistory().allergies || []; track item.id) { <p>⚠ {{ item.name }} — {{ item.notes }}</p> }
-            @for (item of transferHistory().treatments || []; track item.id) { <p>{{ t('Treatment', 'علاج') }}: {{ item.treatmentName }} — {{ item.notes }}</p> }
+        <section
+          class="alert"
+          style="background:#eaf7f6;border:1px solid #b8e5e0;color:#174a4a;margin:14px 0;padding:16px;border-radius:12px"
+        >
+          <strong
+            >{{ t('Transferred from', 'تم النقل من') }} {{ transferHistory().sourceBranch }}</strong
+          >
+          <p>
+            {{
+              t(
+                'Previous clinical history is read-only. Old visits and payments remain in the original branch.',
+                'التاريخ الطبي السابق للقراءة فقط. الزيارات والدفعات القديمة باقية في الفرع الأصلي.'
+              )
+            }}
+          </p>
+          <details>
+            <summary>{{ t('View previous clinical history', 'عرض التاريخ الطبي السابق') }}</summary>
+            @if (transferHistory().medicalNotes) {
+              <p>
+                <strong>{{ t('Medical notes', 'ملاحظات طبية') }}:</strong>
+                {{ transferHistory().medicalNotes }}
+              </p>
+            }
+            <p>
+              {{ t('Allergies', 'الحساسية') }}: {{ transferHistory().allergies?.length || 0 }} ·
+              {{ t('Past visits', 'الزيارات السابقة') }}:
+              {{ transferHistory().appointments?.length || 0 }} · {{ t('Treatments', 'العلاجات') }}:
+              {{ transferHistory().treatments?.length || 0 }}
+            </p>
+            @for (item of transferHistory().allergies || []; track item.id) {
+              <p>⚠ {{ item.name }} — {{ item.notes }}</p>
+            }
+            @for (item of transferHistory().treatments || []; track item.id) {
+              <p>{{ t('Treatment', 'علاج') }}: {{ item.treatmentName }} — {{ item.notes }}</p>
+            }
           </details>
         </section>
       }
       @if (showVisitHistorySheet()) {
-        <app-patient-visit-history-sheet [patientId]="id" (close)="showVisitHistorySheet.set(false)" />
+        <app-patient-visit-history-sheet
+          [patientId]="id"
+          (close)="showVisitHistorySheet.set(false)"
+        />
       }
       @if (showDossierModal()) {
         <app-patient-dossier-modal [patientId]="id" (close)="showDossierModal.set(false)" />
       }
       @if (showMedicalAlertModal() && patient()) {
         <app-medical-alert-modal
-          [patientName]="patient()!.firstName + ' ' + (patient()!.middleName ? patient()!.middleName + ' ' : '') + patient()!.lastName"
+          [patientName]="
+            patient()!.firstName +
+            ' ' +
+            (patient()!.middleName ? patient()!.middleName + ' ' : '') +
+            patient()!.lastName
+          "
           [patientNumber]="patient()!.patientNumber"
           [gender]="patient()!.gender"
           [phone]="patient()!.phone"
@@ -140,253 +226,334 @@ type Tab = 'timeline' | 'overview' | 'contact' | 'medical' | 'notes';
       @if (success()) {
         <div class="alert success" role="status">{{ success() }}</div>
       }
-      <nav class="tabs" [attr.aria-label]="t('Patient sections', 'أقسام ملف المريض')">
+      @if (operationError()) {
+        <div class="alert error" role="alert">{{ operationError() }}</div>
+      }
+      <nav
+        class="tabs patient-section-nav"
+        [attr.aria-label]="t('Patient sections', 'أقسام ملف المريض')"
+      >
         @for (item of tabs; track item.id) {
-          @if (!['medical','timeline'].includes(item.id) || auth.hasPermission('Patients.ViewMedicalHistory')) {
-          <button type="button" [class.active]="tab() === item.id" (click)="tab.set(item.id)">
-            {{ t(item.en, item.ar) }}
-          </button>
+          @if (
+            !['medical', 'timeline'].includes(item.id) ||
+            auth.hasPermission('Patients.ViewMedicalHistory')
+          ) {
+            <button
+              type="button"
+              [class.active]="tab() === item.id"
+              [attr.aria-pressed]="tab() === item.id"
+              aria-controls="patient-section"
+              [attr.data-section]="item.id"
+              (click)="tab.set(item.id)"
+            >
+              {{ t(item.en, item.ar) }}
+            </button>
           }
         }
       </nav>
-      @switch (tab()) {
-        @case ('timeline') { @if(patient()!.canViewMedicalInformation) { <app-patient-clinical-history [patientId]="id" /> } }
-        @case ('overview') {
-          <div class="detail-grid">
-            <section class="panel">
-              <h2>{{ t('Personal information', 'البيانات الشخصية') }}</h2>
-              <dl>
-                <div>
-                  <dt>{{ t('Date of birth', 'تاريخ الميلاد') }}</dt>
-                  <dd>{{ patient()!.dateOfBirth | date: 'dd/MM/yyyy' }}</dd>
-                </div>
-                <div>
-                  <dt>{{ t('Gender', 'النوع') }}</dt>
-                  <dd>{{ gender(patient()!.gender) }}</dd>
-                </div>
-                <div>
-                  <dt>{{ t('Nationality', 'الجنسية') }}</dt>
-                  <dd>{{ patient()!.nationality || '—' }}</dd>
-                </div>
-                <div>
-                  <dt>{{ t('Occupation', 'المهنة') }}</dt>
-                  <dd>{{ patient()!.occupation || '—' }}</dd>
-                </div>
-              </dl>
-            </section>
-            <section class="panel">
-              <h2>{{ t('Registration', 'التسجيل') }}</h2>
-              <dl>
-                <div>
-                  <dt>{{ t('Patient number', 'رقم المريض') }}</dt>
-                  <dd class="number">{{ patient()!.patientNumber }}</dd>
-                </div>
-                <div>
-                  <dt>{{ t('Created', 'تاريخ الإنشاء') }}</dt>
-                  <dd>{{ patient()!.createdAt | date: 'dd/MM/yyyy hh:mm a' }}</dd>
-                </div>
-                <div>
-                  <dt>{{ t('Last updated', 'آخر تحديث') }}</dt>
-                  <dd>{{ patient()!.updatedAt | date: 'dd/MM/yyyy hh:mm a' }}</dd>
-                </div>
-              </dl>
-            </section>
-          </div>
-          @if (auth.hasPermission('Dental.View')) { <app-patient-dental-summary [patientId]="id" /> }
-          @if (auth.hasPermission('Treatments.View')) { <app-patient-treatment-summary [patientId]="id" /> }
-          @if (auth.hasPermission('Prescriptions.View')) { <app-patient-prescription-summary [patientId]="id" /> }
-          @if (auth.hasPermission('CRM.View')) { <app-patient-crm-summary [patientId]="id" /> }
-          @if (auth.hasPermission('Finance.View')) { <app-patient-finance-summary [patientId]="id" /> }
-        }
-        @case ('contact') {
-          <div class="detail-grid">
-            <section class="panel">
-              <h2>{{ t('Contact', 'بيانات الاتصال') }}</h2>
-              <dl>
-                <div>
-                  <dt>{{ t('Phone', 'الهاتف') }}</dt>
-                  <dd>{{ patient()!.phone }}</dd>
-                </div>
-                <div>
-                  <dt>{{ t('Alternate phone', 'هاتف بديل') }}</dt>
-                  <dd>{{ patient()!.alternatePhone || '—' }}</dd>
-                </div>
-                <div>
-                  <dt>Email</dt>
-                  <dd>{{ patient()!.email || '—' }}</dd>
-                </div>
-                <div>
-                  <dt>{{ t('Address', 'العنوان') }}</dt>
-                  <dd>
-                    {{ patient()!.address || '—' }}, {{ patient()!.city || '—' }},
-                    {{ patient()!.country || '—' }}
-                  </dd>
-                </div>
-              </dl>
-            </section>
-            <section class="panel">
-              <h2>{{ t('Emergency contact', 'جهة اتصال للطوارئ') }}</h2>
-              <p>
-                <strong>{{ patient()!.emergencyContactName || '—' }}</strong>
-              </p>
-              <p>{{ patient()!.emergencyContactPhone || '—' }}</p>
-            </section>
-          </div>
-        }
-        @case ('medical') {
-          @if (!patient()!.canViewMedicalInformation) {
-            <div class="panel restricted">
-              <strong>{{ t('Medical history is restricted', 'السجل الطبي مقيّد') }}</strong>
-              <p>
-                {{
-                  t(
-                    'Your role does not include permission to view clinical history.',
-                    'دورك لا يتضمن صلاحية عرض السجل الطبي.'
-                  )
-                }}
-              </p>
+      <section id="patient-section" class="patient-section" [attr.aria-label]="sectionTitle()">
+        @switch (tab()) {
+          @case ('timeline') {
+            @if (patient()!.canViewMedicalInformation) {
+              <app-patient-clinical-history [patientId]="id" />
+            }
+          }
+          @case ('overview') {
+            <div class="detail-grid">
+              <section class="panel">
+                <h2>{{ t('Personal information', 'البيانات الشخصية') }}</h2>
+                <dl>
+                  <div>
+                    <dt>{{ t('Date of birth', 'تاريخ الميلاد') }}</dt>
+                    <dd>{{ patient()!.dateOfBirth | date: 'dd/MM/yyyy' }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ t('Gender', 'النوع') }}</dt>
+                    <dd>{{ gender(patient()!.gender) }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ t('Nationality', 'الجنسية') }}</dt>
+                    <dd>{{ patient()!.nationality || '—' }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ t('Occupation', 'المهنة') }}</dt>
+                    <dd>{{ patient()!.occupation || '—' }}</dd>
+                  </div>
+                </dl>
+              </section>
+              <section class="panel">
+                <h2>{{ t('Registration', 'التسجيل') }}</h2>
+                <dl>
+                  <div>
+                    <dt>{{ t('Patient number', 'رقم المريض') }}</dt>
+                    <dd class="number">{{ patient()!.patientNumber }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ t('Created', 'تاريخ الإنشاء') }}</dt>
+                    <dd>{{ patient()!.createdAt | date: 'dd/MM/yyyy hh:mm a' }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ t('Last updated', 'آخر تحديث') }}</dt>
+                    <dd>{{ patient()!.updatedAt | date: 'dd/MM/yyyy hh:mm a' }}</dd>
+                  </div>
+                </dl>
+              </section>
             </div>
-          } @else {
-            <div class="medical-grid">
+            @if (auth.hasPermission('Dental.View')) {
+              <app-patient-dental-summary [patientId]="id" />
+            }
+            @if (auth.hasPermission('Treatments.View')) {
+              <app-patient-treatment-summary [patientId]="id" />
+            }
+            @if (auth.hasPermission('Prescriptions.View')) {
+              <app-patient-prescription-summary [patientId]="id" />
+            }
+            @if (auth.hasPermission('CRM.View')) {
+              <app-patient-crm-summary [patientId]="id" />
+            }
+            @if (auth.hasPermission('Finance.View')) {
+              <app-patient-finance-summary [patientId]="id" />
+            }
+          }
+          @case ('contact') {
+            <div class="detail-grid">
               <section class="panel">
-                <h2>{{ t('Allergies', 'الحساسية') }}</h2>
-                <div class="chips">
-                  @for (item of patient()!.allergies; track item.id) {
-                    <span
-                      >{{ item.name }}
-                      @if (canEdit()) {
-                        <button type="button" (click)="removeText('allergies', item.id)">×</button>
-                      }
-                    </span>
-                  } @empty {
-                    <em>{{ t('None recorded', 'لا توجد بيانات') }}</em>
-                  }
-                </div>
-                @if (canEdit()) {
-                  <form [formGroup]="allergyForm" (ngSubmit)="addText('allergies')">
-                    <input
-                      formControlName="name"
-                      [placeholder]="t('Allergy name', 'اسم الحساسية')"
-                    /><button class="primary">{{ t('Add', 'إضافة') }}</button>
-                  </form>
-                }
+                <h2>{{ t('Contact', 'بيانات الاتصال') }}</h2>
+                <dl>
+                  <div>
+                    <dt>{{ t('Phone', 'الهاتف') }}</dt>
+                    <dd>{{ patient()!.phone }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ t('Alternate phone', 'هاتف بديل') }}</dt>
+                    <dd>{{ patient()!.alternatePhone || '—' }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ t('Email', 'البريد الإلكتروني') }}</dt>
+                    <dd>{{ patient()!.email || '—' }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ t('Address', 'العنوان') }}</dt>
+                    <dd>
+                      {{ patient()!.address || '—' }}, {{ patient()!.city || '—' }},
+                      {{ patient()!.country || '—' }}
+                    </dd>
+                  </div>
+                </dl>
               </section>
               <section class="panel">
-                <h2>{{ t('Medical conditions', 'الحالات المرضية') }}</h2>
-                <div class="chips">
-                  @for (item of patient()!.medicalConditions; track item.id) {
-                    <span
-                      >{{ item.name }}
-                      @if (canEdit()) {
-                        <button type="button" (click)="removeText('conditions', item.id)">×</button>
-                      }
-                    </span>
-                  } @empty {
-                    <em>{{ t('None recorded', 'لا توجد بيانات') }}</em>
-                  }
-                </div>
-                @if (canEdit()) {
-                  <form [formGroup]="conditionForm" (ngSubmit)="addText('conditions')">
-                    <input
-                      formControlName="name"
-                      [placeholder]="t('Condition name', 'اسم الحالة')"
-                    /><button class="primary">{{ t('Add', 'إضافة') }}</button>
-                  </form>
-                }
-              </section>
-              <section class="panel">
-                <h2>{{ t('Current medications', 'الأدوية الحالية') }}</h2>
-                <div class="record-list">
-                  @for (item of patient()!.medications; track item.id) {
-                    <div>
-                      <span
-                        ><strong>{{ item.name }}</strong
-                        ><small>{{ item.dosage || '—' }}</small></span
-                      >
-                      @if (canEdit()) {
-                        <button class="icon" type="button" (click)="removeMedication(item.id)">
-                          ×
-                        </button>
-                      }
-                    </div>
-                  } @empty {
-                    <em>{{ t('None recorded', 'لا توجد بيانات') }}</em>
-                  }
-                </div>
-                @if (canEdit()) {
-                  <form [formGroup]="medicationForm" (ngSubmit)="addMedication()">
-                    <input
-                      formControlName="name"
-                      [placeholder]="t('Medication', 'اسم الدواء')"
-                    /><input
-                      formControlName="dosage"
-                      [placeholder]="t('Dosage', 'الجرعة')"
-                    /><button class="primary">{{ t('Add', 'إضافة') }}</button>
-                  </form>
-                }
-              </section>
-              <section class="panel">
-                <h2>{{ t('Previous surgeries', 'العمليات السابقة') }}</h2>
-                <div class="record-list">
-                  @for (item of patient()!.surgeries; track item.id) {
-                    <div>
-                      <span
-                        ><strong>{{ item.procedure }}</strong
-                        ><small>{{ item.procedureDate || '—' }}</small></span
-                      >
-                      @if (canEdit()) {
-                        <button class="icon" type="button" (click)="removeSurgery(item.id)">
-                          ×
-                        </button>
-                      }
-                    </div>
-                  } @empty {
-                    <em>{{ t('None recorded', 'لا توجد بيانات') }}</em>
-                  }
-                </div>
-                @if (canEdit()) {
-                  <form [formGroup]="surgeryForm" (ngSubmit)="addSurgery()">
-                    <input
-                      formControlName="procedure"
-                      [placeholder]="t('Procedure', 'اسم العملية')"
-                    /><app-date-input formControlName="procedureDate"></app-date-input><button class="primary">
-                      {{ t('Add', 'إضافة') }}
-                    </button>
-                  </form>
-                }
+                <h2>{{ t('Emergency contact', 'جهة اتصال للطوارئ') }}</h2>
+                <p>
+                  <strong>{{ patient()!.emergencyContactName || '—' }}</strong>
+                </p>
+                <p>{{ patient()!.emergencyContactPhone || '—' }}</p>
               </section>
             </div>
           }
-        }
-        @case ('notes') {
-          <div class="detail-grid">
-            <section class="panel">
-              <h2>{{ t('Administrative notes', 'ملاحظات إدارية') }}</h2>
-              <p class="pre">
-                {{ patient()!.notes || t('No notes recorded.', 'لا توجد ملاحظات.') }}
-              </p>
-            </section>
-            @if (patient()!.canViewMedicalInformation) {
-              <section class="panel">
-                <h2>{{ t('Medical notes', 'ملاحظات طبية') }}</h2>
-                @if (canEdit()) {
-                  <form [formGroup]="notesForm" (ngSubmit)="saveMedicalNotes()">
-                    <textarea rows="8" formControlName="medicalNotes" maxlength="4000"></textarea
-                    ><button class="primary">
-                      {{ t('Save medical notes', 'حفظ الملاحظات الطبية') }}
-                    </button>
-                  </form>
-                } @else {
-                  <p class="pre">
-                    {{ patient()!.medicalNotes || t('No notes recorded.', 'لا توجد ملاحظات.') }}
-                  </p>
-                }
-              </section>
+          @case ('medical') {
+            @if (!patient()!.canViewMedicalInformation) {
+              <div class="panel restricted">
+                <strong>{{ t('Medical history is restricted', 'السجل الطبي مقيّد') }}</strong>
+                <p>
+                  {{
+                    t(
+                      'Your role does not include permission to view clinical history.',
+                      'دورك لا يتضمن صلاحية عرض السجل الطبي.'
+                    )
+                  }}
+                </p>
+              </div>
+            } @else {
+              <div class="medical-grid">
+                <section class="panel">
+                  <h2>{{ t('Allergies', 'الحساسية') }}</h2>
+                  <div class="chips">
+                    @for (item of patient()!.allergies; track item.id) {
+                      <span
+                        >{{ item.name }}
+                        @if (canEdit()) {
+                          <button
+                            type="button"
+                            (click)="removeText('allergies', item.id)"
+                            [attr.aria-label]="t('Remove allergy: ', 'حذف الحساسية: ') + item.name"
+                          >
+                            ×
+                          </button>
+                        }
+                      </span>
+                    } @empty {
+                      <em>{{ t('None recorded', 'لا توجد بيانات') }}</em>
+                    }
+                  </div>
+                  @if (canEdit()) {
+                    <form [formGroup]="allergyForm" (ngSubmit)="addText('allergies')">
+                      <label class="workspace-filter-field"
+                        ><span>{{ t('Allergy name', 'اسم الحساسية') }}</span>
+                        <input
+                          formControlName="name"
+                          [placeholder]="t('Allergy name', 'اسم الحساسية')" /></label
+                      ><button class="primary">{{ t('Add', 'إضافة') }}</button>
+                    </form>
+                  }
+                </section>
+                <section class="panel">
+                  <h2>{{ t('Medical conditions', 'الحالات المرضية') }}</h2>
+                  <div class="chips">
+                    @for (item of patient()!.medicalConditions; track item.id) {
+                      <span
+                        >{{ item.name }}
+                        @if (canEdit()) {
+                          <button
+                            type="button"
+                            (click)="removeText('conditions', item.id)"
+                            [attr.aria-label]="t('Remove condition: ', 'حذف الحالة: ') + item.name"
+                          >
+                            ×
+                          </button>
+                        }
+                      </span>
+                    } @empty {
+                      <em>{{ t('None recorded', 'لا توجد بيانات') }}</em>
+                    }
+                  </div>
+                  @if (canEdit()) {
+                    <form [formGroup]="conditionForm" (ngSubmit)="addText('conditions')">
+                      <label class="workspace-filter-field"
+                        ><span>{{ t('Condition name', 'اسم الحالة') }}</span>
+                        <input
+                          formControlName="name"
+                          [placeholder]="t('Condition name', 'اسم الحالة')" /></label
+                      ><button class="primary">{{ t('Add', 'إضافة') }}</button>
+                    </form>
+                  }
+                </section>
+                <section class="panel">
+                  <h2>{{ t('Current medications', 'الأدوية الحالية') }}</h2>
+                  <div class="record-list">
+                    @for (item of patient()!.medications; track item.id) {
+                      <div>
+                        <span
+                          ><strong>{{ item.name }}</strong
+                          ><small>{{ item.dosage || '—' }}</small></span
+                        >
+                        @if (canEdit()) {
+                          <button
+                            class="icon"
+                            type="button"
+                            (click)="removeMedication(item.id)"
+                            [attr.aria-label]="t('Remove medication: ', 'حذف الدواء: ') + item.name"
+                          >
+                            ×
+                          </button>
+                        }
+                      </div>
+                    } @empty {
+                      <em>{{ t('None recorded', 'لا توجد بيانات') }}</em>
+                    }
+                  </div>
+                  @if (canEdit()) {
+                    <form [formGroup]="medicationForm" (ngSubmit)="addMedication()">
+                      <label class="workspace-filter-field"
+                        ><span>{{ t('Medication name', 'اسم الدواء') }}</span
+                        ><input
+                          formControlName="name"
+                          [placeholder]="t('Medication', 'اسم الدواء')" /></label
+                      ><label class="workspace-filter-field"
+                        ><span>{{ t('Dosage', 'الجرعة') }}</span
+                        ><input
+                          formControlName="dosage"
+                          [placeholder]="t('Dosage', 'الجرعة')" /></label
+                      ><button class="primary">{{ t('Add', 'إضافة') }}</button>
+                    </form>
+                  }
+                </section>
+                <section class="panel">
+                  <h2>{{ t('Previous surgeries', 'العمليات السابقة') }}</h2>
+                  <div class="record-list">
+                    @for (item of patient()!.surgeries; track item.id) {
+                      <div>
+                        <span
+                          ><strong>{{ item.procedure }}</strong
+                          ><small>{{ item.procedureDate || '—' }}</small></span
+                        >
+                        @if (canEdit()) {
+                          <button
+                            class="icon"
+                            type="button"
+                            (click)="removeSurgery(item.id)"
+                            [attr.aria-label]="
+                              t('Remove surgery: ', 'حذف العملية: ') + item.procedure
+                            "
+                          >
+                            ×
+                          </button>
+                        }
+                      </div>
+                    } @empty {
+                      <em>{{ t('None recorded', 'لا توجد بيانات') }}</em>
+                    }
+                  </div>
+                  @if (canEdit()) {
+                    <form [formGroup]="surgeryForm" (ngSubmit)="addSurgery()">
+                      <label class="workspace-filter-field"
+                        ><span>{{ t('Procedure', 'اسم العملية') }}</span
+                        ><input
+                          formControlName="procedure"
+                          [placeholder]="t('Procedure', 'اسم العملية')"
+                      /></label>
+                      <div class="workspace-filter-field">
+                        <span>{{ t('Procedure date', 'تاريخ العملية') }}</span
+                        ><app-date-input
+                          [label]="t('Procedure date', 'تاريخ العملية')"
+                          formControlName="procedureDate"
+                        ></app-date-input>
+                      </div>
+                      <button class="primary">
+                        {{ t('Add', 'إضافة') }}
+                      </button>
+                    </form>
+                  }
+                </section>
+              </div>
             }
-          </div>
+          }
+          @case ('notes') {
+            <div class="detail-grid">
+              <section class="panel">
+                <h2>{{ t('Administrative notes', 'ملاحظات إدارية') }}</h2>
+                <p class="pre">
+                  {{ patient()!.notes || t('No notes recorded.', 'لا توجد ملاحظات.') }}
+                </p>
+              </section>
+              @if (patient()!.canViewMedicalInformation) {
+                <section class="panel">
+                  <h2>{{ t('Medical notes', 'ملاحظات طبية') }}</h2>
+                  @if (canEdit()) {
+                    <form [formGroup]="notesForm" (ngSubmit)="saveMedicalNotes()">
+                      <label class="workspace-filter-field"
+                        ><span>{{ t('Medical notes', 'الملاحظات الطبية') }}</span
+                        ><textarea
+                          rows="8"
+                          formControlName="medicalNotes"
+                          maxlength="4000"
+                        ></textarea></label
+                      ><button class="primary">
+                        {{ t('Save medical notes', 'حفظ الملاحظات الطبية') }}
+                      </button>
+                    </form>
+                  } @else {
+                    <p class="pre">
+                      {{ patient()!.medicalNotes || t('No notes recorded.', 'لا توجد ملاحظات.') }}
+                    </p>
+                  }
+                </section>
+              }
+            </div>
+          }
         }
-      }
-    }`,
+      </section>
+    }
+  </div>`,
   styleUrl: './patients.scss',
 })
 export class PatientDetailsComponent {
@@ -401,12 +568,15 @@ export class PatientDetailsComponent {
   readonly patientClinicalStatus = signal<'new' | 'in_treatment' | 'completed'>('new');
   readonly loading = signal(true);
   readonly error = signal('');
+  readonly operationError = signal('');
   readonly success = signal(history.state?.success ?? '');
   readonly showVisitHistorySheet = signal(false);
   readonly showDossierModal = signal(false);
   readonly showMedicalAlertModal = signal(false);
   private alertModalAutoShown = false;
-  readonly tab = signal<Tab>(this.auth.hasPermission('Patients.ViewMedicalHistory') ? 'timeline' : 'overview');
+  readonly tab = signal<Tab>(
+    this.auth.hasPermission('Patients.ViewMedicalHistory') ? 'timeline' : 'overview',
+  );
   readonly tabs: { id: Tab; en: string; ar: string }[] = [
     { id: 'timeline', en: 'Medical timeline', ar: 'التاريخ الطبي الزمني' },
     { id: 'overview', en: 'Overview', ar: 'نظرة عامة' },
@@ -428,6 +598,11 @@ export class PatientDetailsComponent {
   });
   readonly notesForm = inject(FormBuilder).nonNullable.group({ medicalNotes: '' });
 
+  sectionTitle(): string {
+    const section = this.tabs.find((item) => item.id === this.tab())!;
+    return this.t(section.en, section.ar);
+  }
+
   hasMedicalAlerts(): boolean {
     const p = this.patient();
     if (!p) return false;
@@ -442,9 +617,7 @@ export class PatientDetailsComponent {
     const p = this.patient();
     if (!p) return 0;
     return (
-      (p.allergies?.length ?? 0) +
-      (p.medicalConditions?.length ?? 0) +
-      (p.medications?.length ?? 0)
+      (p.allergies?.length ?? 0) + (p.medicalConditions?.length ?? 0) + (p.medications?.length ?? 0)
     );
   }
 
@@ -457,7 +630,9 @@ export class PatientDetailsComponent {
   }
 
   patientMedications(): string[] {
-    return (this.patient()?.medications ?? []).map((x) => x.name + (x.dosage ? ` (${x.dosage})` : ''));
+    return (this.patient()?.medications ?? []).map(
+      (x) => x.name + (x.dosage ? ` (${x.dosage})` : ''),
+    );
   }
 
   openMedicalAlertModal(): void {
@@ -471,10 +646,15 @@ export class PatientDetailsComponent {
   constructor() {
     this.load();
     if (this.auth.hasPermission('Patients.ViewMedicalHistory')) {
-      this.http.get<any>(`/api/branches/patients/${this.id}/transfer-history`).subscribe({ next: value => this.transferHistory.set(value) });
+      this.http
+        .get<any>(`/api/branches/patients/${this.id}/transfer-history`)
+        .subscribe({ next: (value) => this.transferHistory.set(value) });
     }
   }
   load(): void {
+    this.loading.set(true);
+    this.error.set('');
+    this.operationError.set('');
     this.api.patient(this.id).subscribe({
       next: (p) => {
         this.patient.set(p);
@@ -598,7 +778,7 @@ export class PatientDetailsComponent {
           : this.t('Not specified', 'غير محدد');
   }
   failed() {
-    this.error.set(
+    this.operationError.set(
       this.t(
         'The change was rejected. Check your permissions.',
         'تم رفض التغيير. تحقق من صلاحياتك.',

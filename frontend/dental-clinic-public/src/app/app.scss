@@ -116,3 +116,18 @@ p {
   color: #dceceb;
   font-size: 0.85rem;
 }
+
+/* Keep public navigation usable at narrow phone widths. */
+header { flex-wrap: wrap; gap: 16px; }
+.header-actions { flex-wrap: wrap; gap: 10px; }
+.login-btn, .lang-toggle { min-block-size: 44px; }
+@media (max-width: 400px) {
+  header { align-items: center; }
+  .brand { font-size: 1.15rem; gap: 8px; }
+  .brand .logo-img { max-inline-size: 36px; }
+  .header-actions { margin-inline-start: auto; }
+  .login-btn, .lang-toggle { padding-inline: 12px; }
+}
+
+main { min-inline-size: 0; }
+main > :not(router-outlet) { min-inline-size: 0; inline-size: 100%; }

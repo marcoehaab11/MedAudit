@@ -1,0 +1,25 @@
+{
+  "status": "passed",
+  "viewports": [
+    1440,
+    1024,
+    768,
+    390,
+    320
+  ],
+  "languages": [
+    "en",
+    "ar"
+  ],
+  "checks": [
+    "patient-create-invalid-focus",
+    "patient-edit-load-retry",
+    "failed-save-preserves-fields",
+    "booking-review",
+    "booking-conflict-refresh",
+    "availability-error-retry",
+    "native-modal-focus-escape-restore"
+  ],
+  "screenshots": 16,
+  "exceptions": []
+}

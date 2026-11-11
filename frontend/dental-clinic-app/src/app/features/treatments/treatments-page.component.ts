@@ -16,7 +16,7 @@ import { PatientSelectComponent } from '../../shared/patient-select.component';
     <div class="treatments-page-wrapper">
       <section class="page-head">
         <div>
-          <p class="eyebrow">{{ t('Clinical Execution & Records', 'سجلات التنفيذ العلاجي') }}</p>
+
           <h1>{{ t('Treatments & Procedures', 'العلاجات والإجراءات المنفذة') }}</h1>
         </div>
       </section>
@@ -29,19 +29,19 @@ import { PatientSelectComponent } from '../../shared/patient-select.component';
           />
         </div>
 
-        <input
+        <label class="workspace-filter-field"><span>{{ t('Tooth # (FDI)', 'رقم السن') }}</span><input
           class="tooth-filter-input"
           type="number"
           formControlName="toothNumber"
           [placeholder]="t('Tooth # (FDI)', 'رقم السن')"
-        />
+        /></label>
 
-        <select formControlName="status">
+        <label class="workspace-filter-field"><span>{{ t('Status', 'الحالة') }}</span><select formControlName="status">
           <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
           @for (x of statuses; track x) {
             <option [value]="x">{{ status(x) }}</option>
           }
-        </select>
+        </select></label>
 
         <button type="button" class="btn-filter" (click)="load()">
           🔍 {{ t('Filter', 'تصفية') }}

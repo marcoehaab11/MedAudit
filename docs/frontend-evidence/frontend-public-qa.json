@@ -1,0 +1,23 @@
+{
+  "status": "passed",
+  "routes": [
+    "/",
+    "/register",
+    "/confirm-email",
+    "/book/:clinicSlug",
+    "/book/confirmation/:reference"
+  ],
+  "viewports": [
+    1440,
+    768,
+    390,
+    320
+  ],
+  "checks": [
+    "keyboard doctor/service selection",
+    "failed booking retains input",
+    "private confirmation without token",
+    "responsive layouts"
+  ],
+  "data": "Synthetic fixtures"
+}

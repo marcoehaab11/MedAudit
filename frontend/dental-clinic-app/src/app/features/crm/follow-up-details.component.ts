@@ -18,14 +18,14 @@ import { isCrmConflict } from './crm-ui';
       <div class="alert success">{{ message() }}</div>
     }
     @if (error()) {
-      <div class="alert error">{{ error() }}</div>
+      <div class="alert error" role="alert">{{ error() }}</div>
     }
     @if (loading()) {
       <div class="state">{{ t('Loading follow-up…', 'جارٍ تحميل المتابعة…') }}</div>
     } @else if (item()) {
       <section class="page-head">
         <div>
-          <p class="eyebrow">{{ type(item()!.type) }}</p>
+
           <h1>{{ item()!.title }}</h1>
           <p>{{ item()!.patientName }} · {{ item()!.assignedToName }}</p>
         </div>

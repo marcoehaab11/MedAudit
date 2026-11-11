@@ -11,7 +11,7 @@ interface BackupModule { id: string; name: string }
   imports: [CommonModule, FormsModule],
   template: `
     <main class="backup-page">
-      <header><p class="eyebrow">CLINIC DATA</p><h1>{{ t('Clinic backup', 'النسخ الاحتياطي للعيادة') }}</h1><p>{{ t('Choose modules and download an encrypted copy. Only the platform administrator can restore it.', 'اختار الموديولات وحمّل نسخة مشفرة. الاسترجاع متاح لأدمن المنصة فقط.') }}</p></header>
+      <header><h1>{{ t('Clinic backup', 'النسخ الاحتياطي للعيادة') }}</h1><p>{{ t('Choose modules and download an encrypted copy. Only the platform administrator can restore it.', 'اختار الموديولات وحمّل نسخة مشفرة. الاسترجاع متاح لأدمن المنصة فقط.') }}</p></header>
       <section class="backup-card">
         <div class="quick-actions"><button type="button" (click)="selectCore()">{{ t('Core modules', 'كل الأساسيات') }}</button><button type="button" (click)="selectAll()">{{ t('Everything', 'كل بيانات العيادة') }}</button><button type="button" (click)="selected.clear()">{{ t('Clear', 'مسح الاختيار') }}</button></div>
         <div class="module-grid">@for (module of modules; track module.id) { <label><input type="checkbox" [checked]="selected.has(module.id)" (change)="toggle(module.id)" /><span>{{ name(module) }}</span></label> }</div>

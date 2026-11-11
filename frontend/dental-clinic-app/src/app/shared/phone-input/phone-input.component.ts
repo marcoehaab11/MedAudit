@@ -4,6 +4,7 @@ import {
   ElementRef,
   forwardRef,
   Input,
+  inject,
   OnDestroy,
   ViewChild,
   ViewEncapsulation,
@@ -17,6 +18,7 @@ import {
   Validator,
 } from '@angular/forms';
 import intlTelInput from 'intl-tel-input';
+import { LocalizationService } from '../../core/localization.service';
 // @ts-ignore
 import { Iti } from 'intl-tel-input';
 
@@ -30,6 +32,7 @@ import { Iti } from 'intl-tel-input';
         type="tel"
         class="form-control"
         [placeholder]="placeholder"
+        [attr.aria-label]="label || (i18n.language() === 'ar' ? 'رقم الهاتف' : 'Phone number')"
         [disabled]="disabled"
         (input)="onInputChange()"
         (keyup)="onInputChange()"
@@ -53,9 +56,13 @@ import { Iti } from 'intl-tel-input';
     },
   ],
 })
-export class PhoneInputComponent implements ControlValueAccessor, Validator, AfterViewInit, OnDestroy {
+export class PhoneInputComponent
+  implements ControlValueAccessor, Validator, AfterViewInit, OnDestroy
+{
   @ViewChild('phoneInput') phoneInputRef!: ElementRef<HTMLInputElement>;
-  
+
+  readonly i18n = inject(LocalizationService);
+  @Input() label = '';
   @Input() placeholder = '';
 
   disabled = false;
@@ -78,7 +85,7 @@ export class PhoneInputComponent implements ControlValueAccessor, Validator, Aft
     if (this.value) {
       this.iti.setNumber(this.value);
     }
-    
+
     input.addEventListener('countrychange', () => {
       this.onInputChange();
       try {
@@ -98,7 +105,11 @@ export class PhoneInputComponent implements ControlValueAccessor, Validator, Aft
     if (wrapper) {
       wrapper.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
-        if (target.closest('.iti__country, .iti__country-list, .iti__dropdown-content, .iti__search-input, .iti__selected-country')) {
+        if (
+          target.closest(
+            '.iti__country, .iti__country-list, .iti__dropdown-content, .iti__search-input, .iti__selected-country',
+          )
+        ) {
           e.stopPropagation();
         }
       });
@@ -162,7 +173,7 @@ export class PhoneInputComponent implements ControlValueAccessor, Validator, Aft
     if (digits.length < 10) {
       return { invalidPhone: true };
     }
-    
+
     return null;
   }
 }

@@ -28,6 +28,7 @@ import { PatientApiService, PatientListItem } from '../features/patients/patient
         display: block;
         position: relative;
         inline-size: 100%;
+        min-inline-size: 0;
       }
 
       .picker-wrapper {
@@ -46,7 +47,9 @@ import { PatientApiService, PatientListItem } from '../features/patients/patient
         border-radius: var(--radius-md);
         background-color: #ffffff;
         cursor: pointer;
-        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        transition:
+          border-color 0.15s ease,
+          box-shadow 0.15s ease;
         user-select: none;
 
         &:hover:not(.disabled) {
@@ -105,6 +108,10 @@ import { PatientApiService, PatientListItem } from '../features/patients/patient
       }
 
       .placeholder-text {
+        min-inline-size: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
         color: var(--muted);
         font-size: 0.88rem;
         font-weight: 500;
@@ -248,15 +255,77 @@ import { PatientApiService, PatientListItem } from '../features/patients/patient
         color: var(--muted);
         font-size: 0.84rem;
       }
+
+      button.selected-display {
+        inline-size: 100%;
+        min-block-size: 44px;
+        text-align: start;
+        font: inherit;
+        box-shadow: none;
+        padding-inline-end: 3.5rem;
+      }
+      button.selected-display:hover {
+        transform: none;
+        box-shadow: none;
+        background: white;
+      }
+      .clear-picker {
+        position: absolute;
+        inset-inline-end: 1.8rem;
+        inset-block-start: 5px;
+        min-inline-size: 34px;
+        block-size: 34px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--ink-secondary);
+        box-shadow: none;
+        z-index: 1;
+      }
+      .options-list li {
+        padding: 0;
+        display: block;
+      }
+      .options-list .picker-option {
+        inline-size: 100%;
+        block-size: auto;
+        min-block-size: 48px;
+        padding: 0.65rem 0.85rem;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        text-align: start;
+        justify-content: start;
+        white-space: normal;
+      }
+      .options-list .picker-option:hover {
+        background: var(--brand-surface);
+        transform: none;
+        box-shadow: none;
+      }
+      :is(button, input):focus-visible {
+        outline: 2px solid var(--brand);
+        outline-offset: -2px;
+      }
     `,
   ],
   template: `
-    <div class="picker-wrapper">
-      <div
+    <div class="picker-wrapper" (keydown.escape)="closeDropdown($event)">
+      <button
+        type="button"
         class="selected-display"
         [class.active]="isOpen()"
         [class.invalid]="isInvalid"
         [class.disabled]="disabled"
+        [disabled]="disabled"
+        aria-haspopup="dialog"
+        [attr.aria-expanded]="isOpen()"
+        [attr.aria-controls]="isOpen() ? popupId : null"
+        [attr.aria-label]="
+          (i18n.language() === 'ar' ? 'المريض: ' : 'Patient: ') +
+          (selectedPatient()?.fullName || resolvedPlaceholder())
+        "
         (click)="toggleDropdown($event)"
       >
         @if (selectedPatient()) {
@@ -272,59 +341,92 @@ import { PatientApiService, PatientListItem } from '../features/patients/patient
         }
 
         <div class="picker-actions">
-          @if (allowClear && selectedPatient() && !disabled) {
-            <button
-              type="button"
-              class="clear-btn"
-              (click)="clearSelection($event)"
-              title="Clear selection"
-            >
-              ×
-            </button>
-          }
           <span class="dropdown-arrow" [class.open]="isOpen()">▼</span>
         </div>
-      </div>
+      </button>
 
+      @if (allowClear && selectedPatient() && !disabled) {
+        <button
+          type="button"
+          class="clear-picker"
+          (click)="clearSelection($event)"
+          [attr.aria-label]="
+            i18n.language() === 'ar' ? 'إلغاء اختيار المريض' : 'Clear patient selection'
+          "
+        >
+          ×
+        </button>
+      }
       @if (isOpen()) {
         <div class="dropdown-backdrop" (click)="closeDropdown($event)"></div>
-        <div class="dropdown-menu" (click)="$event.stopPropagation()">
+        <div
+          class="dropdown-menu"
+          [id]="popupId"
+          role="dialog"
+          [attr.aria-label]="i18n.language() === 'ar' ? 'اختيار المريض' : 'Choose patient'"
+          (click)="$event.stopPropagation()"
+        >
           <div class="search-box">
             <input
               #searchInput
               type="text"
-              [placeholder]="i18n.language() === 'ar' ? 'ابحث بالاسم، التليفون، أو رقم الملف…' : 'Search by name, phone, or file #…'"
+              [attr.aria-label]="i18n.language() === 'ar' ? 'البحث عن المريض' : 'Search patients'"
+              [placeholder]="
+                i18n.language() === 'ar'
+                  ? 'ابحث بالاسم، التليفون، أو رقم الملف…'
+                  : 'Search by name, phone, or file #…'
+              "
               [(ngModel)]="searchQuery"
               (input)="onSearchChange()"
-              (keydown.escape)="closeDropdown($event)"
             />
           </div>
 
           <ul class="options-list">
             @if (allowClear && !searchQuery.trim()) {
-              <li (click)="selectPatient(null, $event)" [class.selected]="!selectedPatient()">
-                <div class="patient-row">
-                  <span class="patient-name">{{ i18n.language() === 'ar' ? '— كل المرضى (بدون تحديد) —' : '— All patients (no filter) —' }}</span>
-                </div>
+              <li [class.selected]="!selectedPatient()">
+                <button
+                  type="button"
+                  class="picker-option"
+                  (click)="selectPatient(null, $event)"
+                  [attr.aria-pressed]="!selectedPatient()"
+                >
+                  <div class="patient-row">
+                    <span class="patient-name">{{
+                      i18n.language() === 'ar'
+                        ? '— كل المرضى (بدون تحديد) —'
+                        : '— All patients (no filter) —'
+                    }}</span>
+                  </div>
+                </button>
               </li>
             }
 
             @for (p of filteredPatients(); track p.id) {
-              <li
-                (click)="selectPatient(p, $event)"
-                [class.selected]="selectedPatient()?.id === p.id"
-              >
-                <div class="patient-row">
-                  <span class="patient-name">{{ p.fullName }}</span>
-                  <span class="patient-sub">
-                    @if (p.phone) { <span>📞 {{ p.phone }}</span> · }
-                    <span>📁 {{ p.patientNumber }}</span>
-                  </span>
-                </div>
+              <li [class.selected]="selectedPatient()?.id === p.id">
+                <button
+                  type="button"
+                  class="picker-option"
+                  (click)="selectPatient(p, $event)"
+                  [attr.aria-pressed]="selectedPatient()?.id === p.id"
+                >
+                  <div class="patient-row">
+                    <span class="patient-name">{{ p.fullName }}</span>
+                    <span class="patient-sub">
+                      @if (p.phone) {
+                        <span>📞 {{ p.phone }}</span> ·
+                      }
+                      <span>📁 {{ p.patientNumber }}</span>
+                    </span>
+                  </div>
+                </button>
               </li>
             } @empty {
               <div class="empty-results">
-                {{ i18n.language() === 'ar' ? 'لا يوجد مريض مطابق للبحث' : 'No patients match your search' }}
+                {{
+                  i18n.language() === 'ar'
+                    ? 'لا يوجد مريض مطابق للبحث'
+                    : 'No patients match your search'
+                }}
               </div>
             }
           </ul>
@@ -334,6 +436,8 @@ import { PatientApiService, PatientListItem } from '../features/patients/patient
   `,
 })
 export class PatientSelectComponent implements OnInit, ControlValueAccessor {
+  private static nextId = 0;
+  readonly popupId = 'patient-picker-' + PatientSelectComponent.nextId++;
   @Input() placeholder = '';
   @Input() allowClear = true;
   @Input() isInvalid = false;
@@ -358,9 +462,17 @@ export class PatientSelectComponent implements OnInit, ControlValueAccessor {
     this.loadPatients();
   }
 
+  @HostListener('focusout', ['$event'])
+  onPickerFocusOut(event: FocusEvent) {
+    if (event.relatedTarget && !this.elementRef.nativeElement.contains(event.relatedTarget))
+      this.closeDropdown();
+  }
+
   resolvedPlaceholder() {
     if (this.placeholder) return this.placeholder;
-    return this.i18n.language() === 'ar' ? 'اختر المريض (ابحث بالاسم أو التليفون)…' : 'Select patient (search name or phone)…';
+    return this.i18n.language() === 'ar'
+      ? 'اختر المريض (ابحث بالاسم أو التليفون)…'
+      : 'Select patient (search name or phone)…';
   }
 
   loadPatients() {
@@ -417,6 +529,8 @@ export class PatientSelectComponent implements OnInit, ControlValueAccessor {
     if (event) event.stopPropagation();
     this.isOpen.set(false);
     this.onTouched();
+    if (event?.type === 'keydown')
+      this.elementRef.nativeElement.querySelector('.selected-display')?.focus();
   }
 
   selectPatient(p: PatientListItem | null, event?: Event) {
@@ -426,6 +540,7 @@ export class PatientSelectComponent implements OnInit, ControlValueAccessor {
     this.onChange(this.currentValue);
     this.onTouched();
     this.isOpen.set(false);
+    this.elementRef.nativeElement.querySelector('.selected-display')?.focus();
   }
 
   clearSelection(event: MouseEvent) {
@@ -459,4 +574,3 @@ export class PatientSelectComponent implements OnInit, ControlValueAccessor {
     this.disabled = isDisabled;
   }
 }
-

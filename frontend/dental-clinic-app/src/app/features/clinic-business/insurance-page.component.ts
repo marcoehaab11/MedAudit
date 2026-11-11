@@ -15,7 +15,7 @@ import { Activity, Batch, BatchDetail, Claim, ClaimDetail, ClinicBusinessApi, Cl
   styleUrl: './clinic-business.scss',
   template: `
     <section class="business-page">
-      <header class="business-head"><div><p class="eyebrow">CLINIC OPERATIONS</p><h1>{{ t('Insurance claims', 'التأمينات والمطالبات') }}</h1><p>{{ t('Private plans and universal health insurance, with individual or grouped settlements.', 'شركات التأمين الخاصة والتأمين الصحي الشامل، بمطالبات وتسويات منفردة أو مجمعة.') }}</p></div></header>
+      <header class="business-head"><div><h1>{{ t('Insurance claims', 'التأمينات والمطالبات') }}</h1><p>{{ t('Private plans and universal health insurance, with individual or grouped settlements.', 'شركات التأمين الخاصة والتأمين الصحي الشامل، بمطالبات وتسويات منفردة أو مجمعة.') }}</p></div></header>
       @if (error) { <div class="business-alert error" role="alert">{{ error }}</div> }
       @if (notice) { <div class="business-alert success" role="status">{{ notice }}</div> }
       <div class="business-stats"><div><small>{{ t('Claims', 'المطالبات') }}</small><strong>{{ claims.length }}</strong></div><div><small>{{ t('Awaiting decision', 'بانتظار رد') }}</small><strong>{{ awaitingCount() }}</strong></div><div><small>{{ t('Rejected', 'مرفوض') }}</small><strong>{{ rejectedCount() }}</strong></div><div><small>{{ t('Outstanding from insurers', 'المستحق من الجهات') }}</small><strong>{{ summary?.outstanding == null ? '—' : (summary!.outstanding | number:'1.2-2') }}</strong><small>{{ summary?.currency || 'EGP' }}</small></div></div>

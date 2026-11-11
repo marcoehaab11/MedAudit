@@ -29,7 +29,7 @@ import { medicationForm, prescriptionActions, prescriptionStatus } from './presc
         <div class="alert success no-print">{{ message() }}</div>
       }
       @if (error()) {
-        <div class="alert error no-print">{{ error() }}</div>
+        <div class="alert error no-print" role="alert">{{ error() }}</div>
       }
 
       @if (loading()) {
@@ -38,7 +38,7 @@ import { medicationForm, prescriptionActions, prescriptionStatus } from './presc
         <!-- Screen Actions Header -->
         <section class="page-head rx-screen-head no-print">
           <div>
-            <p class="eyebrow">{{ status(item()!.status) }}</p>
+
             <h1>{{ item()!.prescriptionNumber }}</h1>
             <p class="head-sub">
               <strong>{{ item()!.patientName }}</strong> · {{ item()!.doctorName }} ·

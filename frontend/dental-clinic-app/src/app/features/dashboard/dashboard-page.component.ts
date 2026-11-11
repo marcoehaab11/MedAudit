@@ -27,7 +27,14 @@ import { DashboardReport, ReportsApiService } from '../reports/reports-api.servi
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, BillingQueueComponent, DoctorVisitQueueComponent, AppointmentCardActionsComponent],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterLink,
+    BillingQueueComponent,
+    DoctorVisitQueueComponent,
+    AppointmentCardActionsComponent,
+  ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
@@ -43,9 +50,14 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
 
   private readonly financeApi = inject(FinanceApiService);
   readonly myDues = signal<DoctorDues | null>(null);
-  readonly isDoctor = computed(() => this.auth.roles().includes('Doctor') || this.myDues() !== null);
+  readonly isDoctor = computed(
+    () => this.auth.roles().includes('Doctor') || this.myDues() !== null,
+  );
   readonly loading = signal(true);
   readonly appointmentsLoading = signal(false);
+  readonly scheduleError = signal('');
+  readonly upcomingUnavailable = signal(false);
+  readonly patientsUnavailable = signal(false);
   readonly error = signal('');
   readonly successMessage = signal('');
 
@@ -109,13 +121,21 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
   duesCaption(): string {
     const dues = this.myDues();
     if (!dues) return '—';
-    const balances = dues.byCurrency?.length ? dues.byCurrency : [{ total: dues.total, currency: dues.currency }];
-    return balances.map(x => money(x.total, x.currency, this.i18n.language())).join(' · ');
+    const balances = dues.byCurrency?.length
+      ? dues.byCurrency
+      : [{ total: dues.total, currency: dues.currency }];
+    return balances.map((x) => money(x.total, x.currency, this.i18n.language())).join(' · ');
   }
 
   ngOnInit(): void {
     this.loadDashboardData();
-    if (this.auth.hasPermission('Finance.View') && (this.auth.roles().includes('Doctor') || this.auth.hasPermission('Examination.Edit'))) this.financeApi.myDues().subscribe({ next: value => this.myDues.set(value), error: () => {} });
+    if (
+      this.auth.hasPermission('Finance.View') &&
+      (this.auth.roles().includes('Doctor') || this.auth.hasPermission('Examination.Edit'))
+    )
+      this.financeApi
+        .myDues()
+        .subscribe({ next: (value) => this.myDues.set(value), error: () => {} });
   }
 
   ngOnDestroy(): void {}
@@ -123,6 +143,9 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
   loadDashboardData(): void {
     this.loading.set(true);
     this.error.set('');
+    this.upcomingUnavailable.set(false);
+    this.patientsUnavailable.set(false);
+    this.dashboardReport.set(null);
 
     const now = new Date();
     const tomorrowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
@@ -133,11 +156,21 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
 
     const upcomingAppReq = this.appointmentApi
       .appointments({ from: tomorrowStr, to: nextWeekStr })
-      .pipe(catchError(() => of({ page: { items: [], totalCount: 0 } })));
+      .pipe(
+        catchError(() => {
+          this.upcomingUnavailable.set(true);
+          return of({ page: { items: [], totalCount: 0 } });
+        }),
+      );
 
     const patientsReq = this.patientApi
       .patients({ search: '', status: '', gender: '', page: 1, sortBy: '1', descending: true })
-      .pipe(catchError(() => of({ items: [], totalCount: 0 })));
+      .pipe(
+        catchError(() => {
+          this.patientsUnavailable.set(true);
+          return of({ items: [], totalCount: 0 });
+        }),
+      );
 
     const reportReq = this.auth.hasPermission('Reports.View')
       ? this.reportsApi.getDashboard().pipe(catchError(() => of(null)))
@@ -186,6 +219,7 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
 
   loadAppointments(): void {
     this.appointmentsLoading.set(true);
+    this.scheduleError.set('');
     const days = this.days();
     this.appointmentApi
       .appointments({
@@ -195,14 +229,23 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
         status: this.statusFilter() || undefined,
         type: this.typeFilter() || undefined,
       })
-      .pipe(catchError(() => of(null)))
+      .pipe(
+        catchError(() => {
+          this.scheduleError.set(
+            this.t('Schedule could not be loaded.', 'تعذر تحميل جدول المواعيد.'),
+          );
+          return of(null);
+        }),
+      )
       .subscribe({
         next: (x) => {
           this.result.set(x);
           this.appointmentsLoading.set(false);
           if (this.selected()) {
             const currentSelected = this.selected()!;
-            const found = x?.page?.items?.find((item: AppointmentItem) => item.id === currentSelected.id);
+            const found = x?.page?.items?.find(
+              (item: AppointmentItem) => item.id === currentSelected.id,
+            );
             if (!found) {
               this.selected.set(null);
             }
@@ -322,9 +365,23 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
       next: () => {
         this.showTemporarySuccess(this.t('Appointment updated.', 'تم تحديث الموعد بنجاح.'));
         this.loadAppointments();
-        this.appointmentApi.appointment(id).subscribe({next:x=>{this.selected.set(x);this.appointmentActionPending.set(false);},error:()=>{this.appointmentActionPending.set(false);this.error.set(this.t('Could not refresh appointment details.','تعذر تحديث بيانات الموعد.'));}});
+        this.appointmentApi.appointment(id).subscribe({
+          next: (x) => {
+            this.selected.set(x);
+            this.appointmentActionPending.set(false);
+          },
+          error: () => {
+            this.appointmentActionPending.set(false);
+            this.error.set(
+              this.t('Could not refresh appointment details.', 'تعذر تحديث بيانات الموعد.'),
+            );
+          },
+        });
       },
-      error: () => {this.appointmentActionPending.set(false);this.error.set(this.t('The appointment could not be updated.', 'تعذر تحديث الموعد.'));},
+      error: () => {
+        this.appointmentActionPending.set(false);
+        this.error.set(this.t('The appointment could not be updated.', 'تعذر تحديث الموعد.'));
+      },
     });
   }
 
@@ -346,26 +403,28 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
 
   reschedule() {
     if (!this.selected()) return;
-    this.appointmentApi.reschedule(this.selected()!.id, this.rescheduleForm.getRawValue()).subscribe({
-      next: () => {
-        this.showTemporarySuccess(this.t('Appointment rescheduled.', 'تمت إعادة جدولة الموعد.'));
-        const id = this.selected()!.id;
-        this.loadAppointments();
-        this.appointmentApi.appointment(id).subscribe((x) => this.selected.set(x));
-      },
-      error: (e: HttpErrorResponse) => {
-        this.error.set(
-          e.status === 409
-            ? this.t(
-                'That slot was just booked. Choose another time.',
-                'تم حجز هذا الوقت للتو. اختر وقتًا آخر.',
-              )
-            : this.t('Rescheduling failed.', 'تعذرت إعادة الجدولة.'),
-        );
-        this.loadRescheduleAvailability();
-        this.loadAppointments();
-      },
-    });
+    this.appointmentApi
+      .reschedule(this.selected()!.id, this.rescheduleForm.getRawValue())
+      .subscribe({
+        next: () => {
+          this.showTemporarySuccess(this.t('Appointment rescheduled.', 'تمت إعادة جدولة الموعد.'));
+          const id = this.selected()!.id;
+          this.loadAppointments();
+          this.appointmentApi.appointment(id).subscribe((x) => this.selected.set(x));
+        },
+        error: (e: HttpErrorResponse) => {
+          this.error.set(
+            e.status === 409
+              ? this.t(
+                  'That slot was just booked. Choose another time.',
+                  'تم حجز هذا الوقت للتو. اختر وقتًا آخر.',
+                )
+              : this.t('Rescheduling failed.', 'تعذرت إعادة الجدولة.'),
+          );
+          this.loadRescheduleAvailability();
+          this.loadAppointments();
+        },
+      });
   }
 
   localDate(value: string, zone?: string): string {
@@ -465,4 +524,3 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
     return this.i18n.language() === 'en' ? en : ar;
   }
 }
-

@@ -1,0 +1,24 @@
+{
+  "status": "passed",
+  "clinical": [
+    "scaling",
+    "bleaching",
+    "implant-planning"
+  ],
+  "auth": [
+    "login",
+    "forgot-password",
+    "reset-password",
+    "accept-invitation"
+  ],
+  "viewports": [
+    1440,
+    1024,
+    768,
+    390,
+    320
+  ],
+  "exceptions": [],
+  "unexpected": [],
+  "data": "Synthetic records; layout and keyboard foundations only, no clinical writes"
+}

@@ -17,7 +17,7 @@ import { PatientSelectComponent } from '../../shared/patient-select.component';
     <div class="prescriptions-page-wrapper">
       <section class="page-head">
         <div>
-          <p class="eyebrow">{{ t('Clinical Documents', 'المستندات السريرية والدوائية') }}</p>
+
           <h1>{{ t('Prescriptions', 'الوصفات الطبية') }}</h1>
         </div>
         @if (auth.hasPermission('Prescriptions.Create')) {
@@ -35,12 +35,12 @@ import { PatientSelectComponent } from '../../shared/patient-select.component';
           />
         </div>
 
-        <select formControlName="status">
+        <label class="workspace-filter-field"><span>{{ t('Status', 'الحالة') }}</span><select formControlName="status">
           <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
           @for (x of statuses; track x) {
             <option [value]="x">{{ status(x) }}</option>
           }
-        </select>
+        </select></label>
 
         <button type="button" class="btn-filter" (click)="load()">
           🔍 {{ t('Filter', 'تصفية') }}

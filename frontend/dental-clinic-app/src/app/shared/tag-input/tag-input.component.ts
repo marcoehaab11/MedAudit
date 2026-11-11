@@ -44,6 +44,7 @@ export interface TagSuggestion {
             class="tag-remove-btn"
             (click)="removeTag(tag, $event)"
             [title]="t('Remove', 'إزالة')"
+            [attr.aria-label]="t('Remove: ', 'إزالة: ') + tag"
           >
             &times;
           </button>
@@ -54,6 +55,7 @@ export interface TagSuggestion {
         #inputElement
         type="text"
         class="tag-text-input"
+        [attr.aria-label]="label || placeholder || t('Add a value', 'إضافة قيمة')"
         [placeholder]="tags.length === 0 ? placeholder : ''"
         [(ngModel)]="inputValue"
         (keydown)="onKeyDown($event)"
@@ -103,7 +105,9 @@ export interface TagSuggestion {
         border: 1.5px solid var(--border, #cbd5e1);
         border-radius: var(--radius-md, 8px);
         cursor: text;
-        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        transition:
+          border-color 0.15s ease,
+          box-shadow 0.15s ease;
 
         &:hover {
           border-color: #93c5fd;
@@ -178,7 +182,9 @@ export interface TagSuggestion {
           line-height: 1;
           color: inherit;
           cursor: pointer;
-          transition: background 0.15s ease, transform 0.1s ease;
+          transition:
+            background 0.15s ease,
+            transform 0.1s ease;
 
           &:hover {
             background: rgba(0, 0, 0, 0.2);
@@ -191,21 +197,30 @@ export interface TagSuggestion {
         background: #fef2f2;
         color: #dc2626;
         border-color: #fecaca;
-        .tag-remove-btn:hover { background: #fca5a5; color: #991b1b; }
+        .tag-remove-btn:hover {
+          background: #fca5a5;
+          color: #991b1b;
+        }
       }
 
       .theme-warning .tag-badge {
         background: #fffbeb;
         color: #b45309;
         border-color: #fde68a;
-        .tag-remove-btn:hover { background: #fcd34d; color: #78350f; }
+        .tag-remove-btn:hover {
+          background: #fcd34d;
+          color: #78350f;
+        }
       }
 
       .theme-info .tag-badge {
         background: #f0f9ff;
         color: #0284c7;
         border-color: #bae6fd;
-        .tag-remove-btn:hover { background: #7dd3fc; color: #075985; }
+        .tag-remove-btn:hover {
+          background: #7dd3fc;
+          color: #075985;
+        }
       }
 
       .tag-text-input {
@@ -261,24 +276,45 @@ export interface TagSuggestion {
             background: #ffffff;
             color: #be123c;
             border-color: #fecdd3;
-            &:hover { background: #fee2e2; border-color: #f87171; }
-            &.selected { background: #be123c; color: #ffffff; border-color: #be123c; }
+            &:hover {
+              background: #fee2e2;
+              border-color: #f87171;
+            }
+            &.selected {
+              background: #be123c;
+              color: #ffffff;
+              border-color: #be123c;
+            }
           }
 
           &.condition-chip {
             background: #ffffff;
             color: #b45309;
             border-color: #fef08a;
-            &:hover { background: #fef3c7; border-color: #f59e0b; }
-            &.selected { background: #b45309; color: #ffffff; border-color: #b45309; }
+            &:hover {
+              background: #fef3c7;
+              border-color: #f59e0b;
+            }
+            &.selected {
+              background: #b45309;
+              color: #ffffff;
+              border-color: #b45309;
+            }
           }
 
           &.medication-chip {
             background: #ffffff;
             color: #0284c7;
             border-color: #bae6fd;
-            &:hover { background: #e0f2fe; border-color: #38bdf8; }
-            &.selected { background: #0284c7; color: #ffffff; border-color: #0284c7; }
+            &:hover {
+              background: #e0f2fe;
+              border-color: #38bdf8;
+            }
+            &.selected {
+              background: #0284c7;
+              color: #ffffff;
+              border-color: #0284c7;
+            }
           }
         }
       }
@@ -302,6 +338,7 @@ export class TagInputComponent implements ControlValueAccessor {
   @Input() tags: string[] = [];
   @Output() tagsChange = new EventEmitter<string[]>();
 
+  @Input() label = '';
   @Input() placeholder = '';
   @Input() theme: 'danger' | 'warning' | 'info' | 'default' = 'default';
   @Input() suggestions: TagSuggestion[] = [];
@@ -318,7 +355,10 @@ export class TagInputComponent implements ControlValueAccessor {
     if (Array.isArray(value)) {
       this.tags = [...value];
     } else if (typeof value === 'string' && value.trim()) {
-      this.tags = value.split(/[,،\n]/).map((s) => s.trim()).filter(Boolean);
+      this.tags = value
+        .split(/[,،\n]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
     } else {
       this.tags = [];
     }

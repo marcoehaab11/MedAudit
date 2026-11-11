@@ -14,7 +14,7 @@ import { FINANCIAL_CATEGORY_PRESETS, CategoryPreset, localizeCategory } from './
   template: `
     <section class="page-head">
       <div>
-        <p class="eyebrow" style="color: var(--muted); font-weight: 700; font-size: 0.85rem; margin: 0 0 0.25rem;">{{ t('Financial Structure', 'الهيكل المالي للعيادة') }}</p>
+
         <h1>{{ t('Financial Categories', 'التصنيفات المالية') }}</h1>
       </div>
     </section>

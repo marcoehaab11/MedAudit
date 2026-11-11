@@ -11,51 +11,89 @@ import { PagedPatients, PatientApiService } from './patient-api.service';
 
   selector: 'app-patients-page',
   imports: [ReactiveFormsModule, RouterLink, DatePipe],
-  template: ` <section class="page-head">
+  template: ` <section class="workspace-page-head">
       <div>
-        <p class="eyebrow">{{ t('Patient registry', 'سجل المرضى') }}</p>
+
         <h1>{{ t('Patients', 'المرضى') }}</h1>
+        <p class="page-description">
+          {{ t('Find a patient and continue their care.', 'ابحث عن مريض وتابع رعايته.') }}
+        </p>
       </div>
-      @if (auth.hasPermission('Patients.Create')) { <a class="button primary" routerLink="/patients/create">{{
-        t('Add patient', 'إضافة مريض')
-      }}</a> }
+      @if (auth.hasPermission('Patients.Create')) {
+        <a class="button primary" routerLink="/patients/create">{{
+          t('Add patient', 'إضافة مريض')
+        }}</a>
+      }
     </section>
     @if (error()) {
       <div class="alert error" role="alert">{{ error() }}</div>
     }
-    <form class="panel filters" [formGroup]="filters" (ngSubmit)="load(1)">
-      <input
-        formControlName="search"
-        [placeholder]="
-          t('Search name, number, phone, or email', 'ابحث بالاسم أو الرقم أو الهاتف أو البريد')
-        "
-      />
-      <select formControlName="status" [attr.aria-label]="t('Status', 'الحالة')">
-        <option value="">{{ t('Active patients', 'المرضى النشطون') }}</option>
-        <option value="2">{{ t('Archived', 'المؤرشفون') }}</option>
-      </select>
-      <select formControlName="gender" [attr.aria-label]="t('Gender', 'النوع')">
-        <option value="">{{ t('All genders', 'كل الأنواع') }}</option>
-        <option value="1">{{ t('Female', 'أنثى') }}</option>
-        <option value="2">{{ t('Male', 'ذكر') }}</option>
-        <option value="3">{{ t('Other', 'آخر') }}</option>
-      </select>
-      <select formControlName="sortBy" [attr.aria-label]="t('Sort', 'الترتيب')">
-        <option value="1">{{ t('Newest', 'الأحدث') }}</option>
-        <option value="2">{{ t('Name', 'الاسم') }}</option>
-        <option value="3">{{ t('Patient number', 'رقم المريض') }}</option>
-      </select>
-      <button type="submit">
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <span>{{ t('Apply', 'تطبيق') }}</span>
-      </button>
+    <form
+      class="panel filters workspace-filters"
+      [formGroup]="filters"
+      (ngSubmit)="load(1)"
+      [attr.aria-label]="t('Patient filters', 'عوامل تصفية المرضى')"
+    >
+      <label class="workspace-filter-field filter-search">
+        <span>{{ t('Search patients', 'البحث عن مريض') }}</span>
+        <input
+          formControlName="search"
+          type="search"
+          [placeholder]="
+            t('Name, patient number, phone or email', 'الاسم أو رقم المريض أو الهاتف أو البريد')
+          "
+        />
+      </label>
+      <label class="workspace-filter-field">
+        <span>{{ t('Patient status', 'حالة المريض') }}</span>
+        <select formControlName="status">
+          <option value="">{{ t('Active', 'نشط') }}</option>
+          <option value="2">{{ t('Archived', 'المؤرشفون') }}</option>
+        </select>
+      </label>
+      <label class="workspace-filter-field">
+        <span>{{ t('Gender', 'النوع') }}</span>
+        <select formControlName="gender">
+          <option value="">{{ t('All genders', 'كل الأنواع') }}</option>
+          <option value="1">{{ t('Female', 'أنثى') }}</option>
+          <option value="2">{{ t('Male', 'ذكر') }}</option>
+          <option value="3">{{ t('Other', 'آخر') }}</option>
+        </select>
+      </label>
+      <label class="workspace-filter-field">
+        <span>{{ t('Sort by', 'الترتيب حسب') }}</span>
+        <select formControlName="sortBy">
+          <option value="1">{{ t('Newest', 'الأحدث') }}</option>
+          <option value="2">{{ t('Name', 'الاسم') }}</option>
+          <option value="3">{{ t('Patient number', 'رقم المريض') }}</option>
+        </select>
+      </label>
+      <div class="filter-actions">
+        <button type="submit" [disabled]="loading()">
+          {{ t('Apply filters', 'تطبيق التصفية') }}
+        </button>
+        <button class="filter-reset" type="button" (click)="resetFilters()" [disabled]="loading()">
+          {{ t('Reset', 'إعادة ضبط') }}
+        </button>
+      </div>
     </form>
-    <section class="panel table-panel">
+    <section class="panel table-panel workspace-results" [attr.aria-busy]="loading()">
+      <header class="workspace-results-head">
+        <h2>{{ t('Patient directory', 'دليل المرضى') }}</h2>
+        <span role="status">
+          @if (!loading() && !error() && result(); as patients) {
+            {{ patients.totalCount }} {{ t('patients', 'مريض') }}
+          }
+        </span>
+      </header>
       @if (loading()) {
         <div class="loading" role="status">{{ t('Loading patients…', 'جارٍ تحميل المرضى…') }}</div>
+      } @else if (error()) {
+        <div class="empty">
+          <strong>{{ t('Patient directory unavailable', 'تعذر عرض دليل المرضى') }}</strong>
+          <p>{{ t('Try loading the directory again.', 'حاول تحميل الدليل مرة أخرى.') }}</p>
+          <button type="button" (click)="load(1)">{{ t('Try again', 'حاول مرة أخرى') }}</button>
+        </div>
       } @else if (!result()?.items?.length) {
         <div class="empty">
           <strong>{{ t('No patients found', 'لا يوجد مرضى') }}</strong>
@@ -70,45 +108,52 @@ import { PagedPatients, PatientApiService } from './patient-api.service';
         </div>
       } @else {
         <div class="table-scroll">
-          <div class="table-responsive"><table>
-            <thead>
-              <tr>
-                <th>{{ t('Patient', 'المريض') }}</th>
-                <th>{{ t('Number', 'الرقم') }}</th>
-                <th>{{ t('Phone', 'الهاتف') }}</th>
-                <th>{{ t('Status', 'الحالة') }}</th>
-                <th>{{ t('Registered', 'تاريخ التسجيل') }}</th>
-                <th>
-                  <span class="sr-only">{{ t('Actions', 'الإجراءات') }}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (patient of result()!.items; track patient.id) {
+          <div class="table-responsive">
+            <table>
+              <caption class="sr-only">
+                {{
+                  t('Patient directory results', 'نتائج دليل المرضى')
+                }}
+              </caption>
+              <thead>
                 <tr>
-                  <td>
-                    <strong>{{ patient.fullName }}</strong
-                    ><small>{{ patient.email || '—' }}</small>
-                  </td>
-                  <td>
-                    <span class="number">{{ patient.patientNumber }}</span>
-                  </td>
-                  <td>{{ patient.phone }}</td>
-                  <td>
-                    <span class="badge status-{{ patient.status }}">{{
-                      patient.status === 1 ? t('Active', 'نشط') : t('Archived', 'مؤرشف')
-                    }}</span>
-                  </td>
-                  <td>{{ patient.createdAt | date: 'dd/MM/yyyy' }}</td>
-                  <td>
-                    <a [routerLink]="['/patients', patient.id]">{{ t('View', 'عرض') }}</a>
-                  </td>
+                  <th>{{ t('Patient', 'المريض') }}</th>
+                  <th>{{ t('Number', 'الرقم') }}</th>
+                  <th>{{ t('Phone', 'الهاتف') }}</th>
+                  <th>{{ t('Status', 'الحالة') }}</th>
+                  <th>{{ t('Registered', 'تاريخ التسجيل') }}</th>
+                  <th>
+                    <span class="sr-only">{{ t('Actions', 'الإجراءات') }}</span>
+                  </th>
                 </tr>
-              }
-            </tbody>
-          </table></div>
+              </thead>
+              <tbody>
+                @for (patient of result()!.items; track patient.id) {
+                  <tr>
+                    <td>
+                      <strong>{{ patient.fullName }}</strong
+                      ><small>{{ patient.email || '—' }}</small>
+                    </td>
+                    <td>
+                      <span class="number">{{ patient.patientNumber }}</span>
+                    </td>
+                    <td>{{ patient.phone }}</td>
+                    <td>
+                      <span class="badge status-{{ patient.status }}">{{
+                        patient.status === 1 ? t('Active', 'نشط') : t('Archived', 'مؤرشف')
+                      }}</span>
+                    </td>
+                    <td>{{ patient.createdAt | date: 'dd/MM/yyyy' }}</td>
+                    <td>
+                      <a [routerLink]="['/patients', patient.id]">{{ t('View', 'عرض') }}</a>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         </div>
-        <nav class="pagination">
+        <nav class="pagination" [attr.aria-label]="t('Patient pages', 'صفحات المرضى')">
           <button type="button" [disabled]="result()!.page <= 1" (click)="load(result()!.page - 1)">
             {{ t('Previous', 'السابق') }}</button
           ><span>{{ result()!.page }} / {{ result()!.totalPages || 1 }}</span
@@ -122,7 +167,6 @@ import { PagedPatients, PatientApiService } from './patient-api.service';
         </nav>
       }
     </section>`,
-
 })
 export class PatientsPageComponent {
   readonly auth = inject(AuthService);
@@ -138,6 +182,10 @@ export class PatientsPageComponent {
     sortBy: '1',
   });
   constructor() {
+    this.load(1);
+  }
+  resetFilters(): void {
+    this.filters.reset({ search: '', status: '', gender: '', sortBy: '1' });
     this.load(1);
   }
   load(page: number): void {
@@ -159,5 +207,3 @@ export class PatientsPageComponent {
     return this.i18n.language() === 'en' ? en : ar;
   }
 }
-
-

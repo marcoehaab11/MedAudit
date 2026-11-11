@@ -10,8 +10,8 @@ import { ReportFilter, ReportPeriod } from '../reports-api.service';
   template: `
     <div class="filter-bar">
       <div class="filter-group">
-        <label>Period / الفترة</label>
-        <select [(ngModel)]="currentFilter.period" (change)="onPeriodChange()">
+        <label for="report-period">Period / الفترة</label>
+        <select id="report-period" [(ngModel)]="currentFilter.period" (change)="onPeriodChange()">
           <option [ngValue]="ReportPeriod.Today">Today / اليوم</option>
           <option [ngValue]="ReportPeriod.ThisWeek">This Week / هذا الأسبوع</option>
           <option [ngValue]="ReportPeriod.ThisMonth">This Month / هذا الشهر</option>
@@ -21,13 +21,13 @@ import { ReportFilter, ReportPeriod } from '../reports-api.service';
       </div>
 
       <div class="filter-group" *ngIf="currentFilter.period === ReportPeriod.Custom">
-        <label>From / من</label>
-        <input type="date" [(ngModel)]="currentFilter.from" (change)="emitChange()" />
+        <label for="report-from">From / من</label>
+        <input id="report-from" type="date" [(ngModel)]="currentFilter.from" (change)="emitChange()" />
       </div>
 
       <div class="filter-group" *ngIf="currentFilter.period === ReportPeriod.Custom">
-        <label>To / إلى</label>
-        <input type="date" [(ngModel)]="currentFilter.to" (change)="emitChange()" />
+        <label for="report-to">To / إلى</label>
+        <input id="report-to" type="date" [(ngModel)]="currentFilter.to" (change)="emitChange()" />
       </div>
 
       <div class="actions">

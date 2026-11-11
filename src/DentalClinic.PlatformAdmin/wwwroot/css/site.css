@@ -249,3 +249,26 @@ body { background: radial-gradient(circle at 92% 2%, #e4f4e8 0, transparent 27%)
 .booking-share-qr { border: 1px solid #d9e9dc; border-radius: 16px; padding: 12px; background: #fff; }
 .booking-share-qr img { display: block; }
 @media (max-width: 768px) { .app-container { padding-top: 1.2rem !important; }.booking-share-qr { margin-inline: auto; }.table-responsive { border-radius: 0 0 18px 18px; } }
+
+/* Workspace finish: consistent input, focus, tables, and small-screen actions. */
+.skip-to-content { position: fixed; inset: 8px auto auto 8px; z-index: 2000; padding: 12px 18px; background: white; color: #065f50; transform: translateY(-180%); border-radius: 8px; }
+.skip-to-content:focus { transform: none; }
+:where(a, button, input, select, textarea, summary):focus-visible { outline: 3px solid #087b68; outline-offset: 3px; }
+.form-control, .form-select, .btn, .nav-link { min-height: 44px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: normal; }
+.app-container main, .app-container .card, .app-container .row > * { min-width: 0; }
+.table-responsive { position: relative; overscroll-behavior-inline: contain; scrollbar-width: thin; }
+.table { font-variant-numeric: tabular-nums; }
+.table th { background: #f1f5f9; font-size: .9rem; white-space: nowrap; }
+.table th, .table td { padding: 14px 16px; vertical-align: middle; }
+.field-validation-error, .validation-summary-errors { color: #b42318; }
+.user-email { max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 575px) {
+  .app-container { padding-inline: 16px; }
+  .form-control, .form-select { font-size: 16px; }
+  .app-container h1 { font-size: 1.6rem; overflow-wrap: anywhere; }
+  .app-container .d-flex { flex-wrap: wrap; }
+  .app-container .table { min-width: 560px; }
+  .table th, .table td { padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }

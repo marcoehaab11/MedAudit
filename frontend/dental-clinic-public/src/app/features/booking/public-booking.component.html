@@ -1,14 +1,14 @@
 <div class="booking-container" [style.--booking-primary]="clinic()?.primaryColor || '#087b68'" [style.--booking-secondary]="clinic()?.secondaryColor || '#0d9488'" [style.--booking-accent]="clinic()?.accentColor || '#f59e0b'">
   @if (loading()) {
-    <div class="loading-state">
+    <div class="loading-state" role="status">
       <div class="spinner"></div>
       <p>Loading clinic booking details...</p>
     </div>
   } @else if (error() && !clinic()) {
-    <div class="error-card">
+    <div class="error-card" role="alert">
       <div class="icon">⚠️</div>
       <h2>Booking Unavailable</h2>
-      <p>{{ error() }}</p>
+      <p>{{ error() }}</p><button type="button" class="btn btn-primary" (click)="loadClinicData(clinicSlug())">Try again</button>
     </div>
   } @else if (clinic()) {
     <!-- Header Hero -->
@@ -50,10 +50,10 @@
       @if (inquirySent()) { <div class="callback-success" role="status">Your request was received. The clinic team will contact you soon.</div> }
       @else {
         <form (ngSubmit)="sendInquiry()" class="callback-form">
-          <input name="inquiryName" [(ngModel)]="inquiryName" placeholder="Your name" aria-label="Your name" required maxlength="200" />
-          <input name="inquiryPhone" [(ngModel)]="inquiryPhone" placeholder="Phone number" aria-label="Phone number" type="tel" required maxlength="50" />
-          <input name="inquiryEmail" [(ngModel)]="inquiryEmail" placeholder="Email (optional)" aria-label="Email (optional)" type="email" maxlength="256" />
-          <textarea name="inquiryMessage" [(ngModel)]="inquiryMessage" placeholder="How can we help? (optional)" aria-label="How can we help?" rows="2" maxlength="2000"></textarea>
+          <label>Your name<input name="inquiryName" [(ngModel)]="inquiryName" placeholder="Your name" aria-label="Your name" required maxlength="200" /></label>
+          <label>Phone number<input name="inquiryPhone" [(ngModel)]="inquiryPhone" placeholder="Phone number" aria-label="Phone number" type="tel" required maxlength="50" /></label>
+          <label>Email (optional)<input name="inquiryEmail" [(ngModel)]="inquiryEmail" placeholder="Email (optional)" aria-label="Email (optional)" type="email" maxlength="256" /></label>
+          <label class="callback-message">How can we help? (optional)<textarea name="inquiryMessage" [(ngModel)]="inquiryMessage" placeholder="How can we help? (optional)" aria-label="How can we help?" rows="2" maxlength="2000"></textarea></label>
           <button type="submit" [disabled]="inquirySubmitting()">{{ inquirySubmitting() ? 'Sending…' : 'Request a call' }}</button>
           @if (inquiryError()) { <span class="callback-error" role="alert">{{ inquiryError() }}</span> }
         </form>
@@ -64,7 +64,7 @@
     <nav class="booking-stepper">
       <button
         type="button"
-        [class.active]="step() === 1"
+        [class.active]="step() === 1" [attr.aria-current]="step() === 1 ? 'step' : null"
         [class.completed]="step() > 1"
         (click)="goToStep(1)"
       >
@@ -72,7 +72,7 @@
       </button>
       <button
         type="button"
-        [class.active]="step() === 2"
+        [class.active]="step() === 2" [attr.aria-current]="step() === 2 ? 'step' : null"
         [class.completed]="step() > 2"
         [disabled]="!selectedDoctorId()"
         (click)="goToStep(2)"
@@ -81,7 +81,7 @@
       </button>
       <button
         type="button"
-        [class.active]="step() === 3"
+        [class.active]="step() === 3" [attr.aria-current]="step() === 3 ? 'step' : null"
         [class.completed]="step() > 3"
         [disabled]="!selectedServiceId()"
         (click)="goToStep(3)"
@@ -90,7 +90,7 @@
       </button>
       <button
         type="button"
-        [class.active]="step() === 4"
+        [class.active]="step() === 4" [attr.aria-current]="step() === 4 ? 'step' : null"
         [disabled]="!selectedSlot()"
         (click)="goToStep(4)"
       >
@@ -99,22 +99,25 @@
     </nav>
 
     @if (error()) {
-      <div class="banner error-banner">
+      <div class="banner error-banner" role="alert">
         <span>⚠️ {{ error() }}</span>
       </div>
     }
 
+    @if (lookupError()) {
+      <div class="banner error-banner" role="alert"><p>{{ lookupError() }}</p><button type="button" class="btn btn-secondary" (click)="loadDoctorsAndServices(clinicSlug())">Try again</button></div>
+    }
     <!-- Step 1: Select Doctor -->
-    @if (step() === 1) {
+    @if (step() === 1 && !lookupError()) {
       <section class="step-card">
         <h2>Select a Dentist</h2>
         <p class="subtitle">Choose an expert practitioner for your appointment</p>
 
         <div class="doctors-grid">
           @for (doc of doctors(); track doc.doctorProfileId) {
-            <div
+            <button type="button"
               class="doctor-card"
-              [class.selected]="selectedDoctorId() === doc.doctorProfileId"
+              [class.selected]="selectedDoctorId() === doc.doctorProfileId" [attr.aria-pressed]="selectedDoctorId() === doc.doctorProfileId"
               (click)="selectDoctor(doc.doctorProfileId)"
             >
               <div class="doc-avatar">👨‍⚕️</div>
@@ -126,7 +129,7 @@
                 }
                 <span class="badge">{{ doc.consultationDurationMinutes }} mins consultation</span>
               </div>
-            </div>
+            </button>
           }
           @if (doctors().length === 0) {
             <div class="empty-state">No doctors are currently available for online booking.</div>
@@ -147,16 +150,16 @@
     }
 
     <!-- Step 2: Select Service -->
-    @if (step() === 2) {
+    @if (step() === 2 && !lookupError()) {
       <section class="step-card">
         <h2>Select Service or Treatment</h2>
         <p class="subtitle">Choose the procedure or consultation you require</p>
 
         <div class="services-list">
           @for (svc of services(); track svc.id) {
-            <div
+            <button type="button"
               class="service-item"
-              [class.selected]="selectedServiceId() === svc.id"
+              [class.selected]="selectedServiceId() === svc.id" [attr.aria-pressed]="selectedServiceId() === svc.id"
               (click)="selectService(svc.id)"
             >
               <div class="svc-main">
@@ -171,7 +174,7 @@
                   <span class="price">{{ svc.price | currency: clinic()?.currency }}</span>
                 }
               </div>
-            </div>
+            </button>
           }
           @if (services().length === 0) {
             <div class="empty-state">No services listed for public booking.</div>
@@ -193,7 +196,7 @@
     }
 
     <!-- Step 3: Select Date & Time Slot -->
-    @if (step() === 3) {
+    @if (step() === 3 && !lookupError()) {
       <section class="step-card">
         <h2>Select Date & Available Time</h2>
         <p class="subtitle">Pick a slot convenient for your schedule</p>
@@ -211,11 +214,11 @@
         </div>
 
         @if (loadingSlots()) {
-          <div class="loading-state">
+          <div class="loading-state" role="status">
             <div class="spinner"></div>
             <p>Checking slot availability...</p>
           </div>
-        } @else {
+        } @else if (!error()) {
           <div class="slots-container">
             <h3>Available Time Slots for {{ selectedDate() }}</h3>
             <div class="slots-grid">
@@ -223,7 +226,7 @@
                 <button
                   type="button"
                   class="slot-chip"
-                  [class.selected]="selectedSlot()?.startAt === slot.startAt"
+                  [class.selected]="selectedSlot()?.startAt === slot.startAt" [attr.aria-pressed]="selectedSlot()?.startAt === slot.startAt"
                   (click)="selectSlot(slot)"
                 >
                   {{ slot.startTime }} - {{ slot.endTime }}
@@ -253,7 +256,7 @@
     }
 
     <!-- Step 4: Patient Details & Confirm -->
-    @if (step() === 4) {
+    @if (step() === 4 && !lookupError()) {
       <section class="step-card">
         <h2>Enter Patient Information</h2>
         <p class="subtitle">Provide your contact details to complete your booking</p>

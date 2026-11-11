@@ -73,7 +73,7 @@ interface DraftItem {
 
           <form [formGroup]="form" (ngSubmit)="savePrescription()">
             @if (modalError()) {
-              <div class="alert error" style="margin-bottom: 0.85rem;">{{ modalError() }}</div>
+              <div class="alert error" role="alert" style="margin-bottom: 0.85rem;">{{ modalError() }}</div>
             }
 
             <!-- Doctor Select Field -->
@@ -257,7 +257,7 @@ interface DraftItem {
           <form [formGroup]="form" (ngSubmit)="savePrescription()">
             <div class="modal-body">
               @if (modalError()) {
-                <div class="alert error">{{ modalError() }}</div>
+                <div class="alert error" role="alert">{{ modalError() }}</div>
               }
 
               <!-- Doctor Select Field -->

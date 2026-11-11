@@ -23,12 +23,26 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
   styleUrl: './appointments.scss',
   selector: 'app-appointments-page',
   standalone: true,
-  imports: [AppointmentCardActionsComponent, BillingQueueComponent, CommonModule, ReactiveFormsModule, RouterLink],
-  template: ` @if (auth.hasPermission('Finance.Revenue.View')) { <app-billing-queue /> }
-    <section class="page-head">
+  imports: [
+    AppointmentCardActionsComponent,
+    BillingQueueComponent,
+    CommonModule,
+    ReactiveFormsModule,
+    RouterLink,
+  ],
+  template: `
+    @if (auth.hasPermission('Finance.Revenue.View')) {
+      <app-billing-queue />
+    }
+    <section class="workspace-page-head">
       <div>
-        <p class="eyebrow">{{ t('Clinic schedule', 'جدول العيادة') }}</p>
+
         <h1>{{ t('Appointments', 'المواعيد') }}</h1>
+        <p class="page-description">
+          {{
+            t('Review the schedule and manage each visit.', 'راجع جدول المواعيد وتابع كل زيارة.')
+          }}
+        </p>
       </div>
       @if (auth.hasPermission('Appointments.Create')) {
         <a
@@ -42,74 +56,124 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
     </section>
 
     @if (message()) {
-      <div class="alert success">{{ message() }}</div>
+      <div class="alert success" role="status">{{ message() }}</div>
     }
     @if (error()) {
-      <div class="alert error">{{ error() }}</div>
+      <div class="alert error" role="alert">{{ error() }}</div>
     }
 
-    <section class="panel calendar-toolbar">
-      <div class="view-toggle">
-        <button type="button" [class.active]="view() === 'day'" (click)="setView('day')">
-          {{ t('Day', 'يوم') }}
-        </button>
-        <button type="button" [class.active]="view() === 'week'" (click)="setView('week')">
-          {{ t('Week', 'أسبوع') }}
-        </button>
+    <section
+      class="panel calendar-toolbar workspace-filters"
+      [attr.aria-label]="t('Schedule filters', 'عوامل تصفية الجدول')"
+    >
+      <div class="workspace-filter-field">
+        <span>{{ t('Calendar view', 'عرض الجدول') }}</span>
+        <div class="view-toggle" role="group" [attr.aria-label]="t('Calendar view', 'عرض الجدول')">
+          <button
+            type="button"
+            [class.active]="view() === 'day'"
+            [attr.aria-pressed]="view() === 'day'"
+            (click)="setView('day')"
+          >
+            {{ t('Day', 'يوم') }}
+          </button>
+          <button
+            type="button"
+            [class.active]="view() === 'week'"
+            [attr.aria-pressed]="view() === 'week'"
+            (click)="setView('week')"
+          >
+            {{ t('Week', 'أسبوع') }}
+          </button>
+        </div>
       </div>
 
       <!-- Quick Day Shortcuts (اليوم / غداً) -->
-      <div class="quick-day-shortcuts">
-        <button
-          type="button"
-          class="btn-shortcut"
-          [class.active]="isToday()"
-          (click)="selectToday()"
-        >
-          📅 {{ t('Today', 'اليوم') }}
-        </button>
-        <button
-          type="button"
-          class="btn-shortcut"
-          [class.active]="isTomorrow()"
-          (click)="selectTomorrow()"
-        >
-          ☀️ {{ t('Tomorrow', 'غداً') }}
-        </button>
+      <div class="workspace-filter-field">
+        <span>{{ t('Jump to', 'انتقل إلى') }}</span>
+        <div class="quick-day-shortcuts">
+          <button
+            type="button"
+            class="btn-shortcut"
+            [class.active]="isToday()"
+            (click)="selectToday()"
+          >
+            {{ t('Today', 'اليوم') }}
+          </button>
+          <button
+            type="button"
+            class="btn-shortcut"
+            [class.active]="isTomorrow()"
+            (click)="selectTomorrow()"
+          >
+            {{ t('Tomorrow', 'غداً') }}
+          </button>
+        </div>
       </div>
-
-      <div class="date-nav">
-        <button type="button" (click)="move(-1)" aria-label="Previous">‹</button>
-        <input type="date" [value]="selectedDate()" (change)="onDateChange($event)" />
-        <button type="button" (click)="move(1)" aria-label="Next">›</button>
+      <div class="workspace-filter-field schedule-date">
+        <label for="schedule-date">{{ t('Schedule date', 'تاريخ الجدول') }}</label>
+        <div class="date-nav">
+          <button
+            type="button"
+            (click)="move(-1)"
+            [attr.aria-label]="t('Previous period', 'الفترة السابقة')"
+          >
+            ‹
+          </button>
+          <input
+            id="schedule-date"
+            type="date"
+            [value]="selectedDate()"
+            (change)="onDateChange($event)"
+          />
+          <button
+            type="button"
+            (click)="move(1)"
+            [attr.aria-label]="t('Next period', 'الفترة التالية')"
+          >
+            ›
+          </button>
+        </div>
       </div>
+      <label class="workspace-filter-field">
+        <span>{{ t('Doctor', 'الطبيب') }}</span>
+        <select [value]="doctorFilter()" (change)="onDoctorChange($event)">
+          <option value="">{{ t('All doctors', 'كل الأطباء') }}</option>
+          @for (d of doctors(); track d.id) {
+            <option [value]="d.id">{{ d.displayName }}</option>
+          }
+        </select>
+      </label>
 
-      <select [value]="doctorFilter()" (change)="onDoctorChange($event)">
-        <option value="">{{ t('All doctors', 'كل الأطباء') }}</option>
-        @for (d of doctors(); track d.id) {
-          <option [value]="d.id">{{ d.displayName }}</option>
-        }
-      </select>
+      <label class="workspace-filter-field">
+        <span>{{ t('Status', 'الحالة') }}</span>
+        <select [value]="statusFilter()" (change)="onStatusChange($event)">
+          <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
+          @for (s of statuses; track s) {
+            <option [value]="s">{{ statusLabel(s) }}</option>
+          }
+        </select>
+      </label>
 
-      <select [value]="statusFilter()" (change)="onStatusChange($event)">
-        <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
-        @for (s of statuses; track s) {
-          <option [value]="s">{{ statusLabel(s) }}</option>
-        }
-      </select>
-
-      <select [value]="typeFilter()" (change)="onTypeChange($event)">
-        <option value="">{{ t('All types', 'كل الأنواع') }}</option>
-        @for (x of types; track x) {
-          <option [value]="x">{{ typeLabel(x) }}</option>
-        }
-      </select>
+      <label class="workspace-filter-field">
+        <span>{{ t('Visit type', 'نوع الزيارة') }}</span>
+        <select [value]="typeFilter()" (change)="onTypeChange($event)">
+          <option value="">{{ t('All types', 'كل الأنواع') }}</option>
+          @for (x of types; track x) {
+            <option [value]="x">{{ typeLabel(x) }}</option>
+          }
+        </select>
+      </label>
     </section>
 
     <div class="calendar-layout" [class.has-details]="selected()">
-      <section class="panel calendar" data-testid="appointment-calendar">
+      <section
+        class="panel calendar workspace-results"
+        data-testid="appointment-calendar"
+        [attr.aria-busy]="loading()"
+      >
         @if (loading()) {
-          <div class="state">{{ t('Loading schedule…', 'جارٍ تحميل الجدول…') }}</div>
+          <div class="state" role="status">{{ t('Loading schedule…', 'جارٍ تحميل الجدول…') }}</div>
         } @else if (!result()?.page?.items?.length) {
           <div class="state">
             <strong>{{ t('No appointments', 'لا توجد مواعيد') }}</strong>
@@ -222,14 +286,26 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
                           <span class="status-badge status-badge-{{ item.status }}">{{
                             statusLabel(item.status)
                           }}</span>
-                          @if ((item.status === 3 || item.status === 4) && auth.hasPermission('Examination.View')) {
+                          @if (
+                            (item.status === 3 || item.status === 4) &&
+                            auth.hasPermission('Examination.View')
+                          ) {
                             <a
                               class="card-visit-link"
                               [routerLink]="['/appointments', item.id, 'visit']"
                               (click)="$event.stopPropagation()"
-                              [title]="item.status === 4 ? t('Continue visit', 'متابعة الزيارة') : t('Open visit', 'فتح الزيارة')"
+                              [title]="
+                                item.status === 4
+                                  ? t('Continue visit', 'متابعة الزيارة')
+                                  : t('Open visit', 'فتح الزيارة')
+                              "
                             >
-                              🦷 {{ item.status === 4 ? t('Continue visit', 'متابعة الزيارة') : t('Open visit', 'فتح الزيارة') }}
+                              🦷
+                              {{
+                                item.status === 4
+                                  ? t('Continue visit', 'متابعة الزيارة')
+                                  : t('Open visit', 'فتح الزيارة')
+                              }}
                             </a>
                           }
                         </div>
@@ -289,34 +365,48 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
           @if (selected()!.notes) {
             <p>{{ selected()!.notes }}</p>
           }
-          <app-appointment-card-actions [appointment]="selected()!" [busy]="appointmentActionPending()" (action)="action($event)" (cancel)="cancel()" />
-            @if (auth.hasPermission('TreatmentPlans.Create') || auth.hasPermission('Prescriptions.Create')) { <details><summary>{{ t('Clinical tools', 'أدوات الزيارة') }}</summary><div class="actions">@if (auth.hasPermission('TreatmentPlans.Create')) {
-              <a
-                class="button"
-                routerLink="/treatment-plans/create"
-                [queryParams]="{
-                  appointmentId: selected()!.id,
-                  patientId: selected()!.patientId,
-                  doctorProfileId: selected()!.doctorProfileId,
-                }"
-              >
-                📋 {{ t('Create treatment plan', 'إنشاء خطة علاج') }}
-              </a>
-            }
-            @if (auth.hasPermission('Prescriptions.Create')) {
-              <a
-                class="button"
-                routerLink="/prescriptions/create"
-                [queryParams]="{
-                  appointmentId: selected()!.id,
-                  patientId: selected()!.patientId,
-                  doctorProfileId: selected()!.doctorProfileId,
-                }"
-              >
-                💊 {{ t('Create prescription', 'إنشاء وصفة') }}
-              </a>
-            }
-            </div></details> }
+          <app-appointment-card-actions
+            [appointment]="selected()!"
+            [busy]="appointmentActionPending()"
+            (action)="action($event)"
+            (cancel)="cancel()"
+          />
+          @if (
+            auth.hasPermission('TreatmentPlans.Create') ||
+            auth.hasPermission('Prescriptions.Create')
+          ) {
+            <details>
+              <summary>{{ t('Clinical tools', 'أدوات الزيارة') }}</summary>
+              <div class="actions">
+                @if (auth.hasPermission('TreatmentPlans.Create')) {
+                  <a
+                    class="button"
+                    routerLink="/treatment-plans/create"
+                    [queryParams]="{
+                      appointmentId: selected()!.id,
+                      patientId: selected()!.patientId,
+                      doctorProfileId: selected()!.doctorProfileId,
+                    }"
+                  >
+                    📋 {{ t('Create treatment plan', 'إنشاء خطة علاج') }}
+                  </a>
+                }
+                @if (auth.hasPermission('Prescriptions.Create')) {
+                  <a
+                    class="button"
+                    routerLink="/prescriptions/create"
+                    [queryParams]="{
+                      appointmentId: selected()!.id,
+                      patientId: selected()!.patientId,
+                      doctorProfileId: selected()!.doctorProfileId,
+                    }"
+                  >
+                    💊 {{ t('Create prescription', 'إنشاء وصفة') }}
+                  </a>
+                }
+              </div>
+            </details>
+          }
           @if (
             (selected()!.status === 1 || selected()!.status === 2) &&
             auth.hasPermission('Appointments.Edit')
@@ -678,7 +768,10 @@ export class AppointmentsPageComponent {
     this.appointmentActionPending.set(true);
     this.api.action(this.selected()!.id, action).subscribe({
       next: () => this.refresh(this.t('Appointment updated.', 'تم تحديث الموعد.')),
-      error: () => { this.appointmentActionPending.set(false); this.error.set(this.t('The appointment could not be updated.', 'تعذر تحديث الموعد.')); },
+      error: () => {
+        this.appointmentActionPending.set(false);
+        this.error.set(this.t('The appointment could not be updated.', 'تعذر تحديث الموعد.'));
+      },
     });
   }
 
@@ -729,8 +822,16 @@ export class AppointmentsPageComponent {
     const id = this.selected()!.id;
     this.load(true);
     this.api.appointment(id).subscribe({
-      next: x => { this.selected.set(x); this.appointmentActionPending.set(false); },
-      error: () => { this.appointmentActionPending.set(false); this.error.set(this.t('Could not refresh appointment details.', 'تعذر تحديث بيانات الموعد.')); },
+      next: (x) => {
+        this.selected.set(x);
+        this.appointmentActionPending.set(false);
+      },
+      error: () => {
+        this.appointmentActionPending.set(false);
+        this.error.set(
+          this.t('Could not refresh appointment details.', 'تعذر تحديث بيانات الموعد.'),
+        );
+      },
     });
   }
 

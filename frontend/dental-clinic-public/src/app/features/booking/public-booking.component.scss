@@ -427,3 +427,30 @@
     transform: rotate(360deg);
   }
 }
+
+.doctor-card, .service-item { width: 100%; font: inherit; text-align: start; color: inherit; background: white; }
+.step-card, .booking-container, .doc-details, .svc-main { min-inline-size: 0; }
+.actions { flex-wrap: wrap; gap: 12px; }
+.steps-nav { overflow-x: auto; scrollbar-width: thin; }
+@media (max-width: 600px) { .actions > button { flex: 1 1 auto; white-space: normal; height: auto; } .date-picker-row { flex-wrap: wrap; } }
+
+:host { display: block; min-inline-size: 0; inline-size: 100%; color: #16372f; }
+.booking-container { inline-size: 100%; }
+.clinic-info { min-inline-size: 0; overflow-wrap: anywhere; }
+.clinic-hero .clinic-avatar, .clinic-hero .clinic-logo { flex-shrink: 0; }
+.booking-stepper { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.booking-stepper button { min-inline-size: 0; white-space: normal; }
+.callback-panel > *, .doctors-grid > *, .services-list > *, .form-group { min-inline-size: 0; }
+@media (max-width: 600px) {
+  .booking-container { padding: 16px 0 32px; }
+  .clinic-hero { flex-direction: column; align-items: flex-start; padding: 20px; }
+  .callback-panel { padding: 20px; }
+  .booking-stepper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .doctors-grid, .form-row { grid-template-columns: minmax(0, 1fr); }
+  .step-card { padding: 20px; }
+  .service-item { flex-wrap: wrap; }
+}
+
+.booking-stepper { display: grid; }
+.callback-form label { display: grid; gap: 6px; min-inline-size: 0; font-size: .875rem; color: white; }
+.callback-message { grid-column: 1 / -1; }

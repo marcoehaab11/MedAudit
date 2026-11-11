@@ -15,7 +15,7 @@ import { Activity, ClinicBusinessApi, ClinicDocument, LabCase, LabStatement, Lab
   styleUrl: './clinic-business.scss',
   template: `
     <section class="business-page">
-      <header class="business-head"><div><p class="eyebrow">CLINIC OPERATIONS</p><h1>{{ t('External dental labs', 'المعامل الخارجية') }}</h1><p>{{ t('Track every case and settle grouped laboratory statements.', 'تابع كل حالة وسوّي كشوف المعمل المجمعة بالتفصيل.') }}</p></div></header>
+      <header class="business-head"><div><h1>{{ t('External dental labs', 'المعامل الخارجية') }}</h1><p>{{ t('Track every case and settle grouped laboratory statements.', 'تابع كل حالة وسوّي كشوف المعمل المجمعة بالتفصيل.') }}</p></div></header>
       @if (error) { <div class="business-alert error" role="alert">{{ error }}</div> }
       @if (notice) { <div class="business-alert success" role="status">{{ notice }}</div> }
       <div class="business-stats"><div><small>{{ t('Open cases', 'حالات مفتوحة') }}</small><strong>{{ openCount() }}</strong></div><div><small>{{ t('Overdue cases', 'حالات متأخرة') }}</small><strong>{{ overdueCount() }}</strong></div><div><small>{{ t('Unbilled cost', 'تكلفة لم تدخل كشف') }}</small><strong>{{ unbilledCost() | number:'1.2-2' }}</strong></div><div><small>{{ t('Statements', 'كشوف حساب') }}</small><strong>{{ statements.length }}</strong></div></div>

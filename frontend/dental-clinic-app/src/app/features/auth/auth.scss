@@ -720,3 +720,14 @@ form {
   }
 }
 
+
+/* Login and password recovery share the same keyboard and mobile contract. */
+.auth-wrapper { min-block-size: 100dvh; }
+.auth-wrapper input { min-block-size: 44px; }
+.auth-wrapper button, .auth-wrapper a.button { min-block-size: 44px; height: auto; white-space: normal; }
+.auth-wrapper .field-error { color: #b42318; line-height: 1.6; }
+@media (max-width: 600px) {
+  .auth-wrapper { padding: 16px; }
+  .auth-wrapper input { font-size: 16px; }
+  .auth-layout, .auth-card { min-inline-size: 0; max-inline-size: 100%; }
+}

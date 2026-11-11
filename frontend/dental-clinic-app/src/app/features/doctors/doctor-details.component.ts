@@ -17,17 +17,27 @@ type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
   styleUrl: './doctors.scss',
 
   selector: 'app-doctor-details',
-  imports: [RouterLink, DatePipe, DecimalPipe, ReactiveFormsModule, FormsModule, DateInputComponent],
-  template: `
+  imports: [
+    RouterLink,
+    DatePipe,
+    DecimalPipe,
+    ReactiveFormsModule,
+    FormsModule,
+    DateInputComponent,
+  ],
+  template: `<div class="workspace-records doctor-profile">
     <a class="back" routerLink="/doctors">← {{ t('Back to doctors', 'العودة إلى الأطباء') }}</a>
     @if (loading()) {
-      <div class="state">{{ t('Loading doctor…', 'جارٍ تحميل الطبيب…') }}</div>
+      <div class="state" role="status">{{ t('Loading doctor…', 'جارٍ تحميل الطبيب…') }}</div>
     } @else if (error()) {
-      <div class="alert error">{{ error() }}</div>
+      <div class="state" role="alert">
+        <strong>{{ error() }}</strong
+        ><button type="button" (click)="load()">{{ t('Try again', 'حاول مرة أخرى') }}</button>
+      </div>
     } @else if (doctor()) {
-      <section class="page-head">
+      <section class="workspace-page-head">
         <div>
-          <p class="eyebrow">{{ doctor()!.specialization }}</p>
+
           <h1>{{ doctor()!.displayName }}</h1>
           <p>{{ doctor()!.email }} · {{ doctor()!.phone || '—' }}</p>
         </div>
@@ -37,251 +47,346 @@ type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
             <a class="button" [routerLink]="['/doctors', id, 'edit']">{{ t('Edit', 'تعديل') }}</a>
           }
           @if (auth.hasPermission('Doctors.Archive') && doctor()!.status !== 3) {
-            <button class="danger" (click)="archive()">{{ t('Delete / Archive', 'حذف / أرشفة') }}</button>
+            <button class="danger" (click)="archive()">
+              {{ t('Archive doctor', 'أرشفة الطبيب') }}
+            </button>
           }
           @if (auth.hasPermission('Doctors.Archive') && doctor()!.status === 3) {
-            <button class="primary" (click)="restore()">{{ t('Restore Doctor', 'استرجاع الطبيب') }}</button>
+            <button class="primary" (click)="restore()">
+              {{ t('Restore Doctor', 'استرجاع الطبيب') }}
+            </button>
           }
         </div>
       </section>
       @if (success()) {
-        <div class="alert success">{{ success() }}</div>
+        <div class="alert success" role="status">{{ success() }}</div>
       }
-      <nav class="tabs">
+      @if (operationError()) {
+        <div class="alert error" role="alert">{{ operationError() }}</div>
+      }
+      <nav class="tabs" [attr.aria-label]="t('Doctor sections', 'أقسام ملف الطبيب')">
         @for (x of tabs; track x.id) {
           @if (x.id !== 'compensation' || doctor()!.canManageCompensation) {
-            <button type="button" [class.active]="tab() === x.id" (click)="tab.set(x.id)">
+            <button
+              type="button"
+              [class.active]="tab() === x.id"
+              [attr.aria-pressed]="tab() === x.id"
+              [attr.data-section]="x.id"
+              aria-controls="doctor-section"
+              (click)="tab.set(x.id)"
+            >
               {{ t(x.en, x.ar) }}
             </button>
           }
         }
       </nav>
-      @switch (tab()) {
-        @case ('profile') {
-          <div class="detail-grid">
+      <section id="doctor-section" [attr.aria-label]="sectionTitle()">
+        @switch (tab()) {
+          @case ('profile') {
+            <div class="detail-grid">
+              <section class="panel">
+                <h2>{{ t('Professional profile', 'الملف المهني') }}</h2>
+                <dl>
+                  <div>
+                    <dt>{{ t('Specialization', 'التخصص') }}</dt>
+                    <dd>{{ doctor()!.specialization }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ t('License number', 'رقم الترخيص') }}</dt>
+                    <dd class="number">{{ doctor()!.licenseNumber || '—' }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ t('Consultation duration', 'مدة الاستشارة') }}</dt>
+                    <dd>{{ doctor()!.consultationDurationMinutes }} {{ t('minutes', 'دقيقة') }}</dd>
+                  </div>
+                </dl>
+              </section>
+              <section class="panel">
+                <h2>{{ t('Biography', 'نبذة') }}</h2>
+                <p class="pre">
+                  {{ doctor()!.bio || t('No biography recorded.', 'لا توجد نبذة مسجلة.') }}
+                </p>
+              </section>
+            </div>
+          }
+          @case ('account') {
             <section class="panel">
-              <h2>{{ t('Professional profile', 'الملف المهني') }}</h2>
+              <h2>{{ t('Linked clinic account', 'حساب العيادة المرتبط') }}</h2>
               <dl>
                 <div>
-                  <dt>{{ t('Specialization', 'التخصص') }}</dt>
-                  <dd>{{ doctor()!.specialization }}</dd>
+                  <dt>{{ t('Name', 'الاسم') }}</dt>
+                  <dd>{{ doctor()!.displayName }}</dd>
                 </div>
                 <div>
-                  <dt>{{ t('License number', 'رقم الترخيص') }}</dt>
-                  <dd class="number">{{ doctor()!.licenseNumber || '—' }}</dd>
+                  <dt>{{ t('Email', 'البريد الإلكتروني') }}</dt>
+                  <dd>{{ doctor()!.email }}</dd>
                 </div>
                 <div>
-                  <dt>{{ t('Consultation duration', 'مدة الاستشارة') }}</dt>
-                  <dd>{{ doctor()!.consultationDurationMinutes }} {{ t('minutes', 'دقيقة') }}</dd>
+                  <dt>{{ t('Account status', 'حالة الحساب') }}</dt>
+                  <dd>
+                    {{
+                      doctor()!.accountStatus === 2
+                        ? t('Active', 'نشط')
+                        : doctor()!.accountStatus === 1
+                          ? t('Invited', 'مدعو')
+                          : t('Inactive', 'غير نشط')
+                    }}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{{ t('Profile created', 'إنشاء الملف') }}</dt>
+                  <dd>{{ doctor()!.createdAt | date: 'dd/MM/yyyy hh:mm a' }}</dd>
                 </div>
               </dl>
+              @if (auth.hasPermission('Doctors.Edit') && doctor()!.status !== 3) {
+                <div class="inline-actions">
+                  @if (doctor()!.status === 1) {
+                    <button class="danger" (click)="setActive(false)">
+                      {{ t('Deactivate doctor', 'إلغاء تنشيط الطبيب') }}
+                    </button>
+                  } @else {
+                    <button class="primary" (click)="setActive(true)">
+                      {{ t('Activate doctor', 'تنشيط الطبيب') }}
+                    </button>
+                  }
+                </div>
+              }
             </section>
+          }
+          @case ('schedule') {
             <section class="panel">
-              <h2>{{ t('Biography', 'نبذة') }}</h2>
-              <p class="pre">
-                {{ doctor()!.bio || t('No biography recorded.', 'لا توجد نبذة مسجلة.') }}
-              </p>
-            </section>
-          </div>
-        }
-        @case ('account') {
-          <section class="panel">
-            <h2>{{ t('Linked clinic account', 'حساب العيادة المرتبط') }}</h2>
-            <dl>
-              <div>
-                <dt>{{ t('Name', 'الاسم') }}</dt>
-                <dd>{{ doctor()!.displayName }}</dd>
-              </div>
-              <div>
-                <dt>Email</dt>
-                <dd>{{ doctor()!.email }}</dd>
-              </div>
-              <div>
-                <dt>{{ t('Account status', 'حالة الحساب') }}</dt>
-                <dd>
-                  {{
-                    doctor()!.accountStatus === 2
-                      ? t('Active', 'نشط')
-                      : doctor()!.accountStatus === 1
-                        ? t('Invited', 'مدعو')
-                        : t('Inactive', 'غير نشط')
-                  }}
-                </dd>
-              </div>
-              <div>
-                <dt>{{ t('Profile created', 'إنشاء الملف') }}</dt>
-                <dd>{{ doctor()!.createdAt | date: 'dd/MM/yyyy hh:mm a' }}</dd>
-              </div>
-            </dl>
-            @if (auth.hasPermission('Doctors.Edit') && doctor()!.status !== 3) {
-              <div class="inline-actions">
-                @if (doctor()!.status === 1) {
-                  <button class="danger" (click)="setActive(false)">
-                    {{ t('Deactivate doctor', 'إلغاء تنشيط الطبيب') }}
-                  </button>
-                } @else {
-                  <button class="primary" (click)="setActive(true)">
-                    {{ t('Activate doctor', 'تنشيط الطبيب') }}
+              <div class="section-head">
+                <div>
+                  <h2>{{ t('Weekly schedule', 'الجدول الأسبوعي') }}</h2>
+                  <p>
+                    {{
+                      t(
+                        'Recurring working periods only; no appointment booking is created.',
+                        'فترات عمل أسبوعية متكررة فقط؛ لا يتم إنشاء حجوزات.'
+                      )
+                    }}
+                  </p>
+                </div>
+                @if (doctor()!.canManageSchedule && doctor()!.status !== 3) {
+                  <button type="button" (click)="addPeriod()">
+                    {{ t('Add period', 'إضافة فترة') }}
                   </button>
                 }
               </div>
-            }
-          </section>
-        }
-        @case ('schedule') {
-          <section class="panel">
-            <div class="section-head">
-              <div>
-                <h2>{{ t('Weekly schedule', 'الجدول الأسبوعي') }}</h2>
-                <p>
-                  {{
-                    t(
-                      'Recurring working periods only; no appointment booking is created.',
-                      'فترات عمل أسبوعية متكررة فقط؛ لا يتم إنشاء حجوزات.'
-                    )
-                  }}
-                </p>
-              </div>
-              @if (doctor()!.canManageSchedule && doctor()!.status !== 3) {
-                <button type="button" (click)="addPeriod()">
-                  {{ t('Add period', 'إضافة فترة') }}
-                </button>
-              }
-            </div>
-            @if (scheduleLoading()) {
-              <div class="state">{{ t('Loading schedule…', 'جارٍ تحميل الجدول…') }}</div>
-            } @else if (!periods().length) {
-              <div class="state">
-                {{ t('No working periods configured.', 'لا توجد فترات عمل محددة.') }}
-              </div>
-            } @else {
-              <div class="schedule-list">
-                @for (p of periods(); track $index; let i = $index) {
-                  <article>
-                    <select [(ngModel)]="p.dayOfWeek" [disabled]="!doctor()!.canManageSchedule">
-                      <option [ngValue]="0">{{ t('Sunday', 'الأحد') }}</option>
-                      <option [ngValue]="1">{{ t('Monday', 'الاثنين') }}</option>
-                      <option [ngValue]="2">{{ t('Tuesday', 'الثلاثاء') }}</option>
-                      <option [ngValue]="3">{{ t('Wednesday', 'الأربعاء') }}</option>
-                      <option [ngValue]="4">{{ t('Thursday', 'الخميس') }}</option>
-                      <option [ngValue]="5">{{ t('Friday', 'الجمعة') }}</option>
-                      <option [ngValue]="6">{{ t('Saturday', 'السبت') }}</option></select
-                    ><input
-                      type="time"
-                      [(ngModel)]="p.startTime"
-                      [disabled]="!doctor()!.canManageSchedule"
-                    /><span>→</span
-                    ><input
-                      type="time"
-                      [(ngModel)]="p.endTime"
-                      [disabled]="!doctor()!.canManageSchedule"
-                    /><label
-                      >{{ t('Slot', 'الموعد')
-                      }}<input
-                        type="number"
-                        min="5"
-                        [(ngModel)]="p.slotDurationMinutes"
-                        [disabled]="!doctor()!.canManageSchedule"
-                    /></label>
-                    @if (doctor()!.canManageSchedule) {
-                      <button class="icon danger" (click)="removePeriod(i)">×</button>
-                    }
-                    <div class="breaks">
-                      @for (b of p.breaks; track $index; let j = $index) {
-                        <span>{{ t('Break', 'استراحة') }}</span
-                        ><input type="time" [(ngModel)]="b.startTime" /><span>→</span
-                        ><input type="time" [(ngModel)]="b.endTime" /><button
-                          class="icon"
-                          (click)="removeBreak(i, j)"
+              @if (scheduleLoading()) {
+                <div class="state">{{ t('Loading schedule…', 'جارٍ تحميل الجدول…') }}</div>
+              } @else if (scheduleError()) {
+                <div class="state" role="alert">
+                  <strong>{{ scheduleError() }}</strong
+                  ><button type="button" (click)="loadSchedule()">
+                    {{ t('Try again', 'حاول مرة أخرى') }}
+                  </button>
+                </div>
+              } @else if (!periods().length) {
+                <div class="state">
+                  {{ t('No working periods configured.', 'لا توجد فترات عمل محددة.') }}
+                </div>
+              } @else {
+                <div class="schedule-list">
+                  @for (p of periods(); track $index; let i = $index) {
+                    <article>
+                      <label
+                        ><span>{{ t('Day of week', 'يوم الأسبوع') }}</span
+                        ><select
+                          [attr.aria-label]="t('Day of week', 'يوم الأسبوع')"
+                          [(ngModel)]="p.dayOfWeek"
+                          [disabled]="!doctor()!.canManageSchedule || doctor()!.status === 3"
+                        >
+                          <option [ngValue]="0">{{ t('Sunday', 'الأحد') }}</option>
+                          <option [ngValue]="1">{{ t('Monday', 'الاثنين') }}</option>
+                          <option [ngValue]="2">{{ t('Tuesday', 'الثلاثاء') }}</option>
+                          <option [ngValue]="3">{{ t('Wednesday', 'الأربعاء') }}</option>
+                          <option [ngValue]="4">{{ t('Thursday', 'الخميس') }}</option>
+                          <option [ngValue]="5">{{ t('Friday', 'الجمعة') }}</option>
+                          <option [ngValue]="6">{{ t('Saturday', 'السبت') }}</option>
+                        </select></label
+                      ><label
+                        ><span>{{ t('Work starts', 'بداية العمل') }}</span
+                        ><input
+                          type="time"
+                          [(ngModel)]="p.startTime"
+                          [attr.aria-label]="t('Work starts', 'بداية العمل')"
+                          [disabled]="
+                            !doctor()!.canManageSchedule || doctor()!.status === 3
+                          " /></label
+                      ><label
+                        ><span>{{ t('Work ends', 'نهاية العمل') }}</span
+                        ><input
+                          type="time"
+                          [(ngModel)]="p.endTime"
+                          [attr.aria-label]="t('Work ends', 'نهاية العمل')"
+                          [disabled]="
+                            !doctor()!.canManageSchedule || doctor()!.status === 3
+                          " /></label
+                      ><label
+                        >{{ t('Slot', 'الموعد')
+                        }}<input
+                          type="number"
+                          min="5"
+                          [(ngModel)]="p.slotDurationMinutes"
+                          [disabled]="!doctor()!.canManageSchedule || doctor()!.status === 3"
+                      /></label>
+                      @if (doctor()!.canManageSchedule) {
+                        <button
+                          class="icon danger"
+                          (click)="removePeriod(i)"
+                          [attr.aria-label]="t('Remove working period', 'حذف فترة العمل')"
                         >
                           ×
                         </button>
                       }
-                      @if (doctor()!.canManageSchedule) {
-                        <button (click)="addBreak(i)">{{ t('Add break', 'إضافة استراحة') }}</button>
+                      <div class="breaks">
+                        @for (b of p.breaks; track $index; let j = $index) {
+                          <span>{{ t('Break', 'استراحة') }}</span
+                          ><input
+                            type="time"
+                            [(ngModel)]="b.startTime"
+                            [attr.aria-label]="t('Break starts', 'بداية الاستراحة')"
+                            [disabled]="!doctor()!.canManageSchedule || doctor()!.status === 3"
+                          /><span>→</span
+                          ><input
+                            type="time"
+                            [(ngModel)]="b.endTime"
+                            [attr.aria-label]="t('Break ends', 'نهاية الاستراحة')"
+                            [disabled]="!doctor()!.canManageSchedule || doctor()!.status === 3"
+                          /><button
+                            class="icon"
+                            (click)="removeBreak(i, j)"
+                            [attr.aria-label]="t('Remove break', 'حذف الاستراحة')"
+                            [disabled]="!doctor()!.canManageSchedule || doctor()!.status === 3"
+                          >
+                            ×
+                          </button>
+                        }
+                        @if (doctor()!.canManageSchedule) {
+                          <button (click)="addBreak(i)">
+                            {{ t('Add break', 'إضافة استراحة') }}
+                          </button>
+                        }
+                      </div>
+                    </article>
+                  }
+                </div>
+              }
+              @if (doctor()!.canManageSchedule && doctor()!.status !== 3) {
+                <div class="form-actions">
+                  <button
+                    class="primary"
+                    (click)="saveSchedule()"
+                    [disabled]="savingSchedule() || scheduleLoading() || !!scheduleError()"
+                  >
+                    {{ t('Save schedule', 'حفظ الجدول') }}
+                  </button>
+                </div>
+              }
+            </section>
+          }
+          @case ('compensation') {
+            @if (doctor()!.canManageCompensation) {
+              <div class="detail-grid">
+                <section class="panel">
+                  <h2>{{ t('Compensation history', 'سجل المستحقات') }}</h2>
+                  @if (compensationLoading()) {
+                    <p role="status">
+                      {{ t('Loading compensation rules…', 'جارٍ تحميل قواعد المستحقات…') }}
+                    </p>
+                  } @else if (compensationError()) {
+                    <div role="alert">
+                      <p>{{ compensationError() }}</p>
+                      <button type="button" (click)="loadCompensation()">
+                        {{ t('Try again', 'حاول مرة أخرى') }}
+                      </button>
+                    </div>
+                  } @else if (!compensations().length) {
+                    <p>
+                      {{ t('No compensation rules recorded.', 'لا توجد قواعد مستحقات مسجلة.') }}
+                    </p>
+                  } @else {
+                    <div class="history">
+                      @for (c of compensations(); track c.id) {
+                        <article>
+                          <strong>{{ compType(c.compensationType) }}</strong
+                          ><span
+                            >{{ c.effectiveFrom | date: 'dd/MM/yyyy' }} →
+                            {{
+                              (c.effectiveTo | date: 'dd/MM/yyyy') || t('Current', 'الحالي')
+                            }}</span
+                          ><small>
+                            @if (c.fixedAmount) {
+                              {{ c.fixedAmount | number: '1.0-2' }}
+                            }
+                            @if (c.percentage) {
+                              · {{ c.percentage }}%
+                            }
+                          </small>
+                        </article>
                       }
                     </div>
-                  </article>
-                }
+                  }
+                </section>
+                <section class="panel">
+                  <h2>
+                    {{
+                      compensations().length
+                        ? t('Create successor rule', 'إنشاء قاعدة لاحقة')
+                        : t('Create compensation rule', 'إنشاء قاعدة مستحقات')
+                    }}
+                  </h2>
+                  <form class="form" [formGroup]="compForm" (ngSubmit)="saveCompensation()">
+                    <label
+                      >{{ t('Type', 'النوع')
+                      }}<select formControlName="compensationType">
+                        <option [ngValue]="1">{{ t('Fixed salary', 'راتب ثابت') }}</option>
+                        <option [ngValue]="2">{{ t('Percentage', 'نسبة') }}</option>
+                        <option [ngValue]="3">{{ t('Fixed + percentage', 'ثابت + نسبة') }}</option>
+                      </select></label
+                    ><label
+                      >{{ t('Fixed amount', 'المبلغ الثابت')
+                      }}<input type="number" min="0" formControlName="fixedAmount" /></label
+                    ><label
+                      >{{ t('Percentage', 'النسبة')
+                      }}<input
+                        type="number"
+                        min="0"
+                        max="100"
+                        formControlName="percentage" /></label
+                    ><label
+                      >{{ t('Effective from', 'ساري من')
+                      }}<app-date-input
+                        [label]="t('Effective from', 'ساري من')"
+                        formControlName="effectiveFrom"
+                      ></app-date-input></label
+                    ><label
+                      >{{ t('Effective to (optional)', 'ساري حتى (اختياري)')
+                      }}<app-date-input
+                        [label]="t('Effective to', 'ساري حتى')"
+                        formControlName="effectiveTo"
+                      ></app-date-input></label
+                    ><button
+                      class="primary"
+                      [disabled]="
+                        compForm.invalid ||
+                        compensationLoading() ||
+                        !!compensationError() ||
+                        savingCompensation()
+                      "
+                    >
+                      {{ t('Save new historical rule', 'حفظ قاعدة تاريخية جديدة') }}
+                    </button>
+                  </form>
+                </section>
               </div>
             }
-            @if (doctor()!.canManageSchedule && doctor()!.status !== 3) {
-              <div class="form-actions">
-                <button class="primary" (click)="saveSchedule()">
-                  {{ t('Save schedule', 'حفظ الجدول') }}
-                </button>
-              </div>
-            }
-          </section>
-        }
-        @case ('compensation') {
-          @if (doctor()!.canManageCompensation) {
-            <div class="detail-grid">
-              <section class="panel">
-                <h2>{{ t('Compensation history', 'سجل المستحقات') }}</h2>
-                @if (!compensations().length) {
-                  <p>{{ t('No compensation rules recorded.', 'لا توجد قواعد مستحقات مسجلة.') }}</p>
-                } @else {
-                  <div class="history">
-                    @for (c of compensations(); track c.id) {
-                      <article>
-                        <strong>{{ compType(c.compensationType) }}</strong
-                        ><span
-                          >{{ c.effectiveFrom | date: 'dd/MM/yyyy' }} →
-                          {{ (c.effectiveTo | date: 'dd/MM/yyyy') || t('Current', 'الحالي') }}</span
-                        ><small>
-                          @if (c.fixedAmount) {
-                            {{ c.fixedAmount | number: '1.0-2' }}
-                          }
-                          @if (c.percentage) {
-                            · {{ c.percentage }}%
-                          }
-                        </small>
-                      </article>
-                    }
-                  </div>
-                }
-              </section>
-              <section class="panel">
-                <h2>
-                  {{
-                    compensations().length
-                      ? t('Create successor rule', 'إنشاء قاعدة لاحقة')
-                      : t('Create compensation rule', 'إنشاء قاعدة مستحقات')
-                  }}
-                </h2>
-                <form class="form" [formGroup]="compForm" (ngSubmit)="saveCompensation()">
-                  <label
-                    >{{ t('Type', 'النوع')
-                    }}<select formControlName="compensationType">
-                      <option [ngValue]="1">{{ t('Fixed salary', 'راتب ثابت') }}</option>
-                      <option [ngValue]="2">{{ t('Percentage', 'نسبة') }}</option>
-                      <option [ngValue]="3">{{ t('Fixed + percentage', 'ثابت + نسبة') }}</option>
-                    </select></label
-                  ><label
-                    >{{ t('Fixed amount', 'المبلغ الثابت')
-                    }}<input type="number" min="0" formControlName="fixedAmount" /></label
-                  ><label
-                    >{{ t('Percentage', 'النسبة')
-                    }}<input type="number" min="0" max="100" formControlName="percentage" /></label
-                  ><label
-                    >{{ t('Effective from', 'ساري من')
-                    }}<app-date-input formControlName="effectiveFrom"></app-date-input></label
-                  ><label
-                    >{{ t('Effective to (optional)', 'ساري حتى (اختياري)')
-                    }}<app-date-input formControlName="effectiveTo"></app-date-input></label
-                  ><button class="primary" [disabled]="compForm.invalid">
-                    {{ t('Save new historical rule', 'حفظ قاعدة تاريخية جديدة') }}
-                  </button>
-                </form>
-              </section>
-            </div>
           }
         }
-      }
+      </section>
     }
-  `,
-
+  </div>`,
 })
 export class DoctorDetailsComponent {
   private api = inject(DoctorApiService);
@@ -291,7 +396,13 @@ export class DoctorDetailsComponent {
   readonly doctor = signal<DoctorDetails | null>(null);
   readonly loading = signal(true);
   readonly error = signal('');
-  readonly success = signal(history.state.success ?? '');
+  readonly operationError = signal('');
+  readonly scheduleError = signal('');
+  readonly compensationError = signal('');
+  readonly compensationLoading = signal(false);
+  readonly savingSchedule = signal(false);
+  readonly savingCompensation = signal(false);
+  readonly success = signal(history.state?.success ?? '');
   readonly tab = signal<Tab>('profile');
   readonly periods = signal<SchedulePeriod[]>([]);
   readonly compensations = signal<Compensation[]>([]);
@@ -312,7 +423,14 @@ export class DoctorDetailsComponent {
   constructor() {
     this.load();
   }
+  sectionTitle() {
+    const section = this.tabs.find((x) => x.id === this.tab())!;
+    return this.t(section.en, section.ar);
+  }
   load() {
+    this.loading.set(true);
+    this.error.set('');
+    this.operationError.set('');
     this.api.doctor(this.id).subscribe({
       next: (d) => {
         this.doctor.set(d);
@@ -329,18 +447,36 @@ export class DoctorDetailsComponent {
     });
   }
   loadSchedule() {
+    this.scheduleLoading.set(true);
+    this.scheduleError.set('');
     this.api.schedule(this.id).subscribe({
       next: (x) => {
         this.periods.set(x);
         this.scheduleLoading.set(false);
       },
-      error: () => this.scheduleLoading.set(false),
+      error: () => {
+        this.scheduleLoading.set(false);
+        this.scheduleError.set(
+          this.t('Working periods could not be loaded.', 'تعذر تحميل فترات العمل.'),
+        );
+      },
     });
   }
   loadCompensation() {
-    this.api
-      .compensation(this.id)
-      .subscribe({ next: (x) => this.compensations.set(x), error: () => this.failed() });
+    this.compensationLoading.set(true);
+    this.compensationError.set('');
+    this.api.compensation(this.id).subscribe({
+      next: (x) => {
+        this.compensations.set(x);
+        this.compensationLoading.set(false);
+      },
+      error: () => {
+        this.compensationLoading.set(false);
+        this.compensationError.set(
+          this.t('Compensation rules could not be loaded.', 'تعذر تحميل قواعد المستحقات.'),
+        );
+      },
+    });
   }
   setActive(active: boolean) {
     if (
@@ -372,7 +508,12 @@ export class DoctorDetailsComponent {
       return;
     this.api.archive(this.id).subscribe({
       next: () => {
-        this.success.set(this.t('Doctor archived and removed from active bookings.', 'تمت أرشفة وحذف الطبيب بنجاح ومنع الحجوزات الجديدة له.'));
+        this.success.set(
+          this.t(
+            'Doctor archived and removed from active bookings.',
+            'تمت أرشفة وحذف الطبيب بنجاح ومنع الحجوزات الجديدة له.',
+          ),
+        );
         this.load();
       },
       error: () => this.failed(),
@@ -390,7 +531,12 @@ export class DoctorDetailsComponent {
       return;
     this.api.restore(this.id).subscribe({
       next: () => {
-        this.success.set(this.t('Doctor restored successfully and is now active for appointments.', 'تم استرجاع الطبيب بنجاح وأصبح متاحاً للمواعيد.'));
+        this.success.set(
+          this.t(
+            'Doctor restored successfully and is now active for appointments.',
+            'تم استرجاع الطبيب بنجاح وأصبح متاحاً للمواعيد.',
+          ),
+        );
         this.load();
       },
       error: () => this.failed(),
@@ -420,16 +566,31 @@ export class DoctorDetailsComponent {
     );
   }
   saveSchedule() {
+    if (this.savingSchedule() || this.scheduleLoading() || this.scheduleError()) return;
+    this.savingSchedule.set(true);
+    this.operationError.set('');
     this.api.saveSchedule(this.id, this.periods()).subscribe({
       next: () => {
+        this.savingSchedule.set(false);
         this.success.set(this.t('Schedule saved.', 'تم حفظ الجدول.'));
         this.loadSchedule();
       },
-      error: () => this.failed(),
+      error: () => {
+        this.savingSchedule.set(false);
+        this.failed();
+      },
     });
   }
   saveCompensation() {
-    if (this.compForm.invalid) return;
+    if (
+      this.compForm.invalid ||
+      this.savingCompensation() ||
+      this.compensationLoading() ||
+      this.compensationError()
+    )
+      return;
+    this.savingCompensation.set(true);
+    this.operationError.set('');
     const x = this.compForm.getRawValue();
     const value = {
       compensationType: x.compensationType,
@@ -443,6 +604,7 @@ export class DoctorDetailsComponent {
       : this.api.createCompensation(this.id, value);
     request.subscribe({
       next: () => {
+        this.savingCompensation.set(false);
         this.success.set(
           this.t('Historical compensation rule saved.', 'تم حفظ قاعدة المستحقات التاريخية.'),
         );
@@ -455,11 +617,14 @@ export class DoctorDetailsComponent {
         });
         this.loadCompensation();
       },
-      error: () => this.failed(),
+      error: () => {
+        this.savingCompensation.set(false);
+        this.failed();
+      },
     });
   }
   failed() {
-    this.error.set(
+    this.operationError.set(
       this.t(
         'The change was rejected. Check values and permissions.',
         'تم رفض التغيير. تحقق من القيم والصلاحيات.',
@@ -484,4 +649,3 @@ export class DoctorDetailsComponent {
     return this.i18n.language() === 'en' ? en : ar;
   }
 }
-

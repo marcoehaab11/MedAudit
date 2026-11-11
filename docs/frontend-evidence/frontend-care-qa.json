@@ -1,0 +1,54 @@
+{
+  "passed": true,
+  "viewports": [
+    1440,
+    1024,
+    768,
+    390,
+    320
+  ],
+  "languages": [
+    "en",
+    "ar"
+  ],
+  "checks": [
+    "dashboard hierarchy",
+    "no nested controls",
+    "appointment details",
+    "responsive layouts",
+    "schedule failure/empty/retry",
+    "patient identity and booking context",
+    "section selection semantics",
+    "labeled medical inputs",
+    "notes preserved after rejected save",
+    "automatic medical alerts and review action",
+    "patient load failure/retry",
+    "restricted-role overview"
+  ],
+  "unexpectedApi": [],
+  "browserExceptions": [],
+  "networkFailures": [],
+  "data": "Synthetic local API fixtures; live backend not exercised",
+  "screenshots": [
+    "dashboard-desktop-ar.png",
+    "dashboard-desktop-en.png",
+    "dashboard-mobile-ar.png",
+    "dashboard-mobile-en.png",
+    "dashboard-schedule-error-ar.png",
+    "dashboard-summary-desktop-en.png",
+    "dashboard-summary-mobile-en.png",
+    "dashboard-visit-details-en.png",
+    "patient-alert-summary-mobile-ar.png",
+    "patient-contact-desktop-en.png",
+    "patient-load-error-ar.png",
+    "patient-medical-desktop-en.png",
+    "patient-medical-inputs-desktop-en.png",
+    "patient-medical-inputs-mobile-ar.png",
+    "patient-medical-mobile-ar.png",
+    "patient-medical-mobile-en.png",
+    "patient-note-save-error-ar.png",
+    "patient-overview-desktop-ar.png",
+    "patient-overview-mobile-ar.png",
+    "patient-timeline-desktop-en.png"
+  ]
+}

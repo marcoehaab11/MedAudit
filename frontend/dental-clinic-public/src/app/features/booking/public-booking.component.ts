@@ -1,3 +1,4 @@
+import { forkJoin } from 'rxjs';
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -14,6 +15,7 @@ import {
 
 @Component({
   selector: 'app-public-booking',
+  host: { lang: 'en', dir: 'ltr' },
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './public-booking.component.html',
@@ -37,6 +39,7 @@ export class PublicBookingComponent implements OnInit {
 
   protected readonly step = signal<number>(1);
   protected readonly loading = signal<boolean>(true);
+  protected readonly lookupError = signal('');
   protected readonly loadingSlots = signal<boolean>(false);
   protected readonly submitting = signal<boolean>(false);
   protected readonly error = signal<string | null>(null);
@@ -135,29 +138,25 @@ export class PublicBookingComponent implements OnInit {
     });
   }
 
-  private loadDoctorsAndServices(slug: string): void {
-    this.api.getDoctors(slug).subscribe({
-      next: (docs) => {
-        this.doctors.set(docs);
-        if (docs.length > 0) {
-          this.selectedDoctorId.set(docs[0].doctorProfileId);
-        }
-      },
-    });
-
-    this.api.getServices(slug).subscribe({
-      next: (svcs) => {
-        this.services.set(svcs);
-        if (svcs.length > 0) {
-          this.selectedServiceId.set(svcs[0].id);
-        }
+  protected loadDoctorsAndServices(slug: string): void {
+    this.loading.set(true);
+    this.lookupError.set('');
+    forkJoin({doctors:this.api.getDoctors(slug), services:this.api.getServices(slug)}).subscribe({
+      next: ({doctors,services}) => {
+        this.doctors.set(doctors); this.services.set(services);
+        if (doctors.length) this.selectedDoctorId.set(doctors[0].doctorProfileId);
+        if (services.length) this.selectedServiceId.set(services[0].id);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: () => {
+        this.loading.set(false);
+        this.lookupError.set('Could not load doctors and services. Please try again.');
+      },
     });
   }
 
   protected selectDoctor(doctorId: string): void {
+    ++this.availabilityRequestId;
     this.selectedDoctorId.set(doctorId);
     this.selectedSlot.set(null);
     if (this.step() === 3) {
@@ -166,6 +165,7 @@ export class PublicBookingComponent implements OnInit {
   }
 
   protected selectService(serviceId: string): void {
+    ++this.availabilityRequestId;
     this.selectedServiceId.set(serviceId);
     this.selectedSlot.set(null);
     if (this.step() === 3) {
@@ -179,7 +179,11 @@ export class PublicBookingComponent implements OnInit {
     this.fetchAvailability();
   }
 
+  private availabilityRequestId = 0;
+
   protected fetchAvailability(): void {
+    const requestId = ++this.availabilityRequestId;
+    this.selectedSlot.set(null);
     const slug = this.clinicSlug();
     const docId = this.selectedDoctorId();
     const date = this.selectedDate();
@@ -193,10 +197,12 @@ export class PublicBookingComponent implements OnInit {
 
     this.api.getAvailability(slug, docId, date, svcId).subscribe({
       next: (slots) => {
+        if (requestId !== this.availabilityRequestId) return;
         this.slots.set(slots);
         this.loadingSlots.set(false);
       },
       error: (err) => {
+        if (requestId !== this.availabilityRequestId) return;
         this.loadingSlots.set(false);
         this.error.set(
           err.error?.title || 'Could not fetch availability slots for the selected date.',
@@ -217,6 +223,7 @@ export class PublicBookingComponent implements OnInit {
   }
 
   protected submitBooking(): void {
+    if (this.submitting() || this.loadingSlots()) return;
     const slot = this.selectedSlot();
     const doc = this.selectedDoctor();
     const svc = this.selectedService();

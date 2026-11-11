@@ -1,3 +1,5 @@
+@use '../../shared/styles/workspace-calendar';
+
 // ─── MedAudit Dental Practice Dashboard Styles ────────────────────────────────
 
 $primary: #0284c7;
@@ -1232,3 +1234,78 @@ button.primary {
   }
 }
 
+
+@include workspace-calendar.controls;
+
+// Operational dashboard: share the shell's edges and keep the schedule first.
+.workspace-dashboard {
+  padding: 0;
+  max-inline-size: none;
+  margin: 0;
+  gap: 1.5rem;
+  > * { min-inline-size: 0; }
+  .dashboard-header { margin-block-end: 0; }
+  .workspace-actions { display: flex; align-items: center; gap: .65rem; flex-wrap: wrap; }
+  .workspace-actions .button { min-block-size: 44px; border-radius: .65rem; box-shadow: none; }
+  .workspace-actions .button.primary { background: var(--brand) !important; box-shadow: none !important; }
+  .workspace-actions .button.primary:hover { background: var(--brand-hover) !important; }
+  .dashboard-section-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; margin-block-end: 1rem; }
+  .dashboard-section-head h2 { margin: 0; color: var(--ink); font-size: 1.1rem; }
+  .dashboard-section-head p { color: var(--ink-secondary); font-size: .85rem; margin: .35rem 0 0; }
+  .dashboard-section-head a { font-size: .85rem; font-weight: 650; min-block-size: 44px; display: inline-flex; align-items: center; }
+  .calendar, .details { padding: 1.25rem; border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: none; min-inline-size: 0; }
+  .calendar { min-block-size: 200px; }
+  .calendar-layout { grid-template-columns: minmax(0, 1fr) minmax(260px, 320px); }
+  .calendar-layout:not(:has(.details)) { grid-template-columns: minmax(0, 1fr); }
+  .appointment-card { grid-template-columns: minmax(0, 1fr) auto; box-shadow: none; padding: .75rem; inline-size: 100%; }
+  .appointment-open { display: grid; grid-template-columns: 155px minmax(0, 1fr); gap: .75rem; align-items: center; block-size: auto; min-block-size: 60px; padding: 0; border: 0; border-radius: .35rem; text-align: start; background: transparent; box-shadow: none; white-space: normal; color: var(--ink); }
+  .appointment-open:hover { background: var(--brand-surface); transform: none; box-shadow: none; }
+  .card-info .patient-name, .doctor-name { overflow-wrap: anywhere; }
+  .card-status-col { align-self: center; }
+  .state { padding: 2rem 1rem; text-align: center; color: var(--ink-secondary); }
+  .state p { font-size: .9rem; }
+  .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 1rem; }
+  .kpi-card { border-color: var(--border); box-shadow: none; padding: 1.15rem; gap: .75rem; }
+  .kpi-card:hover { transform: none; box-shadow: none; }
+  .kpi-icon-wrap { background: var(--brand-light); color: var(--brand-dark); inline-size: 38px; block-size: 38px; }
+  .kpi-label { color: var(--ink-secondary); }
+  .kpi-number { color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .kpi-footer a { color: var(--brand-dark); }
+  .dashboard-dual-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 1rem; }
+  .dual-card { border-color: var(--border); border-radius: var(--radius-lg); box-shadow: none; }
+  .dual-card-header { gap: .75rem; flex-wrap: wrap; border-color: var(--border); padding: 1rem 1.25rem; }
+  .dual-title-group { min-inline-size: 0; }
+  .dual-card-header h2 { margin: 0; font-size: .95rem; color: var(--ink); }
+  .header-icon-badge { flex-shrink: 0; }
+  .header-more-link { color: var(--brand-dark); min-block-size: 44px; display: inline-flex; align-items: center; }
+  .compact-item { min-inline-size: 0; flex-wrap: wrap; }
+  .compact-info { overflow-wrap: anywhere; }
+  .patient-initials-badge { background: var(--brand-light); color: var(--brand-dark); }
+  :is(button, a, input, select, summary):focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+}
+@media (max-width: 1100px) {
+  .workspace-dashboard .calendar-layout { grid-template-columns: minmax(0, 1fr); }
+  .workspace-dashboard .details { position: static; }
+}
+@media (max-width: 640px) {
+  .workspace-dashboard {
+    .workspace-actions { inline-size: 100%; }
+    .workspace-actions > .button { flex: 1; justify-content: center; padding-inline: .65rem; white-space: normal; }
+    .calendar, .details { padding: 1rem; }
+    .appointment-card { grid-template-columns: minmax(0, 1fr); gap: .5rem; }
+    .appointment-open { grid-template-columns: minmax(0, 1fr); }
+    .card-time { flex-direction: row; flex-wrap: wrap; justify-content: space-between; }
+    .card-status-col { flex-direction: row; justify-content: space-between; }
+    .dual-card-header, .dual-card-body { padding: 1rem; }
+  }
+}
+
+.workspace-dashboard .dashboard-section-head { margin-block-end: 0; }
+.workspace-dashboard .panel.calendar-toolbar.workspace-filters { margin-block-end: 0; }
+
+.workspace-dashboard .kpi-card .kpi-icon-wrap { background: var(--brand-light); color: var(--brand-dark); }
+
+@media (max-width: 640px) {
+  .workspace-dashboard .compact-item { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+  .workspace-dashboard .compact-item :is(.compact-status, .btn-compact-dental) { grid-column: 2; justify-self: start; }
+}

@@ -40,7 +40,7 @@ export class FinanceNavComponent {
   imports: [FormsModule, FinanceNavComponent],
   template: ` <section class="page-head">
       <div>
-        <p class="eyebrow">{{ t('Financial operations', 'العمليات المالية') }}</p>
+
         <h1>{{ t('Finance dashboard', 'لوحة المالية') }}</h1>
       </div>
     </section>

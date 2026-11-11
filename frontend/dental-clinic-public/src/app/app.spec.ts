@@ -1,12 +1,13 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { App } from './app';
+import { HomeComponent } from './features/home/home.component';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter([])],
+      providers: [provideRouter([{path:'',component:HomeComponent}])],
     }).compileComponents();
   });
 
@@ -16,10 +17,14 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render the brand header', async () => {
+  it('renders the home route with a named landing frame', async () => {
     const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    await TestBed.inject(Router).navigateByUrl('/');
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.brand')?.textContent).toContain('Dental Clinic Booking');
+    const frame = compiled.querySelector('iframe');
+    expect(frame?.getAttribute('src')).toBe('/planora/index.html');
+    expect(frame?.getAttribute('title')).toBe('Planora landing page');
   });
 });

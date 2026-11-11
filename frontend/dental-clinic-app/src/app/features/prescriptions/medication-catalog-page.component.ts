@@ -186,7 +186,7 @@ export function serializeMedicationNotes(meta: MedicationMetadata): string {
                   @let meta = getMedMeta(m);
                   <tr [class.inactive-row]="!m.isActive">
                     <td><span class="row-num">{{ idx + 1 }}</span></td>
-                    
+
                     <!-- Names -->
                     <td>
                       <div class="med-name-cell">
@@ -276,7 +276,7 @@ export function serializeMedicationNotes(meta: MedicationMetadata): string {
       @if (showModal()) {
         <div class="modal-backdrop" (click)="closeModal()">
           <div class="modal-card modal-medication-card" (click)="$event.stopPropagation()">
-            
+
             <header class="modal-header">
               <div class="header-title-wrap">
                 <span class="modal-badge-icon">💊</span>
@@ -292,9 +292,9 @@ export function serializeMedicationNotes(meta: MedicationMetadata): string {
 
             <form [formGroup]="form" (ngSubmit)="saveMedication()" class="catalog-modal-form">
               <div class="modal-body">
-                
+
                 @if (modalError()) {
-                  <div class="alert error">
+                  <div class="alert error" role="alert">
                     <span class="alert-icon">⚠️</span>
                     <span>{{ modalError() }}</span>
                   </div>

@@ -10,7 +10,7 @@ import { CrmApiService, CrmDashboard } from './crm-api.service';
   imports: [RouterLink],
   template: `<section class="page-head">
       <div>
-        <p class="eyebrow">{{ t('Patient relationships', 'علاقات المرضى') }}</p>
+
         <h1>{{ t('CRM dashboard', 'لوحة إدارة العلاقات') }}</h1>
       </div>
       @if (auth.hasPermission('CRM.CreateFollowUp')) { <a class="button primary" routerLink="/crm/follow-ups/create">{{
@@ -18,7 +18,7 @@ import { CrmApiService, CrmDashboard } from './crm-api.service';
       }}</a> }
     </section>
     @if (error()) {
-      <div class="alert error">{{ error() }}</div>
+      <div class="alert error" role="alert">{{ error() }}</div>
     }
     @if (loading()) {
       <div class="state">{{ t('Loading CRM…', 'جارٍ تحميل إدارة العلاقات…') }}</div>

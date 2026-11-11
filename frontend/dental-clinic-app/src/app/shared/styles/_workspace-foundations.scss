@@ -1,0 +1,226 @@
+/* Shared foundations for routed workspaces; clinical diagrams keep their own geometry. */
+#main-content {
+  > :not(router-outlet) {
+    min-inline-size: 0;
+    display: block;
+  }
+  :is(.page-head, .page-header, .reports-page > .header) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-block-end: 24px;
+    h1 {
+      margin: 0;
+      font-size: clamp(1.5rem, 2.5vw, 2rem);
+      line-height: 1.4;
+      letter-spacing: -0.025em;
+    }
+  }
+  .eyebrow {
+    display: none;
+  }
+  :is(.panel, .table-panel, .card, .reports-page, .chart-container) {
+    min-inline-size: 0;
+  }
+  :is(.main-info-grid, .crm-inputs-grid, .date-time-group, .branch-grid) > * {
+    min-inline-size: 0;
+  }
+  :is(.prescription-form-page, .crm-form-page, .branches-page) :is(input, select, textarea) {
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  .branches-page :is(form, label, .panel) {
+    min-inline-size: 0;
+  }
+  .catalog-toolbar :is(.toolbar-search-wrap, .toolbar-filters, .filter-select) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  :is(.filters, .finance-filters, .filter-bar, .filter-toolbar) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 12px;
+    > :is(input, select, label, .workspace-filter-field) {
+      flex: 1 1 160px;
+      min-inline-size: 0;
+      max-inline-size: 100%;
+    }
+  }
+  .workspace-filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: var(--ink-secondary);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  :is(.table-responsive, .table-scroll, .table-wrap, .table-wrapper, .table-container) {
+    position: relative;
+    overflow-x: auto;
+    max-inline-size: 100%;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong, #9caaa7) transparent;
+  }
+  .table-panel {
+    overflow-x: auto;
+    position: relative;
+  }
+  table {
+    border-collapse: collapse;
+    inline-size: 100%;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+  }
+  th {
+    text-align: start;
+    font-weight: 700;
+    color: var(--ink-secondary);
+    background: var(--surface-subtle, #f4f8f7);
+  }
+  th,
+  td {
+    padding: 14px 16px;
+    border-block-end: 1px solid var(--border);
+  }
+  td {
+    vertical-align: middle;
+  }
+  :is(.finance-nav, .sub-nav, .tabs, .tab-bar) {
+    overflow-x: auto;
+    max-inline-size: 100%;
+    scrollbar-width: thin;
+  }
+  :is(.finance-nav, .sub-nav) > a {
+    min-block-size: 44px;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  :is(.metric, .report-kpi, .kpi-card) {
+    box-shadow: none;
+    transform: none;
+  }
+  .metric:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  .metric > span {
+    font-size: 0.85rem;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  :is(.actions, .form-actions, .pagination) {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  :is(.actions-end, .empty-actions, .form-bottom-actions, .header-side-actions, .header-actions) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+  :is(.actions-end, .empty-actions, .header-actions) > button {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    white-space: normal;
+    block-size: auto;
+    min-block-size: 44px;
+  }
+  :is(.pagination, .pager) button {
+    min-inline-size: 44px;
+    min-block-size: 44px;
+  }
+  :is(.alert.error, .field-error) {
+    color: var(--status-error);
+  }
+  :is(.state, .state-msg, .empty-state) {
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+  }
+  @media (max-width: 700px) {
+    :is(.page-head, .page-header) > :is(a.button, button) {
+      flex: 1 1 auto;
+      justify-content: center;
+      text-align: center;
+    }
+    :is(.filters, .finance-filters, .filter-toolbar) > * {
+      flex-basis: 100%;
+    }
+    :is(.metric-grid, .stats-grid, .kpi-grid, .summary-cards) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    :is(.main-info-grid, .crm-inputs-grid, .date-time-group) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .catalog-toolbar .toolbar-filters {
+      flex-wrap: wrap;
+    }
+    .branches-page .panel {
+      padding: 16px;
+    }
+    .branches-page :is(.management-grid, .branch-grid) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    th,
+    td {
+      padding: 12px;
+    }
+    :is(input, select, textarea) {
+      font-size: 16px;
+    }
+  }
+}
+
+:where(button, a, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--focus-ring, #087b68);
+  outline-offset: 3px;
+}
+::selection {
+  background: #bde8da;
+  color: #102c23;
+}
+input,
+textarea {
+  caret-color: var(--brand, #087b68);
+}
+button,
+.button {
+  touch-action: manipulation;
+}
+button:disabled,
+[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+@media print {
+  .sidebar,
+  .topbar,
+  .sidebar-overlay,
+  .skip-link {
+    display: none !important;
+  }
+  .main-area {
+    margin: 0 !important;
+  }
+  #main-content {
+    padding: 0;
+  }
+  #main-content .table-responsive {
+    overflow: visible;
+  }
+}

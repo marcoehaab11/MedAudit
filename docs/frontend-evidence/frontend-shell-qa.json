@@ -1,0 +1,47 @@
+{
+  "passed": true,
+  "viewports": [
+    1440,
+    1024,
+    768,
+    390,
+    320
+  ],
+  "languages": [
+    "en",
+    "ar"
+  ],
+  "checks": [
+    "permission-aware navigation",
+    "exact active destination",
+    "collapse persistence",
+    "collapsed labels/controls",
+    "filter submission/reset",
+    "mobile background isolation",
+    "focus entry/wrap/restore",
+    "Escape close",
+    "group expand",
+    "RTL geometry",
+    "empty/error/retry",
+    "calendar view toggle",
+    "reduced motion"
+  ],
+  "unexpectedApi": [],
+  "browserExceptions": [],
+  "networkFailures": [],
+  "data": "Synthetic local API fixtures; live backend not exercised",
+  "screenshots": [
+    "appointments-desktop-en.png",
+    "appointments-mobile-ar.png",
+    "appointments-mobile-en.png",
+    "patients-desktop-ar.png",
+    "patients-desktop-en.png",
+    "patients-empty-ar.png",
+    "patients-error-ar.png",
+    "patients-mobile-ar.png",
+    "patients-mobile-en.png",
+    "sidebar-collapsed-en.png",
+    "sidebar-mobile-ar.png",
+    "sidebar-mobile-en.png"
+  ]
+}

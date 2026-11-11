@@ -119,7 +119,7 @@ const DEFAULT_PROCEDURES: DefaultTreatmentSeed[] = [
       <!-- Page Header -->
       <section class="page-head">
         <div>
-          <p class="eyebrow">{{ t('Clinic Procedures & Pricing', 'إجراءات العيادة ولائحة الأسعار') }}</p>
+
           <h1>{{ t('Treatment Types & Pricing Catalog', 'جدول أنواع العلاجات والأسعار') }}</h1>
           <p class="sub-desc">{{ t('Manage clinical procedures, bilingual names, and multi-tier pricing options.', 'إدارة وتخصيص أنواع الإجراءات الطبية والأسماء باللغتين ومستويات الأسعار المتعددة.') }}</p>
         </div>
@@ -145,12 +145,12 @@ const DEFAULT_PROCEDURES: DefaultTreatmentSeed[] = [
       <!-- Search & Filters Toolbar -->
       <section class="panel filters catalog-filters">
         <div class="search-input-wrap">
-          <input
+          <label class="workspace-filter-field"><span>{{ t('Search by English or Arabic name, or code…', 'بحث بالاسم الإنجليزي أو العربي أو الكود…') }}</span><input
             type="text"
             [(ngModel)]="searchQuery"
             (ngModelChange)="applyFilters()"
             [placeholder]="t('Search by English or Arabic name, or code…', 'بحث بالاسم الإنجليزي أو العربي أو الكود…')"
-          />
+          /></label>
         </div>
 
         <select [(ngModel)]="categoryFilter" (ngModelChange)="applyFilters()">

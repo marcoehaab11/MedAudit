@@ -26,3 +26,35 @@ small { display:block; color:#9690b5; font-size:12px; font-weight:400; line-heig
 @media(max-width:1150px){.field-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }.planning-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }.abutment-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }.restoration-steps button{font-size:11px;gap:6px;padding:8px;}.stage-layout.with-sidebar{grid-template-columns:190px minmax(0,1fr);}.implant-workspace{padding:16px;}}
 @media(max-width:780px){.field-grid,.planning-grid,.abutment-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.planning-grid .choices{flex-direction:column;}.stage-layout.with-sidebar{display:block;}.implant-aside{display:none;}.implant-summary{grid-template-columns:repeat(2,1fr);}.phase-steps{margin:20px 0;}.phase-steps strong{font-size:11px;}.phase-steps small{font-size:10px;}.restoration-steps{overflow-x:auto;}.restoration-steps button{min-width:140px;}.workflow-actions{align-items:stretch;}.workflow-actions>div{flex-direction:column;}.primary{min-width:230px;}.intervals{min-width:100%;}.implant-header .avatar{width:40px;height:40px;font-size:25px;}.tooth-ident strong{font-size:19px;}.patient-ident a{font-size:15px;}}
 @media(max-width:480px){.implant-workspace{padding:12px;border-radius:8px;}.field-grid,.planning-grid,.abutment-grid{grid-template-columns:1fr;}.upload-card,.span-two{grid-column:auto;}.implant-header{align-items:start;}.patient-ident{gap:7px;}.avatar{display:none;}.phase-steps strong{font-size:9px;}.phase-steps small{font-size:9px;}.step-circle{height:37px;width:37px;}.phase-steps button::before{top:18px;}.phase-steps button{padding:0 3px;}.implant-summary{gap:10px;padding:10px;}.implant-summary div{padding:0 4px;}.implant-summary strong{font-size:12px;}h1{font-size:18px;}.workflow-actions{flex-direction:column;}.workflow-actions>div{width:100%;}.primary{min-width:0;width:100%;}.intervals{flex-wrap:wrap;}.intervals label{min-width:72px;}.visit-toolbar{flex-direction:column;align-items:stretch;}.visit-toolbar label{min-width:0;}.stage-heading{flex-direction:column;align-items:start;}.heading-date{margin:0;width:100%;max-width:none;}}
+
+/* Shared clinical reading and input affordances. Tooth and procedure geometry is unchanged. */
+:host { min-inline-size: 0; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid var(--brand, #087b68); outline-offset: 3px; }
+input:not([type=checkbox]):not([type=radio]), select { min-block-size: 44px; max-inline-size: 100%; }
+textarea { min-block-size: 96px; max-inline-size: 100%; }
+.clinical-grid > *, .implant-workspace > *, .stage-main, .stage-content { min-inline-size: 0; }
+.history-bar, .visit-toolbar, .stage-heading { flex-wrap: wrap; }
+.clinical-stepper { overflow-x: auto; scrollbar-width: thin; }
+.clinical-stepper button { min-block-size: 44px; }
+@media (max-width: 600px) {
+  input, select, textarea { font-size: 16px; }
+  .implant-workspace { padding: 12px; border-radius: 10px; }
+  .implant-header { flex-wrap: wrap; }
+  .implant-header > * { min-inline-size: 0; max-inline-size: 100%; }
+  .visit-toolbar { gap: 12px; }
+  .clinical-stepper { justify-content: flex-start; }
+  .clinical-stepper > * { min-inline-size: 120px; }
+}
+
+/* Keep phase labels and numbers distinct in both reading directions. */
+.phase-steps button { display: flex; flex-direction: column; align-items: center; gap: 6px; min-inline-size: 0; }
+.phase-steps .step-circle { flex-shrink: 0; }
+.phase-steps strong, .phase-steps small { display: block; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .phase-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .phase-steps button { min-block-size: 110px; padding: 12px; border: 1px solid #ded9eb; border-radius: 8px; }
+  .phase-steps button::before { display: none; }
+  .phase-steps button.current { border-color: #008f97; background: #edf9f6; }
+  .phase-steps strong { font-size: 13px; }
+  .phase-steps small { font-size: 12px; line-height: 1.6; }
+}

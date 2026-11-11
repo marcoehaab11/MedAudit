@@ -1,3 +1,5 @@
+import { beforeEach } from 'vitest';
+
 if (typeof globalThis.localStorage?.getItem !== 'function') {
   const values = new Map<string, string>();
   const storage: Storage = {
@@ -16,3 +18,10 @@ if (typeof globalThis.localStorage?.getItem !== 'function') {
   };
   Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: storage });
 }
+
+// Language changes in one feature test must not change the next test's defaults.
+beforeEach(() => {
+  localStorage.removeItem('medaudit.language');
+  document.documentElement.lang = 'ar';
+  document.documentElement.dir = 'rtl';
+});

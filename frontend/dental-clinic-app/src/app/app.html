@@ -1,9 +1,12 @@
 @if (!auth.authenticated() || standaloneClinical()) {
   <router-outlet />
 } @else {
+  <a class="skip-link" href="#main-content" (click)="focusContent($event)">{{
+    t('Skip to content', 'انتقل إلى المحتوى')
+  }}</a>
   <div
     class="app-shell"
-    [class.collapsed]="sidebarCollapsed()"
+    [class.collapsed]="sidebarCollapsed() && !isMobile()"
     [class.mobile-open]="mobileSidebarOpen()"
   >
     <!-- Mobile overlay -->
@@ -15,305 +18,139 @@
     ></div>
 
     <!-- ===== SIDEBAR ===== -->
-    <aside class="sidebar" role="navigation" [attr.aria-label]="t('Main navigation', 'القائمة الرئيسية')">
-
+    <aside
+      id="app-sidebar"
+      class="sidebar"
+      [inert]="isMobile() && !mobileSidebarOpen()"
+      [attr.role]="isMobile() ? 'dialog' : null"
+      [attr.aria-modal]="isMobile() && mobileSidebarOpen() ? 'true' : null"
+      [attr.aria-label]="t('Main navigation', 'القائمة الرئيسية')"
+    >
       <!-- Brand Header -->
       <div class="sidebar-header">
-        <a class="sidebar-brand" routerLink="/dashboard" (click)="onBrandClick()" [attr.aria-label]="t('Dashboard', 'لوحة التحكم')">
+        <a
+          class="sidebar-brand"
+          routerLink="/dashboard"
+          (click)="onBrandClick()"
+          [attr.aria-label]="t('Dashboard', 'لوحة التحكم')"
+        >
           <img src="/planora-logo-transparent.png" alt="" class="brand-logo-full" />
           <span class="brand-name">Planora</span>
           <img src="/planora-logo-transparent.png" alt="Planora" class="brand-icon-img" />
         </a>
 
         <!-- Desktop Collapse Button -->
-        <button class="collapse-btn" type="button" (click)="toggleSidebar()" [attr.aria-label]="t('Toggle sidebar', 'تبديل القائمة')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="15 18 9 12 15 6"/>
+        <button
+          class="collapse-btn"
+          type="button"
+          (click)="toggleSidebar()"
+          [attr.aria-label]="
+            sidebarCollapsed()
+              ? t('Expand sidebar', 'توسيع القائمة')
+              : t('Collapse sidebar', 'طي القائمة')
+          "
+          [attr.aria-expanded]="!sidebarCollapsed()"
+          aria-controls="sidebar-navigation"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
 
         <!-- Mobile Close Button -->
-        <button class="mobile-close-btn" type="button" (click)="closeMobileSidebar()" [attr.aria-label]="t('Close navigation', 'إغلاق القائمة')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
+        <button
+          class="mobile-close-btn"
+          type="button"
+          (click)="closeMobileSidebar()"
+          [attr.aria-label]="t('Close navigation', 'إغلاق القائمة')"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
       </div>
 
-      <!-- Navigation -->
-      <nav class="sidebar-nav" tabindex="0" (keydown)="onSidebarKeydown($event)">
-
-        <!-- ── Overview ── -->
-        <div class="nav-group">
-          <span class="nav-label">{{ t('Overview', 'نظرة عامة') }}</span>
-          <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" (click)="closeMobileSidebar()">
-            <span class="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect width="7" height="9" x="3" y="3" rx="1"/>
-                <rect width="7" height="5" x="14" y="3" rx="1"/>
-                <rect width="7" height="9" x="14" y="12" rx="1"/>
-                <rect width="7" height="5" x="3" y="16" rx="1"/>
+      <!-- Permission-aware navigation shares one metadata source. -->
+      <nav
+        id="sidebar-navigation"
+        class="sidebar-nav"
+        [attr.aria-label]="t('Workspace', 'مساحة العمل')"
+        (scroll)="navTooltip.set(null)"
+      >
+        @for (group of navigationGroups(); track group.id) {
+          <section class="nav-group" [attr.aria-labelledby]="'nav-heading-' + group.id">
+            <button
+              type="button"
+              class="nav-group-toggle"
+              [id]="'nav-heading-' + group.id"
+              [attr.aria-expanded]="isGroupOpen(group)"
+              [attr.aria-controls]="'nav-links-' + group.id"
+              (click)="toggleGroup(group)"
+            >
+              <span>{{ t(group.en, group.ar) }}</span>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+                [class.expanded]="isGroupOpen(group)"
+              >
+                <path d="m6 9 6 6 6-6" />
               </svg>
-            </span>
-            <span class="nav-text">{{ t('Dashboard', 'لوحة التحكم') }}</span>
-          </a>
-        </div>
-
-        <!-- ── Clinical ── -->
-        <div class="nav-group">
-          <span class="nav-label">{{ t('Clinical', 'الاستشارات') }}</span>
-          @if (auth.hasPermission('Patients.View')) { <a class="nav-item" routerLink="/patients" routerLinkActive="active" (click)="closeMobileSidebar()">
-            <span class="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-            </span>
-            <span class="nav-text">{{ t('Patients', 'المرضى') }}</span>
-          </a> }
-
-          @if (auth.hasPermission('Doctors.View')) {
-            <a class="nav-item" routerLink="/doctors" routerLinkActive="active" (click)="closeMobileSidebar()">
-              <span class="nav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                  <polyline points="16 11 18 13 22 9"/>
-                </svg>
-              </span>
-              <span class="nav-text">{{ t('Doctors', 'الأطباء') }}</span>
-            </a>
-          }
-
-          @if (auth.hasPermission('Appointments.View')) {
-            <a class="nav-item" routerLink="/appointments" routerLinkActive="active" (click)="closeMobileSidebar()">
-              <span class="nav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                  <path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/>
-                  <path d="M8 18h.01"/><path d="M12 18h.01"/>
-                </svg>
-              </span>
-              <span class="nav-text">{{ t('Appointments', 'المواعيد') }}</span>
-            </a>
-          }
-        </div>
-
-        <!-- ── Treatment ── -->
-        @if (auth.hasPermission('TreatmentPlans.View') || auth.hasPermission('Treatments.View') || auth.hasPermission('TreatmentCatalog.View') || auth.hasPermission('Prescriptions.View')) {
-          <div class="nav-group">
-            <span class="nav-label">{{ t('Treatment', 'العلاج') }}</span>
-
-            @if (auth.hasPermission('TreatmentPlans.View')) {
-              <a class="nav-item" routerLink="/treatment-plans" routerLinkActive="active" (click)="closeMobileSidebar()">
-                <span class="nav-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-                    <path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/>
-                  </svg>
-                </span>
-                <span class="nav-text">{{ t('Treatment Plans', 'خطط العلاج') }}</span>
-              </a>
-            }
-
-            @if (auth.hasPermission('Treatments.View')) {
-              <a class="nav-item" routerLink="/treatments" routerLinkActive="active" (click)="closeMobileSidebar()">
-                <span class="nav-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-                  </svg>
-                </span>
-                <span class="nav-text">{{ t('Treatments', 'العلاجات') }}</span>
-              </a>
-            }
-
-            @if (auth.hasPermission('TreatmentCatalog.View')) { <a class="nav-item" routerLink="/treatment-catalog" routerLinkActive="active" (click)="closeMobileSidebar()">
-              <span class="nav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 2C6.5 2 4 6.5 4 10c0 4 2 7 3.5 10 .8 1.6 1.8 2 2.5 2 .8 0 1.2-.5 2-2 .8 1.5 1.2 2 2 2 .7 0 1.7-.4 2.5-2 1.5-3 3.5-6 3.5-10 0-3.5-2.5-8-8-8z"/>
-                </svg>
-              </span>
-              <span class="nav-text">{{ t('Treatment Catalog', 'أنواع العلاجات والأسعار') }}</span>
-            </a> }
-
-            @if (auth.hasPermission('Prescriptions.View')) {
-              <a class="nav-item" routerLink="/prescriptions" routerLinkActive="active" (click)="closeMobileSidebar()">
-                <span class="nav-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-                    <polyline points="10 9 9 9 8 9"/>
-                  </svg>
-                </span>
-                <span class="nav-text">{{ t('Prescriptions', 'الوصفات') }}</span>
-              </a>
-
-              <a class="nav-item" routerLink="/medications-catalog" routerLinkActive="active" (click)="closeMobileSidebar()">
-                <span class="nav-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/>
-                  </svg>
-                </span>
-                <span class="nav-text">{{ t('Medications Catalog', 'دليل وجدول الأدوية') }}</span>
-              </a>
-            }
-          </div>
+            </button>
+            <div
+              class="nav-links"
+              [id]="'nav-links-' + group.id"
+              [hidden]="!isGroupOpen(group) && !(sidebarCollapsed() && !isMobile())"
+            >
+              @for (item of group.items; track item.path) {
+                <a
+                  class="nav-item"
+                  [routerLink]="item.path"
+                  routerLinkActive="active"
+                  ariaCurrentWhenActive="page"
+                  [routerLinkActiveOptions]="{ exact: !!item.exact }"
+                  [attr.aria-label]="t(item.en, item.ar)"
+                  (click)="closeMobileSidebar()"
+                  (mouseenter)="showNavTooltip($event, item)"
+                  (mouseleave)="navTooltip.set(null)"
+                  (focus)="showNavTooltip($event, item)"
+                  (blur)="navTooltip.set(null)"
+                >
+                  <span class="nav-icon" aria-hidden="true"
+                    ><svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path [attr.d]="item.icon" /></svg
+                  ></span>
+                  <span class="nav-text">{{ t(item.en, item.ar) }}</span>
+                  <span class="nav-active-dot" aria-hidden="true"></span>
+                </a>
+              }
+            </div>
+          </section>
         }
-
-        <!-- ── Finance ── -->
-        @if (auth.hasPermission('Finance.View') || auth.hasPermission('Finance.Revenue.View') || auth.hasPermission('Finance.Payments.View') || auth.hasPermission('Finance.Expenses.View')) {
-          <div class="nav-group">
-            <span class="nav-label">{{ t('Finance', 'المالية') }}</span>
-            @if (auth.hasPermission('Finance.View')) { <a class="nav-item" routerLink="/finance" [routerLinkActiveOptions]="{exact: true}" routerLinkActive="active" (click)="closeMobileSidebar()">
-              <span class="nav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="12" y1="1" x2="12" y2="23"/>
-                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                </svg>
-              </span>
-              <span class="nav-text">{{ t('Overview', 'نظرة عامة') }}</span>
-            </a> }
-            @if (auth.hasPermission('Finance.Revenue.View')) { <a class="nav-item" routerLink="/finance/revenue" routerLinkActive="active" (click)="closeMobileSidebar()">
-              <span class="nav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
-                  <polyline points="17 6 23 6 23 12"/>
-                </svg>
-              </span>
-              <span class="nav-text">{{ t('Revenue', 'الإيرادات') }}</span>
-            </a> }
-            @if (auth.hasPermission('Finance.Payments.View')) { <a class="nav-item" routerLink="/finance/payments" routerLinkActive="active" (click)="closeMobileSidebar()">
-              <span class="nav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
-                </svg>
-              </span>
-              <span class="nav-text">{{ t('Payments', 'المدفوعات') }}</span>
-            </a> }
-            @if (auth.hasPermission('Finance.Expenses.View')) { <a class="nav-item" routerLink="/finance/expenses" routerLinkActive="active" (click)="closeMobileSidebar()">
-              <span class="nav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z"/>
-                  <path d="M14 8H8"/><path d="M16 12H8"/><path d="M13 16H8"/>
-                </svg>
-              </span>
-              <span class="nav-text">{{ t('Expenses', 'المصروفات') }}</span>
-            </a> }
-          </div>
-        }
-
-        <!-- ── Reports ── -->
-        @if (auth.hasPermission('Reports.View')) {
-          <div class="nav-group">
-            <span class="nav-label">{{ t('Reports', 'التقارير') }}</span>
-            <a class="nav-item" routerLink="/reports" routerLinkActive="active" (click)="closeMobileSidebar()">
-              <span class="nav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="20" x2="18" y2="10"/>
-                  <line x1="12" y1="20" x2="12" y2="4"/>
-                  <line x1="6" y1="20" x2="6" y2="14"/>
-                </svg>
-              </span>
-              <span class="nav-text">{{ t('Analytics', 'التحليلات') }}</span>
-            </a>
-          </div>
-        }
-
-        <!-- ── CRM ── -->
-        @if (auth.hasPermission('CRM.View')) {
-          <div class="nav-group">
-            <span class="nav-label">{{ t('CRM', 'إدارة العملاء') }}</span>
-            <a class="nav-item" routerLink="/crm" routerLinkActive="active" (click)="closeMobileSidebar()">
-              <span class="nav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-              </span>
-              <span class="nav-text">{{ t('CRM', 'إدارة العلاقات') }}</span>
-            </a>
-          </div>
-        }
-
-        <!-- ── Operations ── -->
-        @if (auth.hasPermission('Inventory.View') || auth.hasPermission('Lab.View') || auth.hasPermission('Insurance.View')) {
-          <div class="nav-group">
-            <span class="nav-label">{{ t('Operations', 'العمليات') }}</span>
-            @if (auth.hasPermission('Lab.View')) {
-              <a class="nav-item" routerLink="/lab" routerLinkActive="active" (click)="closeMobileSidebar()"><span class="nav-icon" aria-hidden="true">⚗</span><span class="nav-text">{{ t('Dental labs', 'المعامل') }}</span></a>
-            }
-            @if (auth.hasPermission('Insurance.View')) {
-              <a class="nav-item" routerLink="/insurance" routerLinkActive="active" (click)="closeMobileSidebar()"><span class="nav-icon" aria-hidden="true">▣</span><span class="nav-text">{{ t('Insurance', 'التأمينات') }}</span></a>
-            }
-            @if (auth.hasPermission('Inventory.View')) {
-            <a class="nav-item" routerLink="/inventory" routerLinkActive="active" (click)="closeMobileSidebar()">
-              <span class="nav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="m7.5 4.27 9 5.15"/>
-                  <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
-                  <path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
-                </svg>
-              </span>
-              <span class="nav-text">{{ t('Inventory', 'المخزون') }}</span>
-            </a>
-            }
-          </div>
-        }
-
-        <!-- ── System ── -->
-        <div class="nav-group">
-          <span class="nav-label">{{ t('System', 'النظام') }}</span>
-          @if (auth.hasPermission('Users.View')) { <a class="nav-item" routerLink="/users" routerLinkActive="active" (click)="closeMobileSidebar()">
-            <span class="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-            </span>
-            <span class="nav-text">{{ t('Users', 'المستخدمون') }}</span>
-          </a> }
-          @if (auth.hasPermission('Settings.View')) { <a class="nav-item" routerLink="/branches" routerLinkActive="active" (click)="closeMobileSidebar()"><span class="nav-icon" aria-hidden="true">⌖</span><span class="nav-text">{{ t('Branches', 'الفروع') }}</span></a> }
-
-          @if (auth.hasPermission('Notifications.View')) {
-            <a class="nav-item" routerLink="/notifications" routerLinkActive="active" (click)="closeMobileSidebar()">
-              <span class="nav-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
-                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
-                </svg>
-              </span>
-              <span class="nav-text">{{ t('Notifications', 'الإشعارات') }}</span>
-            </a>
-          }
-
-          @if (auth.hasPermission('Settings.PublicBooking')) { <a class="nav-item" routerLink="/online-booking" routerLinkActive="active" (click)="closeMobileSidebar()">
-            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/><path d="M17 17l3 3"/></svg></span>
-            <span class="nav-text">{{ t('Online booking', 'الحجز الإلكتروني') }}</span>
-          </a> }
-
-          <a class="nav-item" routerLink="/guide" routerLinkActive="active" (click)="closeMobileSidebar()">
-            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.5 9a2.5 2.5 0 1 1 4.3 1.7c-1.1 1-1.8 1.4-1.8 3.3"/><path d="M12 17h.01"/></svg></span>
-            <span class="nav-text">{{ t('Guide & help', 'الدليل والمساعدة') }}</span>
-          </a>
-
-          @if (auth.hasPermission('Settings.View')) { <a class="nav-item" routerLink="/settings" routerLinkActive="active" (click)="closeMobileSidebar()">
-            <span class="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-            </span>
-            <span class="nav-text">{{ t('Settings', 'الإعدادات') }}</span>
-          </a> }
-          @if (auth.hasPermission('Backup.Create')) { <a class="nav-item" routerLink="/backup" routerLinkActive="active" (click)="closeMobileSidebar()"><span class="nav-icon" aria-hidden="true">⇩</span><span class="nav-text">{{ t('Backup', 'نسخة احتياطية') }}</span></a> }
-        </div>
-
       </nav>
 
       <!-- Sidebar Footer: User Info -->
@@ -324,46 +161,109 @@
             <span class="user-name">{{ displayName() }}</span>
           </div>
         </div>
-        <button type="button" class="signout-btn" (click)="logout()" [attr.aria-label]="t('Sign out', 'تسجيل الخروج')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
+        <button
+          type="button"
+          class="signout-btn"
+          (click)="logout()"
+          [attr.aria-label]="t('Sign out', 'تسجيل الخروج')"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
         </button>
       </div>
     </aside>
+    @if (navTooltip(); as tooltip) {
+      <span
+        class="nav-tooltip"
+        aria-hidden="true"
+        [style.top.px]="tooltip.top"
+        [style.left.px]="tooltip.left"
+        [class.rtl]="i18n.direction() === 'rtl'"
+        >{{ t(tooltip.item.en, tooltip.item.ar) }}</span
+      >
+    }
 
     <!-- ===== MAIN AREA ===== -->
-    <div class="main-area">
-
+    <div class="main-area" [inert]="mobileSidebarOpen()">
       <!-- Mini Topbar -->
       <header class="topbar-mini">
-        <button class="mobile-menu-btn" type="button" (click)="toggleMobileSidebar()" [attr.aria-label]="t('Open menu', 'فتح القائمة')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="4" y1="12" x2="20" y2="12"/>
-            <line x1="4" y1="6" x2="20" y2="6"/>
-            <line x1="4" y1="18" x2="20" y2="18"/>
+        <button
+          class="mobile-menu-btn"
+          type="button"
+          (click)="toggleMobileSidebar()"
+          [attr.aria-label]="t('Open menu', 'فتح القائمة')"
+          [attr.aria-expanded]="mobileSidebarOpen()"
+          aria-controls="app-sidebar"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="4" y1="12" x2="20" y2="12" />
+            <line x1="4" y1="6" x2="20" y2="6" />
+            <line x1="4" y1="18" x2="20" y2="18" />
           </svg>
         </button>
         <div class="clinic-switcher">
           <label for="active-clinic">{{ t('Branch', 'الفرع') }}</label>
-          <select id="active-clinic" [value]="auth.tenantId()" [disabled]="switchingClinic()" (change)="switchClinic($event)">
+          <select
+            id="active-clinic"
+            [value]="auth.tenantId()"
+            [disabled]="switchingClinic()"
+            (change)="switchClinic($event)"
+          >
             @for (clinic of auth.clinics(); track clinic.tenantId) {
-              <option [value]="clinic.tenantId" [disabled]="!clinic.accessible">{{ clinic.name }}{{ clinic.accessible ? '' : t(' (unavailable)', ' (غير متاحة)') }}</option>
+              <option [value]="clinic.tenantId" [disabled]="!clinic.accessible">
+                {{ clinic.name }}{{ clinic.accessible ? '' : t(' (unavailable)', ' (غير متاحة)') }}
+              </option>
             }
           </select>
-          @if (clinicSwitchError()) { <span role="alert">{{ clinicSwitchError() }}</span> }
+          @if (clinicSwitchError()) {
+            <span role="alert">{{ clinicSwitchError() }}</span>
+          }
         </div>
         <div class="topbar-right">
-          <a class="help-link" routerLink="/guide" [queryParams]="{ topic: guideTopic() }" [attr.aria-label]="t('Help for this page', 'مساعدة لهذه الصفحة')">
+          <a
+            class="help-link"
+            routerLink="/guide"
+            [queryParams]="{ topic: guideTopic() }"
+            [attr.aria-label]="t('Help for this page', 'مساعدة لهذه الصفحة')"
+          >
             <span aria-hidden="true">?</span>{{ t('Help', 'مساعدة') }}
           </a>
-          <button type="button" class="lang-btn" (click)="i18n.toggle()" [attr.aria-label]="t('Switch to Arabic', 'Switch to English')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="2" y1="12" x2="22" y2="12"/>
-              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          <button
+            type="button"
+            class="lang-btn"
+            (click)="i18n.toggle()"
+            [attr.aria-label]="t('Switch to Arabic', 'Switch to English')"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path
+                d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+              />
             </svg>
             <span>{{ i18n.language() === 'en' ? 'العربية' : 'English' }}</span>
           </button>
@@ -371,30 +271,62 @@
       </header>
 
       <!-- Page Content -->
-      <main class="page-content">
+      <main id="main-content" class="page-content" tabindex="-1">
         <router-outlet />
       </main>
 
       <!-- Mobile primary navigation keeps common clinical actions within thumb reach. -->
-      <nav class="mobile-bottom-nav" [attr.aria-label]="t('Mobile navigation', 'التنقل على الهاتف')">
-        <a routerLink="/dashboard" routerLinkActive="active" (click)="closeMobileSidebar()">
-          <span class="mobile-nav-icon">⌂</span><span>{{ t('Home', 'الرئيسية') }}</span>
-        </a>
-        @if (auth.hasPermission('Patients.View')) { <a routerLink="/patients" routerLinkActive="active" (click)="closeMobileSidebar()">
-          <span class="mobile-nav-icon">♙</span><span>{{ t('Patients', 'المرضى') }}</span>
-        </a> }
-        @if (auth.hasPermission('Appointments.View')) {
-          <a routerLink="/appointments" routerLinkActive="active" (click)="closeMobileSidebar()">
-            <span class="mobile-nav-icon">□</span><span>{{ t('Appointments', 'المواعيد') }}</span>
+      <nav
+        class="mobile-bottom-nav"
+        [attr.aria-label]="t('Mobile navigation', 'التنقل على الهاتف')"
+      >
+        @for (item of mobileNavigation(); track item.path) {
+          <a
+            [routerLink]="item.path"
+            routerLinkActive="active"
+            ariaCurrentWhenActive="page"
+            [routerLinkActiveOptions]="{ exact: !!item.exact }"
+            (click)="closeMobileSidebar()"
+          >
+            <svg
+              class="mobile-nav-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path [attr.d]="item.icon" />
+            </svg>
+            <span>{{
+              item.path === '/dashboard'
+                ? t('Home', 'الرئيسية')
+                : item.path === '/treatment-plans'
+                  ? t('Treatment', 'العلاج')
+                  : t(item.en, item.ar)
+            }}</span>
           </a>
         }
-        @if (auth.hasPermission('TreatmentPlans.View')) {
-          <a routerLink="/treatment-plans" routerLinkActive="active" (click)="closeMobileSidebar()">
-            <span class="mobile-nav-icon">✚</span><span>{{ t('Treatment', 'العلاج') }}</span>
-          </a>
-        }
-        <button type="button" (click)="toggleMobileSidebar()">
-          <span class="mobile-nav-icon">☰</span><span>{{ t('More', 'المزيد') }}</span>
+        <button
+          type="button"
+          (click)="toggleMobileSidebar()"
+          [attr.aria-expanded]="mobileSidebarOpen()"
+          aria-controls="app-sidebar"
+        >
+          <svg
+            class="mobile-nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M4 6h16 M4 12h16 M4 18h16" />
+          </svg>
+          <span>{{ t('More', 'المزيد') }}</span>
         </button>
       </nav>
     </div>
@@ -402,6 +334,3 @@
 }
 
 <app-confirm-modal />
-
-
-

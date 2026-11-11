@@ -22,7 +22,7 @@ import { PatientSelectComponent } from '../../shared/patient-select.component';
       <header class="form-page-header">
         <div class="header-icon-wrap">📞</div>
         <div>
-          <p class="eyebrow">{{ t('Patient CRM', 'العلاقات والمتابعة السريرية') }}</p>
+
           <h1>{{ t('Create New Follow-up', 'إنشاء متابعة جديدة للمريض') }}</h1>
           <p class="header-desc">{{ t('Schedule reminders for checkups, lab results, post-op care, or payments.', 'جدولة تذكيرات للكشوفات الدورية، نتائج المعامل، رعاية ما بعد الجراحة أو السداد.') }}</p>
         </div>

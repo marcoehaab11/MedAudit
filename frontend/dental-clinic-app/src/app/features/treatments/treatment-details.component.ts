@@ -20,14 +20,14 @@ import { TreatmentFinanceSummaryComponent } from '../finance/treatment-finance-s
       <div class="alert success">{{ message() }}</div>
     }
     @if (error()) {
-      <div class="alert error">{{ error() }}</div>
+      <div class="alert error" role="alert">{{ error() }}</div>
     }
     @if (loading()) {
       <div class="state">{{ t('Loading treatment…', 'جارٍ تحميل العلاج…') }}</div>
     } @else if (item()) {
       <section class="page-head">
         <div>
-          <p class="eyebrow">{{ status(item()!.status) }}</p>
+
           <h1>{{ item()!.treatmentName }}</h1>
           <p>{{ item()!.patientName }} · {{ item()!.doctorName }}</p>
         </div>

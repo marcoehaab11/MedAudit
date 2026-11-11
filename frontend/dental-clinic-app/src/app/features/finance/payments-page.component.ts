@@ -25,26 +25,27 @@ import { FinanceNavComponent } from './finance-dashboard.component';
     <app-finance-nav />
 
     <section class="panel finance-filters">
-      <input
+      <label class="workspace-filter-field"><span>{{ t('From date', 'من تاريخ') }}</span><input
         class="filter-date-input"
         type="date"
         [(ngModel)]="from"
         [title]="t('From date', 'من تاريخ')"
-      />
-      <input
+      /></label>
+      <label class="workspace-filter-field"><span>{{ t('To date', 'إلى تاريخ') }}</span><input
         class="filter-date-input"
         type="date"
         [(ngModel)]="to"
         [title]="t('To date', 'إلى تاريخ')"
-      />
+      /></label>
       <button type="button" class="btn-filter" (click)="load()">
         🔍 {{ t('Apply Filter', 'تطبيق التصفية') }}
       </button>
     </section>
 
+    @if (loadError()) { <div class="alert error" role="alert"><p>{{ loadError() }}</p><button type="button" (click)="load()">{{ t('Try again', 'إعادة المحاولة') }}</button></div> }
     @if (loading()) {
       <div class="state">{{ t('Loading payments…', 'جاري تحميل المدفوعات…') }}</div>
-    } @else {
+    } @else if (!loadError()) {
       <section class="panel table-panel">
         <div class="table-responsive"><table class="finance-table">
           <thead>
@@ -86,6 +87,7 @@ export class PaymentsPageComponent {
   i18n = inject(LocalizationService);
   data = signal<Page<Payment> | null>(null);
   loading = signal(true);
+  loadError = signal('');
   from = '';
   to = '';
 
@@ -94,12 +96,14 @@ export class PaymentsPageComponent {
   }
 
   load() {
+    this.loadError.set('');
+    this.loading.set(true);
     this.api.payments({ from: this.from, to: this.to, page: 1 }).subscribe({
       next: (x) => {
         this.data.set(x);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: () => { this.loading.set(false); this.loadError.set(this.t('Could not load these records. Please try again.', 'تعذر تحميل السجلات. يرجى إعادة المحاولة.')); },
     });
   }
 

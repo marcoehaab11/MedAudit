@@ -45,7 +45,7 @@ import { parseMedicationNotes } from './medication-catalog-page.component';
         <header class="form-page-header">
           <div class="header-icon-wrap">💊</div>
           <div>
-            <p class="eyebrow">{{ id ? t('Prescription Edit', 'تعديل الوصفة') : t('Clinical Prescription', 'الوصفات الطبية السريرية') }}</p>
+
             <h1>{{ id ? t('Edit Prescription', 'تعديل الوصفة الطبية') : t('Write New Prescription', 'تحرير روشتة طبية جديدة') }}</h1>
             <p class="header-desc">{{ t('Select patient, attending doctor, and add prescribed medications with clear dosage instructions.', 'حدد المريض والطبيب المعالج، ثم أضف الأدوية والجرعات وتعليمات الاستخدام بدقة.') }}</p>
           </div>

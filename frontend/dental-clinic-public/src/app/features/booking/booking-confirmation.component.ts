@@ -10,6 +10,7 @@ import {
 
 @Component({
   selector: 'app-booking-confirmation',
+  host: { lang: 'en', dir: 'ltr' },
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './booking-confirmation.component.html',

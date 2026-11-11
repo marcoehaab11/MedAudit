@@ -17,7 +17,7 @@ import { FinanceNavComponent } from './finance-dashboard.component';
   template: `
     <section class="page-head">
       <div>
-        <p class="eyebrow" style="color: var(--muted); font-weight: 700; font-size: 0.85rem; margin: 0 0 0.25rem;">{{ t('Expenses & Operational Costs', 'المصروفات والتكاليف التشغيلية') }}</p>
+
         <h1>{{ t('Expenses', 'المصروفات') }}</h1>
       </div>
       @if (auth.hasPermission('Finance.Expenses.Create')) { <a class="button primary" routerLink="/finance/expenses/create">
@@ -27,9 +27,10 @@ import { FinanceNavComponent } from './finance-dashboard.component';
 
     <app-finance-nav />
 
+    @if (loadError()) { <div class="alert error" role="alert"><p>{{ loadError() }}</p><button type="button" (click)="loadExpenses()">{{ t('Try again', 'إعادة المحاولة') }}</button></div> }
     @if (loading()) {
       <div class="state">{{ t('Loading expenses…', 'جاري تحميل المصروفات…') }}</div>
-    } @else {
+    } @else if (!loadError()) {
       <section class="panel table-panel">
         <div class="table-responsive"><table class="finance-table">
           <thead>
@@ -69,14 +70,17 @@ export class ExpensesPageComponent {
   i18n = inject(LocalizationService);
   data = signal<Page<Expense> | null>(null);
   loading = signal(true);
+  loadError = signal('');
 
-  constructor() {
+  constructor() { this.loadExpenses(); }
+  loadExpenses() {
+    this.loading.set(true); this.loadError.set('');
     this.api.expenses({ page: 1 }).subscribe({
       next: (x) => {
         this.data.set(x);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      error: () => { this.loading.set(false); this.loadError.set(this.t('Could not load these records. Please try again.', 'تعذر تحميل السجلات. يرجى إعادة المحاولة.')); },
     });
   }
 
@@ -106,7 +110,7 @@ export class ExpensesPageComponent {
 
       <section class="page-head">
         <div>
-          <p class="eyebrow" style="color: var(--muted); font-weight: 700; font-size: 0.85rem; margin: 0 0 0.25rem;">{{ t('Expense Recording', 'تسجيل مدفوعات وتكاليف') }}</p>
+
           <h1>{{ t('Record New Expense', 'تسجيل مصروف جديد') }}</h1>
         </div>
       </section>

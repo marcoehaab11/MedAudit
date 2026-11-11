@@ -13,7 +13,7 @@ import { followUpFilters } from './crm-ui';
   imports: [ReactiveFormsModule, RouterLink],
   template: `<section class="page-head">
       <div>
-        <p class="eyebrow">CRM</p>
+
         <h1>{{ t('Follow-ups', 'المتابعات') }}</h1>
       </div>
       @if (auth.hasPermission('CRM.CreateFollowUp')) { <a class="button primary" routerLink="/crm/follow-ups/create">{{
@@ -21,41 +21,41 @@ import { followUpFilters } from './crm-ui';
       }}</a> }
     </section>
     <form class="panel filters" [formGroup]="filters" (ngSubmit)="load(1)">
-      <input formControlName="search" [placeholder]="t('Search', 'بحث')" /><select
+      <label class="workspace-filter-field"><span>{{ t('Search', 'بحث') }}</span><input formControlName="search" [placeholder]="t('Search', 'بحث')" /></label><label class="workspace-filter-field"><span>{{ t('Status', 'الحالة') }}</span><select
         formControlName="status"
       >
         <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
         @for (x of statuses; track x) {
           <option [value]="x">{{ status(x) }}</option>
         }</select
-      ><select formControlName="type">
+      ></label><label class="workspace-filter-field"><span>{{ t('Type', 'النوع') }}</span><select formControlName="type">
         <option value="">{{ t('All types', 'كل الأنواع') }}</option>
         @for (x of types; track x) {
           <option [value]="x">{{ type(x) }}</option>
         }</select
-      ><input
+      ></label><label class="workspace-filter-field"><span>{{ t('Assigned user ID', 'المستخدم المسؤول') }}</span><input
         formControlName="assignedToUserId"
         [placeholder]="t('Assigned user ID', 'المستخدم المسؤول')"
-      /><input type="date" formControlName="dueFrom" /><input
+      /></label><label class="workspace-filter-field"><span>{{ t('Due from', 'الاستحقاق من') }}</span><input type="date" formControlName="dueFrom" /></label><label class="workspace-filter-field"><span>{{ t('Due until', 'الاستحقاق حتى') }}</span><input
         type="date"
         formControlName="dueTo"
-      /><label
+      /></label><label
         ><input type="checkbox" formControlName="overdue" />{{
           t('Overdue only', 'المتأخرة فقط')
         }}</label
-      ><select formControlName="sortBy">
+      ><label class="workspace-filter-field"><span>{{ t('Sort by', 'الترتيب حسب') }}</span><select formControlName="sortBy">
         <option value="1">{{ t('Sort by due date', 'ترتيب حسب الاستحقاق') }}</option>
         <option value="2">{{ t('Sort by created date', 'ترتيب حسب الإنشاء') }}</option>
         <option value="3">{{ t('Sort by patient', 'ترتيب حسب المريض') }}</option>
         <option value="4">{{ t('Sort by status', 'ترتيب حسب الحالة') }}</option></select
-      ><label
+      ></label><label
         ><input type="checkbox" formControlName="descending" />{{
           t('Descending', 'تنازلي')
         }}</label
       ><button>{{ t('Filter', 'تصفية') }}</button>
     </form>
     @if (error()) {
-      <div class="alert error">{{ error() }}</div>
+      <div class="alert error" role="alert">{{ error() }}</div>
     }
     <section class="panel table-panel">
       @if (loading()) {
