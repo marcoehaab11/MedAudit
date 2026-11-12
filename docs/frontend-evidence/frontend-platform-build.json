@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "project": "src/DentalClinic.PlatformAdmin/DentalClinic.PlatformAdmin.csproj",
+  "configuration": "Release",
+  "sdk": "10.0.302",
+  "sdkArchiveHashVerified": true,
+  "warnings": 0,
+  "errors": 0,
+  "scope": "Compilation of Razor platform project and its dependencies, not authenticated runtime integration"
+}

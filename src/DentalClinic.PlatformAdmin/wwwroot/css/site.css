@@ -263,6 +263,7 @@ body { background: radial-gradient(circle at 92% 2%, #e4f4e8 0, transparent 27%)
 .table th, .table td { padding: 14px 16px; vertical-align: middle; }
 .field-validation-error, .validation-summary-errors { color: #b42318; }
 .user-email { max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+form.is-loading button[aria-disabled="true"] { opacity: .65; cursor: progress; }
 @media (max-width: 575px) {
   .app-container { padding-inline: 16px; }
   .form-control, .form-select { font-size: 16px; }
