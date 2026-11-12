@@ -1,0 +1,29 @@
+{
+  "angular": "22.2.6",
+  "vitest": "4.1.12",
+  "manifestRangesChanged": false,
+  "cleanInstall": true,
+  "clinic": {
+    "buildPassed": true,
+    "testsPassed": 267,
+    "auditVulnerabilities": 0,
+    "initialKB": 414.65
+  },
+  "public": {
+    "buildPassed": true,
+    "testsPassed": 12,
+    "auditVulnerabilities": 0,
+    "initialKB": 282.98
+  },
+  "dotnet": {
+    "releaseBuildPassed": true,
+    "unitTestsPassed": 242
+  },
+  "dockerImagesPassedInGitHub": 5,
+  "backendIntegration": {
+    "passed": 106,
+    "failed": 27,
+    "resolved": false,
+    "run": "https://github.com/marcoehaab11/MedAudit/actions/runs/43171954857"
+  }
+}

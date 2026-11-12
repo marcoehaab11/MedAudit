@@ -75,3 +75,16 @@ Review the GitHub branch against `main`. Revert its UI commit to roll back the p
 - Removed local Bootstrap CSS/JS references whose files do not exist in the repository (`wwwroot/lib/bootstrap` contains its license only). The existing pinned CDN references remain the single source.
 - A cancelled confirmation no longer puts a native form into a pending state. Pending forms reject duplicate submit events without disabling the submitter before native POST serialization, so named button values remain available. The `pageshow` handler restores controls after browser history navigation and preserves buttons that were originally disabled.
 - `platform.mjs` passed all nine recorded behavior checks plus sign-in/error layouts at 1440/1024/768/390/320, with no JavaScript exceptions. Evidence explicitly distinguishes static Razor preview from a live server login.
+
+
+## Main integration follow-up — 12 November 2026
+
+The frontend and platform changes were fast-forwarded into `main`. The clinic/implant release is already an ancestor of main; the remaining historical admin-seeder fixes are patch-equivalent to commits already included.
+
+The first main CI run exposed pre-existing pipeline gates that local component tests did not exercise. Follow-up commit `475ae578` fixes clean-install lock metadata, clinic Docker source builds, malformed production-health YAML and its uppercase ADMIN URL lookup, and the existing C# whitespace gate. All five Docker image jobs passed on GitHub afterward. The full .NET Release build and all **242 unit tests** also passed locally.
+
+The CI security audit then required compatible dependency updates. Both apps now lock Angular **22.2.6** and Vitest **4.1.12** within their existing manifest ranges. Clean installation, production build and **267 clinic / 12 public tests** passed with the new locks. Both npm audits report **0 vulnerabilities**. The new initial bundles are approximately **414.65 kB clinic / 282.98 kB public**. The existing dental stylesheet warning remains.
+
+The backend integration job is **not green**: [CI run 43171954857](https://github.com/marcoehaab11/MedAudit/actions/runs/43171954857) recorded **106 passed / 27 failed integration tests**. Reported failures include validation fixtures, identity/membership expectations, stock/permission expectations, and missing test-service configuration. These failures are not claimed resolved by the frontend or build-configuration changes. No permission checks, clinical rules or failing tests were disabled to obtain a passing status.
+
+The local main branch is aligned while preserving the original workspace's outstanding user edits and untracked files. Local rollback metadata and a pre-sync patch are under `tmp/main-sync-checkpoint-20261112`.
