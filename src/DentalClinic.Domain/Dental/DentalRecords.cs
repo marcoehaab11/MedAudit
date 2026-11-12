@@ -140,13 +140,15 @@ public sealed class EndodonticRecord : TenantOwnedEntity
         if (postType is not (null or "fiber" or "metal" or "custom")) throw new ArgumentException("Invalid post type.");
         if (stage == RootCanalStage.Completed && restorationType is "post-core" or "post-core-crown" && postType is null) throw new ArgumentException("Post type is required.");
         var cleanWorkflow = DentalText.Optional(workflowJson ?? WorkflowJson, nameof(workflowJson), 64000);
-        if (cleanWorkflow is not null) {
+        if (cleanWorkflow is not null)
+        {
             System.Text.Json.JsonDocument parsedWorkflow;
             try { parsedWorkflow = System.Text.Json.JsonDocument.Parse(cleanWorkflow); } catch (System.Text.Json.JsonException error) { throw new ArgumentException("Invalid clinical workflow JSON.", nameof(workflowJson), error); }
             using var document = parsedWorkflow;
             var data = document.RootElement;
             if (data.ValueKind != System.Text.Json.JsonValueKind.Object || !data.TryGetProperty("version", out var version) || version.GetInt32() != 1) throw new ArgumentException("Invalid clinical workflow version.");
-            if (stage == RootCanalStage.Completed) {
+            if (stage == RootCanalStage.Completed)
+            {
                 if (restorationType != "crown-only" && (!data.TryGetProperty("finalMaterial", out var material) || material.GetString() is not ("composite" or "amalgam" or "glass-ionomer"))) throw new ArgumentException("A permanent restoration is required before completion.");
                 if ((restorationType == "crown-only" || data.TryGetProperty("needsCrown", out var needed) && needed.GetBoolean()) && (!data.TryGetProperty("crown", out var crown) || !crown.TryGetProperty("completed", out var completed) || completed.GetArrayLength() != 5 || completed.EnumerateArray().Where((item, index) => index != 2).Any(item => item.ValueKind != System.Text.Json.JsonValueKind.True))) throw new ArgumentException("Final crown cementation is not completed.");
             }
@@ -164,7 +166,8 @@ public sealed class EndodonticRecord : TenantOwnedEntity
         }
         if (postCanal is not null && !validated.Any(c => string.Equals(c.Name, postCanal, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException("The post canal must belong to this tooth.");
         var retained = new List<EndodonticCanal>();
-        foreach (var item in validated) {
+        foreach (var item in validated)
+        {
             var existing = canals.FirstOrDefault(c => string.Equals(c.Name, item.Name, StringComparison.OrdinalIgnoreCase));
             if (existing is null) retained.Add(item);
             else { existing.CopyMeasurementsFrom(item); retained.Add(existing); }

@@ -314,6 +314,9 @@ internal static partial class PublicBookingEndpoints
     private sealed record VisitInput(string? Source);
     private static string NormalizeSource(string? source) => source?.Trim().ToLowerInvariant() switch
     {
-        "qr" => "qr", "google" => "google", "social" => "social", _ => "direct"
+        "qr" => "qr",
+        "google" => "google",
+        "social" => "social",
+        _ => "direct"
     };
 }

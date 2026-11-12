@@ -51,9 +51,16 @@ public sealed class PlatformMailService(ApplicationDbContext db, IDataProtection
 
     public void Queue(string destination, string subject, string body, string kind, Guid? registrationId = null)
     {
-        db.PlatformEmails.Add(new PlatformEmail { Destination = destination, Subject = subject,
-            ProtectedBody = protector.Protect(body), Kind = kind, RegistrationId = registrationId,
-            CreatedAt = DateTimeOffset.UtcNow, NextAttemptAt = DateTimeOffset.UtcNow });
+        db.PlatformEmails.Add(new PlatformEmail
+        {
+            Destination = destination,
+            Subject = subject,
+            ProtectedBody = protector.Protect(body),
+            Kind = kind,
+            RegistrationId = registrationId,
+            CreatedAt = DateTimeOffset.UtcNow,
+            NextAttemptAt = DateTimeOffset.UtcNow
+        });
     }
 
     public async Task SendAsync(string destination, string subject, string body, CancellationToken token)

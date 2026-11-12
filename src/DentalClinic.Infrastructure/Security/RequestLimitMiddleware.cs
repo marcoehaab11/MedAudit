@@ -144,8 +144,16 @@ public sealed class RequestLimitMiddleware
         context.Response.Headers.CacheControl = "no-store";
         if (context.Request.Path.StartsWithSegments("/api") || !context.Request.Headers.Accept.ToString().Contains("text/html", StringComparison.OrdinalIgnoreCase))
         {
-            await context.Response.WriteAsJsonAsync(new { status, code = status == 429 ? "rate_limit_exceeded" : "rate_limit_unavailable",
-                title = english, detail = english, message = english, messageAr = arabic, retryAfter = seconds }, context.RequestAborted);
+            await context.Response.WriteAsJsonAsync(new
+            {
+                status,
+                code = status == 429 ? "rate_limit_exceeded" : "rate_limit_unavailable",
+                title = english,
+                detail = english,
+                message = english,
+                messageAr = arabic,
+                retryAfter = seconds
+            }, context.RequestAborted);
         }
         else
         {

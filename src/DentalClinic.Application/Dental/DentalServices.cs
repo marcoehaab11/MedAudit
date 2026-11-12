@@ -70,14 +70,17 @@ internal sealed class ExaminationCommands(
     public Task<bool> UpdateFindingAsync(Guid id, Guid itemId, DentalRecordInput<DentalFindingType> input, Guid version, CancellationToken token) =>
         MutateAsync(id, Permissions.DentalEdit, (e, now) => { e.UpdateFinding(itemId, input.Type, input.Surfaces, input.Notes, version, now, input.CariesClass); return null; }, PlatformAuditAction.FindingUpdated, token, itemId);
     public Task<bool> RemoveFindingAsync(Guid id, Guid itemId, Guid version, CancellationToken token) =>
-        MutateAsync(id, Permissions.DentalEdit, (e, now) => {
+        MutateAsync(id, Permissions.DentalEdit, (e, now) =>
+        {
             var item = e.Findings.FirstOrDefault(x => x.Id == itemId);
-            if (item?.FindingType is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening or DentalFindingType.Orthodontics or DentalFindingType.RemovableDentures) {
+            if (item?.FindingType is DentalFindingType.ScalingAndPolishing or DentalFindingType.Whitening or DentalFindingType.Orthodontics or DentalFindingType.RemovableDentures)
+            {
                 // First removal validates the caller version, subsequent removals use the updated version.
                 var ids = e.Findings.Where(x => x.FindingType == item.FindingType).Select(x => x.Id).ToArray();
                 e.RemoveFinding(ids[0], version, now);
                 foreach (var otherId in ids.Skip(1)) e.RemoveFinding(otherId, e.Version, now);
-            } else e.RemoveFinding(itemId, version, now);
+            }
+            else e.RemoveFinding(itemId, version, now);
             return null;
         }, PlatformAuditAction.FindingRemoved, token, itemId);
     public Task<bool> AddProcedureAsync(Guid id, DentalRecordInput<DentalProcedureType> input, Guid version, CancellationToken token) =>
@@ -111,11 +114,13 @@ internal sealed class ExaminationCommands(
         var isNew = !itemId.HasValue;
         if (input.TreatmentId.HasValue && !await store.IsRootCanalTreatmentAsync(input.TreatmentId.Value, e.PatientId, input.ToothNumber, e.DoctorUserId, token, input.RestorationType == "crown-only"))
             throw new DentalStateException("The root canal treatment must match this patient, tooth and doctor.");
-        if (itemId.HasValue) {
+        if (itemId.HasValue)
+        {
             if (e.EndodonticRecords.SingleOrDefault(x => x.Id == itemId)?.ToothNumber != input.ToothNumber)
                 throw new DentalStateException("The endodontic record belongs to a different tooth.");
             e.UpdateEndodonticRecord(itemId.Value, input.Notes, input.Canals, version, clock.UtcNow, input.Stage, input.TreatmentId, input.RestorationType, input.PostType, input.PostCanal, input.WorkflowJson);
-        } else itemId = e.AddEndodonticRecord(input.ToothNumber, input.Notes, input.Canals, Actor(), version, clock.UtcNow, input.Stage, input.TreatmentId, input.RestorationType, input.PostType, input.PostCanal, input.WorkflowJson).Id;
+        }
+        else itemId = e.AddEndodonticRecord(input.ToothNumber, input.Notes, input.Canals, Actor(), version, clock.UtcNow, input.Stage, input.TreatmentId, input.RestorationType, input.PostType, input.PostCanal, input.WorkflowJson).Id;
         Audit(isNew ? PlatformAuditAction.EndodonticRecordCreated : PlatformAuditAction.EndodonticRecordUpdated, itemId ?? e.Id);
         await store.SaveChangesAsync(token);
         return true;

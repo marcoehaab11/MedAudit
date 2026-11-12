@@ -34,7 +34,7 @@ internal sealed class DoctorProfileCommands(IDoctorProfileStore store, IDoctorSc
                 if (maxWorkingMinutes == 1440) maxWorkingMinutes = 1440 - duration;
                 var defaultEndTime = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(maxWorkingMinutes));
 
-                var defaultSchedules = Enum.GetValues<DayOfWeek>().Select(day => 
+                var defaultSchedules = Enum.GetValues<DayOfWeek>().Select(day =>
                     new DoctorSchedule(existingProfile.TenantId, existingProfile.Id, day, new TimeOnly(0, 0), defaultEndTime, duration, [], clock.UtcNow)
                 );
                 scheduleStore.AddRange(defaultSchedules);
@@ -58,7 +58,7 @@ internal sealed class DoctorProfileCommands(IDoctorProfileStore store, IDoctorSc
         if (maxWorkingMinutesNew == 1440) maxWorkingMinutesNew = 1440 - durationNew;
         var defaultEndTimeNew = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(maxWorkingMinutesNew));
 
-        var defaultSchedulesNew = Enum.GetValues<DayOfWeek>().Select(day => 
+        var defaultSchedulesNew = Enum.GetValues<DayOfWeek>().Select(day =>
             new DoctorSchedule(profile.TenantId, profile.Id, day, new TimeOnly(0, 0), defaultEndTimeNew, durationNew, [], clock.UtcNow)
         );
         scheduleStore.AddRange(defaultSchedulesNew);
@@ -130,7 +130,7 @@ internal sealed class DoctorProfileCommands(IDoctorProfileStore store, IDoctorSc
             if (maxWorkingMinutes == 1440) maxWorkingMinutes = 1440 - duration;
             var defaultEndTime = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(maxWorkingMinutes));
 
-            var defaultSchedules = Enum.GetValues<DayOfWeek>().Select(day => 
+            var defaultSchedules = Enum.GetValues<DayOfWeek>().Select(day =>
                 new DoctorSchedule(profile.TenantId, profile.Id, day, new TimeOnly(0, 0), defaultEndTime, duration, [], clock.UtcNow)
             );
             scheduleStore.AddRange(defaultSchedules);

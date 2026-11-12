@@ -60,10 +60,18 @@ public static class ClinicAlertDispatcher
             var delivery = new NotificationDelivery(tenantId, NotificationChannel.InApp, RecipientType.Staff,
                 recipientId, destination, template?.Id, eventType, title, body, "en", entityType, entityId,
                 recipientKey, now);
-            var payload = JsonSerializer.Serialize(new {
-                DeliveryId = delivery.Id, TenantId = tenantId, Channel = NotificationChannel.InApp,
-                RecipientType = RecipientType.Staff, RecipientId = recipientId, Destination = destination,
-                Subject = title, Body = body, Language = "en", RelatedEntityType = entityType,
+            var payload = JsonSerializer.Serialize(new
+            {
+                DeliveryId = delivery.Id,
+                TenantId = tenantId,
+                Channel = NotificationChannel.InApp,
+                RecipientType = RecipientType.Staff,
+                RecipientId = recipientId,
+                Destination = destination,
+                Subject = title,
+                Body = body,
+                Language = "en",
+                RelatedEntityType = entityType,
                 RelatedEntityId = entityId
             });
             db.NotificationDeliveries.Add(delivery);

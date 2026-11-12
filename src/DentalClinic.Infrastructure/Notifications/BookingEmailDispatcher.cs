@@ -27,10 +27,18 @@ public static class BookingEmailDispatcher
         var now = DateTimeOffset.UtcNow;
         var delivery = new NotificationDelivery(tenantId, NotificationChannel.Email, RecipientType.Patient,
             patientId, email, null, template, subject, body, "en", "Appointment", appointmentId, key, now);
-        var payload = JsonSerializer.Serialize(new {
-            DeliveryId = delivery.Id, TenantId = tenantId, Channel = NotificationChannel.Email,
-            RecipientType = RecipientType.Patient, RecipientId = patientId, Destination = email,
-            Subject = subject, Body = body, Language = "en", RelatedEntityType = "Appointment",
+        var payload = JsonSerializer.Serialize(new
+        {
+            DeliveryId = delivery.Id,
+            TenantId = tenantId,
+            Channel = NotificationChannel.Email,
+            RecipientType = RecipientType.Patient,
+            RecipientId = patientId,
+            Destination = email,
+            Subject = subject,
+            Body = body,
+            Language = "en",
+            RelatedEntityType = "Appointment",
             RelatedEntityId = appointmentId
         });
         db.NotificationDeliveries.Add(delivery);

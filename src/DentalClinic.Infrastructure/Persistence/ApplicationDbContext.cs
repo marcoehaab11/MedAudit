@@ -152,10 +152,10 @@ public sealed class ApplicationDbContext(
         base.OnModelCreating(builder);
         builder.Entity<ClinicalPhoto>(e =>
         {
-            e.ToTable("clinical_photos");e.HasKey(x=>x.Id);
-            e.Property(x=>x.Category).HasMaxLength(10);e.Property(x=>x.FileName).HasMaxLength(200);e.Property(x=>x.ContentType).HasMaxLength(50);
-            e.HasOne<Treatment>().WithMany().HasForeignKey(x=>new{x.TenantId,x.TreatmentId}).HasPrincipalKey(x=>new{x.TenantId,x.Id}).OnDelete(DeleteBehavior.Restrict);
-            e.HasQueryFilter(x=>currentTenant.IsAvailable && x.TenantId==currentTenant.TenantId);
+            e.ToTable("clinical_photos"); e.HasKey(x => x.Id);
+            e.Property(x => x.Category).HasMaxLength(10); e.Property(x => x.FileName).HasMaxLength(200); e.Property(x => x.ContentType).HasMaxLength(50);
+            e.HasOne<Treatment>().WithMany().HasForeignKey(x => new { x.TenantId, x.TreatmentId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+            e.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
         });
 
         builder.Entity<ClinicRegistration>(entity =>

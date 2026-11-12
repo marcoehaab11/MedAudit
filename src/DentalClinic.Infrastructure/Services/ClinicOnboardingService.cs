@@ -40,9 +40,21 @@ public sealed class ClinicOnboardingService(ApplicationDbContext db, UserManager
         await using var transaction = await db.Database.BeginTransactionAsync(token);
         var user = new ApplicationUser { Id = Guid.NewGuid(), Email = email, UserName = email, LockoutEnabled = true };
         Succeeded(await users.CreateAsync(user, input.Password));
-        var registration = new ClinicRegistration { IdentityUserId = user.Id, ClinicName = name, OwnerName = owner,
-            Email = email, Phone = phone, Address = address, City = city, Country = country,
-            ShowcaseConsent = input.ShowcaseConsent, Logo = logo, LogoContentType = contentType, CreatedAt = clock.UtcNow };
+        var registration = new ClinicRegistration
+        {
+            IdentityUserId = user.Id,
+            ClinicName = name,
+            OwnerName = owner,
+            Email = email,
+            Phone = phone,
+            Address = address,
+            City = city,
+            Country = country,
+            ShowcaseConsent = input.ShowcaseConsent,
+            Logo = logo,
+            LogoContentType = contentType,
+            CreatedAt = clock.UtcNow
+        };
         db.ClinicRegistrations.Add(registration);
         await QueueConfirmationAsync(registration, user, url);
         await db.SaveChangesAsync(token);

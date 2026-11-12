@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 #nullable disable
 namespace DentalClinic.Infrastructure.Persistence.Migrations;
+
 [DbContext(typeof(ApplicationDbContext))]
 [Migration("20261018130000_PostCanalAndVisitPriceApproval")]
 public class PostCanalAndVisitPriceApproval : Migration

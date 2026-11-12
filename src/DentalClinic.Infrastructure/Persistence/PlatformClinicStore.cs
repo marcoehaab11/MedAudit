@@ -37,14 +37,14 @@ internal sealed class PlatformClinicStore(
 
         var totalCount = await tenants.CountAsync(cancellationToken);
         var adminUsers = (from user in context.ClinicUsers.IgnoreQueryFilters().AsNoTracking()
-            join identity in context.Users.IgnoreQueryFilters().AsNoTracking() on user.IdentityUserId equals identity.Id
-            where
-                context.UserRoleAssignments.IgnoreQueryFilters().Any(assignment =>
-                    assignment.TenantId == user.TenantId && assignment.UserId == user.Id &&
-                    context.TenantRoles.IgnoreQueryFilters().Any(role =>
-                        role.TenantId == user.TenantId && role.Id == assignment.RoleId &&
-                        role.NormalizedName == AuthConstants.ClinicAdminRoleNormalized))
-            select new { user.TenantId, identity.Email });
+                          join identity in context.Users.IgnoreQueryFilters().AsNoTracking() on user.IdentityUserId equals identity.Id
+                          where
+                              context.UserRoleAssignments.IgnoreQueryFilters().Any(assignment =>
+                                  assignment.TenantId == user.TenantId && assignment.UserId == user.Id &&
+                                  context.TenantRoles.IgnoreQueryFilters().Any(role =>
+                                      role.TenantId == user.TenantId && role.Id == assignment.RoleId &&
+                                      role.NormalizedName == AuthConstants.ClinicAdminRoleNormalized))
+                          select new { user.TenantId, identity.Email });
 
         var items = await tenants
             .OrderBy(x => x.Name)
@@ -70,14 +70,14 @@ internal sealed class PlatformClinicStore(
     public async Task<ClinicDetails?> GetDetailsAsync(Guid tenantId, CancellationToken cancellationToken)
     {
         var adminUsers = (from user in context.ClinicUsers.IgnoreQueryFilters().AsNoTracking()
-            join identity in context.Users.IgnoreQueryFilters().AsNoTracking() on user.IdentityUserId equals identity.Id
-            where user.TenantId == tenantId &&
-                context.UserRoleAssignments.IgnoreQueryFilters().Any(assignment =>
-                    assignment.TenantId == tenantId && assignment.UserId == user.Id &&
-                    context.TenantRoles.IgnoreQueryFilters().Any(role =>
-                        role.TenantId == tenantId && role.Id == assignment.RoleId &&
-                        role.NormalizedName == AuthConstants.ClinicAdminRoleNormalized))
-            select identity.Email);
+                          join identity in context.Users.IgnoreQueryFilters().AsNoTracking() on user.IdentityUserId equals identity.Id
+                          where user.TenantId == tenantId &&
+                              context.UserRoleAssignments.IgnoreQueryFilters().Any(assignment =>
+                                  assignment.TenantId == tenantId && assignment.UserId == user.Id &&
+                                  context.TenantRoles.IgnoreQueryFilters().Any(role =>
+                                      role.TenantId == tenantId && role.Id == assignment.RoleId &&
+                                      role.NormalizedName == AuthConstants.ClinicAdminRoleNormalized))
+                          select identity.Email);
 
         return await context.Tenants.AsNoTracking()
             .Where(x => x.Id == tenantId)

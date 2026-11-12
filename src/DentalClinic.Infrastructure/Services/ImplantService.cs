@@ -153,8 +153,10 @@ public sealed class ImplantService(ApplicationDbContext db, ICurrentTenant tenan
     private async Task<ImplantDetails> DetailsAsync(ImplantRecord record, CancellationToken token)
     {
         var patient = await db.Patients.AsNoTracking().SingleAsync(x => x.Id == record.PatientId, token);
-        var doctorName = await (from doctor in db.DoctorProfiles join user in db.ClinicUsers on doctor.ClinicUserId equals user.Id
-            where doctor.Id == record.DoctorProfileId select user.DisplayName).SingleAsync(token);
+        var doctorName = await (from doctor in db.DoctorProfiles
+                                join user in db.ClinicUsers on doctor.ClinicUserId equals user.Id
+                                where doctor.Id == record.DoctorProfileId
+                                select user.DisplayName).SingleAsync(token);
         using var json = JsonDocument.Parse(record.WorkflowJson);
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var age = today.Year - patient.DateOfBirth.Year;

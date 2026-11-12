@@ -23,7 +23,7 @@ jobs:
         run: |
           title='Planora production health alert'
           failures=''
-          for name in API Admin; do
+          for name in API ADMIN; do
             url_var="${name}_URL"
             url="${!url_var}"
             status=$(curl --silent --show-error --location --max-time 12 --output /dev/null --write-out '%{http_code}' "$url") || status='unreachable'
@@ -35,10 +35,12 @@ jobs:
           issue=$(gh issue list --repo "$GH_REPO" --state open --limit 100 --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)
           if [[ -n "$failures" ]]; then
             if [[ -z "$issue" ]]; then
-              gh issue create --repo "$GH_REPO" --title "$title" --body "The external health check failed at $(date -u +'%Y-%m-%d %H:%M UTC').
-
-$failures
-The workflow runs every 10 minutes and will close this issue after recovery."
+              {
+                printf 'The external health check failed at %s.\n\n' "$(date -u +'%Y-%m-%d %H:%M UTC')"
+                printf '%s\n' "$failures"
+                printf '\nThe workflow runs every 10 minutes and will close this issue after recovery.\n'
+              } > "$RUNNER_TEMP/health-alert.md"
+              gh issue create --repo "$GH_REPO" --title "$title" --body-file "$RUNNER_TEMP/health-alert.md"
             fi
             printf '%s' "$failures"
             exit 1

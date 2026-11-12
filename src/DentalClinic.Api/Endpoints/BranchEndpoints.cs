@@ -131,8 +131,14 @@ internal static class BranchEndpoints
         return Results.Ok(new
         {
             branches = rows,
-            totals = new { patients = rows.Sum(x => x.Patients), appointments = rows.Sum(x => x.Appointments),
-                revenue = rows.Sum(x => x.Revenue), payments = rows.Sum(x => x.Payments), expenses = rows.Sum(x => x.Expenses) }
+            totals = new
+            {
+                patients = rows.Sum(x => x.Patients),
+                appointments = rows.Sum(x => x.Appointments),
+                revenue = rows.Sum(x => x.Revenue),
+                payments = rows.Sum(x => x.Payments),
+                expenses = rows.Sum(x => x.Expenses)
+            }
         });
     }
 
@@ -223,8 +229,9 @@ internal static class BranchEndpoints
             return Results.Conflict(new { message = "This staff account already belongs to the target branch." });
 
         var sourceRoles = await (from assignment in db.UserRoleAssignments.AsNoTracking()
-            join role in db.TenantRoles.AsNoTracking() on assignment.RoleId equals role.Id
-            where assignment.UserId == member.Id select role.NormalizedName).ToArrayAsync(token);
+                                 join role in db.TenantRoles.AsNoTracking() on assignment.RoleId equals role.Id
+                                 where assignment.UserId == member.Id
+                                 select role.NormalizedName).ToArrayAsync(token);
         if (sourceRoles.Contains("CLINICADMIN", StringComparer.Ordinal))
             return Results.BadRequest(new { message = "Clinic administrators must retain access to their branch." });
         var targetRoles = await db.TenantRoles.IgnoreQueryFilters().AsNoTracking()

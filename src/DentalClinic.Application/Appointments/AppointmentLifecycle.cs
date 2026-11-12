@@ -18,14 +18,17 @@ internal sealed class AppointmentLifecycle(IAppointmentStore store, AppointmentA
         Permissions.AppointmentsCheckIn, PlatformAuditAction.AppointmentCheckedIn, x => x.CheckIn(clock.UtcNow), cancellationToken);
 
     public Task<bool> StartAsync(Guid id, CancellationToken cancellationToken) => TransitionAsync(id,
-        Permissions.AppointmentsStart, PlatformAuditAction.AppointmentStarted, x => {
+        Permissions.AppointmentsStart, PlatformAuditAction.AppointmentStarted, x =>
+        {
             var now = clock.UtcNow;
-            if (x.Status == AppointmentStatus.Scheduled) {
+            if (x.Status == AppointmentStatus.Scheduled)
+            {
                 x.Confirm(now);
                 store.AddAudit(new PlatformAuditLog(currentTenant.RequireTenantId(), currentUser.UserId,
                     PlatformAuditAction.AppointmentConfirmed, nameof(Appointment), x.Id, now, null));
             }
-            if (x.Status == AppointmentStatus.Confirmed) {
+            if (x.Status == AppointmentStatus.Confirmed)
+            {
                 x.CheckIn(now);
                 store.AddAudit(new PlatformAuditLog(currentTenant.RequireTenantId(), currentUser.UserId,
                     PlatformAuditAction.AppointmentCheckedIn, nameof(Appointment), x.Id, now, null));

@@ -125,7 +125,8 @@ public sealed class PatientWorkflowTests(PlatformPostgresFixture fixture)
         await AcceptAsync(test, "doctor@medical.example");
 
         test.Tenant.Set(clinic.TenantId); test.User.UserId = receptionistId;
-        await using (var scope = test.Provider.CreateAsyncScope()) {
+        await using (var scope = test.Provider.CreateAsyncScope())
+        {
             patientId = await scope.ServiceProvider.GetRequiredService<IPatientCommands>().CreateAsync(
                 new CreatePatientCommand(Profile("Salma", "Adel"), ["Penicillin"], ["Diabetes"], ["Metformin"]), CancellationToken.None);
         }

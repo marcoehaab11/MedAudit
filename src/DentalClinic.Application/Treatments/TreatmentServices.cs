@@ -167,7 +167,7 @@ internal sealed class TreatmentService(ITreatmentStore store, TreatmentAccess ac
                     existing.IsClinicalFlowContainer || existing.ParentTreatmentId.HasValue ||
                     !existing.Teeth.Select(t => t.ToothNumber).Order().SequenceEqual(teeth.Distinct().Order()) ||
                     existing.Notes != command.Notes || command.Price.HasValue && existing.Price != command.Price.Value ||
-                    command.ExecutedStep is not null && !DentalClinic.Domain.Common.ExecutedClinicalSteps.Contains(existing.ExecutedStepsJson,$"{command.AppointmentId}:{command.ExecutedStep}"))
+                    command.ExecutedStep is not null && !DentalClinic.Domain.Common.ExecutedClinicalSteps.Contains(existing.ExecutedStepsJson, $"{command.AppointmentId}:{command.ExecutedStep}"))
                     throw new TreatmentStateException("This save ID belongs to another procedure. Resume its saved record or start a new independent procedure.");
                 return existing.Id;
             }

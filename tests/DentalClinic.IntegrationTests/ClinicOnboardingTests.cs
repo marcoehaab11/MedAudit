@@ -60,7 +60,8 @@ public sealed class ClinicOnboardingTests(PlatformPostgresFixture fixture)
     private async Task<ServiceProvider> CreateProviderAsync()
     {
         var connection = new NpgsqlConnectionStringBuilder(fixture.Postgres.GetConnectionString()) { Database = "onboarding_" + Guid.NewGuid().ToString("N"), Pooling = false }.ConnectionString;
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
             ["ConnectionStrings:Postgres"] = connection,
             ["ConnectionStrings:Redis"] = "localhost:6379,abortConnect=false",
             ["Onboarding:PublicAppUrl"] = "https://planora.example",

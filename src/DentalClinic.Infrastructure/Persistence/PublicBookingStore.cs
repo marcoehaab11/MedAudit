@@ -19,11 +19,11 @@ internal sealed class PublicBookingStore(ApplicationDbContext context) : IPublic
         var now = DateTimeOffset.UtcNow;
 
         var clinic = await (from t in context.Tenants.AsNoTracking().IgnoreQueryFilters()
-                      join parent in context.Tenants.AsNoTracking() on (t.ParentClinicId ?? t.Id) equals parent.Id
-                      join c in context.TenantConfigurations.AsNoTracking().IgnoreQueryFilters() on t.Id equals c.TenantId
-                      where t.Slug == normalizedSlug && t.Status == TenantStatus.Active && parent.Status == TenantStatus.Active &&
-                            parent.SubscriptionStartsAt <= now && parent.SubscriptionExpiresAt > now
-                      select new { Tenant = t, Config = c }).FirstOrDefaultAsync(token);
+                            join parent in context.Tenants.AsNoTracking() on (t.ParentClinicId ?? t.Id) equals parent.Id
+                            join c in context.TenantConfigurations.AsNoTracking().IgnoreQueryFilters() on t.Id equals c.TenantId
+                            where t.Slug == normalizedSlug && t.Status == TenantStatus.Active && parent.Status == TenantStatus.Active &&
+                                  parent.SubscriptionStartsAt <= now && parent.SubscriptionExpiresAt > now
+                            select new { Tenant = t, Config = c }).FirstOrDefaultAsync(token);
         if (clinic is null) return null;
         var clinicId = clinic.Tenant.ParentClinicId ?? clinic.Tenant.Id;
         var theme = await context.TenantConfigurations.AsNoTracking().IgnoreQueryFilters()
@@ -55,10 +55,10 @@ internal sealed class PublicBookingStore(ApplicationDbContext context) : IPublic
         var normalizedSlug = slug.Trim().ToLowerInvariant();
         var now = DateTimeOffset.UtcNow;
         return await (from t in context.Tenants.AsNoTracking()
-            join parent in context.Tenants.AsNoTracking() on (t.ParentClinicId ?? t.Id) equals parent.Id
-            where t.Slug == normalizedSlug && t.Status == TenantStatus.Active && parent.Status == TenantStatus.Active &&
-                  parent.SubscriptionStartsAt <= now && parent.SubscriptionExpiresAt > now
-            select (Guid?)t.Id)
+                      join parent in context.Tenants.AsNoTracking() on (t.ParentClinicId ?? t.Id) equals parent.Id
+                      where t.Slug == normalizedSlug && t.Status == TenantStatus.Active && parent.Status == TenantStatus.Active &&
+                            parent.SubscriptionStartsAt <= now && parent.SubscriptionExpiresAt > now
+                      select (Guid?)t.Id)
             .FirstOrDefaultAsync(token);
     }
 

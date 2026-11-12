@@ -47,19 +47,22 @@ public sealed class RootCanalAuthorizationTests
 
     private static ServiceProvider Services(IDentalStore store) => new ServiceCollection().AddApplication().AddSingleton(store)
         .AddSingleton<IPermissionService>(new PermissionsStub()).AddSingleton<ICurrentTenant>(new Tenant()).AddSingleton<ICurrentUser>(new Actor()).AddSingleton<ISystemClock>(new Clock()).BuildServiceProvider();
-    private sealed class PermissionsStub : IPermissionService {
+    private sealed class PermissionsStub : IPermissionService
+    {
         public Task<bool> HasPermissionAsync(string permission, CancellationToken cancellationToken) => Task.FromResult(false);
         public Task EnsurePermissionAsync(string permission, CancellationToken cancellationToken) => permission is Permissions.DentalEdit or Permissions.ExaminationEdit ? Task.CompletedTask : throw new InvalidOperationException("Unexpected permission");
     }
     private sealed class Tenant : ICurrentTenant { public Guid? TenantId => Guid.Parse("22222222-2222-2222-2222-222222222222"); public bool IsAvailable => true; public Guid RequireTenantId() => TenantId!.Value; }
     private sealed class Actor : ICurrentUser { public Guid? UserId => ActorId; }
     private sealed class Clock : ISystemClock { public DateTimeOffset UtcNow => Now; }
-    public class Store : DispatchProxy {
+    public class Store : DispatchProxy
+    {
         public Examination Examination { get; } = new(Guid.Parse("22222222-2222-2222-2222-222222222222"), Guid.NewGuid(), Guid.NewGuid(), ActorId, ActorId, Now);
         public bool LinkMatches { get; set; }
         public bool Saved { get; private set; }
         public List<PlatformAuditLog> Audits { get; } = [];
-        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) => targetMethod?.Name switch {
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) => targetMethod?.Name switch
+        {
             nameof(IDentalStore.FindExaminationAsync) => Task.FromResult<Examination?>(Examination),
             nameof(IDentalStore.IsRootCanalTreatmentAsync) => Task.FromResult(LinkMatches),
             nameof(IDentalStore.AddAudit) => Audit((PlatformAuditLog)args![0]!),

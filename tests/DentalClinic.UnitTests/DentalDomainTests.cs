@@ -8,8 +8,11 @@ public sealed class DentalDomainTests
     private static readonly Guid Actor = Guid.NewGuid();
     private static readonly DateTimeOffset Now = new(2026, 8, 15, 10, 0, 0, TimeSpan.Zero);
 
-    private static string Workflow(string material, bool crown, bool finished) => System.Text.Json.JsonSerializer.Serialize(new {
-        version = 1, finalMaterial = material, needsCrown = crown,
+    private static string Workflow(string material, bool crown, bool finished) => System.Text.Json.JsonSerializer.Serialize(new
+    {
+        version = 1,
+        finalMaterial = material,
+        needsCrown = crown,
         crown = new { completed = new[] { true, true, false, true, finished } }
     });
     [Fact]

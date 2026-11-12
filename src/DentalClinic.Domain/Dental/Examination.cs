@@ -53,7 +53,8 @@ public sealed class Examination : TenantOwnedEntity
             throw new ArgumentException("This finding must be recorded for an individual tooth.", nameof(type));
         if (cariesClass.HasValue) throw new ArgumentException("Caries class does not apply to whole-mouth services.", nameof(cariesClass));
         Guid? firstId = null;
-        foreach (var tooth in PermanentToothCatalog.All) {
+        foreach (var tooth in PermanentToothCatalog.All)
+        {
             if (findings.Any(x => x.ToothNumber == tooth.Number && x.FindingType == type)) continue;
             var item = new DentalFinding(TenantId, Id, PatientId, tooth.Number, type, [], notes, actorId, now);
             findings.Add(item); firstId ??= item.Id;

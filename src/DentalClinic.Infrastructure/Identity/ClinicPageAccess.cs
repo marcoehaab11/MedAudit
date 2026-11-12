@@ -4,8 +4,12 @@ public static class ClinicPageAccess
 {
     private static readonly Dictionary<string, string> Pages = new(StringComparer.OrdinalIgnoreCase)
     {
-        [""] = "", ["dashboard"] = "", ["guide"] = "", ["access-denied"] = "",
-        ["treatments/catalog"] = "TreatmentCatalog.View", ["medications"] = "Prescriptions.View",
+        [""] = "",
+        ["dashboard"] = "",
+        ["guide"] = "",
+        ["access-denied"] = "",
+        ["treatments/catalog"] = "TreatmentCatalog.View",
+        ["medications"] = "Prescriptions.View",
         ["users"] = "Users.View",
         ["users/:id"] = "Users.View",
         ["branches"] = "Settings.View",

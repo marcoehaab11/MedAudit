@@ -18,20 +18,37 @@ public static class ClinicalTimeline
 {
     private static readonly Dictionary<string, (string En, string Ar)> Labels = new(StringComparer.Ordinal)
     {
-        ["examination"] = ("Examination", "الكشف"), ["caries-removal"] = ("Caries Removal", "إزالة التسوس"),
-        ["temporary-filling"] = ("Temporary Filling", "حشو مؤقت"), ["composite-filling"] = ("Composite Filling", "حشو كومبوزيت"),
-        ["amalgam-filling"] = ("Amalgam Filling", "حشو أملغم"), ["glass-ionomer-filling"] = ("Glass Ionomer Filling", "حشو جلاس أيونومر"),
-        ["filling"] = ("Filling", "الحشو"), ["extraction"] = ("Extraction", "الخلع"),
-        ["access"] = ("Access Cavity", "فتح حجرة العصب"), ["length"] = ("Working Length & Final File Size", "تسجيل أطوال القنوات ومقاسات الملفات"),
-        ["obturation"] = ("Obturation", "حشو قنوات العصب"), ["core"] = ("Permanent Core Build-up", "الحشو الخارجي الدائم"), ["post"] = ("Post Placement", "تركيب الدعامة"),
-        ["crown-preparation"] = ("Crown Preparation", "تحضير السن للكراون"), ["crown-impression"] = ("Impression / Scan", "الطبعة أو المسح"),
-        ["crown-temporary"] = ("Temporary Crown", "كراون مؤقت"), ["crown-tryin"] = ("Crown Try-in", "تجربة الكراون"), ["crown-cementation"] = ("Crown Cementation", "تثبيت الكراون"),
-        ["scaling"] = ("Scaling", "تنظيف الجير"), ["polishing"] = ("Polishing", "التلميع"), ["fluoride"] = ("Fluoride Application", "تطبيق الفلورايد"),
-        ["pocket-mapping"] = ("Pocket Mapping", "تسجيل قياسات الجيوب اللثوية"), ["pocket-treatment"] = ("Pocket Treatment", "علاج الجيوب اللثوية"),
-        ["bleaching"] = ("Bleaching Session", "جلسة تبييض منفذة"), ["implant-1"] = ("Implant Assessment & Planning", "تقييم وتخطيط الزراعة"),
-        ["implant-2"] = ("Implant Placement", "زراعة الغرسة"), ["implant-healing"] = ("Implant Healing Review", "متابعة الالتئام"),
-        ["implant-4"] = ("Abutment Placement", "تركيب الدعامة"), ["implant-5"] = ("Scan / Impression & Crown Details", "المسح أو الطبعة وبيانات التركيبة"),
-        ["implant-6"] = ("Final Fixation", "التثبيت النهائي"), ["implant-followup"] = ("Implant Follow-up", "متابعة الزراعة"),
+        ["examination"] = ("Examination", "الكشف"),
+        ["caries-removal"] = ("Caries Removal", "إزالة التسوس"),
+        ["temporary-filling"] = ("Temporary Filling", "حشو مؤقت"),
+        ["composite-filling"] = ("Composite Filling", "حشو كومبوزيت"),
+        ["amalgam-filling"] = ("Amalgam Filling", "حشو أملغم"),
+        ["glass-ionomer-filling"] = ("Glass Ionomer Filling", "حشو جلاس أيونومر"),
+        ["filling"] = ("Filling", "الحشو"),
+        ["extraction"] = ("Extraction", "الخلع"),
+        ["access"] = ("Access Cavity", "فتح حجرة العصب"),
+        ["length"] = ("Working Length & Final File Size", "تسجيل أطوال القنوات ومقاسات الملفات"),
+        ["obturation"] = ("Obturation", "حشو قنوات العصب"),
+        ["core"] = ("Permanent Core Build-up", "الحشو الخارجي الدائم"),
+        ["post"] = ("Post Placement", "تركيب الدعامة"),
+        ["crown-preparation"] = ("Crown Preparation", "تحضير السن للكراون"),
+        ["crown-impression"] = ("Impression / Scan", "الطبعة أو المسح"),
+        ["crown-temporary"] = ("Temporary Crown", "كراون مؤقت"),
+        ["crown-tryin"] = ("Crown Try-in", "تجربة الكراون"),
+        ["crown-cementation"] = ("Crown Cementation", "تثبيت الكراون"),
+        ["scaling"] = ("Scaling", "تنظيف الجير"),
+        ["polishing"] = ("Polishing", "التلميع"),
+        ["fluoride"] = ("Fluoride Application", "تطبيق الفلورايد"),
+        ["pocket-mapping"] = ("Pocket Mapping", "تسجيل قياسات الجيوب اللثوية"),
+        ["pocket-treatment"] = ("Pocket Treatment", "علاج الجيوب اللثوية"),
+        ["bleaching"] = ("Bleaching Session", "جلسة تبييض منفذة"),
+        ["implant-1"] = ("Implant Assessment & Planning", "تقييم وتخطيط الزراعة"),
+        ["implant-2"] = ("Implant Placement", "زراعة الغرسة"),
+        ["implant-healing"] = ("Implant Healing Review", "متابعة الالتئام"),
+        ["implant-4"] = ("Abutment Placement", "تركيب الدعامة"),
+        ["implant-5"] = ("Scan / Impression & Crown Details", "المسح أو الطبعة وبيانات التركيبة"),
+        ["implant-6"] = ("Final Fixation", "التثبيت النهائي"),
+        ["implant-followup"] = ("Implant Follow-up", "متابعة الزراعة"),
         ["procedure-completed"] = ("Procedure Completed", "الإجراء المنفذ مكتمل")
     };
     public static ClinicalTimelineEvent Event(string id, Guid? treatmentId, Guid? appointmentId, IReadOnlyCollection<int> teeth,
@@ -53,7 +70,7 @@ public static class ClinicalTimeline
             if (step == "procedure-completed") step = treatment.Type == TreatmentType.Filling ? FillingStep(treatment.Notes) : treatment.Type == TreatmentType.Extraction ? "extraction" : step;
             yield return Event($"{(step is "scaling" or "pocket-mapping" or "pocket-treatment" ? "clinical" : "treatment")}:{treatment.Id}:{Text(e, "key")}", treatment.Id, Id(e, "appointmentId"), teeth,
                 treatment.TreatmentName, step, At(e, "performedAt"), Text(e, "reportedDate"),
-                (flow?["visits"] as JsonArray)?.Any(v => Text(v,"id") == Text(e,"key").Split(':')[0] && Text(v,"performed") != "true" && v?["correctedAt"] is not null) == true);
+                (flow?["visits"] as JsonArray)?.Any(v => Text(v, "id") == Text(e, "key").Split(':')[0] && Text(v, "performed") != "true" && v?["correctedAt"] is not null) == true);
         }
         if (flow?["progress"] is JsonObject progress)
         {
@@ -105,7 +122,7 @@ public static class ClinicalTimeline
         for (var stage = 1; stage <= record.CompletedStep; stage++)
         {
             var code = stage == 3 ? "implant-healing" : stage == 7 ? "implant-followup" : $"implant-{stage}";
-            if (stored.Any(e => Text(e,"step") == code)) continue;
+            if (stored.Any(e => Text(e, "step") == code)) continue;
             var section = stage switch { 1 => "planning", 2 => "placement", 4 => "abutment", 5 => "scan", 6 => "fixation", _ => "" };
             yield return Event($"implant:{record.Id}:legacy-stage:{stage}", record.TreatmentId, null, [record.ToothNumber],
                 "Implant / زراعة", code, null, section.Length > 0 ? Text(flow?[section], "date") : null);
@@ -117,23 +134,28 @@ public static class ClinicalTimeline
         var flow = ParseFlow(workflowJson); if (flow is null) yield break;
         var canonical = flow["flowVersion"]?.ToString() == "2";
         // Legacy stage numbers identify the next pending step. Only explicit done flags are evidence.
-        if (!canonical && Text(flow,"obturationDone") == "true")
-            yield return Event($"root:{treatmentId ?? recordId}:obturation",treatmentId,appointmentId,[tooth],procedureName,"obturation",null);
+        if (!canonical && Text(flow, "obturationDone") == "true")
+            yield return Event($"root:{treatmentId ?? recordId}:obturation", treatmentId, appointmentId, [tooth], procedureName, "obturation", null);
         if (flow["crown"] is not JsonObject crown || crown["completed"] is not JsonArray flags) yield break;
-        for(var i=0;i<Math.Min(flags.Count,RootTreatmentFlow.CrownKeys.Length);i++)
+        for (var i = 0; i < Math.Min(flags.Count, RootTreatmentFlow.CrownKeys.Length); i++)
         {
-            var key=RootTreatmentFlow.CrownKeys[i];
-            if(flags[i]?.ToString()!="true" || canonical && flow["progress"]?[key]?["legacyImported"]?.ToString()!="true") continue;
-            var date=crown["dates"] is JsonArray dates && dates.Count>i ? dates[i]?.ToString() : null;
-            yield return Event($"root:{treatmentId ?? recordId}:{key}",treatmentId,appointmentId,[tooth],procedureName,key,null,date);
+            var key = RootTreatmentFlow.CrownKeys[i];
+            if (flags[i]?.ToString() != "true" || canonical && flow["progress"]?[key]?["legacyImported"]?.ToString() != "true") continue;
+            var date = crown["dates"] is JsonArray dates && dates.Count > i ? dates[i]?.ToString() : null;
+            yield return Event($"root:{treatmentId ?? recordId}:{key}", treatmentId, appointmentId, [tooth], procedureName, key, null, date);
         }
     }
     public static ClinicalTimelineEvent InZone(ClinicalTimelineEvent e, TimeZoneInfo zone)
     {
         var local = e.PerformedAt.HasValue ? TimeZoneInfo.ConvertTime(e.PerformedAt.Value, zone) : (DateTimeOffset?)null;
         var date = local.HasValue ? DateOnly.FromDateTime(local.Value.DateTime) : DateOnly.TryParseExact(e.ReportedDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var reported) ? reported : (DateOnly?)null;
-        return e with { Date = date?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), DayEn = date?.ToString("dddd", CultureInfo.GetCultureInfo("en-US")),
-            DayAr = date?.ToString("dddd", CultureInfo.GetCultureInfo("ar-EG")), Time = local?.ToString("HH:mm:ss", CultureInfo.InvariantCulture) };
+        return e with
+        {
+            Date = date?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            DayEn = date?.ToString("dddd", CultureInfo.GetCultureInfo("en-US")),
+            DayAr = date?.ToString("dddd", CultureInfo.GetCultureInfo("ar-EG")),
+            Time = local?.ToString("HH:mm:ss", CultureInfo.InvariantCulture)
+        };
     }
     public static string FillingStep(string? notes) => notes?.Contains("Filling material: Temporary", StringComparison.OrdinalIgnoreCase) == true ? "temporary-filling" : notes?.Contains("Filling material: Composite", StringComparison.OrdinalIgnoreCase) == true ? "composite-filling" :
         notes?.Contains("Filling material: Amalgam", StringComparison.OrdinalIgnoreCase) == true ? "amalgam-filling" :

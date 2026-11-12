@@ -25,8 +25,8 @@ internal sealed class AppointmentAvailabilityQuery(IAppointmentStore store, IPer
             {
                 var start = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(minute));
                 var endMinutes = minute + query.DurationMinutes;
-                var end = endMinutes == 1440 
-                    ? new TimeOnly(0, 0) 
+                var end = endMinutes == 1440
+                    ? new TimeOnly(0, 0)
                     : TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(endMinutes));
 
                 var localStart = query.Date.ToDateTime(start, DateTimeKind.Unspecified);
@@ -69,8 +69,8 @@ internal sealed class AppointmentAvailabilityQuery(IAppointmentStore store, IPer
                 try
                 {
                     utcStart = AppointmentRules.ToUtc(query.Date, start, zone);
-                    utcEnd = endMinutes == 1440 
-                        ? AppointmentRules.ToUtc(query.Date.AddDays(1), end, zone) 
+                    utcEnd = endMinutes == 1440
+                        ? AppointmentRules.ToUtc(query.Date.AddDays(1), end, zone)
                         : AppointmentRules.ToUtc(query.Date, end, zone);
                 }
                 catch (FluentValidation.ValidationException) { continue; }

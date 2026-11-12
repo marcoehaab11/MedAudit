@@ -24,8 +24,12 @@ public sealed class SessionSecurityMiddleware(RequestDelegate next)
             context.Response.Clear();
             context.Response.StatusCode = 503;
             context.Response.Headers.CacheControl = "no-store";
-            await context.Response.WriteAsJsonAsync(new { code = "session_unavailable", message = "Session verification is temporarily unavailable. Please try again shortly.",
-                messageAr = "التحقق من جلسة الدخول غير متاح مؤقتًا. حاول مرة أخرى بعد قليل." }, context.RequestAborted);
+            await context.Response.WriteAsJsonAsync(new
+            {
+                code = "session_unavailable",
+                message = "Session verification is temporarily unavailable. Please try again shortly.",
+                messageAr = "التحقق من جلسة الدخول غير متاح مؤقتًا. حاول مرة أخرى بعد قليل."
+            }, context.RequestAborted);
         }
     }
 }

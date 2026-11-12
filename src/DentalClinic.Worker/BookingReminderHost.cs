@@ -36,8 +36,18 @@ public sealed partial class BookingReminderHost(IServiceProvider services, ILogg
                           where booking.BookingReference != null && patient.Email != null && patient.Email != ""
                               && (booking.Status == AppointmentStatus.Scheduled || booking.Status == AppointmentStatus.Confirmed)
                               && booking.StartAt >= now.AddHours(1) && booking.StartAt <= now.AddHours(24)
-                          select new { booking.Id, booking.TenantId, booking.PatientId, booking.StartAt,
-                              booking.BookingReference, patient.Email, patient.FirstName, tenant.Name, config.TimeZone })
+                          select new
+                          {
+                              booking.Id,
+                              booking.TenantId,
+                              booking.PatientId,
+                              booking.StartAt,
+                              booking.BookingReference,
+                              patient.Email,
+                              patient.FirstName,
+                              tenant.Name,
+                              config.TimeZone
+                          })
             .Take(500).ToListAsync(token);
         foreach (var row in rows)
         {

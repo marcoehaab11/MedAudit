@@ -24,17 +24,20 @@ internal sealed class PatientCommandsService(
         var patientNumber = await store.ReservePatientNumberAsync(tenantId, cancellationToken);
         var patient = NewPatient(tenantId, patientNumber, command.Profile, clock.UtcNow);
         store.AddPatient(patient);
-        foreach (var name in allergies) {
+        foreach (var name in allergies)
+        {
             var item = new PatientAllergy(tenantId, patient.Id, name, null, clock.UtcNow);
             store.AddAllergy(item);
             store.AddAudit(new PlatformAuditLog(tenantId, currentUser.UserId, PlatformAuditAction.AllergyAdded, nameof(PatientAllergy), item.Id, clock.UtcNow, null));
         }
-        foreach (var name in conditions) {
+        foreach (var name in conditions)
+        {
             var item = new PatientMedicalCondition(tenantId, patient.Id, name, null, clock.UtcNow);
             store.AddCondition(item);
             store.AddAudit(new PlatformAuditLog(tenantId, currentUser.UserId, PlatformAuditAction.MedicalConditionAdded, nameof(PatientMedicalCondition), item.Id, clock.UtcNow, null));
         }
-        foreach (var name in medications) {
+        foreach (var name in medications)
+        {
             var item = new PatientMedication(tenantId, patient.Id, name, null, null, clock.UtcNow);
             store.AddMedication(item);
             store.AddAudit(new PlatformAuditLog(tenantId, currentUser.UserId, PlatformAuditAction.MedicationAdded, nameof(PatientMedication), item.Id, clock.UtcNow, null));
@@ -50,7 +53,8 @@ internal sealed class PatientCommandsService(
         await permissions.EnsurePermissionAsync(Permissions.PatientsEdit, cancellationToken);
         PatientValidation.Profile(command.Profile, clock.UtcNow);
         var hasMedicalChanges = command.Allergies is not null || command.MedicalConditions is not null || command.Medications is not null;
-        if (hasMedicalChanges) {
+        if (hasMedicalChanges)
+        {
             await permissions.EnsurePermissionAsync(Permissions.PatientsViewMedicalHistory, cancellationToken);
             await permissions.EnsurePermissionAsync(Permissions.PatientsEditMedicalHistory, cancellationToken);
         }
@@ -61,7 +65,8 @@ internal sealed class PatientCommandsService(
         var patient = await store.FindPatientAsync(command.PatientId, cancellationToken);
         if (patient is null) return false;
         EnsureActive(patient);
-        if (hasMedicalChanges) {
+        if (hasMedicalChanges)
+        {
             var previous = await store.GetDetailsAsync(patient.Id, true, true, cancellationToken)
                 ?? throw PatientValidation.Error("Patient", "Patient not found.");
             var tenantId = currentTenant.RequireTenantId();
@@ -91,7 +96,8 @@ internal sealed class PatientCommandsService(
     {
         if (requested is null) return;
         var existing = previous.ToArray();
-        foreach (var item in existing.Where(x => !requested.Contains(x.Name, StringComparer.OrdinalIgnoreCase))) {
+        foreach (var item in existing.Where(x => !requested.Contains(x.Name, StringComparer.OrdinalIgnoreCase)))
+        {
             if (await find(item.Id) is { } entity) { remove(entity); MedicalAudit(removedAction, item.Id); }
         }
         foreach (var name in requested.Where(name => !existing.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)))) add(name);

@@ -20,16 +20,16 @@ public sealed class PatientClinicalHistoryService(ApplicationDbContext db, IPerm
         var treatments = await db.Treatments.AsNoTracking().Include(t => t.Teeth).Where(t => t.PatientId == patientId).ToListAsync(token);
         var implants = await db.ImplantRecords.AsNoTracking().Where(i => i.PatientId == patientId).ToListAsync(token);
         var endodontics = await db.EndodonticRecords.AsNoTracking().Where(e => e.PatientId == patientId).ToListAsync(token);
-        var visitIds = examinations.ToDictionary(e => e.Id,e => e.AppointmentId);
-        var names = treatments.ToDictionary(t => t.Id,t => t.TreatmentName);
+        var visitIds = examinations.ToDictionary(e => e.Id, e => e.AppointmentId);
+        var names = treatments.ToDictionary(t => t.Id, t => t.TreatmentName);
         var implantTreatmentIds = implants.Select(i => i.TreatmentId).ToHashSet();
         var events = examinations.Select(e => ClinicalTimeline.Event($"examination:{e.Id}", null, e.AppointmentId, [], "Examination / الكشف", "examination", e.CreatedAt))
             .Concat(treatments.Where(t => !implantTreatmentIds.Contains(t.Id)).SelectMany(ClinicalTimeline.TreatmentEvents))
             .Concat(implants.SelectMany(ClinicalTimeline.ImplantEvents))
-            .Concat(endodontics.SelectMany(e => ClinicalTimeline.LegacyRootEvents(e.Id,e.TreatmentId,visitIds.GetValueOrDefault(e.ExaminationId),e.ToothNumber,e.WorkflowJson,
-                e.TreatmentId.HasValue ? names.GetValueOrDefault(e.TreatmentId.Value,"Root / Crown") : "Root / Crown")))
+            .Concat(endodontics.SelectMany(e => ClinicalTimeline.LegacyRootEvents(e.Id, e.TreatmentId, visitIds.GetValueOrDefault(e.ExaminationId), e.ToothNumber, e.WorkflowJson,
+                e.TreatmentId.HasValue ? names.GetValueOrDefault(e.TreatmentId.Value, "Root / Crown") : "Root / Crown")))
             .Select(e => ClinicalTimeline.InZone(e, zone)).GroupBy(e => e.Id, StringComparer.Ordinal)
-            .Select(g => g.OrderBy(e => e.PerformedAt.HasValue ? 0 : e.Date is not null ? 1 : 2).ThenBy(e => e.PerformedAt).ThenBy(e => e.Date,StringComparer.Ordinal).First())
+            .Select(g => g.OrderBy(e => e.PerformedAt.HasValue ? 0 : e.Date is not null ? 1 : 2).ThenBy(e => e.PerformedAt).ThenBy(e => e.Date, StringComparer.Ordinal).First())
             .OrderByDescending(e => e.Date, StringComparer.Ordinal).ThenByDescending(e => e.PerformedAt).ThenBy(e => e.Id, StringComparer.Ordinal).ToArray();
         var first = examinations.OrderBy(e => e.CreatedAt).FirstOrDefault();
         var firstEvent = first is null ? null : ClinicalTimeline.InZone(ClinicalTimeline.Event("first", null, first.AppointmentId, [], "", "examination", first.CreatedAt), zone);

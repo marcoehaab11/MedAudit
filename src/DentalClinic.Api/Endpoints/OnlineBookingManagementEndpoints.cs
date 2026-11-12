@@ -34,7 +34,8 @@ internal static class OnlineBookingManagementEndpoints
             var bookingSources = await bookings.Where(x => x.CreatedAt >= since)
                 .GroupBy(x => x.PublicBookingSource ?? "direct")
                 .Select(x => new { source = x.Key, count = x.Count() }).ToListAsync(token);
-            return Results.Ok(new {
+            return Results.Ok(new
+            {
                 visits30Days = await visits.CountAsync(token),
                 sources,
                 bookingSources,
@@ -61,16 +62,28 @@ internal static class OnlineBookingManagementEndpoints
                 .Where(a => a.TenantId == tenantId && a.BookingReference != null);
             var total = await query.CountAsync(token);
             var rows = await (from appointment in query
-                               join patient in db.Patients on appointment.PatientId equals patient.Id
-                               join doctor in db.DoctorProfiles on appointment.DoctorProfileId equals doctor.Id
-                               join doctorUser in db.ClinicUsers on doctor.ClinicUserId equals doctorUser.Id
-                               orderby appointment.CreatedAt descending
-                               select new { appointment.Id, appointment.BookingReference,
-                                   patient.FirstName, patient.LastName, patient.Phone, patient.Email,
-                                   appointment.Notes, DoctorName = doctorUser.DisplayName,
-                                   appointment.StartAt, appointment.CreatedAt, appointment.Status,
-                                   appointment.PublicBookingContactedAt, appointment.PublicBookingAssignedToUserId,
-                                   appointment.PublicBookingStaffNotes, appointment.PublicBookingFollowUpAt })
+                              join patient in db.Patients on appointment.PatientId equals patient.Id
+                              join doctor in db.DoctorProfiles on appointment.DoctorProfileId equals doctor.Id
+                              join doctorUser in db.ClinicUsers on doctor.ClinicUserId equals doctorUser.Id
+                              orderby appointment.CreatedAt descending
+                              select new
+                              {
+                                  appointment.Id,
+                                  appointment.BookingReference,
+                                  patient.FirstName,
+                                  patient.LastName,
+                                  patient.Phone,
+                                  patient.Email,
+                                  appointment.Notes,
+                                  DoctorName = doctorUser.DisplayName,
+                                  appointment.StartAt,
+                                  appointment.CreatedAt,
+                                  appointment.Status,
+                                  appointment.PublicBookingContactedAt,
+                                  appointment.PublicBookingAssignedToUserId,
+                                  appointment.PublicBookingStaffNotes,
+                                  appointment.PublicBookingFollowUpAt
+                              })
                 .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(token);
             var items = rows.Select(row => new OnlineBookingRequestItem(row.Id, row.BookingReference!,
                 $"{row.FirstName} {row.LastName}".Trim(), row.Phone, row.Email, row.Notes,

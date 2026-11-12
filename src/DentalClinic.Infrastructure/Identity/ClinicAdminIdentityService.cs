@@ -36,10 +36,10 @@ internal sealed class ClinicAdminIdentityService(
             var target = await context.Tenants.AsNoTracking().SingleAsync(x => x.Id == tenantId, cancellationToken);
             var clinicId = target.ParentClinicId ?? target.Id;
             var activeSibling = await (from member in context.ClinicUsers.IgnoreQueryFilters().AsNoTracking()
-                join branch in context.Tenants.AsNoTracking() on member.TenantId equals branch.Id
-                where member.IdentityUserId == existing.Id && member.Status == Domain.Identity.UserStatus.Active &&
-                      (branch.ParentClinicId ?? branch.Id) == clinicId
-                select member.Id).AnyAsync(cancellationToken);
+                                       join branch in context.Tenants.AsNoTracking() on member.TenantId equals branch.Id
+                                       where member.IdentityUserId == existing.Id && member.Status == Domain.Identity.UserStatus.Active &&
+                                             (branch.ParentClinicId ?? branch.Id) == clinicId
+                                       select member.Id).AnyAsync(cancellationToken);
             if (activeSibling)
                 throw new ValidationException([new ValidationFailure("Email", "This user already works at another branch. Transfer the user instead.")]);
             return new IdentityAccountLink(Guid.NewGuid(), existing.Id, true);

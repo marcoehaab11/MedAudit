@@ -82,7 +82,7 @@ public sealed class Treatment : TenantOwnedEntity
     public void Complete(Guid expectedVersion, DateTimeOffset now, Guid? completionAppointmentId = null)
     {
         EnsureVersion(expectedVersion);
-        if(ClinicalWorkflowJson is null && Type==TreatmentType.Other && "scal|polish|clean|whiten|bleach|تنظيف|تنضيف|جير|تبييض|تبيض".Split('|').Any(term=>TreatmentName.Contains(term,StringComparison.OrdinalIgnoreCase)))
+        if (ClinicalWorkflowJson is null && Type == TreatmentType.Other && "scal|polish|clean|whiten|bleach|تنظيف|تنضيف|جير|تبييض|تبيض".Split('|').Any(term => TreatmentName.Contains(term, StringComparison.OrdinalIgnoreCase)))
             throw new TreatmentStateException("Open and complete the scaling or bleaching workflow before completing this treatment.");
         if (IsClinicalFlowContainer)
         {
@@ -99,8 +99,8 @@ public sealed class Treatment : TenantOwnedEntity
             ExecutedStepsJson = ExecutedClinicalSteps.Append(ExecutedStepsJson, "completed", "procedure-completed", now, AppointmentId);
         Touch(now);
     }
-    public void RetractClinicalSession(Guid sessionId,Guid actor,string reason,Guid expectedVersion,DateTimeOffset now)
-    { EnsureVersion(expectedVersion);EnsureMutable();if(Status==TreatmentStatus.Cancelled || ClinicalWorkflowJson is null)throw new TreatmentStateException("This treatment cannot be corrected.");ClinicalWorkflowJson=ClinicalWorkflow.Retract(ClinicalWorkflowJson,sessionId,actor,reason,now);Touch(now); }
+    public void RetractClinicalSession(Guid sessionId, Guid actor, string reason, Guid expectedVersion, DateTimeOffset now)
+    { EnsureVersion(expectedVersion); EnsureMutable(); if (Status == TreatmentStatus.Cancelled || ClinicalWorkflowJson is null) throw new TreatmentStateException("This treatment cannot be corrected."); ClinicalWorkflowJson = ClinicalWorkflow.Retract(ClinicalWorkflowJson, sessionId, actor, reason, now); Touch(now); }
     public void Cancel(Guid expectedVersion, DateTimeOffset now)
     { EnsureVersion(expectedVersion); if (Status is TreatmentStatus.Completed or TreatmentStatus.Cancelled) throw new TreatmentStateException("This treatment cannot be cancelled."); Status = TreatmentStatus.Cancelled; Touch(now); }
     public void SaveRootFlow(string json, Guid expectedVersion, DateTimeOffset now)

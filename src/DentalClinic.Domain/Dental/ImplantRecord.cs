@@ -46,9 +46,9 @@ public sealed class ImplantRecord : TenantOwnedEntity
             var id = saved["key"]!.ToString()["visit:".Length..];
             if (!root.TryGetProperty(stage == 3 ? "healingVisits" : "followupVisits", out var visits))
                 throw new ArgumentException("Keep the previously performed implant visits.");
-            var kept = visits.EnumerateArray().SingleOrDefault(v => Text(v,"id") == id);
+            var kept = visits.EnumerateArray().SingleOrDefault(v => Text(v, "id") == id);
             if (kept.ValueKind != JsonValueKind.Object) throw new ArgumentException("Keep the previously performed implant visits.");
-            ValidateVisit(kept,stage);
+            ValidateVisit(kept, stage);
         }
         for (var stage = 1; stage <= target; stage++)
         {

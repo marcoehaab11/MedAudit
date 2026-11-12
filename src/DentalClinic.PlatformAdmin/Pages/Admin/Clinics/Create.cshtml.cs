@@ -86,7 +86,7 @@ public sealed class CreateModel(
             return Page();
         }
         catch (DbUpdateException exception) when (exception.InnerException is PostgresException
-            { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "IX_tenants_Slug" })
+        { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "IX_tenants_Slug" })
         {
             ModelState.AddModelError("Input.Slug", "This clinic slug is already in use. Choose a different slug.");
             return Page();

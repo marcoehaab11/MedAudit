@@ -16,7 +16,7 @@ internal sealed class AppointmentSchedulingValidator(IAppointmentStore store)
         var doctor = await store.FindDoctorAsync(doctorProfileId, cancellationToken);
         if (doctor?.Status != DoctorProfileStatus.Active)
             throw AppointmentRules.Error(nameof(doctorProfileId), "An active doctor in this tenant is required.");
-        
+
         if (type != AppointmentType.Emergency)
         {
             var schedule = await store.GetScheduleAsync(doctor.Id, cancellationToken);
