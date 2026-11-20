@@ -26,9 +26,12 @@ internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock cl
         var balances = await context.DoctorCompensationCosts.AsNoTracking()
             .Where(x => ids.Contains(x.DoctorProfileId))
             .GroupBy(x => new { x.DoctorProfileId, x.Currency })
-            .Select(g => new {
-                g.Key.DoctorProfileId, g.Key.Currency,
-                Total = g.Sum(x => x.Amount), TreatmentCount = g.Select(x => x.TreatmentId).Distinct().Count(),
+            .Select(g => new
+            {
+                g.Key.DoctorProfileId,
+                g.Key.Currency,
+                Total = g.Sum(x => x.Amount),
+                TreatmentCount = g.Select(x => x.TreatmentId).Distinct().Count(),
             }).ToArrayAsync(token);
         var currency = await CurrencyAsync(token);
         var byDoctor = balances.ToLookup(x => x.DoctorProfileId);
