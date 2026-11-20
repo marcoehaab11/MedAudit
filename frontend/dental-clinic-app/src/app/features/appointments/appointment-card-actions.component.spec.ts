@@ -1,10 +1,11 @@
+import { LocalizationService } from '../../core/localization.service';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 import { AuthService } from '../../core/auth.service';
 import { AppointmentCardActionsComponent } from './appointment-card-actions.component';
 describe('AppointmentCardActionsComponent',()=>{
-  beforeEach(async()=>{await TestBed.configureTestingModule({imports:[AppointmentCardActionsComponent],providers:[provideRouter([]),{provide:AuthService,useValue:{hasPermission:()=>true}}]}).compileComponents();vi.useFakeTimers();vi.setSystemTime(new Date('2030-01-02T10:00:00Z'));});
+  beforeEach(async()=>{await TestBed.configureTestingModule({imports:[AppointmentCardActionsComponent],providers:[provideRouter([]),{provide:AuthService,useValue:{hasPermission:()=>true}}]}).compileComponents();TestBed.inject(LocalizationService).set('ar');vi.useFakeTimers();vi.setSystemTime(new Date('2030-01-02T10:00:00Z'));});
   afterEach(()=>vi.useRealTimers());
   const item=(status:number,date='2030-01-02')=>({id:'a1',patientId:'p1',patientName:'Patient',doctorProfileId:'d1',doctorName:'Doctor',type:1,status,startAt:date+'T12:00:00Z',endAt:date+'T13:00:00Z',durationMinutes:60,timeZone:'Africa/Cairo'});
   it('shows attendance only after booking confirmation on the appointment day',()=>{

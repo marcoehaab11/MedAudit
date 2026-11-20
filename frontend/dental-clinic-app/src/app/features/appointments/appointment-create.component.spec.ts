@@ -375,6 +375,7 @@ describe('AppointmentCreateComponent', () => {
 });
 
 function flushLookups(http: HttpTestingController): void {
+  http.expectOne('/api/appointments/rooms').flush([]);
   http
     .expectOne((r) => r.url === '/api/patients')
     .flush({

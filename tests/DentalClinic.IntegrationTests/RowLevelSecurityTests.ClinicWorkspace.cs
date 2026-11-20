@@ -6,6 +6,7 @@ using DentalClinic.Domain.Appointments;
 using DentalClinic.Domain.Doctors;
 using DentalClinic.Domain.Finance;
 using DentalClinic.Domain.Prescriptions;
+using DentalClinic.Domain.Patients;
 using DentalClinic.Domain.Treatments;
 using DentalClinic.Infrastructure.Persistence;
 using Microsoft.AspNetCore.TestHost;
@@ -45,7 +46,7 @@ public sealed partial class RowLevelSecurityTests
 
         await using var app = await database.HttpAppAsync();
         using var client = app.GetTestClient();
-        client.DefaultRequestHeaders.Add("Cookie", await LoginAsync(client, database.AdminA));
+        client.DefaultRequestHeaders.Add("Cookie", await LoginAsync(client, database.AdminA, database.TenantA));
 
         var month = firstDay.ToString("yyyy-MM", CultureInfo.InvariantCulture);
         var directory = await client.GetFromJsonAsync<JsonElement>($"/api/doctors/directory?month={month}");
@@ -84,14 +85,18 @@ public sealed partial class RowLevelSecurityTests
         var today = DateOnly.FromDateTime(now.UtcDateTime);
         if (!await db.FinancialCategories.AnyAsync(x => x.Code == "TREATMENT_REVENUE"))
             db.FinancialCategories.Add(new(database.TenantA, "Treatment revenue", "TREATMENT_REVENUE", FinancialCategoryType.Revenue, null, now));
-        var rule = new DoctorCompensation(database.TenantA, database.DoctorA, CompensationType.Percentage,
+        var patient = new Patient(database.TenantA, "PAY-000001", "Payment", null, "Commission",
+            PatientGender.NotSpecified, new DateOnly(1990, 1, 1), "01000000000",
+            null, null, null, null, null, null, null, null, null, null, null, null, now);
+        var doctor = new DoctorProfile(database.TenantA, database.AdminA, "Dentist", "COMMISSION-QA", null, 30, now);
+        var rule = new DoctorCompensation(database.TenantA, doctor.Id, CompensationType.Percentage,
             null, 30m, today, null, now, CommissionBasis.AmountPaid);
-        var treatment = new Treatment(database.TenantA, database.PatientA, database.DoctorA, null,
+        var treatment = new Treatment(database.TenantA, patient.Id, doctor.Id, null,
             null, null, database.ServiceA, null, TreatmentType.Filling, "Payment commission fixture", [21],
             100m, null, now);
         treatment.Start(treatment.Version, now);
         treatment.Complete(treatment.Version, now);
-        db.AddRange(rule, treatment);
+        db.AddRange(patient, doctor, rule, treatment);
         await db.SaveChangesAsync();
 
         var creator = services.GetRequiredService<ITreatmentRevenueCreator>();
@@ -101,13 +106,13 @@ public sealed partial class RowLevelSecurityTests
         var revenue = await db.Revenues.SingleAsync(x => x.TreatmentId == treatment.Id);
         var payments = services.GetRequiredService<IPaymentService>();
         foreach (var amount in new decimal[] { 40, 60 })
-            await payments.CreateAsync(new(database.PatientA, revenue.Id, treatment.Id, amount, PaymentMethod.Cash,
+            await payments.CreateAsync(new(patient.Id, revenue.Id, treatment.Id, amount, PaymentMethod.Cash,
                 null, null, today, new TimeOnly(10, 0)), CancellationToken.None);
         var costs = await db.DoctorCompensationCosts.Where(x => x.TreatmentId == treatment.Id).ToArrayAsync();
         Assert.Equal(30m, costs.Sum(x => x.Amount));
         Assert.Equal(2, costs.Select(x => x.PaymentId).Distinct().Count());
-        var balances = await services.GetRequiredService<IFinanceStore>().DoctorDuesAsync([database.DoctorA], CancellationToken.None);
-        Assert.Equal(30m, balances[database.DoctorA].Total);
-        Assert.Equal(1, balances[database.DoctorA].TreatmentCount);
+        var balances = await services.GetRequiredService<IFinanceStore>().DoctorDuesAsync([doctor.Id], CancellationToken.None);
+        Assert.Equal(30m, balances[doctor.Id].Total);
+        Assert.Equal(1, balances[doctor.Id].TreatmentCount);
     }
 }

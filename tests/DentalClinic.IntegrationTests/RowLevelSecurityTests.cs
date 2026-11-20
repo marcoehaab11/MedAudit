@@ -320,10 +320,10 @@ public sealed partial class RowLevelSecurityTests(RowSecurityDatabase database) 
         Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, clinicError.SqlState);
     }
 
-    private static async Task<string> LoginAsync(HttpClient client, Guid member)
+    private static async Task<string> LoginAsync(HttpClient client, Guid member, Guid? preferredTenantId = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login")
-        { Content = JsonContent.Create(new { email = member + "@example.invalid", password = "Password123!" }) };
+        { Content = JsonContent.Create(new { email = member + "@example.invalid", password = "Password123!", preferredTenantId }) };
         request.Headers.Add("X-App-Request", "1");
         var response = await client.SendAsync(request);
         Assert.True(response.StatusCode == HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
