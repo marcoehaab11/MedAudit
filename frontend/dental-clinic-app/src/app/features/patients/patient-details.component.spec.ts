@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { of } from 'rxjs';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
@@ -18,7 +19,7 @@ describe('PatientDetailsComponent', () => {
         provideRouter([]),
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { paramMap: convertToParamMap({ id: 'p1' }) } },
+          useValue: { snapshot: { paramMap: convertToParamMap({ id: 'p1' }) }, paramMap: of(convertToParamMap({ id: 'p1' })) },
         },
       ],
     })

@@ -1,3 +1,7 @@
+using DentalClinic.Application.Common.Interfaces;
+using DentalClinic.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using DentalClinic.Application.Appointments;
 using DentalClinic.Application.Identity;
 using DentalClinic.Contracts.Appointments;
@@ -12,9 +16,13 @@ internal static class AppointmentEndpoints
     {
         var appointments = endpoints.MapGroup("/api/appointments").RequireAuthorization(AuthConstants.TenantMemberPolicy);
         appointments.MapGet("/", SearchAsync).RequireAuthorization(Permissions.AppointmentsView);
+        appointments.MapGet("/rooms", GetRoomsAsync);
+        appointments.MapPost("/rooms", CreateRoomAsync).RequireAuthorization(Permissions.SettingsAppointments);
         appointments.MapGet("/availability", AvailabilityAsync).RequireAuthorization(Permissions.AppointmentsView);
         appointments.MapGet("/{id:guid}", GetAsync).RequireAuthorization(Permissions.AppointmentsView);
         appointments.MapPost("/", CreateAsync).RequireAuthorization(Permissions.AppointmentsCreate);
+        appointments.MapPut("/{id:guid}/room", (Guid id, AssignRoomRequest request, IAppointmentLifecycle service, CancellationToken token) =>
+            ResultAsync(service.AssignRoomAsync(id, request.RoomId, token))).RequireAuthorization(Permissions.AppointmentsEdit);
         appointments.MapPut("/{id:guid}/reschedule", RescheduleAsync).RequireAuthorization(Permissions.AppointmentsEdit);
         appointments.MapPost("/{id:guid}/confirm", ConfirmAsync).RequireAuthorization(Permissions.AppointmentsEdit);
         appointments.MapPost("/{id:guid}/cancel", CancelAsync).RequireAuthorization(Permissions.AppointmentsCancel);
@@ -23,6 +31,32 @@ internal static class AppointmentEndpoints
         appointments.MapPost("/{id:guid}/complete", CompleteAsync).RequireAuthorization(Permissions.AppointmentsComplete);
         appointments.MapPost("/{id:guid}/no-show", NoShowAsync).RequireAuthorization(Permissions.AppointmentsMarkNoShow);
         return endpoints;
+    }
+
+    private static async Task<IResult> GetRoomsAsync(ApplicationDbContext db, IPermissionService permissions,
+        CancellationToken token)
+    {
+        if (!await permissions.HasPermissionAsync(Permissions.AppointmentsView, token)
+            && !await permissions.HasPermissionAsync(Permissions.AppointmentsCreate, token)
+            && !await permissions.HasPermissionAsync(Permissions.SettingsAppointments, token))
+            return Results.Forbid();
+        var rooms = await db.ClinicRooms.AsNoTracking().OrderBy(x => x.Name)
+            .Select(x => new { x.Id, x.Name }).ToListAsync(token);
+        return Results.Ok(rooms);
+    }
+
+    private sealed record RoomRequest(string Name);
+    private sealed record AssignRoomRequest(Guid? RoomId);
+
+    private static async Task<IResult> CreateRoomAsync(RoomRequest request, ApplicationDbContext db,
+        ICurrentTenant tenant, CancellationToken token)
+    {
+        var room = new ClinicRoom(tenant.RequireTenantId(), request.Name);
+        db.ClinicRooms.Add(room);
+        try { await db.SaveChangesAsync(token); }
+        catch (DbUpdateException error) when (error.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        { return Results.Conflict(new { message = "A room with this name already exists." }); }
+        return Results.Ok(new { room.Id, room.Name });
     }
 
     private static Task<AppointmentSearchResult> SearchAsync(IAppointmentQueries service, DateOnly from, DateOnly to,
@@ -41,7 +75,7 @@ internal static class AppointmentEndpoints
         CancellationToken token)
     {
         var id = await service.ExecuteAsync(new CreateAppointmentCommand(request.PatientId, request.DoctorProfileId,
-            (AppointmentType)request.Type, Time(request.Time), request.Notes), token);
+            (AppointmentType)request.Type, Time(request.Time), request.Notes, request.RoomId), token);
         return Results.Created($"/api/appointments/{id:D}", new { id });
     }
 

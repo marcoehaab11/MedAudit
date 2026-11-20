@@ -50,20 +50,45 @@ internal sealed class PrescriptionStore(ApplicationDbContext context) : IPrescri
     public async Task<PrescriptionDetails?> GetPrescriptionAsync(Guid id, Guid? visibleDoctorId, CancellationToken token)
     {
         var item = await context.Prescriptions.AsNoTracking().Include(x => x.Items).SingleOrDefaultAsync(x => x.Id == id && (!visibleDoctorId.HasValue || x.DoctorProfileId == visibleDoctorId), token); if (item is null) return null;
-        var patient = await context.Patients.Where(x => x.Id == item.PatientId).Select(x => x.FirstName + " " + x.LastName).SingleAsync(token);
+        var patient = await context.Patients.Where(x => x.Id == item.PatientId).Select(x => new { Name = x.FirstName + " " + x.LastName, x.PatientNumber }).SingleAsync(token);
         var doctor = await DoctorName(item.DoctorProfileId).SingleAsync(token);
-        return new(item.Id, item.PrescriptionNumber, item.PatientId, patient, item.DoctorProfileId, doctor, item.AppointmentId, item.ExaminationId, item.TreatmentId, item.Status, item.Notes,
+        return new(item.Id, item.PrescriptionNumber, item.PatientId, patient.Name, item.DoctorProfileId, doctor, item.AppointmentId, item.ExaminationId, item.TreatmentId, item.Status, item.Notes,
             item.CreatedAt, item.UpdatedAt, item.IssuedAt, item.CancelledAt, item.DocumentReference, item.Version,
-            item.Items.OrderBy(x => x.SortOrder).Select(x => new PrescriptionItemDetails(x.Id, x.MedicationId, x.MedicationNameSnapshot, x.GenericNameSnapshot, x.StrengthSnapshot, x.FormSnapshot, x.Dose, x.Frequency, x.Duration, x.Route, x.Instructions, x.Quantity, x.SortOrder)).ToArray());
+            item.Items.OrderBy(x => x.SortOrder).Select(x => new PrescriptionItemDetails(x.Id, x.MedicationId, x.MedicationNameSnapshot, x.GenericNameSnapshot, x.StrengthSnapshot, x.FormSnapshot, x.Dose, x.Frequency, x.Duration, x.Route, x.Instructions, x.Quantity, x.SortOrder)).ToArray(), patient.PatientNumber);
     }
     public async Task<PagedResult<PrescriptionListItem>> SearchPrescriptionsAsync(PrescriptionSearch request, Guid? visibleDoctorId, CancellationToken token)
     {
         var query = context.Prescriptions.AsNoTracking().Where(x => (!visibleDoctorId.HasValue || x.DoctorProfileId == visibleDoctorId) && (!request.PatientId.HasValue || x.PatientId == request.PatientId) && (!request.DoctorProfileId.HasValue || x.DoctorProfileId == request.DoctorProfileId) && (!request.Status.HasValue || x.Status == request.Status));
-        if (request.From.HasValue) query = query.Where(x => x.CreatedAt >= new DateTimeOffset(request.From.Value.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero));
-        if (request.To.HasValue) query = query.Where(x => x.CreatedAt < new DateTimeOffset(request.To.Value.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero));
-        var total = await query.CountAsync(token); var items = await query.OrderByDescending(x => x.CreatedAt).Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
+        if (request.IssuedOnly) query = query.Where(x => x.IssuedAt != null);
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var term = request.Search.Trim();
+            if (term.StartsWith('#')) term = term[1..];
+            var pattern = "%" + term.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
+            var patients = context.Patients.Where(p => EF.Functions.ILike(p.PatientNumber, pattern)
+                || EF.Functions.ILike(p.FirstName + " " + p.MiddleName + " " + p.LastName, pattern)
+                || EF.Functions.ILike(p.FirstName + " " + p.LastName, pattern));
+            query = query.Where(x => patients.Any(p => p.Id == x.PatientId));
+        }
+        var zone = request.IssuedOnly && (request.From.HasValue || request.To.HasValue)
+            ? TimeZoneInfo.FindSystemTimeZoneById(await context.TenantConfigurations.Select(x => x.TimeZone).SingleAsync(token))
+            : TimeZoneInfo.Utc;
+        if (request.From.HasValue)
+        {
+            var from = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(request.From.Value.ToDateTime(TimeOnly.MinValue), zone), TimeSpan.Zero);
+            query = query.Where(x => (request.IssuedOnly ? x.IssuedAt : x.CreatedAt) >= from);
+        }
+        if (request.To.HasValue)
+        {
+            var to = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(request.To.Value.AddDays(1).ToDateTime(TimeOnly.MinValue), zone), TimeSpan.Zero);
+            query = query.Where(x => (request.IssuedOnly ? x.IssuedAt : x.CreatedAt) < to);
+        }
+        var total = await query.CountAsync(token);
+        var items = await query.OrderByDescending(x => request.IssuedOnly ? x.IssuedAt : x.CreatedAt)
+            .ThenByDescending(x => x.Id).Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
             .Select(x => new PrescriptionListItem(x.Id, x.PrescriptionNumber, x.PatientId, context.Patients.Where(p => p.Id == x.PatientId).Select(p => p.FirstName + " " + p.LastName).FirstOrDefault() ?? string.Empty, x.DoctorProfileId,
-                context.DoctorProfiles.Where(d => d.Id == x.DoctorProfileId).SelectMany(d => context.ClinicUsers.Where(u => u.Id == d.ClinicUserId).Select(u => u.DisplayName)).FirstOrDefault() ?? string.Empty, x.Status, x.CreatedAt, x.IssuedAt)).ToListAsync(token);
+                context.DoctorProfiles.Where(d => d.Id == x.DoctorProfileId).SelectMany(d => context.ClinicUsers.Where(u => u.Id == d.ClinicUserId).Select(u => u.DisplayName)).FirstOrDefault() ?? string.Empty, x.Status, x.CreatedAt, x.IssuedAt,
+                context.Patients.Where(p => p.Id == x.PatientId).Select(p => p.PatientNumber).FirstOrDefault())).ToListAsync(token);
         return new(items, request.Page, request.PageSize, total);
     }
     public Task<PrescriptionClinic> GetClinicAsync(CancellationToken token) => context.Tenants.AsNoTracking().Where(x => context.Prescriptions.Any(p => p.TenantId == x.Id))

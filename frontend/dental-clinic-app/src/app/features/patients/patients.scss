@@ -2058,8 +2058,8 @@ dd {
 // Patient file: identity, medical context, tools, then selected section.
 .patient-details-page {
   min-inline-size: 0;
-  .back { min-block-size: 44px; margin-block-end: .75rem; }
-  .patient-profile-header { align-items: flex-start; gap: 1.25rem; }
+  .back { min-block-size: 44px; margin-block-end: .25rem; }
+  .patient-profile-header { align-items: flex-start; gap: 1rem; margin-block-end: 1rem; }
   .patient-identity { display: flex; align-items: flex-start; gap: 1rem; min-inline-size: 0; flex: 1 1 350px; }
   .patient-identity-copy { min-inline-size: 0; }
   h1 { overflow-wrap: anywhere; }
@@ -2075,14 +2075,14 @@ dd {
   .patient-alert-summary strong { font-size: .95rem; }
   .patient-alert-summary p { margin: .3rem 0 0; font-size: .85rem; }
   .patient-alert-summary button { color: #81370f; border-color: #e5b79b; background: white; min-block-size: 44px; box-shadow: none; }
-  .patient-tools { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .5rem; padding-block: 1rem; border-block-start: 1px solid var(--border); margin-block-end: .5rem; }
+  .patient-tools { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .5rem; padding-block: .65rem; border-block-start: 1px solid var(--border); margin-block-end: .25rem; }
   .patient-tools > button, .patient-more-actions summary { font-size: .85rem; min-block-size: 44px; box-shadow: none; background: var(--surface-card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: .6rem 1rem; color: var(--ink-secondary); }
   .patient-more-actions { min-inline-size: 0; }
   .patient-more-actions summary { cursor: pointer; }
   .patient-more-actions[open] { flex-basis: 100%; }
   .patient-more-actions[open] summary { inline-size: fit-content; }
   .patient-more-actions > div { display: flex; flex-wrap: wrap; gap: .5rem; padding-block-start: .75rem; }
-  .patient-section-nav { gap: .25rem; scrollbar-width: thin; margin-block-end: 1.25rem; padding-block: .25rem; }
+  .patient-section-nav { gap: .25rem; scrollbar-width: thin; margin-block-end: 1rem; padding-block: .25rem; }
   .patient-section-nav button { min-block-size: 48px; margin: 0; color: var(--ink-secondary); padding: .65rem .9rem; }
   .patient-section-nav button.active { background: var(--brand-surface); color: var(--brand-dark); border-block-end-color: var(--brand); border-start-start-radius: .5rem; border-start-end-radius: .5rem; }
   .patient-section { min-inline-size: 0; }
@@ -2121,7 +2121,6 @@ dd {
     overflow: visible;
   }
   .patient-details-page .patient-section-nav button { white-space: normal; padding-inline: .5rem; }
-  .patient-details-page .patient-section-nav button:first-child:nth-last-child(5) { grid-column: 1 / -1; }
 }
 
 @media (max-width: 640px) {
@@ -2131,3 +2130,32 @@ dd {
 }
 
 @include workspace-intake.forms;
+
+.patient-details-page {
+  .patient-section-nav button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+  }
+
+  .patient-section-nav svg {
+    flex: none;
+    inline-size: 1.15rem;
+    block-size: 1.15rem;
+    color: var(--brand-dark, #086b5e);
+  }
+
+  .patient-medical-details {
+    margin-block: 1rem;
+
+    summary {
+      padding-block: .45rem;
+      color: var(--brand-dark, #086b5e);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .medical-grid { margin-block-start: .8rem; }
+  }
+}

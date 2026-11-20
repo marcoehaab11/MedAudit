@@ -130,6 +130,11 @@ export const routes: Routes = [
   {
     path: 'treatment-plans',
     canActivate: [authGuard, permissionGuard],
+    loadComponent: () => import('./features/treatments/treatment-monitor.component').then(m => m.TreatmentMonitorComponent),
+  },
+  {
+    path: 'treatment-plan-management',
+    canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
       import('./features/treatments/treatment-plans-page.component').then(
         (x) => x.TreatmentPlansPageComponent,

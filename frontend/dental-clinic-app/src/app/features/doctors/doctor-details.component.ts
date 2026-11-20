@@ -1,5 +1,5 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, input, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
@@ -26,7 +26,7 @@ type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
     DateInputComponent,
   ],
   template: `<div class="workspace-records doctor-profile">
-    <a class="back" routerLink="/doctors">← {{ t('Back to doctors', 'العودة إلى الأطباء') }}</a>
+    @if (!doctorId()) { <a class="back" routerLink="/doctors">← {{ t('Back to doctors', 'العودة إلى الأطباء') }}</a> }
     @if (loading()) {
       <div class="state" role="status">{{ t('Loading doctor…', 'جارٍ تحميل الطبيب…') }}</div>
     } @else if (error()) {
@@ -35,6 +35,7 @@ type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
         ><button type="button" (click)="load()">{{ t('Try again', 'حاول مرة أخرى') }}</button>
       </div>
     } @else if (doctor()) {
+      @if (!doctorId()) {
       <section class="workspace-page-head">
         <div>
 
@@ -58,6 +59,7 @@ type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
           }
         </div>
       </section>
+      }
       @if (success()) {
         <div class="alert success" role="status">{{ success() }}</div>
       }
@@ -100,6 +102,15 @@ type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
                     <dd>{{ doctor()!.consultationDurationMinutes }} {{ t('minutes', 'دقيقة') }}</dd>
                   </div>
                 </dl>
+                @if (doctorId() && auth.hasPermission('Doctors.Edit') && doctor()!.status !== 3) {
+                  <form [formGroup]="professionalForm" (ngSubmit)="saveProfessionalProfile()">
+                    <label>{{ t('Specialty', 'التخصص') }}<input formControlName="specialty" maxlength="150" /></label>
+                    <button type="submit" class="button" [disabled]="professionalForm.invalid || savingProfessional()">
+                      {{ t('Save specialty', 'حفظ التخصص') }}
+                    </button>
+                  </form>
+                }
+
               </section>
               <section class="panel">
                 <h2>{{ t('Biography', 'نبذة') }}</h2>
@@ -321,7 +332,7 @@ type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
                               {{ c.fixedAmount | number: '1.0-2' }}
                             }
                             @if (c.percentage) {
-                              · {{ c.percentage }}%
+                              · {{ c.percentage }}% · {{ c.commissionBasis === 1 ? t('Amount paid', 'المبلغ المدفوع') : t('Treatment value', 'قيمة العلاج') }}
                             }
                           </small>
                         </article>
@@ -356,6 +367,12 @@ type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
                         max="100"
                         formControlName="percentage" /></label
                     ><label
+                      >{{ t('Commission basis', 'طريقة حساب العمولة') }}
+                      <select formControlName="commissionBasis">
+                        <option [ngValue]="0">{{ t('Based on treatment value', 'على قيمة العلاج') }}</option>
+                        <option [ngValue]="1">{{ t('Based on amount paid', 'على المبلغ المدفوع') }}</option>
+                      </select></label
+                    ><label
                       >{{ t('Effective from', 'ساري من')
                       }}<app-date-input
                         [label]="t('Effective from', 'ساري من')"
@@ -388,11 +405,13 @@ type Tab = 'profile' | 'account' | 'schedule' | 'compensation';
     }
   </div>`,
 })
-export class DoctorDetailsComponent {
+export class DoctorDetailsComponent implements OnInit {
   private api = inject(DoctorApiService);
   readonly auth = inject(AuthService);
   readonly i18n = inject(LocalizationService);
-  readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id')!;
+  private readonly routeId = inject(ActivatedRoute).snapshot.paramMap.get('id')!;
+  readonly doctorId = input<string | null>(null);
+  get id(): string { return this.doctorId() ?? this.routeId; }
   readonly doctor = signal<DoctorDetails | null>(null);
   readonly loading = signal(true);
   readonly error = signal('');
@@ -413,16 +432,17 @@ export class DoctorDetailsComponent {
     { id: 'schedule', en: 'Schedule', ar: 'الجدول' },
     { id: 'compensation', en: 'Compensation', ar: 'المستحقات' },
   ];
+  readonly savingProfessional = signal(false);
+  readonly professionalForm = inject(FormBuilder).nonNullable.group({ specialty: ['', Validators.required] });
   readonly compForm = inject(FormBuilder).nonNullable.group({
     compensationType: 1,
+    commissionBasis: 0,
     fixedAmount: 0,
     percentage: 0,
     effectiveFrom: ['', Validators.required],
     effectiveTo: '',
   });
-  constructor() {
-    this.load();
-  }
+  ngOnInit(): void { this.load(); }
   sectionTitle() {
     const section = this.tabs.find((x) => x.id === this.tab())!;
     return this.t(section.en, section.ar);
@@ -434,6 +454,7 @@ export class DoctorDetailsComponent {
     this.api.doctor(this.id).subscribe({
       next: (d) => {
         this.doctor.set(d);
+        this.professionalForm.reset({ specialty: d.specialization });
         this.loading.set(false);
         this.loadSchedule();
         if (d.canManageCompensation) this.loadCompensation();
@@ -581,6 +602,25 @@ export class DoctorDetailsComponent {
       },
     });
   }
+  saveProfessionalProfile(): void {
+    const record = this.doctor();
+    const specialization = this.professionalForm.controls.specialty.value.trim();
+    if (!record || !specialization || this.savingProfessional()) return;
+    this.savingProfessional.set(true);
+    this.operationError.set('');
+    this.api.update(this.id, {
+      specialization, licenseNumber: record.licenseNumber, bio: record.bio,
+      consultationDurationMinutes: record.consultationDurationMinutes,
+    }).subscribe({
+      next: () => {
+        this.doctor.set({ ...record, specialization });
+        this.success.set(this.t('Specialty saved.', 'تم حفظ التخصص.'));
+        this.savingProfessional.set(false);
+      },
+      error: () => { this.savingProfessional.set(false); this.failed(); },
+    });
+  }
+
   saveCompensation() {
     if (
       this.compForm.invalid ||
@@ -594,6 +634,7 @@ export class DoctorDetailsComponent {
     const x = this.compForm.getRawValue();
     const value = {
       compensationType: x.compensationType,
+      commissionBasis: x.commissionBasis,
       fixedAmount: x.fixedAmount || undefined,
       percentage: x.percentage || undefined,
       effectiveFrom: x.effectiveFrom,
@@ -610,6 +651,7 @@ export class DoctorDetailsComponent {
         );
         this.compForm.reset({
           compensationType: 1,
+          commissionBasis: 0,
           fixedAmount: 0,
           percentage: 0,
           effectiveFrom: '',

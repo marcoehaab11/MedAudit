@@ -1,7 +1,28 @@
+import { DoctorDues } from '../finance/finance-api.service';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable, map, shareReplay, tap } from 'rxjs';
 
+export interface DoctorDirectoryItem {
+  id: string;
+  displayName: string;
+  phone?: string;
+  specialization: string;
+  accountStatus: number;
+  workingDays: number[];
+  newPatients: number;
+  followUps: number;
+  totalVisits: number;
+  dues?: DoctorDues;
+}
+export interface DoctorFinancialDetails {
+  id: string;
+  displayName: string;
+  specialization: string;
+  dues: DoctorDues;
+  percentage?: number;
+  commissionBasis?: number;
+}
 export interface DoctorProfileInput {
   clinicUserId?: string;
   displayName?: string;
@@ -65,6 +86,7 @@ export interface SchedulePeriod {
 export interface Compensation {
   id: string;
   compensationType: number;
+  commissionBasis?: number;
   fixedAmount?: number;
   percentage?: number;
   effectiveFrom: string;
@@ -98,6 +120,14 @@ export class DoctorApiService {
     this.cachedAll$ = null;
   }
 
+  directory(month: string) {
+    return this.http.get<{ month: string; items: DoctorDirectoryItem[] }>('/api/doctors/directory', {
+      params: month ? { month } : {},
+    });
+  }
+  dues(id: string) {
+    return this.http.get<DoctorFinancialDetails>(`/api/doctors/${id}/dues`);
+  }
   doctors(
     search: string,
     status: string,

@@ -6,14 +6,16 @@ public sealed class Revenue : TenantOwnedEntity
 {
     private Revenue() { }
     public Revenue(Guid tenantId, Guid categoryId, Guid? patientId, Guid? treatmentId, Guid? treatmentPlanId,
-        Guid? doctorProfileId, decimal amount, string currency, string description, DateTimeOffset occurredAt, DateTimeOffset createdAt)
+        Guid? doctorProfileId, decimal amount, string currency, string description, DateTimeOffset occurredAt, DateTimeOffset createdAt, Guid? paidCommissionRuleId = null)
     {
         if (tenantId == Guid.Empty || categoryId == Guid.Empty) throw new ArgumentException("Tenant and category are required.");
         TenantId = tenantId; CategoryId = categoryId; PatientId = patientId; TreatmentId = treatmentId;
         TreatmentPlanId = treatmentPlanId; DoctorProfileId = doctorProfileId; Amount = FinanceRules.NonNegative(amount, nameof(amount));
         Currency = FinanceRules.Currency(currency); Description = FinanceRules.Required(description, nameof(description), 500);
+        PaidCommissionRuleId = paidCommissionRuleId;
         OccurredAt = occurredAt; CreatedAt = createdAt;
     }
+    public Guid? PaidCommissionRuleId { get; private set; }
     public Guid CategoryId { get; private set; }
     public Guid? PatientId { get; private set; }
     public Guid? TreatmentId { get; private set; }
@@ -82,13 +84,15 @@ public sealed class DoctorCompensationCost : TenantOwnedEntity
 {
     private DoctorCompensationCost() { }
     public DoctorCompensationCost(Guid tenantId, Guid treatmentId, Guid doctorProfileId, decimal amount, string currency,
-        string ruleSnapshot, DateTimeOffset occurredAt, DateTimeOffset createdAt)
+        string ruleSnapshot, DateTimeOffset occurredAt, DateTimeOffset createdAt, Guid? paymentId = null)
     {
         if (tenantId == Guid.Empty || treatmentId == Guid.Empty || doctorProfileId == Guid.Empty) throw new ArgumentException("Tenant, treatment and doctor are required.");
         TenantId = tenantId; TreatmentId = treatmentId; DoctorProfileId = doctorProfileId; Amount = FinanceRules.Positive(amount, nameof(amount));
         Currency = FinanceRules.Currency(currency); CompensationRuleSnapshot = FinanceRules.Required(ruleSnapshot, nameof(ruleSnapshot), 500);
+        PaymentId = paymentId;
         OccurredAt = occurredAt; CreatedAt = createdAt;
     }
+    public Guid? PaymentId { get; private set; }
     public Guid TreatmentId { get; private set; }
     public Guid DoctorProfileId { get; private set; }
     public decimal Amount { get; private set; }

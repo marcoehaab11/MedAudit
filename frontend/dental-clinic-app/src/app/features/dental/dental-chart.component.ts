@@ -27,7 +27,7 @@ import { toothName } from './tooth-labels';
       </div>
     }
     @if (showSearch && searchError) { <p role="alert">{{ t('Enter a valid FDI number.', 'أدخل رقم سن صحيحًا.') }}</p> }
-    <div class="chart-body planora-chart">
+    <div class="chart-body planora-chart" [class.chart-status-mode]="showTreatmentStatuses">
       @for (jaw of jaws; track jaw.labelEn) {
         <div class="planora-jaw-label">{{ t(jaw.labelEn, jaw.labelAr) }}</div>
         <div class="planora-chart-scroll" (scroll)="menuTooth = 0"><div class="planora-jaw" [class.planora-upper]="!jaw.lower" [class.planora-lower]="jaw.lower">
@@ -35,14 +35,22 @@ import { toothName } from './tooth-labels';
             <div class="tooth-container" (mouseenter)="openMenu(number, $event)" (mouseleave)="closeMenu(number)">
               <button type="button" class="planora-tooth" [class.selected]="isSelectedTooth(number)" [class.missing]="isMissing(find(number))" [class.completion-highlight]="completedHighlights.includes(number)" [class.implanted]="toothState(number) === 'implant'"
                 [class.extracting]="animatedTeeth()[number] === 'extracted'" [class.implanting]="animatedTeeth()[number] === 'implant'"
-                [attr.aria-pressed]="isSelectedTooth(number)" [attr.aria-label]="name(number) + ' #' + number" [title]="name(number) + ' #' + number"
+                [attr.aria-pressed]="isSelectedTooth(number)" [attr.aria-label]="toothAriaLabel(number)" [title]="name(number) + ' #' + number"
                 [style.--tooth-accent]="planoraAccent(number)" (focus)="openMenu(number, $event)" (keydown.escape)="menuTooth = 0" (click)="choose(number, $event)">
                 <span class="planora-marker"></span><span class="planora-art" [innerHTML]="planoraArt(number, jaw.lower)"></span>
                 <span class="planora-number">#{{ number }}</span>
                 @if (toothState(number) === 'implant') { <span class="restoration-label">{{ t('Implant', 'زراعة') }}</span> }
                 @if (toothState(number) === 'extracted') { <span class="restoration-label">{{ t('Extracted', 'تم الخلع') }}</span> }
-                @if (completedWork(number)) { <small [title]="t('Completed procedure in history — new procedures are allowed', 'إجراء مكتمل في السجل — يمكن إضافة إجراءات جديدة')">✓</small> }
-                @if (pendingWork(number)) { <small [title]="t('Pending or ongoing treatment / findings to review', 'علاج متبقي أو تشخيصات للمراجعة')">◷</small> }
+                @if (showTreatmentStatuses) {
+                  <span class="tooth-statuses">
+                    @for (status of visibleStatuses(number); track status.id) {
+                      <span [class]="status.id" [title]="t(status.en, status.ar)"></span>
+                    }
+                  </span>
+                } @else {
+                  @if (completedWork(number)) { <small [title]="t('Completed procedure in history — new procedures are allowed', 'إجراء مكتمل في السجل — يمكن إضافة إجراءات جديدة')">✓</small> }
+                  @if (pendingWork(number)) { <small [title]="t('Pending or ongoing treatment / findings to review', 'علاج متبقي أو تشخيصات للمراجعة')">◷</small> }
+                }
               </button>
               @if (showQuickFindings && menuTooth === number) {
                 <div class="tooth-problem-menu" [style.top.px]="menuBottom === null ? menuTop : null" [style.bottom.px]="menuBottom" [style.left.px]="menuLeft" [style.max-height.px]="menuMaxHeight" (keydown.escape)="menuTooth = 0" role="group" [attr.aria-label]="name(number)">
@@ -57,13 +65,15 @@ import { toothName } from './tooth-labels';
         </div></div>
       }
     </div>
-    <div class="chart-legend"><span>{{ t('Orange: caries · Purple: root canal · Gold: crown · Missing: hidden tooth', 'برتقالي: تسوس · بنفسجي: علاج جذور · ذهبي: كراون · فقد: سن مخفي') }}</span><span>{{ t('Screw: completed implant · ✓ Completed history · ◷ Pending plan', 'مسمار: زراعة منفذة · ✓ إجراء سابق مكتمل · ◷ خطة غير مكتملة') }}</span></div>
+    <div class="chart-legend"><span>{{ t('Orange: caries · Purple: root canal · Gold: crown · Missing: hidden tooth', 'برتقالي: تسوس · بنفسجي: علاج جذور · ذهبي: كراون · فقد: سن مخفي') }}</span>@if (!showTreatmentStatuses) { <span>{{ t('Screw: completed implant · ✓ Completed history · ◷ Pending plan', 'مسمار: زراعة منفذة · ✓ إجراء سابق مكتمل · ◷ خطة غير مكتملة') }}</span> }</div>
   </section>`,
 })
 export class DentalChartComponent implements OnChanges {
   @Input() teeth: ToothChartSummary[] = [];
   @Input() showSearch = true;
   @Input() showHeading = true;
+  @Input() showTreatmentStatuses = false;
+  @Input() plannedToothNumbers: number[] = [];
   @Input() primaryTeeth = false;
   @Input() selectedNumber = 0;
   @Input() completedHighlights: number[] = [];
@@ -94,6 +104,27 @@ export class DentalChartComponent implements OnChanges {
   constructor(private readonly i18n: LocalizationService, private readonly sanitizer: DomSanitizer) {}
   t(en: string, ar: string) { return this.i18n.language() === 'ar' ? ar : en; }
   name(number: number, short = false) { return number>=51 ? 'Primary '+toothName(number-40,this.i18n.language(),short) : toothName(number, this.i18n.language(), short); }
+  visibleStatuses(number: number) {
+    const tooth = this.find(number);
+    const statuses = new Set(tooth?.treatmentProgress?.map(work => work.status));
+    const result = [];
+    if (statuses.has(4) || tooth?.procedures.length) {
+      result.push({ id: 'completed', en: 'Completed', ar: 'مكتمل' });
+    }
+    if (statuses.has(3)) result.push({ id: 'ongoing', en: 'Ongoing', ar: 'جارٍ' });
+    if (statuses.has(1) || statuses.has(2) || this.plannedToothNumbers.includes(number)) {
+      result.push({ id: 'planned', en: 'Planned', ar: 'مخطط' });
+    }
+    return result;
+  }
+
+  toothAriaLabel(number: number) {
+    const label = this.name(number) + ' #' + number;
+    return this.showTreatmentStatuses
+      ? [label, ...this.visibleStatuses(number).map(status => this.t(status.en, status.ar))].join(' · ')
+      : label;
+  }
+
   private individualWork(number: number) {
     return (this.find(number)?.treatmentProgress ?? []).filter(work => !(work.type === 6 && /denture|أطقم|اطقم|scal|polish|whiten|bleach|clean|ortho|braces|aligner|retainer|تنظيف|تنضيف|جير|تلميع|تبييض|تبيض|تقويم/i.test(work.name)));
   }

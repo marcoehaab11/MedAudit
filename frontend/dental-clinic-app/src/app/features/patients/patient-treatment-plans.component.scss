@@ -1,0 +1,182 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+.treatment-actions,
+.group-heading,
+.dialog-heading {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+}
+
+.treatment-actions {
+  flex-wrap: wrap;
+  margin-block-end: 1rem;
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    min-block-size: 44px;
+  }
+
+  svg { inline-size: 1.15rem; block-size: 1.15rem; }
+}
+
+.update-button { background: #edf5ff; color: #19598f; border-color: #cbdff2; }
+.chart-button { background: #e5f7f1; color: #086759; border-color: #b6e2d7; }
+.update-button:hover { background: #dcecff; }
+.chart-button:hover { background: #d3f0e7; }
+
+[data-status='completed'] { --status-ink: #126647; --status-tint: #e9f8f0; --status-edge: #c8e8d8; --status-marker: #22855a; }
+[data-status='ongoing'] { --status-ink: #1c5590; --status-tint: #edf5ff; --status-edge: #cfe2fa; --status-marker: #2874bd; }
+[data-status='planned'] { --status-ink: #854907; --status-tint: #fff5e6; --status-edge: #f0ddbd; --status-marker: #ad5b05; }
+
+.treatment-groups {
+  display: grid;
+  gap: 1rem;
+}
+
+.treatment-group {
+  padding: .8rem;
+  border: 1px solid var(--status-edge);
+  border-radius: 14px;
+  background: var(--status-tint);
+}
+
+.group-heading {
+  color: var(--status-ink);
+  margin-block-end: .65rem;
+
+  h2 { margin: 0; font-size: 1.025rem; color: inherit; }
+  svg { inline-size: 1.45rem; block-size: 1.45rem; flex: none; }
+}
+
+.group-count {
+  border-radius: 999px;
+  padding: .1rem .55rem;
+  background: var(--status-edge);
+  font-size: .83rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.procedure-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  margin: 0;
+  padding: 0;
+  gap: .55rem;
+}
+
+.procedure-card {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  padding: .8rem;
+  min-block-size: 72px;
+  min-inline-size: 0;
+  color: var(--ink, #142739);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px #173e4810;
+  overflow-wrap: anywhere;
+
+  strong { display: block; font-size: .94rem; }
+}
+
+.procedure-tooth {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 2.4rem;
+  block-size: 2.4rem;
+  border-radius: 10px;
+  color: var(--status-ink);
+  background: var(--status-tint);
+
+  svg { inline-size: 1.4rem; block-size: 1.4rem; }
+}
+
+.procedure-location {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .15rem .65rem;
+  margin-block-start: .2rem;
+  font-size: .84rem;
+  color: #455c68;
+}
+
+.empty-group { margin: .25rem 0 0; color: var(--status-ink); font-size: .88rem; }
+.treatment-message { padding: .85rem; margin: 0; }
+
+.profile-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  inline-size: min(960px, calc(100% - 1.5rem));
+  max-inline-size: none;
+  max-block-size: calc(100dvh - 1.5rem);
+  padding: 1rem;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid #d4e7e3;
+  border-radius: 16px;
+  background: #fff;
+  color: var(--ink, #142739);
+  box-shadow: 0 18px 60px #10313230;
+}
+
+.profile-dialog::backdrop { background: #102a35a6; }
+.chart-dialog { inline-size: min(1170px, calc(100% - 1.5rem)); }
+.dialog-heading {
+  position: sticky;
+  z-index: 1;
+  inset-block-start: -1rem;
+  justify-content: space-between;
+  padding-block: .85rem;
+  margin-block-start: -.85rem;
+  background: #fff;
+}
+.dialog-heading h2 { margin: 0; font-size: 1.18rem; }
+.dialog-heading button { min-block-size: 44px; }
+.chart-orientation, .chart-hint { margin: 0 0 .65rem; color: #455c68; font-size: .9rem; }
+.chart-hint { margin-block-start: .8rem; }
+.chart-status-legend, .tooth-records {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem .85rem;
+  list-style: none;
+  padding: 0;
+}
+
+.chart-status-legend { margin-block: .8rem; }
+.chart-status-legend li, .tooth-records li {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  color: var(--status-ink, inherit);
+  font-size: .88rem;
+}
+
+li[data-status]::before {
+  content: '';
+  inline-size: .5rem;
+  block-size: .5rem;
+  border-radius: 50%;
+  background: var(--status-marker);
+}
+
+.selected-tooth {
+  background: #f2f8f7;
+  border-radius: 12px;
+  padding: .8rem;
+
+  h3 { margin: 0; font-size: 1rem; }
+  p, ul { margin-block: .35rem 0; }
+}
+
+:where(button, a):focus-visible { outline: 2px solid #087f74; outline-offset: 3px; }

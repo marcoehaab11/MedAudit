@@ -40,7 +40,7 @@ interface CategoryOption {
   ],
   template: `
     <div class="treatment-plan-form-page workspace-records plan-editor">
-      <a class="back-link" routerLink="/treatment-plans">
+      <a class="back-link" routerLink="/treatment-plan-management">
         ← {{ t('Back to treatment plans', 'العودة لخطط العلاج') }}
       </a>
 
@@ -437,7 +437,7 @@ interface CategoryOption {
           </div>
 
           <div class="form-bottom-actions">
-            <a class="button btn-cancel" routerLink="/treatment-plans">{{
+            <a class="button btn-cancel" routerLink="/treatment-plan-management">{{
               t('Cancel', 'إلغاء')
             }}</a>
             <button

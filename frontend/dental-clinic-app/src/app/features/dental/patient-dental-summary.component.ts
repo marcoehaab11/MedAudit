@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit, inject, signal } from '@angular/core';
+import { Component, Input, OnChanges, inject, signal } from '@angular/core';
 import { DentalApiService, PatientDentalChart } from './dental-api.service';
 import { LocalizationService } from '../../core/localization.service';
 import { DentalChartComponent } from './dental-chart.component';
@@ -19,12 +19,13 @@ import { FINDING_APPEARANCE, PROCEDURE_APPEARANCE } from './dental-appearance';
             </svg>
           </div>
           <div>
-            <h2>{{ t('Dental Chart & Records', 'المخطط السني والفحوصات') }}</h2>
+            <h2>{{ showChartAction ? t('Dental Chart & Records', 'المخطط السني والفحوصات') : t('Dental Records', 'سجلات الأسنان') }}</h2>
             <p class="section-desc">
-              {{ t('Odontogram findings, procedures history, and clinical examinations.', 'المخطط السني التفاعلي، تشخيص حالة الأسنان، وسجلات الفحص الإكلينيكي.') }}
+              {{ t('Dental findings, procedures, and clinical examinations.', 'تشخيصات الأسنان والإجراءات وسجلات الفحص السريري.') }}
             </p>
           </div>
         </div>
+        @if (showChartAction) {
         <div class="summary-actions">
           <button type="button" class="button primary" (click)="showChartModal.set(true)">
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -35,6 +36,7 @@ import { FINDING_APPEARANCE, PROCEDURE_APPEARANCE } from './dental-appearance';
             <span>{{ t('Open dental chart', 'فتح مخطط الأسنان') }}</span>
           </button>
         </div>
+        }
       </div>
 
       @if (loading()) {
@@ -101,7 +103,7 @@ import { FINDING_APPEARANCE, PROCEDURE_APPEARANCE } from './dental-appearance';
     </section>
 
     <!-- Dental Chart Modal -->
-    @if (showChartModal() && chart()) {
+    @if (showChartAction && showChartModal() && chart()) {
       <div class="chart-modal-overlay" (click)="showChartModal.set(false)">
         <div class="chart-modal-content" (click)="$event.stopPropagation()">
           <div class="chart-modal-header">
@@ -149,18 +151,15 @@ import { FINDING_APPEARANCE, PROCEDURE_APPEARANCE } from './dental-appearance';
     }
   `,
 })
-export class PatientDentalSummaryComponent implements OnInit, OnChanges {
+export class PatientDentalSummaryComponent implements OnChanges {
   @Input({ required: true }) patientId!: string;
+  @Input() showChartAction = true;
   private readonly api = inject(DentalApiService);
   readonly i18n = inject(LocalizationService);
   readonly chart = signal<PatientDentalChart | null>(null);
   readonly loading = signal(true);
   readonly showChartModal = signal(false);
   selected = 11;
-
-  ngOnInit() {
-    this.fetchData();
-  }
 
   ngOnChanges() {
     if (this.patientId) {

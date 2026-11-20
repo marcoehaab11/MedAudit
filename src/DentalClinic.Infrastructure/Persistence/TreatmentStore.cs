@@ -49,7 +49,7 @@ internal sealed class TreatmentStore(ApplicationDbContext context) : ITreatmentS
         if (request.From.HasValue) query = query.Where(x => x.CreatedAt >= new DateTimeOffset(request.From.Value.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero));
         if (request.To.HasValue) query = query.Where(x => x.CreatedAt < new DateTimeOffset(request.To.Value.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero));
         var count = await query.CountAsync(token);
-        var items = await query.OrderByDescending(x => x.CreatedAt).Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
+        var items = await query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
             .Select(x => new TreatmentPlanListItem(x.Id, x.PatientId, context.Patients.Where(p => p.Id == x.PatientId).Select(p => p.FirstName + " " + p.LastName).Single(), x.DoctorProfileId,
                 context.DoctorProfiles.Where(d => d.Id == x.DoctorProfileId).SelectMany(d => context.ClinicUsers.Where(u => u.Id == d.ClinicUserId).Select(u => u.DisplayName)).Single(), x.Title, x.Status, x.Total, x.CreatedAt)).ToListAsync(token);
         return new(items, request.Page, request.PageSize, count);
@@ -72,10 +72,11 @@ internal sealed class TreatmentStore(ApplicationDbContext context) : ITreatmentS
         var query = context.Treatments.AsNoTracking().Where(x => (!visibleDoctorId.HasValue || x.DoctorProfileId == visibleDoctorId) && (!request.PatientId.HasValue || x.PatientId == request.PatientId) && (!request.DoctorProfileId.HasValue || x.DoctorProfileId == request.DoctorProfileId) && (!request.Type.HasValue || x.Type == request.Type) && (!request.Status.HasValue || x.Status == request.Status) && (!request.ToothNumber.HasValue || x.Teeth.Any(t => t.ToothNumber == request.ToothNumber)));
         if (request.From.HasValue) query = query.Where(x => x.CreatedAt >= new DateTimeOffset(request.From.Value.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero));
         if (request.To.HasValue) query = query.Where(x => x.CreatedAt < new DateTimeOffset(request.To.Value.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero));
-        var count = await query.CountAsync(token); var items = await query.OrderByDescending(x => x.CreatedAt).Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
+        var count = await query.CountAsync(token); var items = await query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).Skip((request.Page - 1) * request.PageSize).Take(request.PageSize)
             .Select(x => new TreatmentListItem(x.Id, x.PatientId, context.Patients.Where(p => p.Id == x.PatientId).Select(p => p.FirstName + " " + p.LastName).Single(), x.DoctorProfileId,
                 context.DoctorProfiles.Where(d => d.Id == x.DoctorProfileId).SelectMany(d => context.ClinicUsers.Where(u => u.Id == d.ClinicUserId).Select(u => u.DisplayName)).Single(), x.Type, x.TreatmentName,
-                x.Teeth.OrderBy(t => t.ToothNumber).Select(t => t.ToothNumber).ToArray(), x.Status, x.Price, x.CreatedAt, x.CompletedAt, x.Notes, x.PriceConfirmed, x.AppointmentId, x.TreatmentCatalogItemId, x.ParentTreatmentId, x.IsClinicalFlowContainer)).ToListAsync(token);
+                x.Teeth.OrderBy(t => t.ToothNumber).Select(t => t.ToothNumber).ToArray(), x.Status, x.Price, x.CreatedAt, x.CompletedAt, x.Notes, x.PriceConfirmed, x.AppointmentId, x.TreatmentCatalogItemId, x.ParentTreatmentId, x.IsClinicalFlowContainer, x.TreatmentPlanItemId,
+                context.Patients.Where(p => p.Id == x.PatientId).Select(p => p.PatientNumber).Single(), x.StartedAt)).ToListAsync(token);
         return new(items, request.Page, request.PageSize, count);
     }
     public void AddCatalog(TreatmentCatalogItem item) => context.TreatmentCatalogItems.Add(item);

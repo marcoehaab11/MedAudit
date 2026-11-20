@@ -2,7 +2,11 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { forkJoin, map, of, switchMap } from 'rxjs';
 
+export interface ClinicRoom { id: string; name: string; }
+
 export interface AppointmentItem {
+  roomId?: string;
+  confirmedAt?: string;
   id: string;
   patientId: string;
   patientName: string;
@@ -93,6 +97,8 @@ export class AppointmentApiService {
         ),
       );
   }
+  rooms() { return this.http.get<ClinicRoom[]>('/api/appointments/rooms'); }
+  addRoom(name: string) { return this.http.post<ClinicRoom>('/api/appointments/rooms', { name }); }
   appointment(id: string) {
     return this.http.get<AppointmentDetails>(`/api/appointments/${id}`);
   }
@@ -119,8 +125,12 @@ export class AppointmentApiService {
     type: number;
     time: AppointmentTime;
     notes?: string;
+    roomId?: string;
   }) {
     return this.http.post<{ id: string }>('/api/appointments', value);
+  }
+  assignRoom(id: string, roomId: string | null) {
+    return this.http.put<void>(`/api/appointments/${id}/room`, { roomId });
   }
   reschedule(id: string, time: AppointmentTime) {
     return this.http.put<void>(`/api/appointments/${id}/reschedule`, { time });

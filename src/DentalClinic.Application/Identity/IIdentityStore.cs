@@ -38,6 +38,8 @@ public interface IIdentityStore
     Task<bool> DoctorProfileExistsForUserAsync(Guid clinicUserId, CancellationToken cancellationToken);
     void AddUser(ClinicUser user);
     void AddDoctorProfile(DoctorProfile profile);
+    void AddDoctorCompensation(DoctorCompensation compensation);
+    Task<string> ClinicTimeZoneAsync(CancellationToken token);
     void AddRole(TenantRole role);
     void AddRolePermission(RolePermissionGrant permission);
     void AddUserRole(UserRoleAssignment assignment);

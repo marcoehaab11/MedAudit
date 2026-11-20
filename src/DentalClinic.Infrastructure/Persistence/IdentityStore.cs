@@ -130,7 +130,8 @@ internal sealed class IdentityStore(
         var effective = await GetEffectivePermissionsAsync(userId, cancellationToken);
         return new UserDetails(
             row.Id, row.DisplayName, row.Email, row.Phone, row.Status,
-            roles, row.CreatedAt, row.UpdatedAt, custom, effective);
+            roles, row.CreatedAt, row.UpdatedAt, custom, effective,
+            await context.DoctorProfiles.Where(d => d.ClinicUserId == userId).Select(d => (Guid?)d.Id).SingleOrDefaultAsync(cancellationToken));
     }
 
     public Task<ClinicUser?> FindUserAsync(Guid userId, CancellationToken cancellationToken) =>
@@ -294,6 +295,8 @@ internal sealed class IdentityStore(
 
     public void AddUser(ClinicUser user) => context.ClinicUsers.Add(user);
     public void AddDoctorProfile(DoctorProfile profile) => context.DoctorProfiles.Add(profile);
+    public void AddDoctorCompensation(DoctorCompensation compensation) => context.DoctorCompensations.Add(compensation);
+    public Task<string> ClinicTimeZoneAsync(CancellationToken token) => context.TenantConfigurations.Select(x => x.TimeZone).SingleAsync(token);
     public void AddRole(TenantRole role) => context.TenantRoles.Add(role);
     public void AddRolePermission(RolePermissionGrant permission) => context.RolePermissions.Add(permission);
     public void AddUserRole(UserRoleAssignment assignment) => context.UserRoleAssignments.Add(assignment);

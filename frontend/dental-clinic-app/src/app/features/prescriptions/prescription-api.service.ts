@@ -30,6 +30,7 @@ export interface Prescription {
   prescriptionNumber: string;
   patientId: string;
   patientName: string;
+  patientNumber?: string;
   doctorProfileId: string;
   doctorName: string;
   appointmentId?: string;
@@ -49,6 +50,7 @@ export interface PrescriptionList {
   prescriptionNumber: string;
   patientId: string;
   patientName: string;
+  patientNumber?: string;
   doctorProfileId: string;
   doctorName: string;
   status: number;

@@ -1,3 +1,4 @@
+import { AuthService } from '../../core/auth.service';
 import { CommonModule } from '@angular/common';
 import { Component, Input, OnChanges, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -41,12 +42,17 @@ interface CategoryOption {
           </p>
         </div>
         <div class="summary-actions">
-          <a class="button" [routerLink]="['/treatment-plans']" [queryParams]="{ patientId }">
+          @if (auth.hasPermission('TreatmentPlans.View')) {
+          <a class="button" [routerLink]="['/treatment-plan-management']" [queryParams]="{ patientId }">
             {{ t('All plans', 'كل الخطط') }}
           </a>
+          }
+          @if (auth.hasPermission('Treatments.View')) {
           <a class="button" [routerLink]="['/treatments']" [queryParams]="{ patientId }">
             {{ t('All treatments', 'كل العلاجات') }}
           </a>
+          }
+          @if (auth.hasPermission('TreatmentPlans.Create')) {
           <button
             type="button"
             class="button primary"
@@ -55,6 +61,7 @@ interface CategoryOption {
           >
             {{ showInlineForm() ? '▲ ' + t('Close Form', 'إغلاق النموذج') : '+ ' + t('New plan', 'خطة علاج جديدة') }}
           </button>
+          }
         </div>
       </div>
 
@@ -276,9 +283,11 @@ interface CategoryOption {
       } @else if (!plans().length && !treatments().length) {
         <div class="empty-summary-box">
           <p>{{ t('No treatment activity or plans recorded yet for this patient.', 'لا توجد خطط أو أنشطة علاجية مسجلة بعد لهذا المريض.') }}</p>
+          @if (auth.hasPermission('TreatmentPlans.Create')) {
           <button type="button" class="button primary" (click)="toggleInlineForm()">
             + {{ t('Start treatment plan', 'بدء خطة علاج') }}
           </button>
+          }
         </div>
       } @else {
         <div class="treatment-summary-grid">
@@ -301,7 +310,7 @@ interface CategoryOption {
           <div class="summary-section-block">
             <div class="summary-section-header">
               <span class="sec-title">📋 {{ t('Treatment Plans', 'خطط العلاج') }} ({{ plans().length }})</span>
-              <a class="view-all-link" [routerLink]="['/treatment-plans']" [queryParams]="{ patientId }">{{ t('View all plans →', 'عرض كل الخطط ←') }}</a>
+              <a class="view-all-link" [routerLink]="['/treatment-plan-management']" [queryParams]="{ patientId }">{{ t('View all plans →', 'عرض كل الخطط ←') }}</a>
             </div>
             <div class="summary-cards-list">
               @for (plan of plans().slice(0, 5); track plan.id) {
@@ -538,6 +547,7 @@ export class PatientTreatmentSummaryComponent implements OnInit, OnChanges {
   private readonly api = inject(TreatmentApiService);
   private readonly doctorService = inject(DoctorApiService);
   readonly i18n = inject(LocalizationService);
+  readonly auth = inject(AuthService);
 
   readonly plans = signal<TreatmentPlanList[]>([]);
   readonly treatments = signal<Treatment[]>([]);
@@ -580,15 +590,21 @@ export class PatientTreatmentSummaryComponent implements OnInit, OnChanges {
   });
 
   ngOnInit() {
-    this.fetchData();
-    this.api.catalog().subscribe((x) => this.catalog.set(x));
-    this.doctorService.listAll().subscribe((docs) => {
-      if (docs && docs.length > 0) {
-        this.defaultDoctorId.set(docs[0].id);
-        if (!this.planForm.controls.doctorProfileId.value) {
-          this.planForm.patchValue({ doctorProfileId: docs[0].id });
+    if (!this.auth.hasPermission('TreatmentPlans.Create')) return;
+    this.api.catalog().subscribe({
+      next: items => this.catalog.set(items),
+      error: () => this.loadError.set(this.t('The treatment catalog could not be loaded.', 'تعذر تحميل كتالوج العلاج.')),
+    });
+    this.doctorService.listAll().subscribe({
+      next: docs => {
+        if (docs && docs.length > 0) {
+          this.defaultDoctorId.set(docs[0].id);
+          if (!this.planForm.controls.doctorProfileId.value) {
+            this.planForm.patchValue({ doctorProfileId: docs[0].id });
+          }
         }
-      }
+      },
+      error: () => this.loadError.set(this.t('The doctors list could not be loaded.', 'تعذر تحميل قائمة الأطباء.')),
     });
   }
 
@@ -602,28 +618,36 @@ export class PatientTreatmentSummaryComponent implements OnInit, OnChanges {
     this.count = 0;
     this.loading.set(true);
     this.loadError.set('');
-    this.api.plans({ patientId: this.patientId, pageSize: '10' }).subscribe({
-      next: (x) => {
-        this.plans.set(x.items ?? []);
-        this.done();
-      },
-      error: () => {
-        this.plans.set([]);
-        this.loadError.set(this.t('Treatment plans could not be loaded. Check your access permission.', 'تعذر تحميل خطط العلاج. تحقق من صلاحية عرض الخطط.'));
-        this.done();
-      },
-    });
-    this.api.treatments({ patientId: this.patientId, pageSize: '10' }).subscribe({
-      next: (x) => {
-        this.treatments.set(x.items ?? []);
-        this.done();
-      },
-      error: () => {
-        this.treatments.set([]);
-        if (!this.loadError()) this.loadError.set(this.t('Treatment history could not be loaded. Check your access permission.', 'تعذر تحميل سجل العلاجات. تحقق من صلاحية عرض العلاجات.'));
-        this.done();
-      },
-    });
+    if (this.auth.hasPermission('TreatmentPlans.View')) {
+      this.api.plans({ patientId: this.patientId, pageSize: '10' }).subscribe({
+        next: (x) => {
+          this.plans.set(x.items ?? []);
+          this.done();
+        },
+        error: () => {
+          this.plans.set([]);
+          this.loadError.set(this.t('Treatment plans could not be loaded. Check your access permission.', 'تعذر تحميل خطط العلاج. تحقق من صلاحية عرض الخطط.'));
+          this.done();
+        },
+      });
+    } else {
+      this.done();
+    }
+    if (this.auth.hasPermission('Treatments.View')) {
+      this.api.treatments({ patientId: this.patientId, pageSize: '10' }).subscribe({
+        next: (x) => {
+          this.treatments.set(x.items ?? []);
+          this.done();
+        },
+        error: () => {
+          this.treatments.set([]);
+          if (!this.loadError()) this.loadError.set(this.t('Treatment history could not be loaded. Check your access permission.', 'تعذر تحميل سجل العلاجات. تحقق من صلاحية عرض العلاجات.'));
+          this.done();
+        },
+      });
+    } else {
+      this.done();
+    }
   }
 
   activePlans() {

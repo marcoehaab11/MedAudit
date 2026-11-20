@@ -15,7 +15,7 @@ internal static class PrescriptionEndpoints
         api.MapPost("/medications", CreateMedication).RequireAuthorization(Permissions.SettingsEdit);
         api.MapPut("/medications/{id:guid}", UpdateMedication).RequireAuthorization(Permissions.SettingsEdit);
         api.MapDelete("/medications/{id:guid}", DeleteMedication).RequireAuthorization(Permissions.SettingsEdit);
-        api.MapGet("/prescriptions", (Guid? patientId, Guid? doctorProfileId, PrescriptionStatus? status, DateOnly? from, DateOnly? to, int? page, int? pageSize, IPrescriptionService s, CancellationToken t) => s.SearchAsync(new(patientId, doctorProfileId, status, from, to, page.GetValueOrDefault(1) == 0 ? 1 : page.GetValueOrDefault(1), pageSize.GetValueOrDefault(20) == 0 ? 20 : pageSize.GetValueOrDefault(20)), t)).RequireAuthorization(Permissions.PrescriptionsView);
+        api.MapGet("/prescriptions", (Guid? patientId, Guid? doctorProfileId, PrescriptionStatus? status, DateOnly? from, DateOnly? to, int? page, int? pageSize, string? search, bool? issuedOnly, IPrescriptionService s, CancellationToken t) => s.SearchAsync(new(patientId, doctorProfileId, status, from, to, page.GetValueOrDefault(1) == 0 ? 1 : page.GetValueOrDefault(1), pageSize.GetValueOrDefault(20) == 0 ? 20 : pageSize.GetValueOrDefault(20), search, issuedOnly ?? false), t)).RequireAuthorization(Permissions.PrescriptionsView);
         api.MapGet("/prescriptions/{id:guid}", Get).RequireAuthorization(Permissions.PrescriptionsView);
         api.MapPost("/prescriptions", Create).RequireAuthorization(Permissions.PrescriptionsCreate);
         api.MapPut("/prescriptions/{id:guid}", Update).RequireAuthorization(Permissions.PrescriptionsEdit);

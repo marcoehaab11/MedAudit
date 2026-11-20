@@ -2,13 +2,14 @@ import { PatientClinicalHistoryComponent } from './patient-clinical-history.comp
 import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
 import { PatientApiService, PatientDetails } from './patient-api.service';
 import { DateInputComponent } from '../../shared/date-input/date-input.component';
 import { PatientDentalSummaryComponent } from '../dental/patient-dental-summary.component';
-import { PatientTreatmentSummaryComponent } from '../treatments/patient-treatment-summary.component';
+import { PatientTreatmentPlansComponent } from './patient-treatment-plans.component';
 import { PatientPrescriptionSummaryComponent } from '../prescriptions/patient-prescription-summary.component';
 import { PatientCrmSummaryComponent } from '../crm/patient-crm-summary.component';
 import { PatientFinanceSummaryComponent } from '../finance/patient-finance-summary.component';
@@ -18,7 +19,7 @@ import { MedicalAlertModalComponent } from '../../shared/medical-alert-modal/med
 import { TreatmentApiService } from '../treatments/treatment-api.service';
 import { AuthService } from '../../core/auth.service';
 
-type Tab = 'timeline' | 'overview' | 'contact' | 'medical' | 'notes';
+type Tab = 'overview' | 'treatments' | 'timeline' | 'notes';
 @Component({
   selector: 'app-patient-details',
   standalone: true,
@@ -29,7 +30,7 @@ type Tab = 'timeline' | 'overview' | 'contact' | 'medical' | 'notes';
     ReactiveFormsModule,
     DateInputComponent,
     PatientDentalSummaryComponent,
-    PatientTreatmentSummaryComponent,
+    PatientTreatmentPlansComponent,
     PatientPrescriptionSummaryComponent,
     PatientCrmSummaryComponent,
     PatientFinanceSummaryComponent,
@@ -234,10 +235,7 @@ type Tab = 'timeline' | 'overview' | 'contact' | 'medical' | 'notes';
         [attr.aria-label]="t('Patient sections', 'أقسام ملف المريض')"
       >
         @for (item of tabs; track item.id) {
-          @if (
-            !['medical', 'timeline'].includes(item.id) ||
-            auth.hasPermission('Patients.ViewMedicalHistory')
-          ) {
+          @if (canViewSection(item.id)) {
             <button
               type="button"
               [class.active]="tab() === item.id"
@@ -246,6 +244,10 @@ type Tab = 'timeline' | 'overview' | 'contact' | 'medical' | 'notes';
               [attr.data-section]="item.id"
               (click)="tab.set(item.id)"
             >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path [attr.d]="item.icon" />
+              </svg>
               {{ t(item.en, item.ar) }}
             </button>
           }
@@ -253,11 +255,6 @@ type Tab = 'timeline' | 'overview' | 'contact' | 'medical' | 'notes';
       </nav>
       <section id="patient-section" class="patient-section" [attr.aria-label]="sectionTitle()">
         @switch (tab()) {
-          @case ('timeline') {
-            @if (patient()!.canViewMedicalInformation) {
-              <app-patient-clinical-history [patientId]="id" />
-            }
-          }
           @case ('overview') {
             <div class="detail-grid">
               <section class="panel">
@@ -299,23 +296,6 @@ type Tab = 'timeline' | 'overview' | 'contact' | 'medical' | 'notes';
                 </dl>
               </section>
             </div>
-            @if (auth.hasPermission('Dental.View')) {
-              <app-patient-dental-summary [patientId]="id" />
-            }
-            @if (auth.hasPermission('Treatments.View')) {
-              <app-patient-treatment-summary [patientId]="id" />
-            }
-            @if (auth.hasPermission('Prescriptions.View')) {
-              <app-patient-prescription-summary [patientId]="id" />
-            }
-            @if (auth.hasPermission('CRM.View')) {
-              <app-patient-crm-summary [patientId]="id" />
-            }
-            @if (auth.hasPermission('Finance.View')) {
-              <app-patient-finance-summary [patientId]="id" />
-            }
-          }
-          @case ('contact') {
             <div class="detail-grid">
               <section class="panel">
                 <h2>{{ t('Contact', 'بيانات الاتصال') }}</h2>
@@ -349,8 +329,22 @@ type Tab = 'timeline' | 'overview' | 'contact' | 'medical' | 'notes';
                 <p>{{ patient()!.emergencyContactPhone || '—' }}</p>
               </section>
             </div>
+            @if (auth.hasPermission('Prescriptions.View')) {
+              <app-patient-prescription-summary [patientId]="id" />
+            }
+            @if (auth.hasPermission('CRM.View')) {
+              <app-patient-crm-summary [patientId]="id" />
+            }
+            @if (auth.hasPermission('Finance.View')) {
+              <app-patient-finance-summary [patientId]="id" />
+            }
           }
-          @case ('medical') {
+          @case ('treatments') {
+            @if (canViewSection('treatments')) {
+              <app-patient-treatment-plans [patientId]="id" />
+            }
+          }
+          @case ('timeline') {
             @if (!patient()!.canViewMedicalInformation) {
               <div class="panel restricted">
                 <strong>{{ t('Medical history is restricted', 'السجل الطبي مقيّد') }}</strong>
@@ -364,157 +358,165 @@ type Tab = 'timeline' | 'overview' | 'contact' | 'medical' | 'notes';
                 </p>
               </div>
             } @else {
-              <div class="medical-grid">
-                <section class="panel">
-                  <h2>{{ t('Allergies', 'الحساسية') }}</h2>
-                  <div class="chips">
-                    @for (item of patient()!.allergies; track item.id) {
-                      <span
-                        >{{ item.name }}
-                        @if (canEdit()) {
-                          <button
-                            type="button"
-                            (click)="removeText('allergies', item.id)"
-                            [attr.aria-label]="t('Remove allergy: ', 'حذف الحساسية: ') + item.name"
-                          >
-                            ×
-                          </button>
-                        }
-                      </span>
-                    } @empty {
-                      <em>{{ t('None recorded', 'لا توجد بيانات') }}</em>
-                    }
-                  </div>
-                  @if (canEdit()) {
-                    <form [formGroup]="allergyForm" (ngSubmit)="addText('allergies')">
-                      <label class="workspace-filter-field"
-                        ><span>{{ t('Allergy name', 'اسم الحساسية') }}</span>
-                        <input
-                          formControlName="name"
-                          [placeholder]="t('Allergy name', 'اسم الحساسية')" /></label
-                      ><button class="primary">{{ t('Add', 'إضافة') }}</button>
-                    </form>
-                  }
-                </section>
-                <section class="panel">
-                  <h2>{{ t('Medical conditions', 'الحالات المرضية') }}</h2>
-                  <div class="chips">
-                    @for (item of patient()!.medicalConditions; track item.id) {
-                      <span
-                        >{{ item.name }}
-                        @if (canEdit()) {
-                          <button
-                            type="button"
-                            (click)="removeText('conditions', item.id)"
-                            [attr.aria-label]="t('Remove condition: ', 'حذف الحالة: ') + item.name"
-                          >
-                            ×
-                          </button>
-                        }
-                      </span>
-                    } @empty {
-                      <em>{{ t('None recorded', 'لا توجد بيانات') }}</em>
-                    }
-                  </div>
-                  @if (canEdit()) {
-                    <form [formGroup]="conditionForm" (ngSubmit)="addText('conditions')">
-                      <label class="workspace-filter-field"
-                        ><span>{{ t('Condition name', 'اسم الحالة') }}</span>
-                        <input
-                          formControlName="name"
-                          [placeholder]="t('Condition name', 'اسم الحالة')" /></label
-                      ><button class="primary">{{ t('Add', 'إضافة') }}</button>
-                    </form>
-                  }
-                </section>
-                <section class="panel">
-                  <h2>{{ t('Current medications', 'الأدوية الحالية') }}</h2>
-                  <div class="record-list">
-                    @for (item of patient()!.medications; track item.id) {
-                      <div>
+              <app-patient-clinical-history [patientId]="id" [visitLayout]="true" />
+              <details #medicalDetails class="panel patient-medical-details" [open]="medicalDetailsOpen()"
+                (toggle)="medicalDetailsOpen.set(medicalDetails.open)">
+                <summary>{{ t('Medical history', 'السجل الطبي') }}</summary>
+                <div class="medical-grid">
+                  <section class="panel">
+                    <h2>{{ t('Allergies', 'الحساسية') }}</h2>
+                    <div class="chips">
+                      @for (item of patient()!.allergies; track item.id) {
                         <span
-                          ><strong>{{ item.name }}</strong
-                          ><small>{{ item.dosage || '—' }}</small></span
-                        >
-                        @if (canEdit()) {
-                          <button
-                            class="icon"
-                            type="button"
-                            (click)="removeMedication(item.id)"
-                            [attr.aria-label]="t('Remove medication: ', 'حذف الدواء: ') + item.name"
-                          >
-                            ×
-                          </button>
-                        }
-                      </div>
-                    } @empty {
-                      <em>{{ t('None recorded', 'لا توجد بيانات') }}</em>
+                          >{{ item.name }}
+                          @if (canEdit()) {
+                            <button
+                              type="button"
+                              (click)="removeText('allergies', item.id)"
+                              [attr.aria-label]="t('Remove allergy: ', 'حذف الحساسية: ') + item.name"
+                            >
+                              ×
+                            </button>
+                          }
+                        </span>
+                      } @empty {
+                        <em>{{ t('None recorded', 'لا توجد بيانات') }}</em>
+                      }
+                    </div>
+                    @if (canEdit()) {
+                      <form [formGroup]="allergyForm" (ngSubmit)="addText('allergies')">
+                        <label class="workspace-filter-field"
+                          ><span>{{ t('Allergy name', 'اسم الحساسية') }}</span>
+                          <input
+                            formControlName="name"
+                            [placeholder]="t('Allergy name', 'اسم الحساسية')" /></label
+                        ><button class="primary">{{ t('Add', 'إضافة') }}</button>
+                      </form>
                     }
-                  </div>
-                  @if (canEdit()) {
-                    <form [formGroup]="medicationForm" (ngSubmit)="addMedication()">
-                      <label class="workspace-filter-field"
-                        ><span>{{ t('Medication name', 'اسم الدواء') }}</span
-                        ><input
-                          formControlName="name"
-                          [placeholder]="t('Medication', 'اسم الدواء')" /></label
-                      ><label class="workspace-filter-field"
-                        ><span>{{ t('Dosage', 'الجرعة') }}</span
-                        ><input
-                          formControlName="dosage"
-                          [placeholder]="t('Dosage', 'الجرعة')" /></label
-                      ><button class="primary">{{ t('Add', 'إضافة') }}</button>
-                    </form>
-                  }
-                </section>
-                <section class="panel">
-                  <h2>{{ t('Previous surgeries', 'العمليات السابقة') }}</h2>
-                  <div class="record-list">
-                    @for (item of patient()!.surgeries; track item.id) {
-                      <div>
+                  </section>
+                  <section class="panel">
+                    <h2>{{ t('Medical conditions', 'الحالات المرضية') }}</h2>
+                    <div class="chips">
+                      @for (item of patient()!.medicalConditions; track item.id) {
                         <span
-                          ><strong>{{ item.procedure }}</strong
-                          ><small>{{ item.procedureDate || '—' }}</small></span
-                        >
-                        @if (canEdit()) {
-                          <button
-                            class="icon"
-                            type="button"
-                            (click)="removeSurgery(item.id)"
-                            [attr.aria-label]="
-                              t('Remove surgery: ', 'حذف العملية: ') + item.procedure
-                            "
-                          >
-                            ×
-                          </button>
-                        }
-                      </div>
-                    } @empty {
-                      <em>{{ t('None recorded', 'لا توجد بيانات') }}</em>
+                          >{{ item.name }}
+                          @if (canEdit()) {
+                            <button
+                              type="button"
+                              (click)="removeText('conditions', item.id)"
+                              [attr.aria-label]="t('Remove condition: ', 'حذف الحالة: ') + item.name"
+                            >
+                              ×
+                            </button>
+                          }
+                        </span>
+                      } @empty {
+                        <em>{{ t('None recorded', 'لا توجد بيانات') }}</em>
+                      }
+                    </div>
+                    @if (canEdit()) {
+                      <form [formGroup]="conditionForm" (ngSubmit)="addText('conditions')">
+                        <label class="workspace-filter-field"
+                          ><span>{{ t('Condition name', 'اسم الحالة') }}</span>
+                          <input
+                            formControlName="name"
+                            [placeholder]="t('Condition name', 'اسم الحالة')" /></label
+                        ><button class="primary">{{ t('Add', 'إضافة') }}</button>
+                      </form>
                     }
-                  </div>
-                  @if (canEdit()) {
-                    <form [formGroup]="surgeryForm" (ngSubmit)="addSurgery()">
-                      <label class="workspace-filter-field"
-                        ><span>{{ t('Procedure', 'اسم العملية') }}</span
-                        ><input
-                          formControlName="procedure"
-                          [placeholder]="t('Procedure', 'اسم العملية')"
-                      /></label>
-                      <div class="workspace-filter-field">
-                        <span>{{ t('Procedure date', 'تاريخ العملية') }}</span
-                        ><app-date-input
-                          [label]="t('Procedure date', 'تاريخ العملية')"
-                          formControlName="procedureDate"
-                        ></app-date-input>
-                      </div>
-                      <button class="primary">
-                        {{ t('Add', 'إضافة') }}
-                      </button>
-                    </form>
-                  }
-                </section>
-              </div>
+                  </section>
+                  <section class="panel">
+                    <h2>{{ t('Current medications', 'الأدوية الحالية') }}</h2>
+                    <div class="record-list">
+                      @for (item of patient()!.medications; track item.id) {
+                        <div>
+                          <span
+                            ><strong>{{ item.name }}</strong
+                            ><small>{{ item.dosage || '—' }}</small></span
+                          >
+                          @if (canEdit()) {
+                            <button
+                              class="icon"
+                              type="button"
+                              (click)="removeMedication(item.id)"
+                              [attr.aria-label]="t('Remove medication: ', 'حذف الدواء: ') + item.name"
+                            >
+                              ×
+                            </button>
+                          }
+                        </div>
+                      } @empty {
+                        <em>{{ t('None recorded', 'لا توجد بيانات') }}</em>
+                      }
+                    </div>
+                    @if (canEdit()) {
+                      <form [formGroup]="medicationForm" (ngSubmit)="addMedication()">
+                        <label class="workspace-filter-field"
+                          ><span>{{ t('Medication name', 'اسم الدواء') }}</span
+                          ><input
+                            formControlName="name"
+                            [placeholder]="t('Medication', 'اسم الدواء')" /></label
+                        ><label class="workspace-filter-field"
+                          ><span>{{ t('Dosage', 'الجرعة') }}</span
+                          ><input
+                            formControlName="dosage"
+                            [placeholder]="t('Dosage', 'الجرعة')" /></label
+                        ><button class="primary">{{ t('Add', 'إضافة') }}</button>
+                      </form>
+                    }
+                  </section>
+                  <section class="panel">
+                    <h2>{{ t('Previous surgeries', 'العمليات السابقة') }}</h2>
+                    <div class="record-list">
+                      @for (item of patient()!.surgeries; track item.id) {
+                        <div>
+                          <span
+                            ><strong>{{ item.procedure }}</strong
+                            ><small>{{ item.procedureDate || '—' }}</small></span
+                          >
+                          @if (canEdit()) {
+                            <button
+                              class="icon"
+                              type="button"
+                              (click)="removeSurgery(item.id)"
+                              [attr.aria-label]="
+                                t('Remove surgery: ', 'حذف العملية: ') + item.procedure
+                              "
+                            >
+                              ×
+                            </button>
+                          }
+                        </div>
+                      } @empty {
+                        <em>{{ t('None recorded', 'لا توجد بيانات') }}</em>
+                      }
+                    </div>
+                    @if (canEdit()) {
+                      <form [formGroup]="surgeryForm" (ngSubmit)="addSurgery()">
+                        <label class="workspace-filter-field"
+                          ><span>{{ t('Procedure', 'اسم العملية') }}</span
+                          ><input
+                            formControlName="procedure"
+                            [placeholder]="t('Procedure', 'اسم العملية')"
+                        /></label>
+                        <div class="workspace-filter-field">
+                          <span>{{ t('Procedure date', 'تاريخ العملية') }}</span
+                          ><app-date-input
+                            [label]="t('Procedure date', 'تاريخ العملية')"
+                            formControlName="procedureDate"
+                          ></app-date-input>
+                        </div>
+                        <button class="primary">
+                          {{ t('Add', 'إضافة') }}
+                        </button>
+                      </form>
+                    }
+                  </section>
+                </div>
+              </details>
+              @if (auth.hasPermission('Dental.View')) {
+                <app-patient-dental-summary [patientId]="id" [showChartAction]="false" />
+              }
             }
           }
           @case ('notes') {
@@ -561,7 +563,8 @@ export class PatientDetailsComponent {
   private readonly api = inject(PatientApiService);
   private readonly http = inject(HttpClient);
   private readonly treatmentApi = inject(TreatmentApiService);
-  readonly id = inject(ActivatedRoute).snapshot.paramMap.get('id')!;
+  private readonly route = inject(ActivatedRoute);
+  id = this.route.snapshot.paramMap.get('id')!;
   readonly i18n = inject(LocalizationService);
   readonly patient = signal<PatientDetails | null>(null);
   readonly transferHistory = signal<any | null>(null);
@@ -574,16 +577,24 @@ export class PatientDetailsComponent {
   readonly showDossierModal = signal(false);
   readonly showMedicalAlertModal = signal(false);
   private alertModalAutoShown = false;
-  readonly tab = signal<Tab>(
-    this.auth.hasPermission('Patients.ViewMedicalHistory') ? 'timeline' : 'overview',
-  );
-  readonly tabs: { id: Tab; en: string; ar: string }[] = [
-    { id: 'timeline', en: 'Medical timeline', ar: 'التاريخ الطبي الزمني' },
-    { id: 'overview', en: 'Overview', ar: 'نظرة عامة' },
-    { id: 'contact', en: 'Contact', ar: 'الاتصال' },
-    { id: 'medical', en: 'Medical history', ar: 'السجل الطبي' },
-    { id: 'notes', en: 'Notes', ar: 'الملاحظات' },
+  readonly tab = signal<Tab>('overview');
+  readonly medicalDetailsOpen = signal(false);
+  readonly tabs: { id: Tab; en: string; ar: string; icon: string }[] = [
+    { id: 'overview', en: 'Patient Overview', ar: 'ملخص المريض', icon: 'M3 11l9-8 9 8M5 9v12h5v-6h4v6h5V9' },
+    { id: 'treatments', en: 'Treatment Plans', ar: 'خطط العلاج', icon: 'M9 4H6v17h12V4h-3M9 3h6v4H9zM9 11h6m-6 4h6' },
+    { id: 'timeline', en: 'Clinical Records', ar: 'السجل السريري', icon: 'M4 5h16v16H4zM8 3v4m8-4v4M4 10h16M8 15h3m2 0h3' },
+    { id: 'notes', en: 'Team Notes', ar: 'ملاحظات الفريق', icon: 'M12 5H4v15h15v-8m-9 3 1-4 7-7 3 3-7 7z' },
   ];
+
+  canViewSection(tab: Tab): boolean {
+    if (tab === 'timeline') return this.auth.hasPermission('Patients.ViewMedicalHistory');
+    if (tab === 'treatments') {
+      return ['Treatments.View', 'TreatmentPlans.View', 'Dental.View']
+        .some(permission => this.auth.hasPermission(permission));
+    }
+    return true;
+  }
+
   readonly allergyForm = inject(FormBuilder).nonNullable.group({ name: ['', Validators.required] });
   readonly conditionForm = inject(FormBuilder).nonNullable.group({
     name: ['', Validators.required],
@@ -644,19 +655,49 @@ export class PatientDetailsComponent {
   }
 
   constructor() {
+    this.loadProfile();
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(params => {
+      const id = params.get('id');
+      if (!id || id === this.id) return;
+      this.id = id;
+      this.tab.set('overview');
+      this.patient.set(null);
+      this.transferHistory.set(null);
+      this.patientClinicalStatus.set('new');
+      this.success.set('');
+      this.showVisitHistorySheet.set(false);
+      this.showDossierModal.set(false);
+      this.showMedicalAlertModal.set(false);
+      this.medicalDetailsOpen.set(false);
+      this.allergyForm.reset();
+      this.conditionForm.reset();
+      this.medicationForm.reset();
+      this.surgeryForm.reset();
+      this.notesForm.reset();
+      this.alertModalAutoShown = false;
+      this.loadProfile();
+    });
+  }
+
+  private loadProfile(): void {
     this.load();
     if (this.auth.hasPermission('Patients.ViewMedicalHistory')) {
-      this.http
-        .get<any>(`/api/branches/patients/${this.id}/transfer-history`)
-        .subscribe({ next: (value) => this.transferHistory.set(value) });
+      const id = this.id;
+      this.http.get<any>(`/api/branches/patients/${id}/transfer-history`).subscribe({
+        next: value => { if (id === this.id) this.transferHistory.set(value); },
+        error: () => {},
+      });
     }
   }
+
   load(): void {
     this.loading.set(true);
     this.error.set('');
     this.operationError.set('');
-    this.api.patient(this.id).subscribe({
+    const id = this.id;
+    this.api.patient(id).subscribe({
       next: (p) => {
+        if (id !== this.id) return;
         this.patient.set(p);
         this.notesForm.setValue({ medicalNotes: p.medicalNotes ?? '' });
         this.loading.set(false);
@@ -668,6 +709,7 @@ export class PatientDetailsComponent {
 
         this.treatmentApi.treatments({ patientId: this.id }).subscribe({
           next: (res) => {
+            if (id !== this.id) return;
             const items = res.items || [];
             if (items.some((t) => t.status === 3 || t.status === 1 || t.status === 2)) {
               this.patientClinicalStatus.set('in_treatment');
@@ -681,6 +723,7 @@ export class PatientDetailsComponent {
         });
       },
       error: () => {
+        if (id !== this.id) return;
         this.error.set(
           this.t('Patient not found or access denied.', 'المريض غير موجود أو الوصول مرفوض.'),
         );

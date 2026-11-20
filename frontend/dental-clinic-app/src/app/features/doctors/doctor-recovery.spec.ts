@@ -16,6 +16,7 @@ describe('Doctor management recovery', () => {
 
   it('keeps edited periods and the profile visible after a rejected save and prevents duplicate submits',()=>{
     const fixture=TestBed.createComponent(DoctorDetailsComponent),http=TestBed.inject(HttpTestingController),c=fixture.componentInstance;
+    fixture.detectChanges();
     http.expectOne('/api/doctors/d1').flush(doctor);http.expectOne('/api/doctors/d1/schedule').flush([period]);
     c.tab.set('schedule');c.periods()[0].startTime='10:00';c.saveSchedule();c.saveSchedule();
     const request=http.expectOne('/api/doctors/d1/schedule');expect(request.request.body.periods[0].startTime).toBe('10:00');request.flush({}, {status:403,statusText:'Forbidden'});
@@ -26,6 +27,7 @@ describe('Doctor management recovery', () => {
 
   it('does not create a compensation rule while its existing history could not be loaded',()=>{
     const fixture=TestBed.createComponent(DoctorDetailsComponent),http=TestBed.inject(HttpTestingController),c=fixture.componentInstance;
+    fixture.detectChanges();
     http.expectOne('/api/doctors/d1').flush({...doctor,canManageCompensation:true});http.expectOne('/api/doctors/d1/schedule').flush([]);http.expectOne('/api/doctors/d1/compensation').flush({}, {status:503,statusText:'Unavailable'});
     c.compForm.patchValue({effectiveFrom:'2026-11-11',fixedAmount:100});c.saveCompensation();
     http.expectNone(r=>r.method==='POST');expect(c.compensationError()).not.toBe('');expect(c.compForm.controls.fixedAmount.value).toBe(100);

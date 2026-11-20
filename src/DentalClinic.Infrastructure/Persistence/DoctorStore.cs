@@ -15,7 +15,7 @@ internal sealed class DoctorStore(ApplicationDbContext context) :
     public async Task<IReadOnlyCollection<DoctorLookupItem>> LookupAsync(CancellationToken cancellationToken) =>
         await (from doctor in context.DoctorProfiles.AsNoTracking()
                join user in context.ClinicUsers.AsNoTracking() on doctor.ClinicUserId equals user.Id
-               where doctor.Status == DoctorProfileStatus.Active
+               where doctor.Status == DoctorProfileStatus.Active && user.Status == UserStatus.Active
                orderby user.DisplayName
                select new DoctorLookupItem(doctor.Id, user.DisplayName, doctor.Specialization, doctor.ConsultationDurationMinutes))
             .ToListAsync(cancellationToken);

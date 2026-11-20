@@ -29,7 +29,7 @@ public sealed record UserDetails(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     IReadOnlyCollection<string>? CustomPermissions = null,
-    IReadOnlyCollection<string>? EffectivePermissions = null);
+    IReadOnlyCollection<string>? EffectivePermissions = null, Guid? DoctorProfileId = null);
 
 public sealed record RoleSummary(Guid Id, string Name, string Description, bool IsSystemRole);
 public sealed record RoleDetails(

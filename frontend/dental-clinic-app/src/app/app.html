@@ -6,6 +6,7 @@
   }}</a>
   <div
     class="app-shell"
+    [class.patient-profile-route]="tealWorkspace()"
     [class.collapsed]="sidebarCollapsed() && !isMobile()"
     [class.mobile-open]="mobileSidebarOpen()"
   >

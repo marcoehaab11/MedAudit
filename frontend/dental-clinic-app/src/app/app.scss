@@ -44,6 +44,22 @@
   transition: inline-size 180ms ease;
   color: var(--nav-ink);
 }
+.patient-profile-route .sidebar {
+  --sidebar-start: #09685e;
+  --nav-ink: #effffb;
+  --nav-muted: #c5ece3;
+
+  a.nav-item.active {
+    background: #d8f6ee;
+    border-color: #d8f6ee;
+    color: #075549;
+
+    .nav-active-dot { background: #128170; }
+  }
+
+  .sidebar-nav { scrollbar-color: #93d2c4 transparent; }
+  .user-name { color: var(--nav-ink); }
+}
 .sidebar-header {
   min-block-size: 80px;
   display: flex;

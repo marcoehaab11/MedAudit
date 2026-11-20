@@ -28,8 +28,8 @@ public sealed record SchedulePeriodModel(Guid Id, DayOfWeek DayOfWeek, TimeOnly 
     int SlotDurationMinutes, IReadOnlyCollection<ScheduleBreakModel> Breaks);
 
 public sealed record DoctorCompensationInput(CompensationType CompensationType, decimal? FixedAmount,
-    decimal? Percentage, DateOnly EffectiveFrom, DateOnly? EffectiveTo);
+    decimal? Percentage, DateOnly EffectiveFrom, DateOnly? EffectiveTo, CommissionBasis CommissionBasis = CommissionBasis.TreatmentValue);
 public sealed record CreateDoctorCompensationCommand(Guid DoctorProfileId, DoctorCompensationInput Compensation);
 public sealed record UpdateDoctorCompensationCommand(Guid DoctorProfileId, DoctorCompensationInput Compensation);
 public sealed record DoctorCompensationModel(Guid Id, CompensationType CompensationType, decimal? FixedAmount,
-    decimal? Percentage, DateOnly EffectiveFrom, DateOnly? EffectiveTo, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+    decimal? Percentage, DateOnly EffectiveFrom, DateOnly? EffectiveTo, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, CommissionBasis CommissionBasis = CommissionBasis.TreatmentValue);

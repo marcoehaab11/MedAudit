@@ -24,7 +24,13 @@ import { AppointmentItem } from './appointment-api.service';
       }
     }
     @if (appointment.status===5 && auth.hasPermission('Examination.View')) { <a class="outline" [routerLink]="['/appointments',appointment.id,'examination']">{{ t('View visit record','عرض سجل الزيارة') }}</a> }
+    @if (!beforeVisit && appointment.confirmedAt && appointment.status===3 && auth.hasPermission('Appointments.MarkNoShow')) {
+      <button type="button" class="outline" [disabled]="busy" (click)="action.emit('no-show')">{{ t('Correct to no show', 'تصحيح إلى لم يحضر') }}</button>
+    }
     @if (appointment.status===7) {
+      @if (!beforeVisit && appointment.confirmedAt && auth.hasPermission('Appointments.CheckIn')) {
+        <button type="button" [disabled]="busy" (click)="action.emit('check-in')">{{ t('Correct to attended', 'تصحيح إلى حضر') }}</button>
+      }
       <p>{{ t('Did not attend — recorded in appointment history.','لم يحضر — تم تسجيل الحالة في سجل المواعيد.') }}</p>
       @if (auth.hasPermission('Appointments.Create')) { <a class="outline" routerLink="/appointments/create" [queryParams]="{patientId:appointment.patientId,doctorProfileId:appointment.doctorProfileId}">{{ t('Book another appointment','حجز موعد بديل') }}</a> }
     }

@@ -132,7 +132,8 @@ internal static class IdentityEndpoints
         CancellationToken cancellationToken)
     {
         var id = await service.CreateUserAsync(new CreateUserCommand(
-            request.DisplayName, request.Email, request.Password, request.Phone, request.RoleIds, request.Permissions), cancellationToken);
+            request.DisplayName, request.Email, request.Password, request.Phone, request.RoleIds, request.Permissions,
+            request.DoctorSpecialty, request.DoctorCommission, (DentalClinic.Domain.Doctors.CommissionBasis)request.CommissionBasis), cancellationToken);
         return Results.Created($"/api/users/{id:D}", new { id });
     }
 

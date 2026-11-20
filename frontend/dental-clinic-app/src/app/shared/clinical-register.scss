@@ -1,0 +1,41 @@
+:host { display: block; min-inline-size: 0; }
+.register-sections { display: grid; gap: 1rem; }
+.register-section { border: 1px solid #d6e9e6; border-radius: 14px; background: #fff; overflow: hidden; }
+.register-section > h2 {
+  display: flex; gap: .55rem; align-items: center; margin: 0; padding: .8rem 1rem;
+  background: #eaf7f5; font-size: 1.05rem; color: #064f47;
+}
+.register-row {
+  display: grid; grid-template-columns: 1.3fr .62fr 1.45fr .85fr .8fr; align-items: center;
+  gap: .7rem; padding: .75rem 1rem; min-block-size: 66px; overflow-wrap: anywhere;
+}
+.register-row + .register-row { border-block-start: 1px solid #e3eeeb; }
+.register-row > span { min-inline-size: 0; }
+.register-row small { display: block; color: #45636b; }
+.register-row time, .register-row bdi { font-variant-numeric: tabular-nums; }
+.register-row .button { justify-self: start; min-block-size: 44px; }
+.register-dot { inline-size: .65rem; block-size: .65rem; flex: none; border-radius: 50%; background: var(--register-mark); }
+[data-kind='ongoing'] { --register-mark: #176db8; --register-ink: #164c80; --register-surface: #e4f2ff; }
+[data-kind='completed'] { --register-mark: #218359; --register-ink: #125b3d; --register-surface: #e0f6e9; }
+.register-status {
+  justify-self: start; color: var(--register-ink); background: var(--register-surface);
+  border-radius: 999px; font-size: .86rem; font-weight: 700; padding: .2rem .65rem;
+}
+.register-state { margin: 0; padding: 1rem; }
+.register-filter {
+  display: grid; grid-template-columns: 1.4fr repeat(3, minmax(9rem, 1fr)) auto;
+  gap: .75rem; align-items: end; margin-block-end: 1rem;
+}
+.register-pagination { display: flex; align-items: center; justify-content: center; gap: .75rem; margin-block: 1rem; }
+.rx-details { padding-block-start: 1rem; }
+.rx-details dl { margin-block: .5rem; }
+.rx-details dt { font-weight: 700; }
+.rx-details dd { margin-inline-start: 0; overflow-wrap: anywhere; }
+.rx-medications { list-style: none; padding: 0; display: grid; gap: .75rem; }
+.rx-medications li { padding: .9rem; background: #f2f8f7; border-radius: 12px; }
+.rx-medications dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: .65rem; }
+@media (max-width: 960px) { .register-filter { grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); } }
+@media (max-width: 640px) {
+  .register-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: .75rem; gap: .4rem .75rem; }
+  .register-row .button { grid-column: 1 / -1; }
+}

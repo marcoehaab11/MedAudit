@@ -8,7 +8,7 @@ public sealed class Appointment : TenantOwnedEntity
 
     public Appointment(Guid tenantId, Guid patientId, Guid doctorProfileId, AppointmentType type,
         DateTimeOffset startAt, int durationMinutes, string? notes, Guid createdBy, DateTimeOffset createdAt,
-        string? bookingReference = null, Guid? treatmentCatalogItemId = null)
+        string? bookingReference = null, Guid? treatmentCatalogItemId = null, Guid? roomId = null)
     {
         if (tenantId == Guid.Empty || patientId == Guid.Empty || doctorProfileId == Guid.Empty || createdBy == Guid.Empty)
             throw new ArgumentException("Tenant, patient, doctor, and creator IDs are required.");
@@ -22,11 +22,13 @@ public sealed class Appointment : TenantOwnedEntity
         Notes = NormalizeOptional(notes, nameof(notes), 2000);
         BookingReference = NormalizeOptional(bookingReference, nameof(bookingReference), 50);
         TreatmentCatalogItemId = treatmentCatalogItemId == Guid.Empty ? null : treatmentCatalogItemId;
+        RoomId = roomId;
         Status = AppointmentStatus.Scheduled;
         CreatedAt = createdAt;
         UpdatedAt = createdAt;
     }
 
+    public Guid? RoomId { get; private set; }
     public Guid PatientId { get; private set; }
     public Guid DoctorProfileId { get; private set; }
     public AppointmentType Type { get; private set; }
@@ -110,8 +112,9 @@ public sealed class Appointment : TenantOwnedEntity
 
     public void CheckIn(DateTimeOffset occurredAt)
     {
-        if (Status is not (AppointmentStatus.Scheduled or AppointmentStatus.Confirmed))
-            throw new InvalidOperationException("Only scheduled or confirmed appointments can be checked in.");
+        if (Status is not (AppointmentStatus.Scheduled or AppointmentStatus.Confirmed) &&
+            !(Status == AppointmentStatus.NoShow && ConfirmedAt.HasValue))
+            throw new InvalidOperationException("This appointment cannot be checked in.");
         Status = AppointmentStatus.CheckedIn;
         CheckedInAt = occurredAt;
         UpdatedAt = occurredAt;
@@ -134,9 +137,19 @@ public sealed class Appointment : TenantOwnedEntity
 
     public void MarkNoShow(DateTimeOffset occurredAt)
     {
-        if (Status is not (AppointmentStatus.Scheduled or AppointmentStatus.Confirmed))
-            throw new InvalidOperationException("Only scheduled or confirmed appointments can be marked as no-show.");
+        if (Status is not (AppointmentStatus.Scheduled or AppointmentStatus.Confirmed) &&
+            !(Status == AppointmentStatus.CheckedIn && ConfirmedAt.HasValue))
+            throw new InvalidOperationException("This appointment cannot be marked as no-show.");
         Status = AppointmentStatus.NoShow;
+        CheckedInAt = null;
+        UpdatedAt = occurredAt;
+    }
+
+    public void AssignRoom(Guid? roomId, DateTimeOffset occurredAt)
+    {
+        if (roomId == Guid.Empty) throw new ArgumentException("Choose a valid room.");
+        if (IsTerminal) throw new InvalidOperationException("A closed appointment cannot be assigned a room.");
+        RoomId = roomId;
         UpdatedAt = occurredAt;
     }
 

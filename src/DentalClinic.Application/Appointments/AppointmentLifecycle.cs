@@ -43,6 +43,21 @@ internal sealed class AppointmentLifecycle(IAppointmentStore store, AppointmentA
         Permissions.AppointmentsMarkNoShow, PlatformAuditAction.AppointmentMarkedNoShow,
         x => x.MarkNoShow(clock.UtcNow), cancellationToken);
 
+    public async Task<bool> AssignRoomAsync(Guid id, Guid? roomId, CancellationToken token)
+    {
+        var appointment = await store.FindAsync(id, true, token);
+        if (appointment is null) return false;
+        await access.EnsureCanModifyAsync(appointment, Permissions.AppointmentsEdit, token);
+        if (roomId.HasValue && !await store.RoomExistsAsync(roomId.Value, token))
+            throw AppointmentRules.Error(nameof(roomId), "The clinic room was not found.");
+        try { appointment.AssignRoom(roomId, clock.UtcNow); }
+        catch (InvalidOperationException exception) { throw AppointmentRules.Error(nameof(id), exception.Message); }
+        store.AddAudit(new PlatformAuditLog(currentTenant.RequireTenantId(), currentUser.UserId,
+            PlatformAuditAction.AppointmentRoomAssigned, nameof(Appointment), id, clock.UtcNow, null));
+        await store.SaveChangesAsync(token);
+        return true;
+    }
+
     private async Task<bool> TransitionAsync(Guid id, string permission, PlatformAuditAction action,
         Action<Appointment> transition, CancellationToken cancellationToken)
     {

@@ -1,3 +1,4 @@
+using DentalClinic.Domain.Doctors;
 using System.Net.Mail;
 using DentalClinic.Application.Common.Exceptions;
 using DentalClinic.Application.Common.Interfaces;
@@ -56,6 +57,14 @@ internal sealed class UserManagementService(
         }
 
         var roles = await ValidateAssignableRolesAsync(command.RoleIds, cancellationToken);
+        if (command.DoctorCommission.HasValue)
+        {
+            await permissions.EnsurePermissionAsync(Permissions.DoctorsManageCompensation, cancellationToken);
+            if (!HasDoctorRole(roles) || command.DoctorCommission is <= 0 or > 100 || !Enum.IsDefined(command.CommissionBasis))
+                throw Validation(nameof(command.DoctorCommission), "Enter a valid doctor percentage and commission basis.");
+        }
+        if (command.DoctorSpecialty?.Trim().Length > 120)
+            throw Validation(nameof(command.DoctorSpecialty), "Specialty cannot exceed 120 characters.");
         if (command.Permissions is not null) await EnsurePermissionsAssignableAsync(command.Permissions, cancellationToken);
         var now = clock.UtcNow;
         await using var transaction = await store.BeginTransactionAsync(cancellationToken);
@@ -71,22 +80,18 @@ internal sealed class UserManagementService(
         if (command.Permissions is not null)
             store.AddUserPermissionProfile(new UserPermissionProfile(tenantId, userId, command.Permissions));
 
-        var isDoctorRole = roles.Any(r => string.Equals(r.NormalizedName, "DOCTOR", StringComparison.OrdinalIgnoreCase) ||
-                                          string.Equals(r.Name, "Doctor", StringComparison.OrdinalIgnoreCase));
-        if (isDoctorRole && !await store.DoctorProfileExistsForUserAsync(userId, cancellationToken))
+        if (HasDoctorRole(roles))
         {
-            var licenseSuffix = userId.ToString("N")[..8].ToUpperInvariant();
-            var doctorProfile = new Domain.Doctors.DoctorProfile(
-                tenantId,
-                userId,
-                "General Dentist",
-                $"DOC-{licenseSuffix}",
-                null,
-                30,
-                now,
-                true);
-            store.AddDoctorProfile(doctorProfile);
-            AddAudit(PlatformAuditAction.DoctorProfileCreated, "DoctorProfile", doctorProfile.Id, now);
+            var doctor = await EnsureDoctorProfileAsync(tenantId, userId, now, cancellationToken, command.DoctorSpecialty);
+            if (doctor is not null && command.DoctorCommission is decimal percentage)
+            {
+                var zone = TimeZoneInfo.FindSystemTimeZoneById(await store.ClinicTimeZoneAsync(cancellationToken));
+                var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, zone).DateTime);
+                var rule = new DoctorCompensation(tenantId, doctor.Id, CompensationType.Percentage, null,
+                    percentage, today, null, now, command.CommissionBasis);
+                store.AddDoctorCompensation(rule);
+                AddAudit(PlatformAuditAction.DoctorCompensationCreated, nameof(DoctorCompensation), rule.Id, now);
+            }
         }
 
         AddAudit(PlatformAuditAction.UserActivated, nameof(ClinicUser), userId, now);
@@ -124,6 +129,9 @@ internal sealed class UserManagementService(
         }
         if (command.Permissions is not null)
             store.AddUserPermissionProfile(new UserPermissionProfile(tenantId, userId, command.Permissions));
+
+        if (HasDoctorRole(roles))
+            await EnsureDoctorProfileAsync(tenantId, userId, now, cancellationToken);
 
         var token = tokenGenerator.Generate();
         var invitation = new AdminInvitation(
@@ -222,8 +230,25 @@ internal sealed class UserManagementService(
             AddAudit(PlatformAuditAction.RoleAssigned, nameof(TenantRole), role.Id, now);
         }
 
+        if (HasDoctorRole(roles))
+            await EnsureDoctorProfileAsync(currentTenant.RequireTenantId(), command.UserId, now, cancellationToken);
         await store.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    private static bool HasDoctorRole(IEnumerable<TenantRole> roles) =>
+        roles.Any(role => string.Equals(role.NormalizedName, "DOCTOR", StringComparison.OrdinalIgnoreCase));
+
+    private async Task<DoctorProfile?> EnsureDoctorProfileAsync(Guid tenantId, Guid userId,
+        DateTimeOffset now, CancellationToken token, string? specialty = null)
+    {
+        if (await store.DoctorProfileExistsForUserAsync(userId, token)) return null;
+        var profile = new DoctorProfile(tenantId, userId,
+            string.IsNullOrWhiteSpace(specialty) ? "General Dentist" : specialty.Trim(),
+            $"DOC-{userId.ToString("N")[..8].ToUpperInvariant()}", null, 30, now, true);
+        store.AddDoctorProfile(profile);
+        AddAudit(PlatformAuditAction.DoctorProfileCreated, nameof(DoctorProfile), profile.Id, now);
+        return profile;
     }
 
     public async Task<bool> SetUserPermissionsAsync(SetUserPermissionsCommand command, CancellationToken cancellationToken)

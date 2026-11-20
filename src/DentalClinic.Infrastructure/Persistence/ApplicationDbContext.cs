@@ -74,6 +74,7 @@ public sealed class ApplicationDbContext(
     public DbSet<DoctorSchedule> DoctorSchedules => Set<DoctorSchedule>();
     public DbSet<DoctorScheduleBreak> DoctorScheduleBreaks => Set<DoctorScheduleBreak>();
     public DbSet<DoctorCompensation> DoctorCompensations => Set<DoctorCompensation>();
+    public DbSet<ClinicRoom> ClinicRooms => Set<ClinicRoom>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<BookingInquiry> BookingInquiries => Set<BookingInquiry>();
     public DbSet<BookingPageVisit> BookingPageVisits => Set<BookingPageVisit>();
@@ -424,6 +425,15 @@ public sealed class ApplicationDbContext(
             entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
         });
 
+        builder.Entity<ClinicRoom>(entity =>
+        {
+            entity.ToTable("clinic_rooms");
+            entity.HasAlternateKey(x => new { x.TenantId, x.Id });
+            entity.Property(x => x.Name).HasMaxLength(80);
+            entity.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);
+        });
+
         builder.Entity<Appointment>(entity =>
         {
             entity.ToTable("appointments");
@@ -443,6 +453,9 @@ public sealed class ApplicationDbContext(
             entity.HasIndex(x => new { x.TenantId, x.DoctorProfileId, x.StartAt });
             entity.HasIndex(x => new { x.TenantId, x.PatientId, x.StartAt });
             entity.HasIndex(x => new { x.TenantId, x.Status, x.StartAt });
+            entity.HasOne<ClinicRoom>().WithMany()
+                .HasForeignKey(x => new { x.TenantId, x.RoomId })
+                .HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<Patient>().WithMany()
                 .HasForeignKey(x => new { x.TenantId, x.PatientId })
                 .HasPrincipalKey(x => new { x.TenantId, x.Id })
@@ -790,7 +803,9 @@ public sealed class ApplicationDbContext(
         {
             entity.ToTable("doctor_compensation_costs"); entity.HasKey(x => x.Id); entity.Property(x => x.Id).ValueGeneratedNever(); entity.HasAlternateKey(x => new { x.TenantId, x.Id });
             entity.Property(x => x.Amount).HasPrecision(18, 2); entity.Property(x => x.Currency).HasMaxLength(3).IsRequired(); entity.Property(x => x.CompensationRuleSnapshot).HasMaxLength(500).IsRequired();
-            entity.HasIndex(x => new { x.TenantId, x.TreatmentId }).IsUnique(); entity.HasIndex(x => new { x.TenantId, x.DoctorProfileId }); entity.HasIndex(x => new { x.TenantId, x.OccurredAt });
+            entity.HasIndex(x => new { x.TenantId, x.TreatmentId }).IsUnique().HasFilter("\"PaymentId\" IS NULL");
+            entity.HasIndex(x => new { x.TenantId, x.PaymentId }).IsUnique();
+            entity.HasOne<Payment>().WithMany().HasForeignKey(x => new { x.TenantId, x.PaymentId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict); entity.HasIndex(x => new { x.TenantId, x.DoctorProfileId }); entity.HasIndex(x => new { x.TenantId, x.OccurredAt });
             entity.HasOne<Treatment>().WithMany().HasForeignKey(x => new { x.TenantId, x.TreatmentId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<DoctorProfile>().WithMany().HasForeignKey(x => new { x.TenantId, x.DoctorProfileId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
             entity.HasQueryFilter(x => currentTenant.IsAvailable && x.TenantId == currentTenant.TenantId);

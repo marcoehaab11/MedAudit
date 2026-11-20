@@ -9,7 +9,8 @@ public sealed record CreateUserRequest(
     string Password,
     string? Phone,
     IReadOnlyCollection<Guid> RoleIds,
-    IReadOnlyCollection<string>? Permissions = null);
+    IReadOnlyCollection<string>? Permissions = null, string? DoctorSpecialty = null,
+    decimal? DoctorCommission = null, int CommissionBasis = 0);
 public sealed record InviteUserRequest(
     string DisplayName,
     string Email,

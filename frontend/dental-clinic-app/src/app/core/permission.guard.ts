@@ -11,7 +11,7 @@ const routePermissions: Record<string, string> = {
   'doctors': 'Doctors.View', 'doctors/:id': 'Doctors.View', 'doctors/create': 'Doctors.Create', 'doctors/:id/edit': 'Doctors.Edit',
   'appointments': 'Appointments.View', 'appointments/create': 'Appointments.Create',
   'appointments/:appointmentId/examination': 'Examination.View', 'appointments/:appointmentId/visit': 'Examination.View',
-  'treatment-plans': 'TreatmentPlans.View', 'treatment-plans/:id': 'TreatmentPlans.View', 'treatment-plans/create': 'TreatmentPlans.Create', 'treatment-plans/:id/edit': 'TreatmentPlans.Edit',
+  'treatment-plans': 'Treatments.View', 'treatment-plan-management': 'TreatmentPlans.View', 'treatment-plans/:id': 'TreatmentPlans.View', 'treatment-plans/create': 'TreatmentPlans.Create', 'treatment-plans/:id/edit': 'TreatmentPlans.Edit',
   'treatments': 'Treatments.View', 'treatments/:id': 'Treatments.View', 'treatment-catalog': 'TreatmentCatalog.View',
   'medications-catalog': 'Prescriptions.View', 'prescriptions': 'Prescriptions.View', 'prescriptions/:id': 'Prescriptions.View', 'prescriptions/create': 'Prescriptions.Create', 'prescriptions/:id/edit': 'Prescriptions.Edit',
   'crm': 'CRM.View', 'crm/follow-ups': 'CRM.View', 'crm/follow-ups/:id': 'CRM.View', 'crm/follow-ups/create': 'CRM.CreateFollowUp',

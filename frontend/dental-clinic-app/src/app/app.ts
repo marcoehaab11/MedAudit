@@ -39,6 +39,8 @@ export class App implements OnDestroy {
   private previousOverflow: string | null = null;
   private readonly groupOverrides = signal<Record<string, boolean>>({});
   protected readonly currentPath = signal(this.router.url.split('?')[0].split('#')[0]);
+  protected readonly patientProfileRoute = computed(() => /^\/patients\/(?!create(?:\/|$))[^/]+\/?$/.test(this.currentPath()));
+  protected readonly tealWorkspace = computed(() => this.patientProfileRoute() || ['/doctors', '/treatment-plans', '/prescriptions'].includes(this.currentPath()));
   protected readonly isMobile = signal(window.matchMedia('(max-width: 768px)').matches);
   protected readonly navTooltip = signal<{
     item: NavigationItem;

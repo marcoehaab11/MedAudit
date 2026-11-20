@@ -76,3 +76,35 @@ button:disabled { opacity: .5; cursor: wait; }
   .multi-actions { gap:5px; }
   .multi-actions button { padding:7px; font-size:11px; }
 }
+
+.tooth-statuses {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+  min-block-size: 6px;
+
+  span { inline-size: 6px; block-size: 6px; border-radius: 50%; }
+  .completed { background: #22855a; }
+  .ongoing { background: #2874bd; }
+  .planned { background: #ad5b05; }
+}
+
+@media (max-width: 650px) {
+  .chart-status-mode {
+    overflow-x: auto;
+    direction: ltr;
+    padding-block-end: .5rem;
+
+    .planora-chart-scroll {
+      min-inline-size: 560px;
+      overflow: visible;
+    }
+
+    .planora-jaw-label {
+      position: sticky;
+      inset-inline-start: 0;
+      inline-size: fit-content;
+      padding-inline: .5rem;
+    }
+  }
+}

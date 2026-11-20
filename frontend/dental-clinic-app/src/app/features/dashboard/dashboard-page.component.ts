@@ -1,6 +1,7 @@
+import { AppointmentIntakeActionsComponent } from '../appointments/appointment-intake-actions.component';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
@@ -34,6 +35,7 @@ import { DashboardReport, ReportsApiService } from '../reports/reports-api.servi
     BillingQueueComponent,
     DoctorVisitQueueComponent,
     AppointmentCardActionsComponent,
+    AppointmentIntakeActionsComponent,
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
@@ -139,6 +141,11 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {}
+
+  @HostListener('window:focus')
+  refreshScheduleOnFocus(): void {
+    if (!this.loading() && !this.appointmentsLoading() && !this.appointmentActionPending()) this.loadAppointments();
+  }
 
   loadDashboardData(): void {
     this.loading.set(true);

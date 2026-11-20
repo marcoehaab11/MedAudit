@@ -60,9 +60,9 @@ internal sealed class DoctorCompensationService(IDoctorCompensationStore store, 
         return doctor;
     }
     private DoctorCompensation New(DoctorProfile doctor, DoctorCompensationInput x) => new(doctor.TenantId, doctor.Id,
-        x.CompensationType, x.FixedAmount, x.Percentage, x.EffectiveFrom, x.EffectiveTo, clock.UtcNow);
+        x.CompensationType, x.FixedAmount, x.Percentage, x.EffectiveFrom, x.EffectiveTo, clock.UtcNow, x.CommissionBasis);
     private void Audit(PlatformAuditAction action, Guid id) => store.AddAudit(new PlatformAuditLog(
         currentTenant.RequireTenantId(), currentUser.UserId, action, nameof(DoctorCompensation), id, clock.UtcNow, null));
     private static DoctorCompensationModel Map(DoctorCompensation x) => new(x.Id, x.CompensationType,
-        x.FixedAmount, x.Percentage, x.EffectiveFrom, x.EffectiveTo, x.CreatedAt, x.UpdatedAt);
+        x.FixedAmount, x.Percentage, x.EffectiveFrom, x.EffectiveTo, x.CreatedAt, x.UpdatedAt, x.CommissionBasis);
 }

@@ -20,6 +20,7 @@ describe('AppointmentsPageComponent', () => {
   it('keeps the reception appointment card open while starting and refreshing its status',()=>{
     const fixture=TestBed.createComponent(AppointmentsPageComponent),c=fixture.componentInstance,http=TestBed.inject(HttpTestingController);
     http.expectOne('/api/doctors/lookup').flush([]);
+    http.expectOne('/api/appointments/rooms').flush([]);
     const empty={page:{items:[],page:1,pageSize:100,totalCount:0,totalPages:0},timeZone:'UTC'};
     http.expectOne(r=>r.url==='/api/appointments').flush(empty);
     const appointment={id:'a1',patientId:'p1',patientName:'Patient',doctorProfileId:'d1',doctorName:'Doctor',status:3,type:1,startAt:'2026-10-20T10:00:00Z',endAt:'2026-10-20T11:00:00Z',durationMinutes:60,timeZone:'UTC',createdAt:'',updatedAt:''};
@@ -36,6 +37,7 @@ describe('AppointmentsPageComponent', () => {
     const component = fixture.componentInstance;
     const date = component.selectedDate();
     http.expectOne((r) => r.url === '/api/doctors/lookup').flush([]);
+    http.expectOne('/api/appointments/rooms').flush([{ id: 'r1', name: 'Room 1' }, { id: 'r2', name: 'Room 2' }]);
     http
       .expectOne((r) => r.url === '/api/appointments')
       .flush({
@@ -43,6 +45,7 @@ describe('AppointmentsPageComponent', () => {
           items: [
             {
               id: 'a1',
+              roomId: 'r1',
               patientId: 'p1',
               patientName: 'Mona Hassan',
               doctorProfileId: 'd1',
@@ -64,22 +67,20 @@ describe('AppointmentsPageComponent', () => {
       });
     fixture.detectChanges();
 
-    const card = (fixture.nativeElement as HTMLElement).querySelector(
-      '.timeline-card',
-    ) as HTMLElement;
-    expect(card.style.width).toBe('90px');
-    expect(card.style.getPropertyValue('inset-inline-start')).toBe('300px');
-    expect(card.textContent).toContain('Dr Sara');
-
-    expect(
-      (fixture.nativeElement as HTMLElement).querySelector('.appointment-card')?.textContent,
-    ).toContain('Mona Hassan');
+    const root = fixture.nativeElement as HTMLElement;
+    const columns = root.querySelectorAll('.room-column');
+    expect(columns.length).toBe(2);
+    expect(columns[0].querySelector('.room-card')?.textContent).toContain('Dr Sara');
+    expect(columns[0].querySelector('.room-card')?.textContent).toContain('Mona Hassan');
+    expect(columns[1].querySelector('.room-card')).toBeNull();
+    expect(root.querySelector('.timeline')).toBeNull();
   });
 
   it('renders Arabic labels when localization switches to Arabic', () => {
     const fixture = TestBed.createComponent(AppointmentsPageComponent);
     const http = TestBed.inject(HttpTestingController);
     http.expectOne((r) => r.url === '/api/doctors/lookup').flush([]);
+    http.expectOne('/api/appointments/rooms').flush([]);
     http
       .expectOne((r) => r.url === '/api/appointments')
       .flush({
@@ -98,6 +99,7 @@ describe('AppointmentsPageComponent', () => {
     const fixture = TestBed.createComponent(AppointmentsPageComponent);
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/doctors/lookup').flush([]);
+    http.expectOne('/api/appointments/rooms').flush([]);
     const oldRequest = http.expectOne((r) => r.url === '/api/appointments');
     fixture.componentInstance.move(1);
     expect(oldRequest.cancelled).toBe(true);
@@ -113,6 +115,7 @@ describe('AppointmentsPageComponent', () => {
     const fixture = TestBed.createComponent(AppointmentsPageComponent);
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/doctors/lookup').flush([]);
+    http.expectOne('/api/appointments/rooms').flush([]);
     http
       .expectOne((r) => r.url === '/api/appointments')
       .flush({

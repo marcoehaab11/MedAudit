@@ -1,8 +1,9 @@
+import { AppointmentIntakeActionsComponent } from './appointment-intake-actions.component';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AppointmentCardActionsComponent } from './appointment-card-actions.component';
 import { BillingQueueComponent } from '../finance/billing-queue.component';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
@@ -13,6 +14,7 @@ import {
   AppointmentDetails,
   AppointmentItem,
   AppointmentSearchResult,
+  ClinicRoom,
   AvailabilitySlot,
 } from './appointment-api.service';
 import { Subscription } from 'rxjs';
@@ -20,20 +22,24 @@ import { appointmentStatus, appointmentType } from './appointment-labels';
 import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
 
 @Component({
-  styleUrl: './appointments.scss',
+  styleUrls: ['./appointments.scss', './appointments-rooms.scss'],
   selector: 'app-appointments-page',
   standalone: true,
   imports: [
     AppointmentCardActionsComponent,
+    AppointmentIntakeActionsComponent,
     BillingQueueComponent,
     CommonModule,
     ReactiveFormsModule,
     RouterLink,
   ],
   template: `
-    @if (auth.hasPermission('Finance.Revenue.View')) {
-      <app-billing-queue />
-    }
+    <ng-template #statusIcon let-state>
+      <svg class="room-status-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path [attr.d]="statusIconPath(state)" />
+      </svg>
+    </ng-template>
     <section class="workspace-page-head">
       <div>
 
@@ -44,15 +50,8 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
           }}
         </p>
       </div>
-      @if (auth.hasPermission('Appointments.Create')) {
-        <a
-          class="button primary"
-          routerLink="/appointments/create"
-          [queryParams]="{ date: selectedDate() }"
-        >
-          {{ t('New appointment', 'موعد جديد') }}
-        </a>
-      }
+      <app-appointment-intake-actions [date]="selectedDate()"
+        (appointmentCreated)="appointmentCreated()" (patientCreated)="patientCreated()" />
     </section>
 
     @if (message()) {
@@ -88,28 +87,6 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
         </div>
       </div>
 
-      <!-- Quick Day Shortcuts (اليوم / غداً) -->
-      <div class="workspace-filter-field">
-        <span>{{ t('Jump to', 'انتقل إلى') }}</span>
-        <div class="quick-day-shortcuts">
-          <button
-            type="button"
-            class="btn-shortcut"
-            [class.active]="isToday()"
-            (click)="selectToday()"
-          >
-            {{ t('Today', 'اليوم') }}
-          </button>
-          <button
-            type="button"
-            class="btn-shortcut"
-            [class.active]="isTomorrow()"
-            (click)="selectTomorrow()"
-          >
-            {{ t('Tomorrow', 'غداً') }}
-          </button>
-        </div>
-      </div>
       <div class="workspace-filter-field schedule-date">
         <label for="schedule-date">{{ t('Schedule date', 'تاريخ الجدول') }}</label>
         <div class="date-nav">
@@ -135,35 +112,61 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
           </button>
         </div>
       </div>
-      <label class="workspace-filter-field">
-        <span>{{ t('Doctor', 'الطبيب') }}</span>
-        <select [value]="doctorFilter()" (change)="onDoctorChange($event)">
-          <option value="">{{ t('All doctors', 'كل الأطباء') }}</option>
-          @for (d of doctors(); track d.id) {
-            <option [value]="d.id">{{ d.displayName }}</option>
-          }
-        </select>
-      </label>
+      <details class="schedule-filters">
+        <summary>{{ t('Schedule filters', 'فلاتر المواعيد') }}</summary>
+        <div class="schedule-filter-grid">
+          <div class="workspace-filter-field">
+            <span>{{ t('Jump to', 'انتقل إلى') }}</span>
+            <div class="quick-day-shortcuts">
+              <button
+                type="button"
+                class="btn-shortcut"
+                [class.active]="isToday()"
+                (click)="selectToday()"
+              >
+                {{ t('Today', 'اليوم') }}
+              </button>
+              <button
+                type="button"
+                class="btn-shortcut"
+                [class.active]="isTomorrow()"
+                (click)="selectTomorrow()"
+              >
+                {{ t('Tomorrow', 'غداً') }}
+              </button>
+            </div>
+          </div>
+          <label class="workspace-filter-field">
+            <span>{{ t('Doctor', 'الطبيب') }}</span>
+            <select [value]="doctorFilter()" (change)="onDoctorChange($event)">
+              <option value="">{{ t('All doctors', 'كل الأطباء') }}</option>
+              @for (d of doctors(); track d.id) {
+                <option [value]="d.id">{{ d.displayName }}</option>
+              }
+            </select>
+          </label>
 
-      <label class="workspace-filter-field">
-        <span>{{ t('Status', 'الحالة') }}</span>
-        <select [value]="statusFilter()" (change)="onStatusChange($event)">
-          <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
-          @for (s of statuses; track s) {
-            <option [value]="s">{{ statusLabel(s) }}</option>
-          }
-        </select>
-      </label>
+          <label class="workspace-filter-field">
+            <span>{{ t('Status', 'الحالة') }}</span>
+            <select [value]="statusFilter()" (change)="onStatusChange($event)">
+              <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
+              @for (s of statuses; track s) {
+                <option [value]="s">{{ statusLabel(s) }}</option>
+              }
+            </select>
+          </label>
 
-      <label class="workspace-filter-field">
-        <span>{{ t('Visit type', 'نوع الزيارة') }}</span>
-        <select [value]="typeFilter()" (change)="onTypeChange($event)">
-          <option value="">{{ t('All types', 'كل الأنواع') }}</option>
-          @for (x of types; track x) {
-            <option [value]="x">{{ typeLabel(x) }}</option>
-          }
-        </select>
-      </label>
+          <label class="workspace-filter-field">
+            <span>{{ t('Visit type', 'نوع الزيارة') }}</span>
+            <select [value]="typeFilter()" (change)="onTypeChange($event)">
+              <option value="">{{ t('All types', 'كل الأنواع') }}</option>
+              @for (x of types; track x) {
+                <option [value]="x">{{ typeLabel(x) }}</option>
+              }
+            </select>
+          </label>
+        </div>
+      </details>
     </section>
 
     <div class="calendar-layout" [class.has-details]="selected()">
@@ -174,79 +177,50 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
       >
         @if (loading()) {
           <div class="state" role="status">{{ t('Loading schedule…', 'جارٍ تحميل الجدول…') }}</div>
-        } @else if (!result()?.page?.items?.length) {
-          <div class="state">
-            <strong>{{ t('No appointments', 'لا توجد مواعيد') }}</strong>
-            <p>
-              {{ t('There are no appointments in this period.', 'لا توجد مواعيد في هذه الفترة.') }}
-            </p>
-            @if (auth.hasPermission('Appointments.Create')) {
-              <a
-                class="button primary"
-                routerLink="/appointments/create"
-                [queryParams]="{ date: selectedDate() }"
-              >
-                + {{ t('Book for this date', 'حجز موعد لهذا اليوم') }}
-              </a>
-            }
-          </div>
-        } @else {
+        } @else if (result()) {
+          @if (view() === 'day') {
+            @if (roomLoadFailed()) { <p role="alert">{{ t('Could not load clinic rooms.', 'تعذر تحميل غرف العيادة.') }}</p> }
+            <div class="room-schedule">
+              @for (room of roomSchedule(); track room.id) {
+                <section class="room-column" [class.dense]="room.items.length >= 5" [class.compact]="room.items.length >= 9">
+                  <h2>{{ room.name }}</h2>
+                  <div class="room-appointments">
+                    @for (item of room.items; track item.id) {
+                      <button class="room-card" type="button" [attr.data-state]="attendanceColor(item.status)" (click)="open(item)">
+                        <time><bdi>{{ time(item.startAt, item.timeZone) }}</bdi></time>
+                        <span class="room-card-info">
+                          <strong><bdi>{{ item.patientName }}</bdi></strong>
+                          <span><bdi>{{ item.doctorName }}</bdi></span>
+                          <span>{{ typeLabel(item.type) }}</span>
+                        </span>
+                        <span class="room-card-states">
+                          @let booking = confirmationState(item);
+                          <span class="room-badge" [attr.data-state]="booking">
+                            <ng-container *ngTemplateOutlet="statusIcon; context: { $implicit: booking }" />{{ confirmationLabel(booking) }}
+                          </span>
+                          @if (item.status >= 3) {
+                            <span class="room-badge" [attr.data-state]="attendanceColor(item.status)">
+                              <ng-container *ngTemplateOutlet="statusIcon; context: { $implicit: attendanceColor(item.status) }" />{{ attendanceLabel(item.status) }}
+                            </span>
+                          }
+                        </span>
+                      </button>
+                    } @empty {
+                      <p class="empty-day-note">{{ t('No appointments', 'لا توجد مواعيد') }}</p>
+                    }
+                  </div>
+                </section>
+              }
+            </div>
+            <ul class="room-legend" role="list" [attr.aria-label]="t('Appointment status legend', 'مفتاح ألوان المواعيد')">
+              @for (state of legend; track state.color) {
+                <li class="room-badge" [attr.data-state]="state.color"><ng-container *ngTemplateOutlet="statusIcon; context: { $implicit: state.color }" />{{ t(state.en, state.ar) }}</li>
+              }
+            </ul>
+          } @else {
           @for (day of days(); track day) {
             <section class="calendar-day">
               <h2>{{ dayLabel(day) }}</h2>
-              @if (view() === 'day') {
-                <div class="timeline-scroll">
-                  <div
-                    class="timeline"
-                    [style.width.px]="120 + (timelineEnd(day) - timelineStart(day)) * 3"
-                  >
-                    <div class="timeline-hours">
-                      @for (hour of timelineHours(day); track hour) {
-                        <span
-                          [style.inset-inline-start.px]="120 + (hour * 60 - timelineStart(day)) * 3"
-                          >{{ hourLabel(hour) }}</span
-                        >
-                      }
-                    </div>
-                    @for (doctor of dayDoctors(day); track doctor.id) {
-                      <div class="doctor-lane" [style.height.px]="laneHeight(day, doctor.id)">
-                        <strong class="lane-name">{{ doctor.displayName }}</strong>
-                        @for (item of itemsForDoctor(day, doctor.id); track item.id) {
-                          <button
-                            type="button"
-                            class="appointment-card timeline-card status-{{ item.status }}"
-                            [style.inset-inline-start.px]="
-                              120 + (startMinute(item, day) - timelineStart(day)) * 3
-                            "
-                            [style.width.px]="visibleMinutes(item, day) * 3"
-                            [style.top.px]="8 + trackFor(item, day) * 100"
-                            [title]="
-                              item.patientName +
-                              ' · ' +
-                              item.doctorName +
-                              ' · ' +
-                              time(item.startAt, item.timeZone) +
-                              ' – ' +
-                              time(item.endAt, item.timeZone)
-                            "
-                            (click)="open(item)"
-                          >
-                            <span class="time-range"
-                              >{{ time(item.startAt, item.timeZone) }} –
-                              {{ time(item.endAt, item.timeZone) }}</span
-                            >
-                            <strong>{{ item.patientName }}</strong>
-                            <span>{{ item.doctorName }}</span>
-                            <span class="status-badge status-badge-{{ item.status }}">{{
-                              statusLabel(item.status)
-                            }}</span>
-                          </button>
-                        }
-                      </div>
-                    }
-                  </div>
-                </div>
-              } @else {
                 <div class="appointment-stack">
                   @if (itemsFor(day).length === 0) {
                     <div class="empty-day-note">
@@ -313,8 +287,8 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
                     }
                   }
                 </div>
-              }
             </section>
+          }
           }
         }
       </section>
@@ -364,6 +338,18 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
           </dl>
           @if (selected()!.notes) {
             <p>{{ selected()!.notes }}</p>
+          }
+          @if (rooms().length && auth.hasPermission('Appointments.Edit') && ![5, 6, 7].includes(selected()!.status)) {
+            <div class="room-edit">
+              <label class="workspace-filter-field"><span>{{ t('Room', 'الغرفة') }}</span>
+                <select #roomSelect [value]="selected()!.roomId ?? ''">
+                  <option value="">{{ t('No room assigned', 'بدون غرفة محددة') }}</option>
+                  @for (room of rooms(); track room.id) { <option [value]="room.id">{{ room.name }}</option> }
+                </select>
+              </label>
+              <button class="button" type="button" [disabled]="appointmentActionPending()"
+                (click)="assignRoom(roomSelect.value)">{{ t('Save room', 'حفظ الغرفة') }}</button>
+            </div>
           }
           <app-appointment-card-actions
             [appointment]="selected()!"
@@ -448,6 +434,9 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
         </aside>
       }
     </div>
+    @if (auth.hasPermission('Finance.Revenue.View')) {
+      <app-billing-queue />
+    }
   `,
 })
 export class AppointmentsPageComponent {
@@ -524,6 +513,10 @@ export class AppointmentsPageComponent {
       error: () =>
         this.error.set(this.t('Doctors could not be loaded.', 'تعذر تحميل أسماء الأطباء.')),
     });
+    this.api.rooms().subscribe({
+      next: rooms => this.rooms.set(rooms),
+      error: () => this.roomLoadFailed.set(true),
+    });
     this.load();
 
     this.route.queryParamMap.subscribe((params) => {
@@ -535,10 +528,10 @@ export class AppointmentsPageComponent {
     });
   }
 
-  load(preserveSelection = false) {
+  load(preserveSelection = false, quiet = false) {
     this.calendarRequest?.unsubscribe();
     if (!preserveSelection) this.selected.set(null);
-    this.loading.set(true);
+    if (!quiet) this.loading.set(true);
     this.error.set('');
     const days = this.days();
     this.calendarRequest = this.api
@@ -622,107 +615,89 @@ export class AppointmentsPageComponent {
 
   minuteOfDay(value: string, zone: string) {
     const parts = new Intl.DateTimeFormat('en-GB', {
-      timeZone: zone || 'UTC',
-      hour: '2-digit',
-      minute: '2-digit',
-      hourCycle: 'h23',
+      timeZone: zone || 'UTC', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
     }).formatToParts(new Date(value));
-    return (
-      Number(parts.find((p) => p.type === 'hour')!.value) * 60 +
-      Number(parts.find((p) => p.type === 'minute')!.value)
-    );
+    return Number(parts.find(p => p.type === 'hour')?.value) * 60 +
+      Number(parts.find(p => p.type === 'minute')?.value);
   }
 
-  startMinute(item: AppointmentItem, day: string) {
-    return this.localDate(item.startAt, item.timeZone) < day
-      ? 0
-      : this.minuteOfDay(item.startAt, item.timeZone);
-  }
-
-  visibleMinutes(item: AppointmentItem, day: string) {
-    const end =
-      this.localDate(item.endAt, item.timeZone) > day
-        ? 1440
-        : this.minuteOfDay(item.endAt, item.timeZone);
-    return end - this.startMinute(item, day);
-  }
-
-  timelineStart(day: string) {
-    return (
-      Math.floor(
-        Math.min(8 * 60, ...this.itemsFor(day).map((x) => this.startMinute(x, day))) / 60,
-      ) * 60
-    );
-  }
-
-  timelineEnd(day: string) {
-    return Math.min(
-      1440,
-      Math.ceil(
-        Math.max(
-          18 * 60,
-          ...this.itemsFor(day).map((x) => this.startMinute(x, day) + this.visibleMinutes(x, day)),
-        ) / 60,
-      ) * 60,
-    );
-  }
-
-  timelineHours(day: string) {
-    return Array.from(
-      { length: (this.timelineEnd(day) - this.timelineStart(day)) / 60 },
-      (_, i) => this.timelineStart(day) / 60 + i,
-    );
-  }
-
-  hourLabel(hour: number) {
-    return new Intl.DateTimeFormat(this.i18n.language() === 'ar' ? 'ar-EG' : 'en-GB', {
-      hour: 'numeric',
-      hour12: true,
-    }).format(new Date(2000, 0, 1, hour));
-  }
-
-  dayDoctors(day: string) {
-    const entries = new Map(
-      this.doctors()
-        .filter((d) => !this.doctorFilter() || d.id === this.doctorFilter())
-        .map((d) => [d.id, d]),
-    );
-    for (const item of this.itemsFor(day))
-      entries.set(item.doctorProfileId, {
-        id: item.doctorProfileId,
-        displayName: item.doctorName,
-        specialization: '',
-      });
-    return [...entries.values()];
-  }
-
-  itemsForDoctor(day: string, doctorId: string) {
-    return this.itemsFor(day)
-      .filter((x) => x.doctorProfileId === doctorId)
-      .sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt));
-  }
-
-  trackFor(item: AppointmentItem, day: string) {
-    const ends: number[] = [];
-    for (const entry of this.itemsForDoctor(day, item.doctorProfileId)) {
-      const start = Date.parse(entry.startAt);
-      let track = ends.findIndex((end) => end <= start);
-      if (track < 0) track = ends.length;
-      ends[track] = Date.parse(entry.endAt);
-      if (entry.id === item.id) return track;
+  readonly rooms = signal<ClinicRoom[]>([]);
+  readonly roomLoadFailed = signal(false);
+  readonly roomSchedule = computed(() => {
+    const items = [...this.itemsFor(this.selectedDate())].sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt));
+    const known = new Set(this.rooms().map(room => room.id));
+    const columns = this.rooms().map(room => ({ ...room, items: items.filter(item => item.roomId === room.id) }));
+    const unassigned = items.filter(item => !item.roomId || !known.has(item.roomId));
+    if (!columns.length || unassigned.length) {
+      columns.push({ id: '', name: this.t('No room assigned', 'بدون غرفة محددة'), items: unassigned });
     }
-    return 0;
+    return columns;
+  });
+  readonly legend = [
+    { color: 'unconfirmed', en: 'Unconfirmed', ar: 'غير مؤكد' },
+    { color: 'confirmed', en: 'Confirmed', ar: 'مؤكد' },
+    { color: 'attended', en: 'Attended', ar: 'حضر' },
+    { color: 'no-show', en: 'No show', ar: 'لم يحضر' },
+    { color: 'cancelled', en: 'Cancelled', ar: 'ملغي' },
+  ];
+
+  confirmationState(item: AppointmentItem): 'confirmed' | 'unconfirmed' {
+    return item.status === 2 || item.confirmedAt ? 'confirmed' : 'unconfirmed';
   }
 
-  laneHeight(day: string, doctorId: string) {
-    return (
-      Math.max(
-        1,
-        ...this.itemsForDoctor(day, doctorId).map((item) => this.trackFor(item, day) + 1),
-      ) *
-        100 +
-      16
-    );
+  confirmationLabel(state: 'confirmed' | 'unconfirmed'): string {
+    return state === 'confirmed' ? this.t('Confirmed', 'مؤكد') : this.t('Unconfirmed', 'غير مؤكد');
+  }
+
+  statusIconPath(state: string): string {
+    return ({
+      unconfirmed: 'M8 3v5l3 2M8 1a7 7 0 1 1 0 14 7 7 0 0 1 0-14Z',
+      confirmed: 'm4.5 8 2 2 5-5M8 1a7 7 0 1 1 0 14 7 7 0 0 1 0-14Z',
+      attended: 'm3 8 3 3 7-7',
+      'no-show': 'm5 5 6 6m0-6-6 6M8 1a7 7 0 1 1 0 14 7 7 0 0 1 0-14Z',
+      cancelled: 'm3 3 10 10M8 1a7 7 0 1 1 0 14 7 7 0 0 1 0-14Z',
+    } as Record<string, string>)[state] ?? '';
+  }
+
+  attendanceColor(status: number): string {
+    return ({ 1: 'unconfirmed', 2: 'confirmed', 6: 'cancelled', 7: 'no-show' } as Record<number, string>)[status] ?? 'attended';
+  }
+
+  attendanceLabel(status: number): string {
+    if (status === 6) return this.t('Cancelled', 'ملغي');
+    if (status === 7) return this.t('No show', 'لم يحضر');
+    return this.t('Attended', 'حضر');
+  }
+
+  @HostListener('window:focus')
+  refreshOnFocus(): void {
+    if (!this.loading() && !this.appointmentActionPending()) this.load(true, true);
+  }
+
+  assignRoom(roomId: string): void {
+    const item = this.selected();
+    if (!item || this.appointmentActionPending() || (item.roomId ?? '') === roomId) return;
+    this.appointmentActionPending.set(true);
+    this.api.assignRoom(item.id, roomId || null).subscribe({
+      next: () => {
+        if (this.selected()?.id === item.id) this.selected.set({ ...item, roomId: roomId || undefined });
+        this.appointmentActionPending.set(false);
+        this.load(true, true);
+      },
+      error: () => {
+        this.appointmentActionPending.set(false);
+        this.error.set(this.t('Could not assign the room. It may already be in use.', 'تعذر تعيين الغرفة. قد تكون مشغولة في هذا الوقت.'));
+      },
+    });
+  }
+
+  appointmentCreated(): void {
+    this.message.set(this.t('Appointment created.', 'تم إنشاء الموعد.'));
+    this.load(true, true);
+  }
+
+  patientCreated(): void {
+    this.message.set(this.t('Patient saved successfully.', 'تم حفظ المريض بنجاح.'));
   }
 
   open(item: AppointmentItem) {

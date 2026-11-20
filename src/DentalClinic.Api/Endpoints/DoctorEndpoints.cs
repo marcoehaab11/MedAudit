@@ -12,6 +12,7 @@ internal static class DoctorEndpoints
     public static IEndpointRouteBuilder MapDoctorEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var doctors = endpoints.MapGroup("/api/doctors").RequireAuthorization(AuthConstants.TenantMemberPolicy);
+        doctors.MapDoctorDirectory();
         doctors.MapGet("/lookup", (IDoctorProfileQueries service, CancellationToken token) => service.LookupAsync(token));
         doctors.MapGet("/", SearchAsync).RequireAuthorization(Permissions.DoctorsView);
         doctors.MapGet("/candidates", GetCandidatesAsync).RequireAuthorization(Permissions.DoctorsCreate);
@@ -91,5 +92,5 @@ internal static class DoctorEndpoints
     private static DoctorProfileInput ToInput(UpdateDoctorProfileRequest x) =>
         new(x.Specialization, x.LicenseNumber, x.Bio, x.ConsultationDurationMinutes, x.DisplayName, x.Phone);
     private static DoctorCompensationInput ToInput(DoctorCompensationRequest x) =>
-        new((CompensationType)x.CompensationType, x.FixedAmount, x.Percentage, x.EffectiveFrom, x.EffectiveTo);
+        new((CompensationType)x.CompensationType, x.FixedAmount, x.Percentage, x.EffectiveFrom, x.EffectiveTo, (CommissionBasis)x.CommissionBasis);
 }

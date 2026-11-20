@@ -16,7 +16,7 @@ import { planStatus } from './treatment-labels';
         >← {{ t('Back to patient', 'العودة لملف المريض') }}</a
       >
     } @else {
-      <a class="back" routerLink="/treatment-plans">← {{ t('Back to plans', 'العودة للخطط') }}</a>
+      <a class="back" routerLink="/treatment-plan-management">← {{ t('Back to plans', 'العودة للخطط') }}</a>
     }
     @if (message()) {
       <div class="alert success" role="status">{{ message() }}</div>

@@ -226,6 +226,7 @@
 
   <!-- WORKING HOURS TAB -->
   <div *ngIf="activeTab() === 'hours'" class="tab-content">
+    @if (auth.hasPermission('Settings.Appointments')) { <app-clinic-rooms /> }
     <div class="card">
       <div class="card-header">
         <h3>{{ loc.language() === 'ar' ? 'ساعات العمل الرسمية للعيادة' : 'Clinic Working Hours' }}</h3>

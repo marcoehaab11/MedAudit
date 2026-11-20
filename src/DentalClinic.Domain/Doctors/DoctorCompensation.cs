@@ -7,13 +7,16 @@ public sealed class DoctorCompensation : TenantOwnedEntity
     private DoctorCompensation() { }
     public DoctorCompensation(Guid tenantId, Guid doctorProfileId, CompensationType compensationType,
         decimal? fixedAmount, decimal? percentage, DateOnly effectiveFrom, DateOnly? effectiveTo,
-        DateTimeOffset createdAt)
+        DateTimeOffset createdAt, CommissionBasis commissionBasis = CommissionBasis.TreatmentValue)
     {
         if (tenantId == Guid.Empty || doctorProfileId == Guid.Empty) throw new ArgumentException("Tenant and doctor IDs are required.");
+        if (!Enum.IsDefined(commissionBasis)) throw new ArgumentOutOfRangeException(nameof(commissionBasis));
+        CommissionBasis = commissionBasis;
         TenantId = tenantId; DoctorProfileId = doctorProfileId;
         Apply(compensationType, fixedAmount, percentage, effectiveFrom, effectiveTo);
         CreatedAt = createdAt; UpdatedAt = createdAt;
     }
+    public CommissionBasis CommissionBasis { get; private set; }
     public Guid DoctorProfileId { get; private set; }
     public CompensationType CompensationType { get; private set; }
     public decimal? FixedAmount { get; private set; }

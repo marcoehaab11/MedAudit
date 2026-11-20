@@ -17,10 +17,12 @@ internal sealed class CreateAppointment(IAppointmentStore store, AppointmentSche
             throw AppointmentRules.Error(nameof(command.Notes), "Notes cannot exceed 2000 characters.");
         var valid = await validator.ValidateAsync(command.PatientId, command.DoctorProfileId,
             command.Time, command.Type, null, cancellationToken);
+        if (command.RoomId.HasValue && !await store.RoomExistsAsync(command.RoomId.Value, cancellationToken))
+            throw AppointmentRules.Error(nameof(command.RoomId), "The clinic room was not found.");
         var appointment = new Appointment(currentTenant.RequireTenantId(), valid.Patient.Id, valid.Doctor.Id,
             command.Type, valid.StartAt, command.Time.DurationMinutes, command.Notes,
             currentUser.UserId ?? throw new Common.Exceptions.ForbiddenAccessException("An authenticated user is required."),
-            clock.UtcNow);
+            clock.UtcNow, roomId: command.RoomId);
         store.Add(appointment);
         store.AddAudit(Audit(PlatformAuditAction.AppointmentCreated, appointment.Id));
         await store.SaveChangesAsync(cancellationToken);

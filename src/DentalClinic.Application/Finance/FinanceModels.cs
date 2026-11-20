@@ -40,7 +40,7 @@ public sealed record FinanceTreatment(Guid Id, Guid PatientId, Guid DoctorProfil
     string Name, TreatmentStatus Status, decimal Amount, DateTimeOffset? CompletedAt, DateTimeOffset CreatedAt = default,
     TreatmentType Type = TreatmentType.Other, bool IsClinicalFlowContainer = false, bool IsFlowComponent = false, bool PriceConfirmed = true);
 public sealed record FinanceDoctorRule(Guid Id, CompensationType Type, decimal? FixedAmount, decimal? Percentage,
-    DateOnly EffectiveFrom, DateOnly? EffectiveTo);
+    DateOnly EffectiveFrom, DateOnly? EffectiveTo, CommissionBasis CommissionBasis = CommissionBasis.TreatmentValue);
 public sealed record CompensationResult(decimal Amount, decimal? Percentage, string Snapshot);
 
 public sealed record DoctorDuesCurrency(string Currency, decimal Total, int TreatmentCount);

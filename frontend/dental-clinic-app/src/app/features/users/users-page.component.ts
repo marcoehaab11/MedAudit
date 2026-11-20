@@ -373,6 +373,22 @@ import { AuthService } from '../../core/auth.service';
                 <app-permission-matrix [catalog]="permissionCatalog()" [selected]="selectedPermissions()" [arabic]="i18n.language() === 'ar'" (selectedChange)="selectedPermissions.set($event)" />
               }
 
+              @if (selectedDoctorRole() && !inviteMode()) {
+                <div class="form-grid">
+                  <label><span>{{ text('Specialty', 'التخصص') }}</span><input formControlName="doctorSpecialty" maxlength="120" /></label>
+                  @if (auth.hasPermission('Doctors.ManageCompensation')) {
+                    <label><span>{{ text('Doctor commission (%)', 'عمولة الطبيب (%)') }}</span>
+                      <input type="number" min="0.01" max="100" step="0.01" formControlName="doctorCommission" />
+                    </label>
+                    <label><span>{{ text('Commission basis', 'طريقة حساب العمولة') }}</span>
+                      <select formControlName="commissionBasis">
+                        <option [ngValue]="0">{{ text('Treatment value', 'قيمة العلاج') }}</option>
+                        <option [ngValue]="1">{{ text('Amount paid', 'المبلغ المدفوع') }}</option>
+                      </select>
+                    </label>
+                  }
+                </div>
+              }
               <div class="doctor-note-strip">
                 <span class="note-icon">✨</span>
                 <span>{{ text('If "Doctor" is selected, their doctor profile & scheduling will be activated automatically.', 'عند اختيار دور "طبيب"، يتم تلقائياً إنشاء ملف الطبيب وتفعيله في المواعيد والمخطط السني.') }}</span>
@@ -421,6 +437,9 @@ export class UsersPageComponent {
     password: ['', [Validators.required, Validators.minLength(6)]],
     phone: '',
     roleId: ['', Validators.required],
+    doctorSpecialty: '',
+    doctorCommission: [null as number | null, [Validators.min(.01), Validators.max(100)]],
+    commissionBasis: 0,
   });
 
   readonly doctorCount = computed(() => {
@@ -500,9 +519,15 @@ export class UsersPageComponent {
   }
 
   onRoleChanged(): void {
+    if (!this.selectedDoctorRole()) this.userForm.controls.doctorCommission.reset();
     if (!this.customizePermissions()) return;
     const roleId = this.userForm.controls.roleId.value;
     if (roleId) this.api.role(roleId).subscribe({ next: role => this.selectedPermissions.set(role.permissions), error: () => this.modalError.set(this.text('Could not load role permissions.', 'تعذر تحميل صلاحيات الدور.')) });
+  }
+
+  selectedDoctorRole(): boolean {
+    const id = this.userForm.controls.roleId.value;
+    return this.roles().some(role => role.id === id && role.name.toLowerCase() === 'doctor');
   }
 
   createUser(): void {
@@ -522,7 +547,14 @@ export class UsersPageComponent {
         roleIds: [value.roleId],
         permissions: this.customizePermissions() ? this.selectedPermissions() : null,
     };
-    (this.inviteMode() ? this.api.invite(request) : this.api.createUser({ ...request, password: value.password }))
+    (this.inviteMode() ? this.api.invite(request) : this.api.createUser({
+      ...request, password: value.password,
+      ...(this.selectedDoctorRole() ? {
+        doctorSpecialty: value.doctorSpecialty || undefined,
+        doctorCommission: this.auth.hasPermission('Doctors.ManageCompensation') ? (value.doctorCommission ?? undefined) : undefined,
+        commissionBasis: value.commissionBasis,
+      } : {}),
+    }))
       .subscribe({
         next: () => {
           this.saving.set(false);

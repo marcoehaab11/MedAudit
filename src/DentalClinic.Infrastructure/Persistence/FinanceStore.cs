@@ -17,13 +17,30 @@ internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock cl
         var doctorId = await context.DoctorProfiles.AsNoTracking().Where(x => x.ClinicUserId == userId)
             .Select(x => (Guid?)x.Id).SingleOrDefaultAsync(token);
         if (!doctorId.HasValue) return null;
-        var costs = context.DoctorCompensationCosts.AsNoTracking().Where(x => x.DoctorProfileId == doctorId.Value);
-        var balances = await costs.GroupBy(x => x.Currency)
-            .Select(g => new DoctorDuesCurrency(g.Key, g.Sum(x => x.Amount), g.Count())).ToArrayAsync(token);
-        var currency = await CurrencyAsync(token);
-        return new DoctorDues(balances.FirstOrDefault(x => x.Currency == currency)?.Total ?? 0,
-            currency, balances.Sum(x => x.TreatmentCount), balances);
+        return (await DoctorDuesAsync([doctorId.Value], token))[doctorId.Value];
     }
+
+    public async Task<IReadOnlyDictionary<Guid, DoctorDues>> DoctorDuesAsync(IReadOnlyCollection<Guid> ids, CancellationToken token)
+    {
+        if (ids.Count == 0) return new Dictionary<Guid, DoctorDues>();
+        var balances = await context.DoctorCompensationCosts.AsNoTracking()
+            .Where(x => ids.Contains(x.DoctorProfileId))
+            .GroupBy(x => new { x.DoctorProfileId, x.Currency })
+            .Select(g => new {
+                g.Key.DoctorProfileId, g.Key.Currency,
+                Total = g.Sum(x => x.Amount), TreatmentCount = g.Select(x => x.TreatmentId).Distinct().Count(),
+            }).ToArrayAsync(token);
+        var currency = await CurrencyAsync(token);
+        var byDoctor = balances.ToLookup(x => x.DoctorProfileId);
+        return ids.Distinct().ToDictionary(id => id, id =>
+        {
+            var rows = byDoctor[id].OrderBy(x => x.Currency)
+                .Select(x => new DoctorDuesCurrency(x.Currency, x.Total, x.TreatmentCount)).ToArray();
+            return new DoctorDues(rows.FirstOrDefault(x => x.Currency == currency)?.Total ?? 0,
+                currency, rows.Sum(x => x.TreatmentCount), rows);
+        });
+    }
+
     public async Task<IReadOnlyCollection<BillingQueueItem>> BillingQueueAsync(CancellationToken token)
     {
         return await (from revenue in context.Revenues.AsNoTracking()
@@ -64,7 +81,11 @@ internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock cl
         if (tracked is not null) return Task.FromResult<FinanceTreatment?>(new(tracked.Id, tracked.PatientId, tracked.DoctorProfileId, tracked.TreatmentPlanId, tracked.TreatmentName, tracked.Status, tracked.Price, tracked.CompletedAt, tracked.CreatedAt, tracked.Type, tracked.IsClinicalFlowContainer, tracked.ParentTreatmentId.HasValue, tracked.PriceConfirmed));
         return context.Treatments.AsNoTracking().Where(x => x.Id == id).Select(x => new FinanceTreatment(x.Id, x.PatientId, x.DoctorProfileId, x.TreatmentPlanId, x.TreatmentName, x.Status, x.Price, x.CompletedAt, x.CreatedAt, x.Type, x.IsClinicalFlowContainer, x.ParentTreatmentId.HasValue, x.PriceConfirmed)).SingleOrDefaultAsync(token);
     }
-    public Task<FinanceDoctorRule?> FindCompensationRuleAsync(Guid doctorId, DateOnly treatmentDate, CancellationToken token) => context.DoctorCompensations.AsNoTracking().Where(x => x.DoctorProfileId == doctorId && x.EffectiveFrom <= treatmentDate && (!x.EffectiveTo.HasValue || x.EffectiveTo >= treatmentDate)).OrderByDescending(x => x.EffectiveFrom).Select(x => new FinanceDoctorRule(x.Id, x.CompensationType, x.FixedAmount, x.Percentage, x.EffectiveFrom, x.EffectiveTo)).FirstOrDefaultAsync(token);
+    public Task<FinanceDoctorRule?> CompensationRuleByIdAsync(Guid id, CancellationToken token) =>
+        context.DoctorCompensations.AsNoTracking().Where(x => x.Id == id)
+            .Select(x => new FinanceDoctorRule(x.Id, x.CompensationType, x.FixedAmount, x.Percentage,
+                x.EffectiveFrom, x.EffectiveTo, x.CommissionBasis)).SingleOrDefaultAsync(token);
+    public Task<FinanceDoctorRule?> FindCompensationRuleAsync(Guid doctorId, DateOnly treatmentDate, CancellationToken token) => context.DoctorCompensations.AsNoTracking().Where(x => x.DoctorProfileId == doctorId && x.EffectiveFrom <= treatmentDate && (!x.EffectiveTo.HasValue || x.EffectiveTo >= treatmentDate)).OrderByDescending(x => x.EffectiveFrom).Select(x => new FinanceDoctorRule(x.Id, x.CompensationType, x.FixedAmount, x.Percentage, x.EffectiveFrom, x.EffectiveTo, x.CommissionBasis)).FirstOrDefaultAsync(token);
     public Task<FinancialCategory?> FindCategoryAsync(Guid id, bool tracking, CancellationToken token) => (tracking ? context.FinancialCategories.AsQueryable() : context.FinancialCategories.AsNoTracking()).SingleOrDefaultAsync(x => x.Id == id, token);
     public Task<FinancialCategory?> FindCategoryByCodeAsync(string code, FinancialCategoryType type, CancellationToken token) => context.FinancialCategories.SingleOrDefaultAsync(x => x.Code == code && x.Type == type && x.IsActive, token);
     public Task<bool> CategoryCodeExistsAsync(string code, Guid? excludeId, CancellationToken token) => context.FinancialCategories.AnyAsync(x => x.Code == code && (!excludeId.HasValue || x.Id != excludeId), token);

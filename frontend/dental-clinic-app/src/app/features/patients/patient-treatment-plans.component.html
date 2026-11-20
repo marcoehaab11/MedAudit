@@ -1,0 +1,142 @@
+<ng-template #toothIcon>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M12 4c-2.3 0-3.2-1-5-1-2.7 0-4 2.1-4 5 0 3 1.5 4 2.1 6.6C5.8 17.4 6 21 8 21c1.6 0 1.7-2.1 2.1-4.5.3-1.6.9-2.5 1.9-2.5s1.6.9 1.9 2.5c.4 2.4.5 4.5 2.1 4.5 2 0 2.2-3.6 2.9-6.4C19.5 12 21 11 21 8c0-2.9-1.3-5-4-5-1.8 0-2.7 1-5 1Zm-2 2.5c1 .5 2 .5 3 .3" />
+  </svg>
+</ng-template>
+
+<div class="treatment-actions">
+  @if (canReadPlans() || canReadTreatments()) {
+    <button type="button" class="button update-button" (click)="openUpdate(updateDialog)" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="m15 5 4 4M4 20l4.5-1 12-12-4-4-12 12L4 20Z" />
+      </svg>
+      {{ t('Update', 'تحديث') }}
+    </button>
+  }
+  @if (auth.hasPermission('Dental.View')) {
+    <button type="button" class="button chart-button" (click)="openChart(chartDialog)" aria-haspopup="dialog">
+      <ng-container [ngTemplateOutlet]="toothIcon" />
+      {{ t('Dental Chart', 'خريطة الأسنان') }}
+    </button>
+  }
+</div>
+
+@if (canReadPlans() || canReadTreatments()) {
+  <div class="treatment-groups" [attr.aria-busy]="loading()">
+    @if (loading()) {
+      <p class="treatment-message" role="status">{{ t('Loading treatment plans…', 'جارٍ تحميل خطط العلاج…') }}</p>
+    } @else if (failed()) {
+      <div class="treatment-message" role="alert">
+        <p>{{ t('Treatment plans could not be loaded.', 'تعذر تحميل خطط العلاج.') }}</p>
+        <button type="button" class="button" (click)="load()">{{ t('Try again', 'إعادة المحاولة') }}</button>
+      </div>
+    } @else {
+      @for (group of groups; track group.id) {
+        @let items = cards()[group.id];
+        <section class="treatment-group" [attr.data-status]="group.id" [attr.aria-labelledby]="'treatments-' + group.id">
+          <header class="group-heading">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path [attr.d]="group.icon" /></svg>
+            <h2 [id]="'treatments-' + group.id">{{ t(group.en, group.ar) }}</h2>
+            <span class="group-count" [attr.aria-label]="items.length + t(' procedures', ' إجراءات')">{{ items.length }}</span>
+          </header>
+          @if (items.length) {
+            <ul class="procedure-grid" role="list">
+              @for (item of items; track item.id) {
+                <li class="procedure-card">
+                  <span class="procedure-tooth"><ng-container [ngTemplateOutlet]="toothIcon" /></span>
+                  <div>
+                    <strong><bdi>{{ item.name }}</bdi></strong>
+                    <span class="procedure-location">
+                      @for (number of item.teeth; track number) {
+                        <span>{{ toothLocation(number) }} <bdi dir="ltr">#{{ number }}</bdi></span>
+                      } @empty {
+                        {{ t('No tooth specified', 'بدون سن محدد') }}
+                      }
+                    </span>
+                  </div>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="empty-group">{{ t('No procedures recorded.', 'لا توجد إجراءات مسجلة.') }}</p>
+          }
+        </section>
+      }
+    }
+  </div>
+}
+
+<dialog #chartDialog class="profile-dialog chart-dialog" aria-labelledby="profile-chart-title" (close)="closeChart()">
+  <header class="dialog-heading">
+    <h2 id="profile-chart-title">{{ t('Dental Chart', 'خريطة الأسنان') }}</h2>
+    <button type="button" class="button" autofocus (click)="chartDialog.close()">{{ t('Close', 'إغلاق') }}</button>
+  </header>
+  @if (chartOpen()) {
+    @if (chartLoading()) {
+      <p class="treatment-message" role="status">{{ t('Loading dental chart…', 'جارٍ تحميل خريطة الأسنان…') }}</p>
+    } @else if (chartFailed()) {
+      <div class="treatment-message" role="alert">
+        <p>{{ t('The dental chart could not be loaded.', 'تعذر تحميل خريطة الأسنان.') }}</p>
+        <button type="button" class="button" (click)="loadChart()">{{ t('Try again', 'إعادة المحاولة') }}</button>
+      </div>
+    } @else if (chart(); as record) {
+      <div class="chart-content">
+        <p class="chart-orientation">
+          <bdi>{{ record.patientName }}</bdi> · FDI ·
+          {{ t('The patient’s right is on the left of the chart.', 'يمين المريض يظهر على يسار الخريطة.') }}
+        </p>
+        <app-dental-chart [teeth]="record.teeth" [showHeading]="false" [showSearch]="false"
+          [showTreatmentStatuses]="true" [plannedToothNumbers]="plannedToothNumbers()"
+          [selectedNumber]="selected()" (selectedNumberChange)="selected.set($event)" />
+        <ul class="chart-status-legend" role="list" [attr.aria-label]="t('Treatment status legend', 'مفتاح ألوان الإجراءات')">
+          @for (group of groups; track group.id) {
+            <li [attr.data-status]="group.id">{{ t(group.en, group.ar) }}</li>
+          }
+        </ul>
+        @if (selectedTooth(); as tooth) {
+          <section class="selected-tooth" aria-live="polite">
+            <h3>{{ toothLocation(tooth.toothNumber) }} <bdi dir="ltr">#{{ tooth.toothNumber }}</bdi></h3>
+            <ul class="tooth-records" role="list">
+              @for (work of tooth.treatmentProgress ?? []; track work.id) {
+                <li [attr.data-status]="groupFor(work.status)">
+                  <bdi>{{ work.name }}</bdi> · {{ statusLabel(work.status) }}
+                </li>
+              }
+              @for (item of selectedPlannedItems(); track item.id) {
+                <li data-status="planned"><bdi>{{ item.name }}</bdi> · {{ statusLabel(item.status) }}</li>
+              }
+              @for (finding of tooth.findings; track finding) {
+                @if (findingLabels[finding]; as label) { <li>{{ t(label.en, label.ar) }}</li> }
+              }
+              @for (procedure of tooth.procedures; track procedure) {
+                @if (procedureLabels[procedure]; as label) {
+                  <li data-status="completed">{{ t(label.en, label.ar) }} · {{ statusLabel(4) }}</li>
+                }
+              }
+            </ul>
+            @if (tooth.hasEndodonticRecord) {
+              <p>{{ t('Endodontic record available', 'يوجد سجل علاج جذور') }}</p>
+            } @else if (!tooth.findings.length && !tooth.procedures.length && !tooth.treatmentProgress?.length && !selectedPlannedItems().length) {
+              <p>{{ t('No findings or procedures recorded for this tooth.', 'لا توجد تشخيصات أو إجراءات مسجلة لهذا السن.') }}</p>
+            }
+          </section>
+        } @else {
+          <p class="chart-hint">{{ t('Select a tooth to view its recorded findings and procedures.', 'اختر سنًا لعرض التشخيصات والإجراءات المسجلة عليه.') }}</p>
+        }
+      </div>
+    }
+  }
+</dialog>
+
+<dialog #updateDialog class="profile-dialog" aria-labelledby="profile-update-title" (close)="closeUpdate()">
+  <header class="dialog-heading">
+    <h2 id="profile-update-title">{{ t('Update treatment plans', 'تحديث خطط العلاج') }}</h2>
+    <button type="button" class="button" autofocus (click)="updateDialog.close()">{{ t('Close', 'إغلاق') }}</button>
+  </header>
+  @if (updateOpen()) {
+    <app-patient-treatment-summary [patientId]="patientId()" />
+  }
+</dialog>

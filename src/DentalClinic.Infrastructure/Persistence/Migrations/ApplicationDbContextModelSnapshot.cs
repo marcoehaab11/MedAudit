@@ -91,6 +91,9 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<Guid?>("RoomId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("StartAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -117,6 +120,8 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "BookingReference");
 
                     b.HasIndex("TenantId", "CreatedBy");
+
+                    b.HasIndex("TenantId", "RoomId");
 
                     b.HasIndex("TenantId", "StartAt");
 
@@ -211,6 +216,28 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "CreatedAt");
 
                     b.ToTable("booking_page_visits", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Appointments.ClinicRoom", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("clinic_rooms", (string)null);
                 });
 
             modelBuilder.Entity("DentalClinic.Domain.Appointments.PublicBookingIdempotencyRecord", b =>
@@ -1253,6 +1280,9 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("CommissionBasis")
+                        .HasColumnType("integer");
+
                     b.Property<int>("CompensationType")
                         .HasColumnType("integer");
 
@@ -1432,6 +1462,9 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("OccurredAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("PaymentId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
@@ -1446,8 +1479,12 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "OccurredAt");
 
-                    b.HasIndex("TenantId", "TreatmentId")
+                    b.HasIndex("TenantId", "PaymentId")
                         .IsUnique();
+
+                    b.HasIndex("TenantId", "TreatmentId")
+                        .IsUnique()
+                        .HasFilter("\"PaymentId\" IS NULL");
 
                     b.ToTable("doctor_compensation_costs", (string)null);
                 });
@@ -1696,6 +1733,9 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("OccurredAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("PaidCommissionRuleId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("PatientId")
                         .HasColumnType("uuid");
@@ -4502,6 +4542,12 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Appointments.ClinicRoom", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "RoomId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("DentalClinic.Domain.Appointments.BookingInquiry", b =>
@@ -4944,6 +4990,12 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("DentalClinic.Domain.Finance.Payment", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PaymentId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("DentalClinic.Domain.Treatments.Treatment", null)
                         .WithMany()

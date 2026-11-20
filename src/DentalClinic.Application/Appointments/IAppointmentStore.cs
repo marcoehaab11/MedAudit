@@ -8,6 +8,7 @@ namespace DentalClinic.Application.Appointments;
 
 public interface IAppointmentStore
 {
+    Task<bool> RoomExistsAsync(Guid id, CancellationToken token);
     Task<Patient?> FindPatientAsync(Guid id, CancellationToken cancellationToken);
     Task<DoctorProfile?> FindDoctorAsync(Guid id, CancellationToken cancellationToken);
     Task<Guid?> FindDoctorProfileIdForUserAsync(Guid userId, CancellationToken cancellationToken);

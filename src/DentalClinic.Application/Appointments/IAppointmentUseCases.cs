@@ -25,6 +25,7 @@ public interface IRescheduleAppointment
 
 public interface IAppointmentLifecycle
 {
+    Task<bool> AssignRoomAsync(Guid id, Guid? roomId, CancellationToken token);
     Task<bool> ConfirmAsync(Guid id, CancellationToken cancellationToken);
     Task<bool> CancelAsync(Guid id, string reason, CancellationToken cancellationToken);
     Task<bool> CheckInAsync(Guid id, CancellationToken cancellationToken);

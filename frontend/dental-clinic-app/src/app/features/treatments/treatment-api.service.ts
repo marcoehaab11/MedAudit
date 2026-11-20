@@ -120,6 +120,9 @@ export interface TreatmentPlanList {
   createdAt: string;
 }
 export interface Treatment {
+  patientNumber?: string;
+  startedAt?: string;
+  treatmentPlanItemId?: string | null;
   parentTreatmentId?: string | null;
   isClinicalFlowContainer?: boolean;
   appointmentId?: string | null;

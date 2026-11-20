@@ -1,3 +1,4 @@
+import { ClinicRoomsComponent } from './clinic-rooms.component';
 import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -18,7 +19,7 @@ import { ClinicTheme, ClinicThemeService, DEFAULT_CLINIC_THEME } from '../../cor
   styleUrl: './settings-page.component.scss',
   selector: 'app-settings-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, PhoneInputComponent],
+  imports: [CommonModule, FormsModule, PhoneInputComponent, ClinicRoomsComponent],
   templateUrl: './settings-page.component.html',
 })
 export class SettingsPageComponent implements OnInit {

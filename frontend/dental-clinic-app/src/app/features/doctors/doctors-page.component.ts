@@ -1,249 +1,226 @@
-import { DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
+import { Subscription, timer } from 'rxjs';
 import { LocalizationService } from '../../core/localization.service';
-import { AuthService } from '../../core/auth.service';
-import { DoctorApiService, PagedDoctors, DoctorListItem } from './doctor-api.service';
+import { WorkspaceDialogComponent } from '../../shared/workspace-dialog.component';
+import { DoctorApiService, DoctorDirectoryItem, DoctorFinancialDetails } from './doctor-api.service';
+import { DoctorDues } from '../finance/finance-api.service';
+import { money } from '../finance/finance-ui';
 
 @Component({
-  styleUrl: './doctors.scss',
-
   selector: 'app-doctors-page',
-  imports: [ReactiveFormsModule, RouterLink, DatePipe],
-  template: `<div class="workspace-records doctor-directory">
-    <section class="workspace-page-head">
-      <div>
+  imports: [FormsModule, WorkspaceDialogComponent],
+  styleUrl: './doctor-directory.scss',
+  template: `
+    <header class="workspace-page-head">
+      <div><h1>{{ t('Doctors', 'الأطباء') }}</h1>
+        <p class="page-description">{{ t('Clinic directory and monthly visit statistics.', 'دليل الأطباء وإحصائيات الزيارات الشهرية') }}</p>
+      </div>
+      @if (ready()) { <span class="doctor-count">{{ t('Total doctors', 'إجمالي الأطباء') }} <strong>{{ doctors().length }}</strong></span> }
+    </header>
 
-        <h1>{{ t('Doctors', 'الأطباء') }}</h1>
-        <p class="page-description">
-          {{
-            t(
-              'Manage the clinical team and their working schedules.',
-              'إدارة الفريق الطبي ومواعيد عمله.'
-            )
-          }}
-        </p>
-      </div>
-      @if (auth.hasPermission('Doctors.Create')) {
-        <a class="button primary" routerLink="/doctors/create">{{
-          t('Create doctor profile', 'إنشاء ملف طبيب')
-        }}</a>
-      }
-    </section>
+    <div class="panel workspace-filters doctor-filters">
+      <label class="workspace-filter-field"><span>{{ t('Name, specialty or phone', 'الاسم أو التخصص أو الهاتف') }}</span>
+        <input type="search" [ngModel]="search()" (ngModelChange)="search.set($event)" />
+      </label>
+      <label class="workspace-filter-field"><span>{{ t('Specialty', 'التخصص') }}</span>
+        <select [ngModel]="specialty()" (ngModelChange)="specialty.set($event)">
+          <option value="">{{ t('All specialties', 'كل التخصصات') }}</option>
+          @for (item of specialties(); track item) { <option [value]="item">{{ item }}</option> }
+        </select>
+      </label>
+      <label class="workspace-filter-field"><span>{{ t('Working day', 'يوم العمل') }}</span>
+        <select [ngModel]="day()" (ngModelChange)="day.set($event)">
+          <option value="">{{ t('All days', 'كل الأيام') }}</option>
+          @for (day of workDays; track day) { <option [value]="day">{{ dayLabel(day) }}</option> }
+        </select>
+      </label>
+      <label class="workspace-filter-field"><span>{{ t('Month', 'الشهر') }}</span>
+        <input type="month" [ngModel]="month()" (ngModelChange)="changeMonth($event)" />
+      </label>
+    </div>
+
     @if (error()) {
-      <div class="alert error" role="alert">{{ error() }}</div>
-    }
-    @if (success()) {
-      <div class="alert success" role="status">{{ success() }}</div>
-    }
-    <form
-      class="panel workspace-filters"
-      [formGroup]="filters"
-      (ngSubmit)="load(1)"
-      [attr.aria-label]="t('Doctor filters', 'تصفية الأطباء')"
-    >
-      <label class="workspace-filter-field"
-        ><span>{{ t('Search doctors', 'البحث عن طبيب') }}</span
-        ><input
-          type="search"
-          formControlName="search"
-          [placeholder]="t('Name, email or phone', 'الاسم أو البريد أو الهاتف')"
-      /></label>
-      <label class="workspace-filter-field"
-        ><span>{{ t('Specialization', 'التخصص') }}</span
-        ><input
-          formControlName="specialization"
-          [placeholder]="t('All specializations', 'كل التخصصات')"
-      /></label>
-      <label class="workspace-filter-field"
-        ><span>{{ t('Status', 'الحالة') }}</span
-        ><select formControlName="status">
-          <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
-          <option value="1">{{ t('Active', 'نشط') }}</option>
-          <option value="2">{{ t('Inactive', 'غير نشط') }}</option>
-          <option value="3">{{ t('Archived', 'مؤرشف') }}</option>
-        </select></label
-      >
-      <div class="filter-actions">
-        <button type="submit" [disabled]="loading()">
-          {{ t('Apply filters', 'تطبيق التصفية') }}</button
-        ><button type="button" class="filter-reset" (click)="resetFilters()" [disabled]="loading()">
-          {{ t('Reset', 'إعادة ضبط') }}
-        </button>
+      <div class="alert error" role="alert">{{ t('Could not load the doctor directory.', 'تعذر تحميل دليل الأطباء.') }}
+        <button class="button" type="button" (click)="load()">{{ t('Try again', 'إعادة المحاولة') }}</button>
       </div>
-    </form>
-    <section class="panel table-panel workspace-results" [attr.aria-busy]="loading()">
-      <header class="workspace-results-head">
-        <h2>{{ t('Doctor directory', 'دليل الأطباء') }}</h2>
-        <span role="status">
-          @if (!loading() && !loadError()) {
-            {{ result()?.totalCount ?? 0 }} {{ t('doctors', 'طبيب') }}
-          }
-        </span>
-      </header>
-      @if (loading()) {
-        <div class="state">{{ t('Loading doctors…', 'جارٍ تحميل الأطباء…') }}</div>
-      } @else if (loadError()) {
-        <div class="state" role="alert">
-          <strong>{{ loadError() }}</strong
-          ><button type="button" (click)="load(1)">{{ t('Try again', 'حاول مرة أخرى') }}</button>
-        </div>
-      } @else if (!result()?.items?.length) {
-        <div class="state">
-          <strong>{{ t('No doctors found', 'لا يوجد أطباء') }}</strong>
-          <p>
-            {{
-              t(
-                'Assign the Doctor role to a clinic user, then create their profile.',
-                'عيّن دور الطبيب لمستخدم العيادة ثم أنشئ ملفه.'
-              )
-            }}
-          </p>
-        </div>
-      } @else {
-        <div class="table-scroll">
-          <div class="table-responsive">
-            <table>
-              <caption class="sr-only">
-                {{
-                  t('Doctor directory results', 'نتائج دليل الأطباء')
-                }}
-              </caption>
-              <thead>
-                <tr>
-                  <th>{{ t('Doctor', 'الطبيب') }}</th>
-                  <th>{{ t('Specialization', 'التخصص') }}</th>
-                  <th>{{ t('License', 'الترخيص') }}</th>
-                  <th>{{ t('Status', 'الحالة') }}</th>
-                  <th>{{ t('Created', 'تاريخ الإنشاء') }}</th>
-                  <th>
-                    <span class="sr-only">{{ t('Actions', 'الإجراءات') }}</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (d of result()!.items; track d.id) {
-                  <tr>
-                    <td>
-                      <strong>{{ d.displayName }}</strong
-                      ><small>{{ d.email }}</small>
-                    </td>
-                    <td>{{ d.specialization }}</td>
-                    <td class="number">{{ d.licenseNumber || '—' }}</td>
-                    <td>
-                      <span class="badge status-{{ d.status }}">{{ status(d.status) }}</span>
-                    </td>
-                    <td>{{ d.createdAt | date: 'dd/MM/yyyy' }}</td>
-                    <td>
-                      <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <a [routerLink]="['/doctors', d.id]">{{ t('Manage', 'إدارة') }}</a>
-                        @if (auth.hasPermission('Doctors.Archive') && d.status === 3) {
-                          <span>·</span>
-                          <button
-                            type="button"
-                            class="button-link"
-                            style="background: none; border: none; padding: 0; color: #0284c7; cursor: pointer; font-weight: 600; text-decoration: underline; font-family: inherit; font-size: inherit;"
-                            (click)="restore(d)"
-                          >
-                            {{ t('Restore', 'استرجاع') }}
-                          </button>
-                        }
-                      </div>
-                    </td>
-                  </tr>
+    }
+    @if (loading()) {
+      <p role="status">{{ t('Loading doctors…', 'جارٍ تحميل الأطباء…') }}</p>
+    } @else {
+      <div class="doctor-grid">
+        @for (doctor of filtered(); track doctor.id) {
+          <article class="doctor-card">
+            <header>
+              <div class="doctor-avatar" aria-hidden="true">{{ initials(doctor.displayName) }}</div>
+              <div class="doctor-identity">
+                <h2><bdi>{{ doctor.displayName }}</bdi></h2>
+                <p><bdi>{{ doctor.specialization }}</bdi></p>
+                <span class="doctor-status" [class.active]="doctor.accountStatus === 2">{{ status(doctor.accountStatus) }}</span>
+              </div>
+            </header>
+            <dl class="doctor-contact">
+              <div><dt>{{ t('Phone', 'الهاتف') }}</dt><dd><bdi>{{ doctor.phone || '—' }}</bdi></dd></div>
+              <div><dt>{{ t('Working days', 'أيام العمل') }}</dt><dd>{{ workingDays(doctor) }}</dd></div>
+            </dl>
+            <dl class="doctor-activity">
+              <div><dt>{{ t('New patients', 'مرضى جدد') }}</dt><dd>{{ doctor.newPatients }}</dd></div>
+              <div><dt>{{ t('Follow-ups', 'زيارات متابعة') }}</dt><dd>{{ doctor.followUps }}</dd></div>
+              <div><dt>{{ t('Total visits', 'إجمالي الزيارات') }}</dt><dd>{{ doctor.totalVisits }}</dd></div>
+            </dl>
+            @if (doctor.dues; as dues) {
+              <footer class="doctor-dues">
+                <div>
+                  <span>{{ t('Current dues', 'المستحقات الحالية') }}</span>
+                  @for (amount of dueAmounts(dues); track amount.currency) {
+                    <strong><bdi>{{ formatMoney(amount.total, amount.currency) }}</bdi></strong>
+                  }
+                </div>
+                <button class="button" type="button" aria-haspopup="dialog"
+                  [attr.aria-label]="t('Dues details', 'تفاصيل المستحقات') + ' · ' + doctor.displayName"
+                  (click)="open(doctor, dialog)">{{ t('Dues details', 'تفاصيل المستحقات') }}</button>
+              </footer>
+            }
+          </article>
+        } @empty {
+          <p class="panel">{{ t('No doctors match these filters.', 'لا يوجد أطباء مطابقون للفلاتر.') }}</p>
+        }
+      </div>
+    }
+    <app-workspace-dialog #dialog width="30rem" [title]="t('Doctor dues details', 'تفاصيل مستحقات الطبيب')"
+      [closeLabel]="t('Close', 'إغلاق')" (closed)="clearDetails()">
+      @if (detailLoading()) {
+        <p role="status">{{ t('Loading account details…', 'جارٍ تحميل تفاصيل الحساب…') }}</p>
+      } @else if (detailError()) {
+        <p role="alert">{{ t('Could not load this doctor’s financial details.', 'تعذر تحميل مستحقات هذا الطبيب.') }}</p>
+      } @else if (detail(); as record) {
+        <div class="doctor-details">
+          <h3><bdi>{{ record.displayName }}</bdi></h3>
+          <p><bdi>{{ record.specialization }}</bdi></p>
+          <dl>
+            <div class="doctor-dues">
+              <dt>{{ t('Current dues', 'المستحقات الحالية') }}</dt>
+              <dd>
+                @for (amount of dueAmounts(record.dues); track amount.currency) {
+                  <strong><bdi>{{ formatMoney(amount.total, amount.currency) }}</bdi></strong>
                 }
-              </tbody>
-            </table>
-          </div>
+              </dd>
+            </div>
+            <div><dt>{{ t('Treatments with commission recorded', 'علاجات مسجّل لها مستحقات') }}</dt><dd>{{ record.dues.treatmentCount }}</dd></div>
+            @if (record.percentage != null) {
+              <div><dt>{{ t('Current commission', 'العمولة الحالية') }}</dt><dd><bdi>{{ record.percentage }}%</bdi></dd></div>
+              <div><dt>{{ t('Commission basis', 'طريقة حساب العمولة') }}</dt>
+                <dd>{{ record.commissionBasis === 1 ? t('Amount paid', 'المبلغ المدفوع') : t('Treatment value', 'قيمة العلاج') }}</dd></div>
+            }
+          </dl>
         </div>
-        <nav class="pagination" [attr.aria-label]="t('Doctor pages', 'صفحات الأطباء')">
-          <button type="button" [disabled]="result()!.page <= 1" (click)="load(result()!.page - 1)">
-            {{ t('Previous', 'السابق') }}</button
-          ><span>{{ result()!.page }} / {{ result()!.totalPages || 1 }}</span
-          ><button
-            type="button"
-            [disabled]="result()!.page >= result()!.totalPages"
-            (click)="load(result()!.page + 1)"
-          >
-            {{ t('Next', 'التالي') }}
-          </button>
-        </nav>
       }
-    </section>
-  </div>`,
+    </app-workspace-dialog>
+  `,
 })
 export class DoctorsPageComponent {
-  private api = inject(DoctorApiService);
-  readonly auth = inject(AuthService);
-  readonly i18n = inject(LocalizationService);
-  readonly result = signal<PagedDoctors | null>(null);
+  private readonly api = inject(DoctorApiService);
+  private readonly i18n = inject(LocalizationService);
+  private readonly destroyRef = inject(DestroyRef);
+  private request?: Subscription;
+  private detailRequest?: Subscription;
+  readonly month = signal('');
+  readonly search = signal('');
+  readonly specialty = signal('');
+  readonly day = signal('');
+  readonly doctors = signal<DoctorDirectoryItem[]>([]);
   readonly loading = signal(true);
-  readonly error = signal('');
-  readonly loadError = signal('');
-  readonly success = signal('');
-  readonly filters = inject(FormBuilder).nonNullable.group({
-    search: '',
-    specialization: '',
-    status: '',
+  readonly ready = signal(false);
+  readonly error = signal(false);
+  readonly detail = signal<DoctorFinancialDetails | null>(null);
+  readonly detailLoading = signal(false);
+  readonly detailError = signal(false);
+  readonly workDays = [6, 0, 1, 2, 3, 4, 5];
+  readonly specialties = computed(() => [...new Set(this.doctors().map(x => x.specialization))].sort());
+  readonly filtered = computed(() => {
+    const term = this.search().trim().toLocaleLowerCase();
+    return this.doctors().filter(x =>
+      (!this.specialty() || x.specialization === this.specialty()) &&
+      (!this.day() || x.workingDays.includes(Number(this.day()))) &&
+      (!term || [x.displayName, x.specialization, x.phone ?? ''].some(value => value.toLocaleLowerCase().includes(term))));
   });
-  constructor() {
-    this.load(1);
-  }
-  resetFilters() {
-    this.filters.reset({ search: '', specialization: '', status: '' });
-    this.load(1);
-  }
-  load(page: number) {
-    this.loadError.set('');
-    this.error.set('');
-    this.loading.set(true);
-    const x = this.filters.getRawValue();
-    this.api.doctors(x.search, x.status, x.specialization, page).subscribe({
-      next: (r) => {
-        this.result.set(r);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.loadError.set(this.t('Doctors could not be loaded.', 'تعذر تحميل الأطباء.'));
-        this.loading.set(false);
-      },
-    });
-  }
-  status(x: number) {
-    return x === 1
-      ? this.t('Active', 'نشط')
-      : x === 2
-        ? this.t('Inactive', 'غير نشط')
-        : this.t('Archived', 'مؤرشف');
-  }
-  restore(d: DoctorListItem) {
-    if (
-      !confirm(
-        this.t(
-          `Are you sure you want to restore ${d.displayName}? They will become active and available for appointments.`,
-          `هل أنت متأكد من استرجاع الطبيب ${d.displayName}؟ سيصبح نشطاً ومتاحاً لحجز المواعيد.`,
-        ),
-      )
-    )
-      return;
 
-    this.api.restore(d.id).subscribe({
-      next: () => {
-        this.success.set(
-          this.t(
-            `Dr. ${d.displayName} restored successfully.`,
-            `تم استرجاع الطبيب ${d.displayName} بنجاح وأصبح متاحاً للمواعيد.`,
-          ),
-        );
-        this.load(this.result()?.page || 1);
+  constructor() {
+    this.load();
+    timer(30_000, 30_000).pipe(takeUntilDestroyed()).subscribe(() => {
+      if (document.visibilityState === 'visible') this.load(true);
+    });
+  }
+
+  changeMonth(month: string): void {
+    if (!/^\d{4}-\d{2}$/.test(month)) return;
+    this.month.set(month);
+    this.load();
+  }
+
+  load(quiet = false): void {
+    if (quiet && this.request && !this.request.closed) return;
+    this.request?.unsubscribe();
+    if (!quiet) this.loading.set(true);
+    this.request = this.api.directory(this.month()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: result => {
+        this.month.set(result.month);
+        this.doctors.set(result.items);
+        this.loading.set(false);
+        this.ready.set(true);
+        this.error.set(false);
       },
-      error: () => {
-        this.error.set(this.t('Could not restore doctor.', 'تعذر استرجاع الطبيب.'));
+      error: response => {
+        if (!quiet || [401, 403].includes(response.status)) {
+          this.doctors.set([]);
+          this.ready.set(false);
+        }
+        this.error.set(true);
+        this.loading.set(false);
       },
     });
   }
-  t(en: string, ar: string) {
-    return this.i18n.language() === 'en' ? en : ar;
+
+  open(doctor: DoctorDirectoryItem, dialog: WorkspaceDialogComponent): void {
+    this.clearDetails();
+    this.detailLoading.set(true);
+    dialog.open();
+    this.detailRequest = this.api.dues(doctor.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: result => {
+        this.detail.set(result.id === doctor.id ? result : null);
+        this.detailError.set(!this.detail());
+        this.detailLoading.set(false);
+      },
+      error: () => { this.detailError.set(true); this.detailLoading.set(false); },
+    });
   }
+
+  clearDetails(): void {
+    this.detailRequest?.unsubscribe();
+    this.detail.set(null);
+    this.detailError.set(false);
+    this.detailLoading.set(false);
+  }
+
+  status(status: number): string {
+    if (status === 2) return this.t('Active', 'نشط');
+    if (status === 1) return this.t('Invited', 'الدعوة معلّقة');
+    return this.t('Inactive', 'غير نشط');
+  }
+
+  initials(name: string): string { return name.trim().split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join(''); }
+  dayLabel(day: number): string {
+    return this.t(
+      ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][day],
+      ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'][day],
+    );
+  }
+  workingDays(doctor: DoctorDirectoryItem): string {
+    return this.workDays.filter(day => doctor.workingDays.includes(day)).map(day => this.dayLabel(day)).join(this.t(', ', '، '))
+      || this.t('No days set', 'لم تُحدد أيام العمل');
+  }
+  dueAmounts(dues: DoctorDues) { return dues.byCurrency?.length ? dues.byCurrency : [dues]; }
+  formatMoney(value: number, currency: string): string { return money(value, currency, this.i18n.language()); }
+  t(en: string, ar: string): string { return this.i18n.language() === 'ar' ? ar : en; }
 }

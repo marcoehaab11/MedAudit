@@ -130,5 +130,6 @@ public enum PlatformAuditAction
     SubscriptionExtended = 126,
     BranchCreated = 127,
     StaffTransferred = 128,
-    PatientTransferred = 129
+    PatientTransferred = 129,
+    AppointmentRoomAssigned = 130
 }

@@ -1,3 +1,4 @@
+import { input, output, OnChanges } from '@angular/core';
 import {
   afterNextRender,
   Component,
@@ -53,6 +54,7 @@ import { DateInputComponent } from '../../shared/date-input/date-input.component
     DateInputComponent,
   ],
   template: `<div class="workspace-intake booking-intake">
+    @if (!embedded()) {
     <section class="workspace-page-head">
       <div>
         <h1>{{ t('New appointment', 'موعد جديد') }}</h1>
@@ -69,6 +71,7 @@ import { DateInputComponent } from '../../shared/date-input/date-input.component
         t('Back to calendar', 'العودة للتقويم')
       }}</a>
     </section>
+    }
 
     @if (error()) {
       <div class="alert error" role="alert">{{ error() }}</div>
@@ -462,6 +465,15 @@ import { DateInputComponent } from '../../shared/date-input/date-input.component
             }
           </select>
         </label>
+        @if (rooms().length) {
+          <label class="workspace-filter-field"><span>{{ t('Room', 'الغرفة') }}</span>
+            <select formControlName="roomId">
+              <option value="">{{ t('Unassigned', 'بدون غرفة') }}</option>
+              @for (room of rooms(); track room.id) { <option [value]="room.id">{{ room.name }}</option> }
+            </select>
+          </label>
+        }
+
         <label>
           {{ t('Notes', 'ملاحظات') }}
           <textarea formControlName="notes" maxlength="2000"></textarea>
@@ -526,7 +538,11 @@ import { DateInputComponent } from '../../shared/date-input/date-input.component
         </section>
       }
       <div class="form-actions">
-        <a class="button" routerLink="/appointments">{{ t('Cancel', 'إلغاء') }}</a>
+        @if (embedded()) {
+          <button class="button" type="button" [disabled]="saving()" (click)="cancelled.emit()">{{ t('Cancel', 'إلغاء') }}</button>
+        } @else {
+          <a class="button" routerLink="/appointments">{{ t('Cancel', 'إلغاء') }}</a>
+        }
         <button class="primary" [disabled]="saving() || slotsLoading()" [attr.aria-busy]="saving()">
           {{
             saving() ? t('Creating…', 'جارٍ الإنشاء…') : t('Confirm appointment', 'تأكيد الموعد')
@@ -766,13 +782,22 @@ import { DateInputComponent } from '../../shared/date-input/date-input.component
     }
   </div>`,
 })
-export class AppointmentCreateComponent implements OnInit {
+export class AppointmentCreateComponent implements OnInit, OnChanges {
   private readonly injector = inject(Injector);
   private readonly api = inject(AppointmentApiService);
   private readonly patientApi = inject(PatientApiService);
   private readonly doctorApi = inject(DoctorApiService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  readonly embedded = input(false);
+  readonly rooms = signal<import('./appointment-api.service').ClinicRoom[]>([]);
+  readonly initialDate = input('');
+  readonly created = output<void>();
+  readonly cancelled = output<void>();
+
+  ngOnChanges(): void {
+    if (this.initialDate()) this.form.controls.date.setValue(this.initialDate());
+  }
   private readonly destroyRef = inject(DestroyRef);
   readonly i18n = inject(LocalizationService);
   readonly patients = signal<PatientListItem[]>([]);
@@ -825,6 +850,7 @@ export class AppointmentCreateComponent implements OnInit {
     durationMinutes: [60, [Validators.required, Validators.min(5)]],
     isEmergency: [false],
     type: [3, Validators.required],
+    roomId: '',
     notes: ['', [Validators.maxLength(2000)]],
   });
   readonly showNewPatientModal = signal(false);
@@ -858,6 +884,10 @@ export class AppointmentCreateComponent implements OnInit {
 
   constructor() {
     this.destroyRef.onDestroy(() => this.restoreDialogScroll());
+    this.api.rooms().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: rooms => this.rooms.set(rooms),
+      error: () => {},
+    });
     const qDate = this.route.snapshot.queryParamMap.get('date');
     if (qDate) {
       this.form.controls.date.setValue(qDate);
@@ -1130,12 +1160,19 @@ export class AppointmentCreateComponent implements OnInit {
           durationMinutes: x.durationMinutes,
         },
         notes: x.notes || undefined,
+        roomId: x.roomId || undefined,
       })
       .subscribe({
-        next: () =>
-          this.router.navigate(['/appointments'], {
-            state: { message: this.t('Appointment created.', 'تم إنشاء الموعد.') },
-          }),
+        next: () => {
+          if (this.embedded()) {
+            this.saving.set(false);
+            this.created.emit();
+          } else {
+            void this.router.navigate(['/appointments'], {
+              state: { message: this.t('Appointment created.', 'تم إنشاء الموعد.') },
+            });
+          }
+        },
         error: (e: any) => {
           this.saving.set(false);
           const conflictMsg =

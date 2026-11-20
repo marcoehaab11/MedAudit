@@ -332,15 +332,15 @@ public sealed partial class RowLevelSecurityTests(RowSecurityDatabase database) 
     }
 
     [Fact]
-    public async Task All91TablesAreForcedAndRuntimeCannotOwnOrBypassThem()
+    public async Task All92TablesAreForcedAndRuntimeCannotOwnOrBypassThem()
     {
         await DatabaseSecurityBootstrap.VerifyRuntimeAsync(database.Services);
         await using var connection = new NpgsqlConnection(database.OwnerConnection);
         await connection.OpenAsync();
         await using var command = new NpgsqlCommand("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='r' AND c.relrowsecurity AND c.relforcerowsecurity", connection);
-        Assert.Equal(91L, await command.ExecuteScalarAsync());
+        Assert.Equal(92L, await command.ExecuteScalarAsync());
         command.CommandText = "SELECT count(*) FROM pg_policies WHERE schemaname='public'";
-        Assert.Equal(374L, await command.ExecuteScalarAsync());
+        Assert.Equal(378L, await command.ExecuteScalarAsync());
     }
 
     [Fact]
@@ -626,6 +626,7 @@ public sealed class RowSecurityDatabase : IAsyncLifetime
         app.UseExceptionHandler(); app.UseRouting(); app.UseMiddleware<SessionSecurityMiddleware>();
         app.UseAuthentication(); app.UseMiddleware<TenantResolutionMiddleware>(); app.UseAuthorization();
         app.MapClinicalWorkflowEndpoints(); app.MapImplantEndpoints(); app.MapIdentityEndpoints(); app.MapPatientEndpoints(); app.MapPublicBookingEndpoints(); app.MapOnboardingEndpoints(); app.MapBranchEndpoints(); app.MapBackupEndpoints();
+        app.MapDoctorEndpoints(); app.MapAppointmentEndpoints(); app.MapPrescriptionEndpoints();
         await app.StartAsync();
         return app;
     }

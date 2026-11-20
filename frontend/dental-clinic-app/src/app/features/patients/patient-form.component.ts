@@ -1,3 +1,4 @@
+import { input, output } from '@angular/core';
 import { Component, ElementRef, inject, signal, ViewChildren, QueryList } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -52,6 +53,7 @@ export const COMMON_MEDICATIONS: TagSuggestion[] = [
     DateInputComponent,
   ],
   template: `<div class="workspace-intake patient-intake">
+    @if (!embedded()) {
     <a class="back" routerLink="/patients"
       >{{ i18n.language() === 'ar' ? '→' : '←' }}
       {{ t('Back to patients', 'العودة إلى المرضى') }}</a
@@ -69,6 +71,7 @@ export const COMMON_MEDICATIONS: TagSuggestion[] = [
         </p>
       </div>
     </section>
+    }
     @if (loading()) {
       <div class="loading" role="status">{{ t('Loading patient…', 'جارٍ تحميل المريض…') }}</div>
     } @else if (loadError()) {
@@ -403,6 +406,9 @@ export const COMMON_MEDICATIONS: TagSuggestion[] = [
           </section>
         </fieldset>
         <div class="form-actions">
+          @if (embedded()) {
+            <button type="button" class="button" [disabled]="saving()" (click)="cancelled.emit()">{{ t('Cancel', 'إلغاء') }}</button>
+          } @else {
           <a
             class="button"
             routerLink="/patients"
@@ -410,6 +416,7 @@ export const COMMON_MEDICATIONS: TagSuggestion[] = [
             (click)="saving() && $event.preventDefault()"
             >{{ t('Cancel', 'إلغاء') }}</a
           >
+          }
           <button class="primary" [disabled]="saving()">
             {{ saving() ? t('Saving…', 'جارٍ الحفظ…') : t('Save patient', 'حفظ المريض') }}
           </button>
@@ -419,6 +426,9 @@ export const COMMON_MEDICATIONS: TagSuggestion[] = [
   </div>`,
 })
 export class PatientFormComponent {
+  readonly embedded = input(false);
+  readonly created = output<string>();
+  readonly cancelled = output<void>();
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly api = inject(PatientApiService);
   private readonly router = inject(Router);
@@ -565,6 +575,11 @@ export class PatientFormComponent {
     }
   }
   private saved(id: string): void {
+    if (this.embedded()) {
+      this.saving.set(false);
+      this.created.emit(id);
+      return;
+    }
     void this.router.navigate(['/patients', id], {
       state: { success: this.t('Patient saved successfully.', 'تم حفظ المريض بنجاح.') },
     });

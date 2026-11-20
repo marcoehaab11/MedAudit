@@ -5,16 +5,8 @@
       <h1>{{ t('Clinic overview', 'نظرة عامة على العيادة') }}</h1>
       <p class="page-description">{{ t('Welcome back,', 'مرحباً بعودتك،') }} {{ displayName() }}</p>
     </div>
-    <div class="workspace-actions">
-      @if (auth.hasPermission('Appointments.Create')) {
-        <a class="button primary" routerLink="/appointments/create">{{
-          t('Book appointment', 'حجز موعد')
-        }}</a>
-      }
-      @if (auth.hasPermission('Patients.Create')) {
-        <a class="button" routerLink="/patients/create">{{ t('Add patient', 'إضافة مريض') }}</a>
-      }
-    </div>
+    <app-appointment-intake-actions [date]="selectedDate()"
+      (appointmentCreated)="loadDashboardData()" (patientCreated)="loadDashboardData()" />
   </header>
   @if (
     isDoctor() && auth.hasPermission('Appointments.View') && auth.hasPermission('Examination.View')

@@ -17,7 +17,7 @@ public sealed class DoctorCompensationCalculator : IDoctorCompensationCalculator
         if (rule?.Type is not (CompensationType.Percentage or CompensationType.FixedSalaryAndPercentage) || rule.Percentage is null)
             return new(0, null, rule is null ? "No effective compensation rule" : $"{rule.Type}; fixed salary excluded from treatment cost");
         var amount = decimal.Round(treatmentAmount * rule.Percentage.Value / 100m, 2, MidpointRounding.AwayFromZero);
-        return new(amount, rule.Percentage, $"Rule={rule.Id:D};Type={rule.Type};Percentage={rule.Percentage.Value.ToString(CultureInfo.InvariantCulture)};EffectiveFrom={rule.EffectiveFrom:yyyy-MM-dd};EffectiveTo={rule.EffectiveTo:yyyy-MM-dd}");
+        return new(amount, rule.Percentage, $"Rule={rule.Id:D};Type={rule.Type};Basis={rule.CommissionBasis};Percentage={rule.Percentage.Value.ToString(CultureInfo.InvariantCulture)};EffectiveFrom={rule.EffectiveFrom:yyyy-MM-dd};EffectiveTo={rule.EffectiveTo:yyyy-MM-dd}");
     }
 }
 
@@ -64,7 +64,7 @@ internal sealed class FinancialCategoryService(IFinanceStore store, IPermissionS
     private void Audit(PlatformAuditAction action, Guid id) => store.AddAudit(new(tenant.RequireTenantId(), user.UserId, action, nameof(FinancialCategory), id, clock.UtcNow, null));
 }
 
-internal sealed class PaymentService(IFinanceStore store, IPermissionService permissions, ICurrentTenant tenant,
+internal sealed class PaymentService(IFinanceStore store, IDoctorCompensationCalculator calculator, IPermissionService permissions, ICurrentTenant tenant,
     ICurrentUser user, ISystemClock clock) : IPaymentService
 {
     public async Task<Guid> CreateAsync(PaymentInput x, CancellationToken token)
@@ -124,6 +124,26 @@ internal sealed class PaymentService(IFinanceStore store, IPermissionService per
         if (amount <= 0 || amount > revenue.Amount - paid) throw new FinanceConflictException($"Payment exceeds the outstanding revenue amount. (Amount: {amount}, Revenue: {revenue.Amount}, Paid: {paid})");
         var item = new Payment(tenant.RequireTenantId(), revenue.PatientId, revenue.Id, revenue.TreatmentId, amount, revenue.Currency, x.PaymentMethod, x.Reference, x.Notes, paidAt, user.UserId ?? throw new InvalidOperationException("Authenticated user is required."), clock.UtcNow);
         store.AddPayment(item); store.AddTransaction(new(item.TenantId, FinancialTransactionType.Payment, item.Amount, item.Currency, item.PaidAt, FinancialSourceType.Payment, item.Id, "Payment received", item.CreatedAt));
+        if (revenue.PaidCommissionRuleId is Guid ruleId && revenue.TreatmentId is Guid treatmentId &&
+            revenue.DoctorProfileId is Guid doctorId)
+        {
+            var rule = await store.CompensationRuleByIdAsync(ruleId, token)
+                ?? throw new FinanceConflictException("The recorded doctor commission rule could not be found.");
+            var total = calculator.Calculate(rule, paid + item.Amount);
+            var previous = calculator.Calculate(rule, paid);
+            var amountDue = total.Amount - previous.Amount;
+            if (amountDue > 0)
+            {
+                var cost = new DoctorCompensationCost(item.TenantId, treatmentId, doctorId, amountDue,
+                    item.Currency, total.Snapshot, item.PaidAt, item.CreatedAt, item.Id);
+                store.AddDoctorCost(cost);
+                store.AddTransaction(new(cost.TenantId, FinancialTransactionType.DoctorCompensation, cost.Amount,
+                    cost.Currency, cost.OccurredAt, FinancialSourceType.DoctorCompensation, cost.Id,
+                    "Payment-based doctor commission", item.CreatedAt));
+                store.AddAudit(new(cost.TenantId, user.UserId, PlatformAuditAction.DoctorCompensationRecorded,
+                    nameof(DoctorCompensationCost), cost.Id, item.CreatedAt, null));
+            }
+        }
         store.AddAudit(new(item.TenantId, user.UserId, PlatformAuditAction.PaymentCreated, nameof(Payment), item.Id, clock.UtcNow, null)); await store.SaveChangesAsync(token); await transaction.CommitAsync(token); return item.Id;
     }
     internal static DateTimeOffset ToUtc(DateOnly date, TimeOnly time, string zoneId)
@@ -158,12 +178,19 @@ internal sealed class TreatmentRevenueCreator(IFinanceStore store, IDoctorCompen
         if (category is null) throw new FinanceConflictException("Treatment revenue category is not initialized.");
         var currency = await store.CurrencyAsync(token); var now = clock.UtcNow;
         var occurredAt = treatment.CompletedAt ?? treatment.CreatedAt;
-        var revenue = new Revenue(tenant.RequireTenantId(), category.Id, treatment.PatientId, treatment.Id, treatment.TreatmentPlanId, treatment.DoctorProfileId, treatment.Amount, currency, treatment.Name, occurredAt, now);
-        store.AddRevenue(revenue); store.AddTransaction(new(revenue.TenantId, FinancialTransactionType.Revenue, revenue.Amount, revenue.Currency, revenue.OccurredAt, FinancialSourceType.Revenue, revenue.Id, revenue.Description, now));
-        store.AddAudit(new(revenue.TenantId, user.UserId, PlatformAuditAction.RevenueCreated, nameof(Revenue), revenue.Id, now, null));
         var range = await store.ResolveRangeAsync(new(FinancePeriod.Custom, DateOnly.FromDateTime(occurredAt.UtcDateTime), DateOnly.FromDateTime(occurredAt.UtcDateTime)), token);
         var date = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(occurredAt, TimeZoneInfo.FindSystemTimeZoneById(range.TimeZone)).DateTime);
-        var result = calculator.Calculate(await store.FindCompensationRuleAsync(treatment.DoctorProfileId, date, token), treatment.Amount);
+        var rule = await store.FindCompensationRuleAsync(treatment.DoctorProfileId, date, token);
+        var paymentBasis = rule?.CommissionBasis == CommissionBasis.AmountPaid;
+        var revenue = new Revenue(tenant.RequireTenantId(), category.Id, treatment.PatientId, treatment.Id,
+            treatment.TreatmentPlanId, treatment.DoctorProfileId, treatment.Amount, currency, treatment.Name,
+            occurredAt, now, paymentBasis ? rule!.Id : null);
+        store.AddRevenue(revenue);
+        store.AddTransaction(new(revenue.TenantId, FinancialTransactionType.Revenue, revenue.Amount, revenue.Currency,
+            revenue.OccurredAt, FinancialSourceType.Revenue, revenue.Id, revenue.Description, now));
+        store.AddAudit(new(revenue.TenantId, user.UserId, PlatformAuditAction.RevenueCreated, nameof(Revenue), revenue.Id, now, null));
+        if (paymentBasis) return;
+        var result = calculator.Calculate(rule, treatment.Amount);
         store.AddAudit(new(revenue.TenantId, user.UserId, PlatformAuditAction.DoctorCompensationCalculated, nameof(DoctorCompensationCost), treatment.Id, now, null));
         if (result.Amount > 0) { var cost = new DoctorCompensationCost(revenue.TenantId, treatment.Id, treatment.DoctorProfileId, result.Amount, currency, result.Snapshot, occurredAt, now); store.AddDoctorCost(cost); store.AddTransaction(new(cost.TenantId, FinancialTransactionType.DoctorCompensation, cost.Amount, cost.Currency, cost.OccurredAt, FinancialSourceType.DoctorCompensation, cost.Id, "Treatment percentage compensation", now)); store.AddAudit(new(cost.TenantId, user.UserId, PlatformAuditAction.DoctorCompensationRecorded, nameof(DoctorCompensationCost), cost.Id, now, null)); }
     }

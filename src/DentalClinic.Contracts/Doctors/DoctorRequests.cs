@@ -9,4 +9,4 @@ public sealed record SchedulePeriodRequest(int DayOfWeek, TimeOnly StartTime, Ti
     int SlotDurationMinutes, IReadOnlyCollection<ScheduleBreakRequest> Breaks);
 public sealed record DoctorScheduleRequest(IReadOnlyCollection<SchedulePeriodRequest> Periods);
 public sealed record DoctorCompensationRequest(int CompensationType, decimal? FixedAmount,
-    decimal? Percentage, DateOnly EffectiveFrom, DateOnly? EffectiveTo);
+    decimal? Percentage, DateOnly EffectiveFrom, DateOnly? EffectiveTo, int CommissionBasis = 0);

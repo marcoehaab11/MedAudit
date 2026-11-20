@@ -11,6 +11,7 @@ namespace DentalClinic.Infrastructure.Persistence;
 
 internal sealed class AppointmentStore(ApplicationDbContext context) : IAppointmentStore
 {
+    public Task<bool> RoomExistsAsync(Guid id, CancellationToken token) => context.ClinicRooms.AnyAsync(x => x.Id == id, token);
     public Task<Patient?> FindPatientAsync(Guid id, CancellationToken cancellationToken) =>
         context.Patients.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
 
@@ -78,7 +79,7 @@ internal sealed class AppointmentStore(ApplicationDbContext context) : IAppointm
                 x.DoctorProfileId,
                 context.DoctorProfiles.Where(d => d.Id == x.DoctorProfileId)
                     .Select(d => context.ClinicUsers.Where(u => u.Id == d.ClinicUserId).Select(u => u.DisplayName).Single()).Single(),
-                x.Type, x.Status, x.StartAt, x.EndAt, x.DurationMinutes, timeZone))
+                x.Type, x.Status, x.StartAt, x.EndAt, x.DurationMinutes, timeZone, x.RoomId, x.ConfirmedAt))
             .ToListAsync(cancellationToken);
         return new PagedResult<AppointmentListItem>(items, query.Page, query.PageSize, total);
     }
@@ -92,7 +93,7 @@ internal sealed class AppointmentStore(ApplicationDbContext context) : IAppointm
         catch (DbUpdateException exception) when (exception.InnerException is PostgresException postgres &&
             postgres.SqlState is PostgresErrorCodes.ExclusionViolation or PostgresErrorCodes.DeadlockDetected)
         {
-            throw new AppointmentConflictException("The selected doctor or patient is no longer available for this time.");
+            throw new AppointmentConflictException("The selected doctor, patient, or room is no longer available for this time.");
         }
     }
 
@@ -108,6 +109,6 @@ internal sealed class AppointmentStore(ApplicationDbContext context) : IAppointm
             x.Type, x.Status, x.StartAt, x.EndAt, x.DurationMinutes, x.Notes, x.CancellationReason,
             x.CreatedAt, x.UpdatedAt, x.ConfirmedAt, x.CheckedInAt, x.CompletedAt, x.CancelledAt,
             context.TenantConfigurations.Select(c => c.TimeZone).Single(),
-            context.DoctorProfiles.Where(d => d.Id == x.DoctorProfileId).Select(d => d.ConsultationDurationMinutes).Single()));
+            context.DoctorProfiles.Where(d => d.Id == x.DoctorProfileId).Select(d => d.ConsultationDurationMinutes).Single(), x.RoomId));
     }
 }

@@ -1,6 +1,7 @@
 namespace DentalClinic.Application.Identity;
 
-public sealed record CreateUserCommand(string DisplayName, string Email, string Password, string? Phone, IReadOnlyCollection<Guid> RoleIds, IReadOnlyCollection<string>? Permissions = null);
+public sealed record CreateUserCommand(string DisplayName, string Email, string Password, string? Phone, IReadOnlyCollection<Guid> RoleIds, IReadOnlyCollection<string>? Permissions = null,
+    string? DoctorSpecialty = null, decimal? DoctorCommission = null, Domain.Doctors.CommissionBasis CommissionBasis = Domain.Doctors.CommissionBasis.TreatmentValue);
 public sealed record InviteUserCommand(string DisplayName, string Email, string? Phone, IReadOnlyCollection<Guid> RoleIds, IReadOnlyCollection<string>? Permissions = null);
 public sealed record UpdateUserCommand(Guid Id, string DisplayName, string? Phone);
 public sealed record AssignUserRolesCommand(Guid UserId, IReadOnlyCollection<Guid> RoleIds);

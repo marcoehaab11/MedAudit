@@ -19,11 +19,11 @@ public sealed record PrescriptionItemDetails(Guid Id, Guid? MedicationId, string
 public sealed record PrescriptionDetails(Guid Id, string PrescriptionNumber, Guid PatientId, string PatientName, Guid DoctorProfileId,
     string DoctorName, Guid? AppointmentId, Guid? ExaminationId, Guid? TreatmentId, PrescriptionStatus Status, string? Notes,
     DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, DateTimeOffset? IssuedAt, DateTimeOffset? CancelledAt, string? DocumentReference,
-    Guid Version, IReadOnlyCollection<PrescriptionItemDetails> Items);
+    Guid Version, IReadOnlyCollection<PrescriptionItemDetails> Items, string? PatientNumber = null);
 public sealed record PrescriptionListItem(Guid Id, string PrescriptionNumber, Guid PatientId, string PatientName, Guid DoctorProfileId,
-    string DoctorName, PrescriptionStatus Status, DateTimeOffset CreatedAt, DateTimeOffset? IssuedAt);
+    string DoctorName, PrescriptionStatus Status, DateTimeOffset CreatedAt, DateTimeOffset? IssuedAt, string? PatientNumber = null);
 public sealed record PrescriptionSearch(Guid? PatientId = null, Guid? DoctorProfileId = null, PrescriptionStatus? Status = null,
-    DateOnly? From = null, DateOnly? To = null, int Page = 1, int PageSize = 20);
+    DateOnly? From = null, DateOnly? To = null, int Page = 1, int PageSize = 20, string? Search = null, bool IssuedOnly = false);
 public sealed record PrescriptionPatient(Guid Id, string Name, bool IsActive);
 public sealed record PrescriptionDoctor(Guid Id, Guid UserId, string Name, string Specialization, string? LicenseNumber, bool IsActive);
 public sealed record PrescriptionAssociation(Guid Id, Guid PatientId, Guid DoctorProfileId);

@@ -1,3 +1,4 @@
+import { DoctorDetailsComponent } from '../doctors/doctor-details.component';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -12,7 +13,7 @@ import { PermissionMatrixComponent } from './permission-matrix.component';
 @Component({
   styleUrl: './users.scss',
   selector: 'app-user-details',
-  imports: [ReactiveFormsModule, RouterLink, DatePipe, PhoneInputComponent, PermissionMatrixComponent],
+  imports: [DoctorDetailsComponent, ReactiveFormsModule, RouterLink, DatePipe, PhoneInputComponent, PermissionMatrixComponent],
   template: `
     <a class="back" routerLink="/users">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="inline-size: 1rem; block-size: 1rem;">
@@ -115,6 +116,13 @@ import { PermissionMatrixComponent } from './permission-matrix.component';
             </div> }
           </form>
         </section>
+
+        @if (user()?.doctorProfileId && auth.hasPermission('Doctors.View')) {
+          <details class="panel">
+            <summary>{{ text('Doctor profile and compensation', 'ملف الطبيب والمستحقات') }}</summary>
+            <app-doctor-details [doctorId]="user()!.doctorProfileId!" />
+          </details>
+        }
 
         <!-- Roles and Permissions -->
         @if (auth.hasPermission('Users.ManageRoles') && id !== auth.userId()) { <section class="panel">

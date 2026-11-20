@@ -70,13 +70,6 @@ export const NAVIGATION_GROUPS: readonly NavigationGroup[] = [
         en: 'Treatment plans',
         ar: 'خطط العلاج',
         icon: 'M8 2h8v4H8z M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2 M8 11h8 M8 16h8',
-        permission: 'TreatmentPlans.View',
-      },
-      {
-        path: '/treatments',
-        en: 'Treatments',
-        ar: 'العلاجات',
-        icon: 'M2 12h4l3-9 6 18 3-9h4',
         permission: 'Treatments.View',
       },
       {
