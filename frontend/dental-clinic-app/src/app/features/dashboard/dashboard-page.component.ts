@@ -1,10 +1,10 @@
 import { AppointmentIntakeActionsComponent } from '../appointments/appointment-intake-actions.component';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, HostListener, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { afterNextRender, Component, ElementRef, HostListener, Injector, computed, inject, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
+import { RouterLink } from '@angular/router';
+import { forkJoin, of, Subscription } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { AuthService } from '../../core/auth.service';
 import { LocalizationService } from '../../core/localization.service';
@@ -23,7 +23,7 @@ import { DoctorDues, FinanceApiService } from '../finance/finance-api.service';
 import { appointmentStatus, appointmentType } from '../appointments/appointment-labels';
 import { DoctorApiService, DoctorListItem } from '../doctors/doctor-api.service';
 import { PatientApiService, PatientListItem } from '../patients/patient-api.service';
-import { DashboardReport, ReportsApiService } from '../reports/reports-api.service';
+import { DashboardReport, ReportPeriod, ReportsApiService } from '../reports/reports-api.service';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -43,8 +43,10 @@ import { DashboardReport, ReportsApiService } from '../reports/reports-api.servi
 export class DashboardPageComponent implements OnInit, OnDestroy {
   protected readonly auth = inject(AuthService);
   protected readonly i18n = inject(LocalizationService);
-  private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly injector = inject(Injector);
+  private readonly detailsPanel = viewChild<ElementRef<HTMLElement>>('detailsPanel');
+  private detailsTrigger?: HTMLElement;
   private readonly appointmentApi = inject(AppointmentApiService);
   private readonly doctorApi = inject(DoctorApiService);
   private readonly patientApi = inject(PatientApiService);
@@ -67,11 +69,18 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
   readonly upcomingAppointments = signal<AppointmentItem[]>([]);
   readonly recentPatients = signal<PatientListItem[]>([]);
   readonly dashboardReport = signal<DashboardReport | null>(null);
+  readonly todayAppointments = signal<AppointmentSearchResult | null>(null);
+  readonly waitingPatients = computed(() => {
+    const items = this.todayAppointments()?.page.items;
+    return items ? new Set(items.filter((item) => item.status === 3).map((item) => item.patientId)).size : null;
+  });
+  private scheduleRequest?: Subscription;
+  private todayRequest?: Subscription;
   readonly totalPatientsCount = signal<number>(0);
 
   // Appointments schedule state matching AppointmentsPageComponent
   readonly selectedDate = signal<string>(this.iso(new Date()));
-  readonly view = signal<'day' | 'week'>('day');
+  readonly view = signal<'day' | 'week' | 'month'>('day');
   readonly doctorFilter = signal<string>('');
   readonly statusFilter = signal<string>('');
   readonly typeFilter = signal<string>('');
@@ -95,30 +104,25 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
     return this.selectedDate() === this.iso(new Date());
   });
 
-  readonly isTomorrow = computed(() => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return this.selectedDate() === this.iso(tomorrow);
+  readonly scheduleRange = computed(() => {
+    const date = this.parseDate(this.selectedDate());
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    if (this.view() === 'month') {
+      return { from: this.iso(new Date(year, month, 1)), to: this.iso(new Date(year, month + 1, 0)) };
+    }
+    const lastDay = date.getDate() + (this.view() === 'week' ? 6 : 0);
+    return { from: this.selectedDate(), to: this.iso(new Date(year, month, lastDay)) };
   });
 
-  readonly days = computed(() => {
-    const start = this.parseDate(this.selectedDate());
-    return Array.from({ length: this.view() === 'day' ? 1 : 7 }, (_, i) =>
-      this.iso(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i)),
-    );
-  });
+  revenueCaption(): string {
+    const report = this.dashboardReport();
+    return report?.revenue === undefined ? '—' : money(report.revenue, report.currency, this.i18n.language());
+  }
 
-  // Formatted date string for hero
-  readonly formattedTodayDate = computed(() => {
-    const now = new Date();
-    const isAr = this.i18n.language() === 'ar';
-    return now.toLocaleDateString(isAr ? 'ar-EG' : 'en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  });
+  patientInitials(name: string): string {
+    return name.trim().split(/\s+/).slice(0, 2).map((part) => part.charAt(0)).join('');
+  }
 
   duesCaption(): string {
     const dues = this.myDues();
@@ -140,11 +144,17 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
         .subscribe({ next: (value) => this.myDues.set(value), error: () => {} });
   }
 
-  ngOnDestroy(): void {}
+  ngOnDestroy(): void {
+    this.scheduleRequest?.unsubscribe();
+    this.todayRequest?.unsubscribe();
+  }
 
   @HostListener('window:focus')
   refreshScheduleOnFocus(): void {
-    if (!this.loading() && !this.appointmentsLoading() && !this.appointmentActionPending()) this.loadAppointments();
+    if (!this.loading() && !this.appointmentsLoading() && !this.appointmentActionPending()) {
+      this.loadAppointments();
+      this.loadTodayAppointments();
+    }
   }
 
   loadDashboardData(): void {
@@ -153,6 +163,7 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
     this.upcomingUnavailable.set(false);
     this.patientsUnavailable.set(false);
     this.dashboardReport.set(null);
+    this.loadTodayAppointments();
 
     const now = new Date();
     const tomorrowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
@@ -180,7 +191,7 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
       );
 
     const reportReq = this.auth.hasPermission('Reports.View')
-      ? this.reportsApi.getDashboard().pipe(catchError(() => of(null)))
+      ? this.reportsApi.getDashboard({ period: ReportPeriod.Today }).pipe(catchError(() => of(null)))
       : of(null);
 
     const doctorsReq = this.auth.hasPermission('Doctors.View')
@@ -224,14 +235,23 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
     });
   }
 
+  private loadTodayAppointments(): void {
+    if (!this.auth.hasPermission('Appointments.View')) return;
+    this.todayRequest?.unsubscribe();
+    const today = this.iso(new Date());
+    this.todayRequest = this.appointmentApi.appointments({ from: today, to: today })
+      .pipe(catchError(() => of(null)))
+      .subscribe((result) => this.todayAppointments.set(result));
+  }
+
   loadAppointments(): void {
+    if (!this.auth.hasPermission('Appointments.View')) return;
+    this.scheduleRequest?.unsubscribe();
     this.appointmentsLoading.set(true);
     this.scheduleError.set('');
-    const days = this.days();
-    this.appointmentApi
+    this.scheduleRequest = this.appointmentApi
       .appointments({
-        from: days[0],
-        to: days.at(-1)!,
+        ...this.scheduleRange(),
         doctorProfileId: this.doctorFilter() || undefined,
         status: this.statusFilter() || undefined,
         type: this.typeFilter() || undefined,
@@ -246,6 +266,9 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (x) => {
+          if (x) {
+            x.page.items.sort((first, second) => Date.parse(first.startAt) - Date.parse(second.startAt));
+          }
           this.result.set(x);
           this.appointmentsLoading.set(false);
           if (this.selected()) {
@@ -264,17 +287,19 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
       });
   }
 
-  setView(view: 'day' | 'week') {
+  setView(view: 'day' | 'week' | 'month') {
     this.view.set(view);
     this.loadAppointments();
   }
 
   selectToday() {
+    this.view.set('day');
     this.selectedDate.set(this.iso(new Date()));
     this.loadAppointments();
   }
 
   selectTomorrow() {
+    this.view.set('day');
     const d = new Date();
     d.setDate(d.getDate() + 1);
     this.selectedDate.set(this.iso(d));
@@ -306,21 +331,22 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
 
   move(direction: number) {
     const d = this.parseDate(this.selectedDate());
-    d.setDate(d.getDate() + direction * (this.view() === 'day' ? 1 : 7));
+    if (this.view() === 'month') {
+      d.setDate(1);
+      d.setMonth(d.getMonth() + direction);
+    } else {
+      d.setDate(d.getDate() + direction * (this.view() === 'day' ? 1 : 7));
+    }
     this.selectedDate.set(this.iso(d));
     this.loadAppointments();
   }
 
-  itemsFor(day: string) {
-    return (
-      this.result()?.page.items.filter((x) => this.localDate(x.startAt, x.timeZone) === day) ?? []
-    );
-  }
-
-  open(item: AppointmentItem) {
+  open(item: AppointmentItem, event: Event) {
+    this.detailsTrigger = event.currentTarget as HTMLElement;
     this.appointmentApi.appointment(item.id).subscribe({
       next: (x) => {
         this.selected.set(x);
+        this.focusDetails();
         this.rescheduleForm.setValue({
           date: this.localDate(x.startAt, x.timeZone),
           startTime: '',
@@ -329,13 +355,20 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
         this.loadRescheduleAvailability();
       },
       error: () => {
-        this.selected.set(item as any);
+        this.selected.set(item as AppointmentDetails);
+        this.focusDetails();
       },
     });
   }
 
+  private focusDetails(): void {
+    afterNextRender(() => this.detailsPanel()?.nativeElement.focus(), { injector: this.injector });
+  }
+
   closeDetails(): void {
     this.selected.set(null);
+    if (this.detailsTrigger?.isConnected) this.detailsTrigger.focus();
+    this.detailsTrigger = undefined;
   }
 
   loadRescheduleAvailability() {
@@ -372,6 +405,7 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
       next: () => {
         this.showTemporarySuccess(this.t('Appointment updated.', 'تم تحديث الموعد بنجاح.'));
         this.loadAppointments();
+        this.loadTodayAppointments();
         this.appointmentApi.appointment(id).subscribe({
           next: (x) => {
             this.selected.set(x);
@@ -402,6 +436,7 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
       next: () => {
         this.showTemporarySuccess(this.t('Appointment cancelled.', 'تم إلغاء الموعد.'));
         this.loadAppointments();
+        this.loadTodayAppointments();
         this.selected.set(null);
       },
       error: () => this.error.set(this.t('Cancellation failed.', 'تعذر الإلغاء.')),
@@ -417,6 +452,7 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
           this.showTemporarySuccess(this.t('Appointment rescheduled.', 'تمت إعادة جدولة الموعد.'));
           const id = this.selected()!.id;
           this.loadAppointments();
+          this.loadTodayAppointments();
           this.appointmentApi.appointment(id).subscribe((x) => this.selected.set(x));
         },
         error: (e: HttpErrorResponse) => {

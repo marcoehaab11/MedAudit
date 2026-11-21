@@ -6,8 +6,8 @@
   --sidebar-width: 260px;
   --sidebar-rail: 72px;
   --sidebar-current: var(--sidebar-width);
-  --nav-ink: #c3cfdd;
-  --nav-muted: #a3b3c6;
+  --nav-ink: #f3fffc;
+  --nav-muted: #f3fffc;
   display: flex;
   min-block-size: 100dvh;
   background: var(--surface);
@@ -39,26 +39,10 @@
   display: flex;
   flex-direction: column;
   z-index: 200;
-  background: var(--sidebar-start, #101f35);
+  background: #2c8071;
   border-inline-end: 1px solid rgb(255 255 255 / 8%);
   transition: inline-size 180ms ease;
   color: var(--nav-ink);
-}
-.patient-profile-route .sidebar {
-  --sidebar-start: #09685e;
-  --nav-ink: #effffb;
-  --nav-muted: #c5ece3;
-
-  a.nav-item.active {
-    background: #d8f6ee;
-    border-color: #d8f6ee;
-    color: #075549;
-
-    .nav-active-dot { background: #128170; }
-  }
-
-  .sidebar-nav { scrollbar-color: #93d2c4 transparent; }
-  .user-name { color: var(--nav-ink); }
 }
 .sidebar-header {
   min-block-size: 80px;
@@ -141,7 +125,7 @@
   overscroll-behavior: contain;
   padding: 0 0.75rem 1rem;
   scrollbar-width: thin;
-  scrollbar-color: #6c8098 transparent;
+  scrollbar-color: #99d7c9 transparent;
 }
 .nav-group + .nav-group {
   margin-block-start: 0.4rem;
@@ -224,8 +208,8 @@ a.nav-item {
     background: rgb(255 255 255 / 6%);
   }
   &.active {
-    background: rgb(255 255 255 / 11%);
-    border-color: rgb(255 255 255 / 12%);
+    background: #0d5c52;
+    border-color: #0d5c52;
     color: white;
     font-weight: 650;
   }
@@ -630,4 +614,121 @@ a.nav-item {
     padding: 0;
     max-inline-size: none;
   }
+}
+
+.dashboard-route {
+  --workspace-gutter: clamp(1rem, 2vw, 1.75rem);
+  --sidebar-width: 212px;
+
+  .page-content {
+    padding-block-start: 0;
+    background: #f1f8f8;
+  }
+
+  .topbar-mini {
+    min-block-size: 62px;
+    padding-block: .45rem;
+    gap: .8rem;
+    background: #fbfefe;
+    border-color: #e2edee;
+  }
+
+  .sidebar-footer .signout-btn:has(span) {
+    display: flex;
+    gap: .65rem;
+    padding-inline: .75rem;
+    justify-content: flex-start;
+    inline-size: 100%;
+    border-color: transparent;
+    font-size: .86rem;
+  }
+
+  &.collapsed .sidebar-footer .signout-btn span { display: none; }
+  &.collapsed .sidebar-footer .signout-btn:has(span) { justify-content: center; padding-inline: 0; }
+
+  .topbar-right { gap: .35rem; }
+  .clinic-switcher { gap: .4rem; }
+  .clinic-switcher select { max-inline-size: 14vw; }
+}
+
+.dashboard-search,
+.dashboard-date {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  border: 1px solid #dbe9eb;
+  border-radius: 1.5rem;
+  min-block-size: 38px;
+  color: #245655;
+  background: #f4f9fa;
+
+  svg { inline-size: 17px; block-size: 17px; flex: none; }
+}
+
+.dashboard-search {
+  inline-size: clamp(10rem, 20vw, 18rem);
+  min-inline-size: 0;
+
+  input {
+    flex: 1;
+    inline-size: 0;
+    min-inline-size: 0;
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    padding: .4rem .2rem .4rem .55rem;
+    padding-inline: .7rem .15rem;
+    font-size: .78rem;
+    color: #183d41;
+    &::placeholder { color: #526b71; opacity: 1; }
+  }
+
+  button {
+    display: grid;
+    place-items: center;
+    inline-size: 36px;
+    block-size: 34px;
+    flex: none;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    border: 0;
+    border-radius: 50%;
+    box-shadow: none;
+    &:hover { background: #e1f0ed; transform: none; }
+  }
+}
+
+.dashboard-date {
+  padding-inline: .7rem;
+  font-size: .74rem;
+  white-space: nowrap;
+  svg { color: #167466; }
+}
+
+.dashboard-account {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding-inline-start: .65rem;
+  border-inline-start: 1px solid #e2edee;
+  color: #23424b;
+  font-size: .8rem;
+  font-weight: 700;
+  white-space: nowrap;
+
+  > span:first-child { max-inline-size: 12vw; overflow: hidden; text-overflow: ellipsis; }
+  .user-initials { background: #deedf0; color: #245a63; }
+}
+
+@media (max-width: 1120px) {
+  .dashboard-route .dashboard-account { display: none; }
+}
+@media (max-width: 930px) {
+  .dashboard-route .dashboard-date { display: none; }
+}
+@media (max-width: 768px) {
+  .dashboard-route .topbar-mini { gap: .5rem; }
+  .dashboard-route .dashboard-search { order: 1; inline-size: 100%; }
+  .dashboard-route .clinic-switcher select { max-inline-size: min(32vw, 220px); }
 }

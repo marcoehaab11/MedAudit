@@ -23,9 +23,10 @@ describe('DashboardPageComponent data states', () => {
     const fixture = TestBed.createComponent(DashboardPageComponent);
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
+    http.expectOne(r => r.url === '/api/appointments' && r.params.get('from') === r.params.get('to')).flush(empty);
     http.expectOne(r => r.url === '/api/appointments').flush(empty);
     http.expectOne(r => r.url === '/api/patients').flush({ items: [], totalCount: 0 });
-    http.expectOne(r => r.url === '/api/reports/dashboard').flush({ completedTreatments: 2, prescriptionsIssued: 1 });
+    http.expectOne(r => r.url === '/api/reports/dashboard').flush({ revenue: 0, currency: 'EGP' });
     http.expectOne(r => r.url === '/api/doctors').flush({ items: [] });
     http.expectOne(r => r.url === '/api/appointments').flush({}, { status: 503, statusText: 'Unavailable' });
     fixture.detectChanges();
@@ -43,9 +44,10 @@ describe('DashboardPageComponent data states', () => {
     const fixture = TestBed.createComponent(DashboardPageComponent);
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
+    http.expectOne(r => r.url === '/api/appointments' && r.params.get('from') === r.params.get('to')).flush(empty);
     http.expectOne(r => r.url === '/api/appointments').flush({}, { status: 503, statusText: 'Unavailable' });
     http.expectOne(r => r.url === '/api/patients').flush({}, { status: 503, statusText: 'Unavailable' });
-    http.expectOne(r => r.url === '/api/reports/dashboard').flush({ completedTreatments: 2, prescriptionsIssued: 1 });
+    http.expectOne(r => r.url === '/api/reports/dashboard').flush({ revenue: 0, currency: 'EGP' });
     http.expectOne(r => r.url === '/api/doctors').flush({ items: [] });
     http.expectOne(r => r.url === '/api/appointments').flush(empty);
     fixture.detectChanges();

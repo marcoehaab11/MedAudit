@@ -1,7 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
 import { AuthService } from '../../core/auth.service';
 import { PagedPatients, PatientApiService } from './patient-api.service';
@@ -182,6 +182,7 @@ export class PatientsPageComponent {
     sortBy: '1',
   });
   constructor() {
+    this.filters.controls.search.setValue(inject(ActivatedRoute).snapshot.queryParamMap.get('search') ?? '');
     this.load(1);
   }
   resetFilters(): void {

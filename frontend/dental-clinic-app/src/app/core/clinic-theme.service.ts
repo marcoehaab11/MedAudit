@@ -44,9 +44,6 @@ export class ClinicThemeService {
     root.setProperty('--brand-gradient-hover', `linear-gradient(135deg, ${this.mix(theme.primaryColor, '#000000', .13)} 0%, ${this.mix(theme.secondaryColor, '#000000', .13)} 100%)`);
     root.setProperty('--border-focus', theme.primaryColor);
     root.setProperty('--clinic-accent', theme.accentColor);
-    root.setProperty('--sidebar-start', this.mix(theme.primaryColor, '#071536', .83));
-    root.setProperty('--sidebar-middle', this.mix(theme.secondaryColor, '#0a1b42', .86));
-    root.setProperty('--sidebar-end', this.mix(theme.primaryColor, '#051026', .9));
   }
 
   private mix(first: string, second: string, secondWeight: number): string {

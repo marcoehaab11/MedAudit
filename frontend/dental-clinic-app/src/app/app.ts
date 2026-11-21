@@ -39,8 +39,11 @@ export class App implements OnDestroy {
   private previousOverflow: string | null = null;
   private readonly groupOverrides = signal<Record<string, boolean>>({});
   protected readonly currentPath = signal(this.router.url.split('?')[0].split('#')[0]);
-  protected readonly patientProfileRoute = computed(() => /^\/patients\/(?!create(?:\/|$))[^/]+\/?$/.test(this.currentPath()));
-  protected readonly tealWorkspace = computed(() => this.patientProfileRoute() || ['/doctors', '/treatment-plans', '/prescriptions'].includes(this.currentPath()));
+  protected readonly dashboardRoute = computed(() => this.currentPath() === '/dashboard');
+  protected readonly dashboardDate = computed(() => new Intl.DateTimeFormat(
+    this.i18n.language() === 'ar' ? 'ar-EG' : 'en-GB',
+    { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' },
+  ).format(new Date()));
   protected readonly isMobile = signal(window.matchMedia('(max-width: 768px)').matches);
   protected readonly navTooltip = signal<{
     item: NavigationItem;
@@ -155,6 +158,12 @@ export class App implements OnDestroy {
       event.preventDefault();
       first.focus();
     }
+  }
+
+  protected searchPatients(event: SubmitEvent, value: string): void {
+    event.preventDefault();
+    const search = value.trim();
+    if (search) void this.router.navigate(['/patients'], { queryParams: { search } });
   }
 
   protected isGroupOpen(group: NavigationGroup): boolean {

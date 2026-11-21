@@ -12,11 +12,17 @@ import { AuthService } from '../../core/auth.service';
     <div class="actions">
       @if (auth.hasPermission('Appointments.Create')) {
         <button type="button" class="button primary" aria-haspopup="dialog"
-          (click)="mode.set('appointment'); dialog.open()">{{ t('Book appointment', 'حجز موعد') }}</button>
+          (click)="mode.set('appointment'); dialog.open()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 10h18m-9 2v6m-3-3h6"/></svg>
+          {{ t('Book appointment', 'حجز موعد') }}
+        </button>
       }
       @if (auth.hasPermission('Patients.Create')) {
         <button type="button" class="button add-patient" aria-haspopup="dialog"
-          (click)="mode.set('patient'); dialog.open()">{{ t('Add patient', 'إضافة مريض') }}</button>
+          (click)="mode.set('patient'); dialog.open()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="7" r="3"/><path d="M3 20v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2zm15-13v6m-3-3h6"/></svg>
+          {{ t('Add patient', 'إضافة مريض') }}
+        </button>
       }
     </div>
     <app-workspace-dialog #dialog
@@ -36,7 +42,13 @@ import { AuthService } from '../../core/auth.service';
   `,
   styles: `
     .actions { display: flex; flex-wrap: wrap; gap: .65rem; }
-    .actions button { min-block-size: 44px; }
+    .actions button { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-block-size: 44px; box-shadow: none; }
+    .actions svg { inline-size: 18px; block-size: 18px; flex: none; }
+    :host-context(.workspace-dashboard) .actions { flex-direction: row-reverse; justify-content: flex-end; }
+    :host-context(.workspace-dashboard) .primary { background: #15796a; }
+    :host-context(.workspace-dashboard) .primary:hover { background: #0c6659; }
+    :host-context(.workspace-dashboard) .add-patient { background: #f7fcfb; border-color: #258778; }
+    :host-context(.workspace-dashboard) .add-patient:hover { background: #e0f5ef; }
     .add-patient { background: #e0f5ef; color: #105d51; border-color: #c9e9df; }
   `,
 })
