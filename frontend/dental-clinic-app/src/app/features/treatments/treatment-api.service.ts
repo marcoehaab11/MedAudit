@@ -1,5 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { EMPTY, Observable, defer, expand, map, reduce } from 'rxjs';
 
 export interface PriceTier {
   id: string;
@@ -178,6 +179,9 @@ export class TreatmentApiService {
       params: new HttpParams({ fromObject: { page: '1', pageSize: '50', ...filters } }),
     });
   }
+  allPlans(filters: Record<string, string>) {
+    return this.readAllPages((page) => this.plans({ ...filters, page, pageSize: '100' }));
+  }
   plan(id: string) {
     return this.http.get<TreatmentPlan>(`/api/treatment-plans/${id}`);
   }
@@ -212,6 +216,21 @@ export class TreatmentApiService {
     return this.http.get<Page<Treatment>>('/api/treatments', {
       params: new HttpParams({ fromObject: { page: '1', pageSize: '50', ...filters } }),
     });
+  }
+  allTreatments(filters: Record<string, string>) {
+    return this.readAllPages((page) => this.treatments({ ...filters, page, pageSize: '100' }));
+  }
+  private readAllPages<T extends { id: string }>(get: (page: string) => Observable<Page<T>>) {
+    return defer(() =>
+      get('1').pipe(
+        expand((page) => page.page < page.totalPages ? get(String(page.page + 1)) : EMPTY),
+        reduce((items, page) => {
+          for (const item of page.items) items.set(item.id, item);
+          return items;
+        }, new Map<string, T>()),
+        map((items) => Array.from(items.values())),
+      )
+    );
   }
   treatment(id: string) {
     return this.http.get<Treatment>(`/api/treatments/${id}`);

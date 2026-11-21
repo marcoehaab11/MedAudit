@@ -1,15 +1,16 @@
 import { DatePipe } from '@angular/common';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute } from '@angular/router';
-import { EMPTY, Subscription, expand, forkJoin, reduce, timer } from 'rxjs';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Subscription, forkJoin, timer } from 'rxjs';
 import { LocalizationService } from '../../core/localization.service';
 import { Treatment, TreatmentApiService } from './treatment-api.service';
 
 @Component({
   selector: 'app-treatment-monitor',
-  imports: [DatePipe],
+  imports: [DatePipe, RouterLink],
   styleUrl: '../../shared/clinical-register.scss',
+  styles: ['.register-treatment-link { color: var(--brand-dark); font-weight: 700; text-decoration: underline; text-underline-offset: .18em; }'],
   template: `
     <header class="workspace-page-head">
       <div><h1>{{ t('Treatment plans', 'خطط العلاج') }}</h1>
@@ -31,7 +32,7 @@ import { Treatment, TreatmentApiService } from './treatment-api.service';
               <article class="register-row">
                 <strong><bdi>{{ item.patientName }}</bdi></strong>
                 <span><bdi>{{ item.patientNumber || '—' }}</bdi></span>
-                <span><strong><bdi>{{ item.treatmentName }}</bdi></strong>
+                <span><a class="register-treatment-link" [routerLink]="['/treatments', item.id]"><bdi>{{ item.treatmentName }}</bdi></a>
                   @if (item.toothNumbers.length) {
                     <small>{{ t('Tooth', 'السن') }} <bdi dir="ltr">{{ item.toothNumbers.join(', ') }}</bdi></small>
                   }
@@ -75,16 +76,11 @@ export class TreatmentMonitorComponent {
     this.request?.unsubscribe();
     if (!quiet) this.loading.set(true);
     const patientId = this.route.snapshot.queryParamMap.get('patientId');
-    const read = (status: number) => {
-      const get = (page: number) => this.api.treatments({
-        status: String(status), page: String(page), pageSize: '100', ...(patientId ? { patientId } : {}),
-      });
-      return get(1).pipe(
-        expand(page => page.page < page.totalPages ? get(page.page + 1) : EMPTY),
-        reduce((items, page) => items.concat(page.items), [] as Treatment[]),
-      );
-    };
-    this.request = forkJoin({ ongoing: read(3), completed: read(4) })
+    const filters: Record<string, string> = patientId ? { patientId } : {};
+    this.request = forkJoin({
+      ongoing: this.api.allTreatments({ ...filters, status: '3' }),
+      completed: this.api.allTreatments({ ...filters, status: '4' }),
+    })
       .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: result => {
           const all = [...result.ongoing, ...result.completed];

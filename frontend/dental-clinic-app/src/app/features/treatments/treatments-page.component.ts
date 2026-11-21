@@ -1,7 +1,9 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { LocalizationService } from '../../core/localization.service';
 import { Treatment, TreatmentApiService } from './treatment-api.service';
 import { treatmentStatus } from './treatment-labels';
@@ -21,7 +23,7 @@ import { PatientSelectComponent } from '../../shared/patient-select.component';
         </div>
       </section>
 
-      <section class="panel filters" [formGroup]="filters">
+      <form class="panel filters workspace-filters" [formGroup]="filters" (ngSubmit)="load()" [attr.aria-label]="t('Treatment filters', 'تصفية العلاجات')">
         <div class="patient-filter-box">
           <app-patient-select
             formControlName="patientId"
@@ -43,23 +45,34 @@ import { PatientSelectComponent } from '../../shared/patient-select.component';
           }
         </select></label>
 
-        <button type="button" class="btn-filter" (click)="load()">
-          🔍 {{ t('Filter', 'تصفية') }}
-        </button>
-      </section>
+        <div class="filter-actions">
+          <button type="submit" [disabled]="loading()">{{ t('Apply filters', 'تطبيق التصفية') }}</button>
+          <button type="button" class="filter-reset" [disabled]="loading()" (click)="resetFilters()">
+            {{ t('Reset', 'إعادة ضبط') }}
+          </button>
+        </div>
+      </form>
 
-      @if (error()) {
-        <div class="alert error" role="alert">{{ error() }}</div>
-      }
-
-      <section class="panel table-panel">
+      <section class="panel table-panel workspace-results" [attr.aria-busy]="loading()">
+        <header class="workspace-results-head">
+          <h2>{{ t('Treatment results', 'نتائج العلاجات') }}</h2>
+          <span role="status">
+            @if (!loading() && !error()) {
+              {{ t('Results', 'النتائج') }} ({{ items().length }})
+            }
+          </span>
+        </header>
         @if (loading()) {
-          <div class="state">{{ t('Loading executed treatments…', 'جارٍ تحميل قائمة العلاجات…') }}</div>
+          <div class="state" role="status">{{ t('Loading treatments…', 'جارٍ تحميل العلاجات…') }}</div>
+        } @else if (error()) {
+          <div class="state" role="alert">
+            <strong>{{ error() }}</strong>
+            <button type="button" (click)="load()">{{ t('Try again', 'حاول مرة أخرى') }}</button>
+          </div>
         } @else if (!items().length) {
           <div class="empty-data-state">
-            <div class="empty-icon">🦷</div>
             <strong>{{ t('No treatments found', 'لا توجد علاجات مسجلة') }}</strong>
-            <p>{{ t('Executed clinical dental procedures and treatments will appear here.', 'ستظهر هنا جميع الإجراءات العلاجية المنفذة للمرضى.') }}</p>
+            <p>{{ t('Try changing the filters or select a different patient.', 'جرّب تعديل الفلاتر أو اختيار مريض آخر.') }}</p>
           </div>
         } @else {
           <div class="table-scroll">
@@ -119,6 +132,8 @@ import { PatientSelectComponent } from '../../shared/patient-select.component';
 })
 export class TreatmentsPageComponent {
   private readonly api = inject(TreatmentApiService);
+  private readonly destroyRef = inject(DestroyRef);
+  private request?: Subscription;
   readonly i18n = inject(LocalizationService);
   readonly items = signal<Treatment[]>([]);
   readonly loading = signal(true);
@@ -137,15 +152,23 @@ export class TreatmentsPageComponent {
     this.load();
   }
 
-  load() {
+  resetFilters() {
+    this.filters.reset();
+    this.load();
+  }
+
+  load(): void {
+    this.request?.unsubscribe();
+    this.error.set('');
     this.loading.set(true);
-    const f = this.filters.getRawValue();
-    this.api.treatments(Object.fromEntries(Object.entries(f).filter(([, v]) => v))).subscribe({
-      next: (x) => {
-        this.items.set(x.items ?? []);
+    const filters = Object.fromEntries(Object.entries(this.filters.getRawValue()).filter(([, value]) => value));
+    this.request = this.api.allTreatments(filters).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (items) => {
+        this.items.set(items);
         this.loading.set(false);
       },
       error: () => {
+        this.items.set([]);
         this.error.set(this.t('Treatments could not be loaded.', 'تعذر تحميل العلاجات.'));
         this.loading.set(false);
       },
