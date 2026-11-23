@@ -9,6 +9,7 @@ export const financePeriods = (ar = false) => [
   { value: 1, label: ar ? 'اليوم' : 'Today' },
   { value: 2, label: ar ? 'هذا الأسبوع' : 'This week' },
   { value: 3, label: ar ? 'هذا الشهر' : 'This month' },
+  { value: 6, label: ar ? 'الشهر الماضي' : 'Last month' },
   { value: 4, label: ar ? 'هذه السنة' : 'This year' },
   { value: 5, label: ar ? 'مخصص' : 'Custom range' },
 ];

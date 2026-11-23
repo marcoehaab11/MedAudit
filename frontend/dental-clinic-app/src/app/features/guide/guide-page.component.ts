@@ -5,11 +5,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../core/auth.service';
 import { LocalizationService } from '../../core/localization.service';
 import { GUIDE_TOPICS, GuideText, GuideTopic } from './guide-content';
+import { PatientCreateDialogComponent } from '../patients/patient-create-dialog.component';
 
 @Component({
   selector: 'app-guide-page',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, PatientCreateDialogComponent],
   templateUrl: './guide-page.component.html',
   styleUrl: './guide-page.component.scss',
 })
@@ -18,6 +19,7 @@ export class GuidePageComponent implements OnInit {
   protected readonly auth = inject(AuthService);
   protected readonly i18n = inject(LocalizationService);
   protected readonly selectedId = signal('start');
+  protected readonly savedPatient = signal(false);
   protected readonly query = signal('');
   protected readonly group = signal<'all' | GuideTopic['group']>('all');
 

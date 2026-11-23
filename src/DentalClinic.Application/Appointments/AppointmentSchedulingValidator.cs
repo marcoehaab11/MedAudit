@@ -8,7 +8,7 @@ internal sealed class AppointmentSchedulingValidator(IAppointmentStore store)
 {
     public async Task<(Patient Patient, DoctorProfile Doctor, DateTimeOffset StartAt, DateTimeOffset EndAt)> ValidateAsync(
         Guid patientId, Guid doctorProfileId, AppointmentTimeInput time, AppointmentType? type, Guid? excludeAppointmentId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, bool useEmergencyAvailability = false)
     {
         var patient = await store.FindPatientAsync(patientId, cancellationToken);
         if (patient?.Status != PatientStatus.Active)
@@ -17,7 +17,7 @@ internal sealed class AppointmentSchedulingValidator(IAppointmentStore store)
         if (doctor?.Status != DoctorProfileStatus.Active)
             throw AppointmentRules.Error(nameof(doctorProfileId), "An active doctor in this tenant is required.");
 
-        if (type != AppointmentType.Emergency)
+        if (type != AppointmentType.Emergency && !useEmergencyAvailability)
         {
             var schedule = await store.GetScheduleAsync(doctor.Id, cancellationToken);
             AppointmentRules.EnsureScheduleFit(schedule, time.Date, time.StartTime, time.DurationMinutes);

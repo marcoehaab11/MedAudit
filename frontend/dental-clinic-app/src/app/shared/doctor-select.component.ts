@@ -53,12 +53,12 @@ import { DoctorApiService, DoctorLookupItem } from '../features/doctors/doctor-a
         user-select: none;
 
         &:hover:not(.disabled) {
-          border-color: #93c5fd;
+          border-color: var(--picker-selected-ink, #93c5fd);
         }
 
         &.active {
           border-color: var(--brand-cyan);
-          box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.18);
+          box-shadow: 0 0 0 3px var(--picker-focus-ring, rgba(0, 180, 216, 0.18));
         }
 
         &.invalid {
@@ -93,6 +93,19 @@ import { DoctorApiService, DoctorLookupItem } from '../features/doctors/doctor-a
           color: var(--muted);
           font-size: 0.82rem;
           font-weight: 500;
+        }
+      }
+
+      :host(.booking-picker) .selected-display {
+        height: auto;
+        min-height: 44px;
+        padding-block: .25rem;
+
+        .doctor-info {
+          flex-wrap: wrap;
+          gap: .125rem .5rem;
+          white-space: normal;
+          overflow-wrap: anywhere;
         }
       }
 
@@ -182,7 +195,7 @@ import { DoctorApiService, DoctorLookupItem } from '../features/doctors/doctor-a
           &:focus {
             outline: none;
             border-color: var(--brand-cyan);
-            box-shadow: 0 0 0 2.5px rgba(0, 180, 216, 0.18);
+            box-shadow: 0 0 0 2.5px var(--picker-focus-ring, rgba(0, 180, 216, 0.18));
           }
         }
       }
@@ -208,10 +221,10 @@ import { DoctorApiService, DoctorLookupItem } from '../features/doctors/doctor-a
           }
 
           &.selected {
-            background: #e0f2fe;
+            background: var(--picker-selected-background, #e0f2fe);
 
             .doctor-name {
-              color: #0369a1;
+              color: var(--picker-selected-ink, #0369a1);
               font-weight: 800;
             }
           }

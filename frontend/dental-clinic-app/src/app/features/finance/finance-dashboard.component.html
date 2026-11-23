@@ -1,0 +1,110 @@
+<header class="dashboard-header">
+  <div>
+    <h1>{{ t('Finance dashboard', 'لوحة المالية') }}</h1>
+    <p>{{ t('Clinic performance for the selected period', 'ملخص أداء العيادة للفترة المحددة') }}</p>
+  </div>
+  <form class="period-form" (ngSubmit)="load()">
+    <label>
+      {{ t('Period', 'الفترة') }}
+      <select name="period" [ngModel]="period" (ngModelChange)="changePeriod($event)">
+        @for (option of periods(); track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </label>
+    @if (period === 5) {
+      <label>{{ t('From', 'من') }}
+        <input name="from" type="date" [(ngModel)]="from" [attr.max]="to || null" required />
+      </label>
+      <label>{{ t('To', 'إلى') }}
+        <input name="to" type="date" [(ngModel)]="to" [attr.min]="from || null" required />
+      </label>
+      <button type="submit" class="period-action" [disabled]="!from || !to || from > to || loading()">
+        {{ t('Apply', 'تطبيق') }}
+      </button>
+    }
+  </form>
+</header>
+
+<app-finance-nav />
+
+@if (failed()) {
+  <div class="notice">
+    <p role="alert">{{ t('Finance could not be loaded.', 'تعذر تحميل البيانات المالية.') }}</p>
+    <button type="button" class="period-action" (click)="load()">{{ t('Try again', 'إعادة المحاولة') }}</button>
+  </div>
+} @else if (loading()) {
+  <p class="notice" role="status">{{ t('Loading finance…', 'جاري تحميل البيانات المالية…') }}</p>
+} @else if (data(); as summary) {
+  <section class="metrics" [attr.aria-label]="t('Financial summary', 'الملخص المالي')">
+    @for (card of cards(summary); track card.label) {
+      <article class="finance-card">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path [attr.d]="card.icon" />
+          </svg>
+          {{ card.label }}
+        </h2>
+        @if (card.value !== null) {
+          <strong class="metric-value" [class.negative]="card.value < 0">
+            <bdi>{{ format(card.value, summary.currency) }}</bdi>
+          </strong>
+        } @else {
+          <strong class="metric-value unavailable">{{ t('Unavailable', 'غير متاح') }}</strong>
+        }
+        @if ($first && summary.revenueComparison; as comparison) {
+          @let difference = summary.revenue - comparison.revenue;
+          <p>
+            {{ t('Compared with', 'مقارنةً بفترة') }} {{ comparisonDates(comparison.from, comparison.to) }}
+            <span class="change" [class.negative]="difference < 0">
+              <bdi>{{ difference > 0 ? '+' : '' }}{{ format(difference, summary.currency) }}</bdi>
+              @if (comparison.revenue > 0) {
+                <bdi>({{ percent(difference / comparison.revenue, 'exceptZero') }})</bdi>
+              }
+            </span>
+          </p>
+        } @else if (card.description) {
+          <p>{{ card.description }}</p>
+        }
+      </article>
+    }
+  </section>
+
+  <div class="finance-details">
+    <div class="category-groups">
+      @for (group of categoryGroups(summary); track group.label) {
+        <section class="finance-card breakdown">
+          <header>
+            <h2>{{ group.label }}</h2>
+            <p>{{ t('Total', 'الإجمالي') }} <bdi>{{ format(group.total, summary.currency) }}</bdi></p>
+          </header>
+          @if (group.rows.length) {
+            <ul>
+              @for (row of group.rows; track row.id || row.name) {
+                @let fraction = share(row.amount, group.total);
+                <li>
+                  <span class="category-name">{{ categoryName(row.name) }}</span>
+                  <span class="bar" aria-hidden="true"><span [style.inline-size.%]="fraction * 100"></span></span>
+                  <span class="category-amount">
+                    <strong><bdi>{{ format(row.amount, summary.currency) }}</bdi></strong>
+                    @if (group.total > 0) { <small>{{ percent(fraction) }}</small> }
+                  </span>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="empty">{{ group.empty }}</p>
+          }
+        </section>
+      }
+    </div>
+    <section class="finance-card breakdown">
+      <header><h2>{{ t('Overdue supplier payments', 'دفعات متأخرة للموردين') }}</h2></header>
+      <p class="empty">{{ t('Supplier payment due dates are unavailable in the ledger.', 'مواعيد استحقاق دفعات الموردين غير متاحة في السجل المالي.') }}</p>
+    </section>
+  </div>
+  <p class="timezone">{{ t('Clinic timezone', 'المنطقة الزمنية للعيادة') }} · <bdi>{{ summary.timeZone }}</bdi></p>
+} @else {
+  <p class="notice">{{ t('Choose a start and end date, then apply the period.', 'اختر تاريخ البداية والنهاية، ثم اضغط تطبيق.') }}</p>
+}

@@ -1,6 +1,6 @@
 import { input, output } from '@angular/core';
 import { Component, ElementRef, inject, signal, ViewChildren, QueryList } from '@angular/core';
-import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
 import { parseApiError } from '../../core/error-util';
@@ -42,7 +42,7 @@ export const COMMON_MEDICATIONS: TagSuggestion[] = [
 ];
 
 @Component({
-  styleUrl: './patients.scss',
+  styleUrls: ['./patients.scss', './patient-create-compact.scss'],
   selector: 'app-patient-form',
   imports: [
     FormsModule,
@@ -52,7 +52,95 @@ export const COMMON_MEDICATIONS: TagSuggestion[] = [
     TagInputComponent,
     DateInputComponent,
   ],
-  template: `<div class="workspace-intake patient-intake">
+  template: `
+    @if (embedded() && !id) {
+      <form class="patient-form compact-patient-form" [formGroup]="form" (ngSubmit)="save()" [attr.aria-busy]="saving()">
+        @if (error()) {
+          <p class="alert error" role="alert">{{ error() }}</p>
+        }
+        <fieldset [disabled]="saving()">
+          <legend>{{ t('Basic information', 'البيانات الأساسية') }}</legend>
+          <div class="patient-create-grid">
+            <label>
+              <span>{{ t('Full name', 'الاسم بالكامل') }} <span aria-hidden="true">*</span></span>
+              <input [formControl]="fullName" autocomplete="off" maxlength="302" aria-required="true"
+                [attr.aria-invalid]="fullName.touched && fullName.invalid"
+                [attr.aria-describedby]="fullName.touched && fullName.invalid ? 'patient-name-error' : null" />
+              @if (fullName.touched && fullName.invalid) {
+                <span id="patient-name-error" class="field-error">
+                  @if (fullName.hasError('nameLength')) {
+                    {{ t('Use up to 100 characters per name part.', 'الحد الأقصى 100 حرف لكل جزء من الاسم.') }}
+                  } @else {
+                    {{ t('Enter the first and family names.', 'أدخل الاسم الأول واسم العائلة.') }}
+                  }
+                </span>
+              }
+            </label>
+            <div class="compact-field">
+              <span>{{ t('Date of birth', 'تاريخ الميلاد') }} *</span>
+              <app-date-input [label]="t('Date of birth', 'تاريخ الميلاد')" formControlName="dateOfBirth"
+                [max]="today" [isInvalid]="form.controls.dateOfBirth.touched && form.controls.dateOfBirth.invalid" />
+              @if (form.controls.dateOfBirth.touched && form.controls.dateOfBirth.invalid) {
+                <span class="field-error">{{ t('Enter a valid date of birth.', 'أدخل تاريخ ميلاد صالحًا.') }}</span>
+              }
+            </div>
+            <label>
+              <span>{{ t('Gender', 'النوع') }}</span>
+              <select formControlName="gender">
+                <option [ngValue]="0">{{ t('Not specified', 'غير محدد') }}</option>
+                <option [ngValue]="1">{{ t('Female', 'أنثى') }}</option>
+                <option [ngValue]="2">{{ t('Male', 'ذكر') }}</option>
+                <option [ngValue]="3">{{ t('Other', 'آخر') }}</option>
+              </select>
+            </label>
+            <div class="compact-field">
+              <span>{{ t('Primary mobile number', 'رقم الموبايل الأساسي') }} *</span>
+              <app-phone-input [label]="t('Primary mobile number', 'رقم الموبايل الأساسي')" formControlName="phone"
+                [class.invalid]="form.controls.phone.touched && form.controls.phone.invalid" />
+              @if (form.controls.phone.touched && form.controls.phone.invalid) {
+                <span class="field-error">{{ t('Enter a valid mobile number.', 'أدخل رقم موبايل صالحًا.') }}</span>
+              }
+            </div>
+            <label>
+              <span>{{ t('Occupation', 'المهنة') }}</span>
+              <input formControlName="occupation" maxlength="150" />
+            </label>
+            <div class="compact-field">
+              <span>{{ t('Allergies', 'الحساسية') }}</span>
+              <app-tag-input [label]="t('Allergies', 'الحساسية')" [(tags)]="allergies"
+                [suggestions]="allergySuggestions" [compactSuggestions]="true"
+                [placeholder]="t('Add an allergy (optional)', 'أضف حساسية (اختياري)')" />
+            </div>
+          </div>
+        </fieldset>
+        <fieldset [disabled]="saving()">
+          <legend>{{ t('Medical information', 'البيانات الطبية') }}</legend>
+          <div class="patient-create-grid">
+            <div class="compact-field">
+              <span>{{ t('Chronic conditions', 'الأمراض والحالات المزمنة') }}</span>
+              <app-tag-input [label]="t('Chronic conditions', 'الأمراض والحالات المزمنة')" [(tags)]="conditions"
+                [suggestions]="conditionSuggestions" [compactSuggestions]="true"
+                [placeholder]="t('Add a condition (optional)', 'أضف حالة (اختياري)')" />
+            </div>
+            <div class="compact-field">
+              <span>{{ t('Current medications', 'الأدوية والعلاجات الحالية') }}</span>
+              <app-tag-input [label]="t('Current medications', 'الأدوية والعلاجات الحالية')" [(tags)]="medications"
+                [suggestions]="medicationSuggestions" [compactSuggestions]="true"
+                [placeholder]="t('Add a medication (optional)', 'أضف دواءً (اختياري)')" />
+            </div>
+          </div>
+        </fieldset>
+        <div class="compact-patient-actions">
+          <button class="button primary" type="submit" [disabled]="saving()">
+            {{ saving() ? t('Saving…', 'جارٍ الحفظ…') : t('Save patient', 'حفظ المريض') }}
+          </button>
+          <button class="button outline" type="button" [disabled]="saving()" (click)="cancelled.emit()">
+            {{ t('Cancel', 'إلغاء') }}
+          </button>
+        </div>
+      </form>
+    } @else {
+  <div class="workspace-intake patient-intake">
     @if (!embedded()) {
     <a class="back" routerLink="/patients"
       >{{ i18n.language() === 'ar' ? '→' : '←' }}
@@ -423,7 +511,8 @@ export const COMMON_MEDICATIONS: TagSuggestion[] = [
         </div>
       </form>
     }
-  </div>`,
+  </div>
+  }`,
 })
 export class PatientFormComponent {
   readonly embedded = input(false);
@@ -447,6 +536,11 @@ export class PatientFormComponent {
   readonly allergySuggestions = COMMON_ALLERGIES;
   readonly conditionSuggestions = COMMON_CONDITIONS;
   readonly medicationSuggestions = COMMON_MEDICATIONS;
+  readonly fullName = new FormControl('', { nonNullable: true, validators: (control) => {
+    const parts = this.nameParts(control.value);
+    if (!parts.lastName) return { incompleteName: true };
+    return Object.values(parts).some((part) => part.length > 100) ? { nameLength: true } : null;
+  } });
   readonly form = inject(FormBuilder).nonNullable.group({
     firstName: ['', Validators.required],
     middleName: '',
@@ -509,6 +603,10 @@ export class PatientFormComponent {
     });
   }
   focusInvalidField(): void {
+    if (this.embedded() && !this.id && this.fullName.invalid) {
+      this.host.nativeElement.querySelector<HTMLInputElement>('.compact-patient-form input[aria-required]')?.focus();
+      return;
+    }
     const field = this.host.nativeElement.querySelector<HTMLElement>(
       '.patient-form [formcontrolname].ng-invalid',
     );
@@ -521,8 +619,12 @@ export class PatientFormComponent {
   save(): void {
     if (this.saving() || this.loading() || this.loadError()) return;
     this.medicalInputs?.forEach((input) => input.commitPending());
+    if (this.embedded() && !this.id) {
+      this.fullName.markAsTouched();
+      this.form.patchValue(this.nameParts(this.fullName.value));
+    }
     this.form.markAllAsTouched();
-    if (this.form.invalid) {
+    if (this.form.invalid || (this.embedded() && !this.id && this.fullName.invalid)) {
       this.focusInvalidField();
       return;
     }
@@ -573,6 +675,11 @@ export class PatientFormComponent {
           error: (err) => this.saveFailed(err),
         });
     }
+  }
+  private nameParts(name: string) {
+    const [firstName = '', ...rest] = name.trim().split(/\s+/);
+    const lastName = rest.pop() ?? '';
+    return { firstName, middleName: rest.join(' '), lastName };
   }
   private saved(id: string): void {
     if (this.embedded()) {

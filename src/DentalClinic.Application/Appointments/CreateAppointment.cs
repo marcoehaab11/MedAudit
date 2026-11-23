@@ -16,7 +16,7 @@ internal sealed class CreateAppointment(IAppointmentStore store, AppointmentSche
         if (command.Notes?.Trim().Length > 2000)
             throw AppointmentRules.Error(nameof(command.Notes), "Notes cannot exceed 2000 characters.");
         var valid = await validator.ValidateAsync(command.PatientId, command.DoctorProfileId,
-            command.Time, command.Type, null, cancellationToken);
+            command.Time, command.Type, null, cancellationToken, command.UseEmergencyAvailability);
         if (command.RoomId.HasValue && !await store.RoomExistsAsync(command.RoomId.Value, cancellationToken))
             throw AppointmentRules.Error(nameof(command.RoomId), "The clinic room was not found.");
         var appointment = new Appointment(currentTenant.RequireTenantId(), valid.Patient.Id, valid.Doctor.Id,

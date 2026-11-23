@@ -5,9 +5,16 @@ using DentalClinic.Domain.Treatments;
 
 namespace DentalClinic.Application.Finance;
 
-public enum FinancePeriod { Today = 1, ThisWeek = 2, ThisMonth = 3, ThisYear = 4, Custom = 5 }
-public sealed record FinanceDateFilter(FinancePeriod Period = FinancePeriod.ThisMonth, DateOnly? From = null, DateOnly? To = null);
-public sealed record FinanceRange(DateTimeOffset From, DateTimeOffset To, string TimeZone, string Currency);
+public enum FinancePeriod { Today = 1, ThisWeek = 2, ThisMonth = 3, ThisYear = 4, Custom = 5, LastMonth = 6 }
+public sealed record FinanceDateFilter(FinancePeriod Period = FinancePeriod.ThisMonth, DateOnly? From = null, DateOnly? To = null)
+{
+    public bool IncludeComparison { get; init; }
+}
+public sealed record FinanceRange(DateTimeOffset From, DateTimeOffset To, string TimeZone, string Currency)
+{
+    public FinanceComparisonRange? Comparison { get; init; }
+}
+public sealed record FinanceComparisonRange(DateTimeOffset From, DateTimeOffset To, DateOnly FromDate, DateOnly ToDate);
 public sealed record FinancialCategoryInput(string Name, string Code, FinancialCategoryType Type, Guid? ParentId);
 public sealed record FinancialCategoryItem(Guid Id, string Name, string Code, FinancialCategoryType Type, Guid? ParentId,
     string? ParentName, bool IsActive, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, Guid Version);
@@ -32,7 +39,11 @@ public sealed record FinanceSummary(decimal Revenue, decimal Payments, decimal O
     decimal DoctorCompensation, decimal NetProfit, string Currency, DateTimeOffset From, DateTimeOffset To, string TimeZone,
     IReadOnlyCollection<FinanceNamedAmount> RevenueByCategory, IReadOnlyCollection<FinanceNamedAmount> RevenueByDoctor,
     IReadOnlyCollection<FinanceNamedAmount> ExpensesByCategory, IReadOnlyCollection<FinanceDailyAmount> RevenueByDay,
-    IReadOnlyCollection<FinanceDailyAmount> ExpensesByDay);
+    IReadOnlyCollection<FinanceDailyAmount> ExpensesByDay)
+{
+    public FinanceRevenueComparison? RevenueComparison { get; init; }
+}
+public sealed record FinanceRevenueComparison(decimal Revenue, DateOnly From, DateOnly To);
 public sealed record FinanceNamedAmount(Guid? Id, string Name, decimal Amount);
 public sealed record FinanceDailyAmount(DateOnly Date, decimal Amount);
 public sealed record FinancePatient(Guid Id, string Name, bool IsActive);

@@ -34,7 +34,11 @@ internal sealed class FinanceQueries(IFinanceStore store, IPermissionService per
         return await store.BillingQueueAsync(token);
     }
     public async Task<FinanceSummary> DashboardAsync(FinanceDateFilter filter, CancellationToken token)
-    { await permissions.EnsurePermissionAsync(Permissions.FinanceDashboard, token); return await store.DashboardAsync(await store.ResolveRangeAsync(filter, token), token); }
+    {
+        await permissions.EnsurePermissionAsync(Permissions.FinanceDashboard, token);
+        var range = await store.ResolveRangeAsync(filter with { IncludeComparison = true }, token);
+        return await store.DashboardAsync(range, token);
+    }
     public async Task<PagedResult<RevenueItem>> RevenuesAsync(RevenueSearch x, CancellationToken token)
     { await permissions.EnsurePermissionAsync(Permissions.FinanceRevenueView, token); Validate(x.Page, x.PageSize, x.From, x.To); return await store.RevenuesAsync(x, await store.ResolveRangeAsync(new(FinancePeriod.Custom, x.From, x.To), token), token); }
     public async Task<PagedResult<PaymentItem>> PaymentsAsync(PaymentSearch x, CancellationToken token)

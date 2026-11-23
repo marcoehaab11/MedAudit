@@ -64,9 +64,17 @@ export interface TagSuggestion {
       />
     </div>
 
-    @if (suggestions.length > 0) {
+    @if (suggestions.length && compactSuggestions) {
+      <button type="button" class="suggestion-toggle" [attr.aria-expanded]="suggestionsOpen()"
+        (click)="suggestionsOpen.set(!suggestionsOpen())">
+        {{ t('Choose from suggestions', 'اختر من الاقتراحات') }}
+      </button>
+    }
+    @if (suggestions.length > 0 && (!compactSuggestions || suggestionsOpen())) {
       <div class="presets-chips-bar">
-        <span class="chips-label">💡 {{ t('Suggestions:', 'اقتراحات:') }}</span>
+        @if (!compactSuggestions) {
+          <span class="chips-label">💡 {{ t('Suggestions:', 'اقتراحات:') }}</span>
+        }
         <div class="chips-scroll-wrap">
           @for (s of suggestions; track s.en) {
             @let label = i18n.language() === 'ar' ? s.ar : s.en;
@@ -75,6 +83,7 @@ export interface TagSuggestion {
               type="button"
               class="chip-suggest"
               [class.selected]="isSelected"
+              [attr.aria-pressed]="isSelected"
               [class.allergy-chip]="theme === 'danger'"
               [class.condition-chip]="theme === 'warning'"
               [class.medication-chip]="theme === 'info'"
@@ -92,6 +101,21 @@ export interface TagSuggestion {
       :host {
         display: block;
         width: 100%;
+      }
+
+      .suggestion-toggle {
+        display: block;
+        min-block-size: 32px;
+        padding: .125rem .25rem;
+        border: 0;
+        background: transparent;
+        color: var(--brand-dark);
+        font: inherit;
+        font-size: .8125rem;
+        text-decoration: underline;
+        text-underline-offset: .2em;
+        box-shadow: none;
+        cursor: pointer;
       }
 
       .tag-input-container {
@@ -342,6 +366,8 @@ export class TagInputComponent implements ControlValueAccessor {
   @Input() placeholder = '';
   @Input() theme: 'danger' | 'warning' | 'info' | 'default' = 'default';
   @Input() suggestions: TagSuggestion[] = [];
+  @Input() compactSuggestions = false;
+  readonly suggestionsOpen = signal(false);
 
   @ViewChild('inputElement') inputRef!: ElementRef<HTMLInputElement>;
 

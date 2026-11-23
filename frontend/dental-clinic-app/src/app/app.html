@@ -94,7 +94,8 @@
         (scroll)="navTooltip.set(null)"
       >
         @for (group of navigationGroups(); track group.id) {
-          <section class="nav-group" [attr.aria-labelledby]="'nav-heading-' + group.id">
+          <section class="nav-group" [attr.aria-labelledby]="group.id === 'finance' ? null : 'nav-heading-' + group.id">
+            @if (group.id !== 'finance') {
             <button
               type="button"
               class="nav-group-toggle"
@@ -115,18 +116,18 @@
                 <path d="m6 9 6 6 6-6" />
               </svg>
             </button>
+            }
             <div
               class="nav-links"
               [id]="'nav-links-' + group.id"
-              [hidden]="!isGroupOpen(group) && !(sidebarCollapsed() && !isMobile())"
+              [hidden]="group.id !== 'finance' && !isGroupOpen(group) && !(sidebarCollapsed() && !isMobile())"
             >
               @for (item of group.items; track item.path) {
                 <a
                   class="nav-item"
                   [routerLink]="item.path"
-                  routerLinkActive="active"
-                  ariaCurrentWhenActive="page"
-                  [routerLinkActiveOptions]="{ exact: !!item.exact }"
+                  [class.active]="isNavigationItemActive(group, item)"
+                  [attr.aria-current]="isNavigationItemActive(group, item) ? (group.id === 'finance' ? 'true' : 'page') : null"
                   [attr.aria-label]="t(item.en, item.ar)"
                   (click)="closeMobileSidebar()"
                   (mouseenter)="showNavTooltip($event, item)"
@@ -244,12 +245,11 @@
           <label for="active-clinic">{{ t('Branch', 'الفرع') }}</label>
           <select
             id="active-clinic"
-            [value]="auth.tenantId()"
             [disabled]="switchingClinic()"
             (change)="switchClinic($event)"
           >
             @for (clinic of auth.clinics(); track clinic.tenantId) {
-              <option [value]="clinic.tenantId" [disabled]="!clinic.accessible">
+              <option [value]="clinic.tenantId" [selected]="clinic.tenantId === auth.tenantId()" [disabled]="!clinic.accessible">
                 {{ clinic.name }}{{ clinic.accessible ? '' : t(' (unavailable)', ' (غير متاحة)') }}
               </option>
             }

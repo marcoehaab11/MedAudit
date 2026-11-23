@@ -61,6 +61,21 @@ public sealed class AppointmentWorkflowTests(PlatformPostgresFixture fixture)
         Assert.True(await lifecycle.CompleteAsync(appointmentId, CancellationToken.None));
         Assert.Equal(AppointmentStatus.Completed, (await scope.ServiceProvider.GetRequiredService<IAppointmentQueries>()
             .GetAsync(appointmentId, CancellationToken.None))!.Status);
+
+        var create = scope.ServiceProvider.GetRequiredService<ICreateAppointment>();
+        var followUp = Command(patient, doctor.ProfileId, new TimeOnly(7, 0), 60) with { Type = AppointmentType.FollowUp };
+        await Assert.ThrowsAsync<ValidationException>(() => create.ExecuteAsync(followUp, CancellationToken.None));
+        var emergencySlots = await availability.GetAsync(
+            new DoctorAvailabilityQuery(doctor.ProfileId, Monday, 60, IsEmergency: true), CancellationToken.None);
+        var earlySlot = Assert.Single(emergencySlots, x => x.LocalStartTime == new TimeOnly(7, 0));
+        var followUpId = await create.ExecuteAsync(followUp with { UseEmergencyAvailability = true }, CancellationToken.None);
+        var followUpDetails = await scope.ServiceProvider.GetRequiredService<IAppointmentQueries>()
+            .GetAsync(followUpId, CancellationToken.None);
+        Assert.NotNull(followUpDetails);
+        Assert.Equal(AppointmentType.FollowUp, followUpDetails.Type);
+        Assert.Equal(earlySlot.StartAt, followUpDetails.StartAt);
+        await Assert.ThrowsAsync<AppointmentConflictException>(
+            () => create.ExecuteAsync(followUp with { UseEmergencyAvailability = true }, CancellationToken.None));
     }
 
     [Fact]

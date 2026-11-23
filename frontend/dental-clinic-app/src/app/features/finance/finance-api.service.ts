@@ -30,6 +30,7 @@ export interface FinanceSummary {
   from: string;
   to: string;
   timeZone: string;
+  revenueComparison?: { revenue: number; from: string; to: string } | null;
   revenueByCategory: NamedAmount[];
   revenueByDoctor: NamedAmount[];
   expensesByCategory: NamedAmount[];

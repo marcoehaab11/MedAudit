@@ -7,7 +7,7 @@ import { AuthService } from '../../core/auth.service';
 import { DateInputComponent } from '../../shared/date-input/date-input.component';
 import { Category, Expense, FinanceApiService, Page } from './finance-api.service';
 import { categoryTitle, localizeCategory, money } from './finance-ui';
-import { FinanceNavComponent } from './finance-dashboard.component';
+import { FinanceNavComponent } from './finance-nav.component';
 
 @Component({
   styleUrl: './finance.scss',
@@ -101,8 +101,9 @@ export class ExpensesPageComponent {
   styleUrl: './finance.scss',
   selector: 'app-expense-form',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, DateInputComponent],
+  imports: [ReactiveFormsModule, RouterLink, DateInputComponent, FinanceNavComponent],
   template: `
+    <app-finance-nav />
     <div class="finance-form-page">
       <a class="back-link" routerLink="/finance/expenses">
         ← {{ t('Back to expenses', 'العودة لقائمة المصروفات') }}

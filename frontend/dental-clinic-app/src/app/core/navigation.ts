@@ -14,6 +14,15 @@ export interface NavigationGroup {
   defaultOpen: boolean;
   items: readonly NavigationItem[];
 }
+
+export const FINANCE_TABS = [
+  { path: '/finance', en: 'Dashboard', ar: 'لوحة المالية', permissions: ['Finance.View', 'Finance.Dashboard'] },
+  { path: '/finance/revenue', en: 'Revenue', ar: 'الإيرادات', permissions: ['Finance.Revenue.View'] },
+  { path: '/finance/payments', en: 'Payments', ar: 'المدفوعات', permissions: ['Finance.Payments.View'] },
+  { path: '/finance/expenses', en: 'Expenses', ar: 'المصروفات', permissions: ['Finance.Expenses.View'] },
+  { path: '/finance/categories', en: 'Categories', ar: 'التصنيفات', permissions: ['Finance.Categories.View'] },
+  { path: '/finance/my-dues', en: 'My dues', ar: 'مستحقاتي', permissions: ['Finance.View'] },
+] as const;
 export const NAVIGATION_GROUPS: readonly NavigationGroup[] = [
   {
     id: 'overview',
@@ -103,46 +112,9 @@ export const NAVIGATION_GROUPS: readonly NavigationGroup[] = [
     items: [
       {
         path: '/finance',
-        en: 'Overview',
-        ar: 'نظرة عامة',
-        icon: 'M12 2v20 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
-        permission: 'Finance.View',
-        exact: true,
-      },
-      {
-        path: '/finance/revenue',
-        en: 'Revenue',
-        ar: 'الإيرادات',
-        icon: 'M4 20V10 M10 20V4 M16 20v-7 M22 20H2',
-        permission: 'Finance.Revenue.View',
-      },
-      {
-        path: '/finance/payments',
-        en: 'Payments',
-        ar: 'المدفوعات',
+        en: 'Finance',
+        ar: 'المالية',
         icon: 'M3 4h18v16H3z M3 10h18 M7 15h4',
-        permission: 'Finance.Payments.View',
-      },
-      {
-        path: '/finance/expenses',
-        en: 'Expenses',
-        ar: 'المصروفات',
-        icon: 'M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1 M8 8h6 M8 12h8 M8 16h5',
-        permission: 'Finance.Expenses.View',
-      },
-      {
-        path: '/finance/categories',
-        en: 'Categories',
-        ar: 'التصنيفات',
-        icon: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
-        permission: 'Finance.Categories.View',
-      },
-      {
-        path: '/finance/my-dues',
-        en: 'My dues',
-        ar: 'مستحقاتي',
-        icon: 'M12 2v20 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
-        permission: 'Finance.View',
       },
     ],
   },

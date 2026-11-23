@@ -16,7 +16,7 @@ import { AuthService } from './core/auth.service';
 import { LocalizationService } from './core/localization.service';
 import { ClinicThemeService } from './core/clinic-theme.service';
 
-import { NAVIGATION_GROUPS, NavigationGroup, NavigationItem } from './core/navigation';
+import { FINANCE_TABS, NAVIGATION_GROUPS, NavigationGroup, NavigationItem } from './core/navigation';
 
 import { ConfirmModalComponent } from './shared/confirm-modal.component';
 
@@ -40,6 +40,9 @@ export class App implements OnDestroy {
   private readonly groupOverrides = signal<Record<string, boolean>>({});
   protected readonly currentPath = signal(this.router.url.split('?')[0].split('#')[0]);
   protected readonly dashboardRoute = computed(() => this.currentPath() === '/dashboard');
+  protected readonly financeRoute = computed(() =>
+    this.currentPath() === '/finance' || this.currentPath().startsWith('/finance/'),
+  );
   protected readonly dashboardDate = computed(() => new Intl.DateTimeFormat(
     this.i18n.language() === 'ar' ? 'ar-EG' : 'en-GB',
     { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' },
@@ -53,11 +56,17 @@ export class App implements OnDestroy {
   protected readonly navigationGroups = computed(() =>
     NAVIGATION_GROUPS.map((group) => ({
       ...group,
-      items: group.items.filter(
-        (item) => !item.permission || this.auth.hasPermission(item.permission),
-      ),
+      items: group.id === 'finance'
+        ? this.financeNavigation(group)
+        : group.items.filter((item) => !item.permission || this.auth.hasPermission(item.permission)),
     })).filter((group) => group.items.length),
   );
+  private financeNavigation(group: NavigationGroup): NavigationItem[] {
+    const first = FINANCE_TABS.find((tab) =>
+      tab.permissions.every((permission) => this.auth.hasPermission(permission)),
+    );
+    return first ? [{ ...group.items[0], path: first.path }] : [];
+  }
   protected readonly mobileNavigation = computed(() => {
     const items = this.navigationGroups().flatMap((group) => group.items);
     return ['/dashboard', '/patients', '/appointments', '/treatment-plans']
@@ -171,12 +180,14 @@ export class App implements OnDestroy {
     if (override !== undefined) return override;
     return (
       group.defaultOpen ||
-      group.items.some(
-        (item) =>
-          this.currentPath() === item.path ||
-          (!item.exact && this.currentPath().startsWith(item.path + '/')),
-      )
+      group.items.some((item) => this.isNavigationItemActive(group, item))
     );
+  }
+
+  protected isNavigationItemActive(group: NavigationGroup, item: NavigationItem): boolean {
+    if (group.id === 'finance') return this.financeRoute();
+    return this.currentPath() === item.path ||
+      (!item.exact && this.currentPath().startsWith(item.path + '/'));
   }
 
   protected toggleGroup(group: NavigationGroup): void {

@@ -1,0 +1,37 @@
+:host {
+  display: block;
+  min-inline-size: 0;
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: .375rem;
+  margin-block-end: 1.25rem;
+  border-block-end: 1px solid var(--border);
+}
+
+a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  padding: .5rem clamp(.75rem, 1.5vw, 1.125rem);
+  border-block-end: 2px solid transparent;
+  color: color-mix(in srgb, var(--muted) 75%, var(--ink));
+  font-weight: 700;
+  text-decoration: none;
+
+  &:hover,
+  &.active {
+    color: var(--brand);
+  }
+
+  &.active {
+    border-block-end-color: currentColor;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: -2px;
+  }
+}

@@ -3,7 +3,7 @@ import { Component, ElementRef, input, output, viewChild } from '@angular/core';
 @Component({
   selector: 'app-workspace-dialog',
   template: `
-    <dialog #dialog [attr.aria-label]="title()" [style.--dialog-width]="width()" (close)="closed.emit()" (cancel)="closeDisabled() && $event.preventDefault()">
+    <dialog #dialog [attr.aria-label]="title()" [style.--dialog-width]="width()" (close)="closed.emit()" (cancel)="onCancel($event)">
       <header>
         <h2>{{ title() }}</h2>
         <button type="button" class="button" autofocus [disabled]="closeDisabled()" (click)="close()">{{ closeLabel() }}</button>
@@ -40,4 +40,7 @@ export class WorkspaceDialogComponent {
 
   open(): void { this.dialog().nativeElement.showModal(); }
   close(): void { this.dialog().nativeElement.close(); }
+  protected onCancel(event: Event): void {
+    if (this.closeDisabled()) event.preventDefault();
+  }
 }

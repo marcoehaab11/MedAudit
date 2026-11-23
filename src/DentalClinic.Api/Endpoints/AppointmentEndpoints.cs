@@ -75,7 +75,7 @@ internal static class AppointmentEndpoints
         CancellationToken token)
     {
         var id = await service.ExecuteAsync(new CreateAppointmentCommand(request.PatientId, request.DoctorProfileId,
-            (AppointmentType)request.Type, Time(request.Time), request.Notes, request.RoomId), token);
+            (AppointmentType)request.Type, Time(request.Time), request.Notes, request.RoomId, request.UseEmergencyAvailability), token);
         return Results.Created($"/api/appointments/{id:D}", new { id });
     }
 

@@ -1,31 +1,21 @@
 import { input, output, OnChanges } from '@angular/core';
 import {
-  afterNextRender,
   Component,
-  ElementRef,
-  Injector,
   DestroyRef,
   inject,
   OnInit,
   signal,
   computed,
   ViewChild,
-  ViewChildren,
-  QueryList,
 } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { combineLatest, tap, debounceTime, distinctUntilChanged, startWith } from 'rxjs';
+import { combineLatest, tap, debounceTime, startWith } from 'rxjs';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
 import { parseApiError } from '../../core/error-util';
 import { DoctorApiService, DoctorListItem } from '../doctors/doctor-api.service';
-import { PatientApiService, PatientListItem } from '../patients/patient-api.service';
-import {
-  COMMON_ALLERGIES,
-  COMMON_CONDITIONS,
-  COMMON_MEDICATIONS,
-} from '../patients/patient-form.component';
+import { PatientCreateDialogComponent } from '../patients/patient-create-dialog.component';
 import { AppointmentApiService, AvailabilitySlot } from './appointment-api.service';
 import { appointmentType } from './appointment-labels';
 import {
@@ -36,12 +26,10 @@ import {
 
 import { PatientSelectComponent } from '../../shared/patient-select.component';
 import { DoctorSelectComponent } from '../../shared/doctor-select.component';
-import { PhoneInputComponent } from '../../shared/phone-input/phone-input.component';
-import { TagInputComponent } from '../../shared/tag-input/tag-input.component';
 import { DateInputComponent } from '../../shared/date-input/date-input.component';
 
 @Component({
-  styleUrl: './appointments.scss',
+  styleUrls: ['./appointments.scss', './appointment-create.component.scss'],
   selector: 'app-appointment-create',
   imports: [
     FormsModule,
@@ -49,746 +37,17 @@ import { DateInputComponent } from '../../shared/date-input/date-input.component
     RouterLink,
     PatientSelectComponent,
     DoctorSelectComponent,
-    PhoneInputComponent,
-    TagInputComponent,
     DateInputComponent,
+    PatientCreateDialogComponent,
   ],
-  template: `<div class="workspace-intake booking-intake">
-    @if (!embedded()) {
-    <section class="workspace-page-head">
-      <div>
-        <h1>{{ t('New appointment', 'موعد جديد') }}</h1>
-        <p class="page-description">
-          {{
-            t(
-              'Choose the patient, doctor and an available time, then review the booking.',
-              'اختر المريض والطبيب ووقتًا متاحًا، ثم راجع بيانات الحجز.'
-            )
-          }}
-        </p>
-      </div>
-      <a class="button secondary" routerLink="/appointments">{{
-        t('Back to calendar', 'العودة للتقويم')
-      }}</a>
-    </section>
-    }
-
-    @if (error()) {
-      <div class="alert error" role="alert">{{ error() }}</div>
-    }
-
-    <ol class="steps" [attr.aria-label]="t('Booking progress', 'خطوات الحجز')">
-      <li [class.done]="form.controls.patientId.valid">1. {{ t('Patient', 'المريض') }}</li>
-      <li [class.done]="form.controls.doctorProfileId.valid">2. {{ t('Doctor', 'الطبيب') }}</li>
-      <li [class.done]="selectedSlot()">3. {{ t('Time slot', 'الوقت') }}</li>
-      <li [class.done]="form.valid && selectedSlot()">4. {{ t('Confirm', 'التأكيد') }}</li>
-    </ol>
-
-    @if (saving()) {
-      <p class="booking-saving" role="status">
-        {{ t('Creating the appointment…', 'جارٍ إنشاء الموعد…') }}
-      </p>
-    }
-    <form
-      class="panel appointment-form"
-      [attr.aria-busy]="saving()"
-      [inert]="saving()"
-      [formGroup]="form"
-      (ngSubmit)="save()"
-    >
-      <fieldset>
-        <legend>1. {{ t('Choose patient', 'اختيار مريض') }} <strong class="req">*</strong></legend>
-        <div>
-          <div class="booking-patient-choice">
-            <app-patient-select
-              #patientSelect
-              style="flex: 1"
-              formControlName="patientId"
-              [allowClear]="false"
-              [isInvalid]="form.controls.patientId.touched && form.controls.patientId.invalid"
-            ></app-patient-select>
-            <button
-              type="button"
-              class="button outline"
-              (click)="openNewPatientModal()"
-              [attr.aria-label]="
-                t('Add a patient without leaving this booking', 'إضافة مريض دون مغادرة الحجز')
-              "
-            >
-              + {{ t('New Patient', 'مريض جديد') }}
-            </button>
-          </div>
-          @if (form.controls.patientId.touched && form.controls.patientId.invalid) {
-            <span
-              class="field-error"
-              style="display: block; color: #dc2626; font-size: 0.8rem; margin-top: 0.25rem;"
-            >
-              {{ t('Please select a patient.', 'يرجى اختيار مريض.') }}
-            </span>
-          }
-
-          @if (activeTreatmentPlans().length > 0 || activeTreatments().length > 0) {
-            <div class="patient-ongoing-treatment-alert">
-              <div class="alert-icon">📋</div>
-              <div class="alert-content">
-                <div class="alert-title-row">
-                  <strong class="alert-title">
-                    ⚠️
-                    {{
-                      t(
-                        'Patient Has Ongoing Treatment / Incomplete Work!',
-                        'تنبيه: المريض لديه خطة علاج جارية / عمل غير مكتمل!'
-                      )
-                    }}
-                  </strong>
-                  <span class="alert-badge"
-                    >{{ activeTreatmentPlans().length || activeTreatments().length }}
-                    {{ t('active item(s)', 'علاج نشط') }}</span
-                  >
-                </div>
-                <p class="alert-detail">
-                  {{ t('Incomplete Treatment:', 'العمل والعلاج المتبقي:') }}
-                  <span class="highlight-work">{{ remainingTreatmentsSummary() }}</span>
-                </p>
-                <div class="alert-btn-row">
-                  @for (plan of activeTreatmentPlans(); track plan.id) {
-                    <button
-                      type="button"
-                      class="btn-use-plan-reason"
-                      (click)="applyPlanToNotes(plan)"
-                    >
-                      ✓ {{ t('Set as Appointment Reason:', 'اعتماد كسبب للموعد:') }}
-                      {{ plan.title }}
-                    </button>
-                  }
-                </div>
-              </div>
-            </div>
-          }
-        </div>
-      </fieldset>
-
-      <fieldset>
-        <legend>2. {{ t('Choose doctor', 'اختيار طبيب') }} <strong class="req">*</strong></legend>
-        <div>
-          <app-doctor-select
-            formControlName="doctorProfileId"
-            [allowClear]="false"
-            [isInvalid]="
-              form.controls.doctorProfileId.touched && form.controls.doctorProfileId.invalid
-            "
-          ></app-doctor-select>
-          @if (form.controls.doctorProfileId.touched && form.controls.doctorProfileId.invalid) {
-            <span
-              class="field-error"
-              style="display: block; color: #dc2626; font-size: 0.8rem; margin-top: 0.25rem;"
-            >
-              {{ t('Please select a doctor.', 'يرجى اختيار طبيب.') }}
-            </span>
-          }
-        </div>
-      </fieldset>
-
-      <fieldset class="timing">
-        <legend>3. {{ t('Date and duration', 'التاريخ والمدة') }}</legend>
-        <label>
-          {{ t('Date', 'التاريخ') }}
-          <app-date-input
-            [label]="t('Appointment date', 'تاريخ الموعد')"
-            formControlName="date"
-            [isInvalid]="form.controls.date.touched && form.controls.date.invalid"
-          ></app-date-input>
-        </label>
-        <label>
-          {{ t('Duration', 'المدة') }}
-          <select formControlName="durationMinutes">
-            @if (![15, 20, 30, 45, 60, 90, 120].includes(form.controls.durationMinutes.value)) {
-              <option [ngValue]="form.controls.durationMinutes.value">
-                {{ form.controls.durationMinutes.value }} {{ t('minutes', 'دقيقة') }}
-              </option>
-            }
-            <option [ngValue]="20">20 {{ t('minutes', 'دقيقة') }}</option>
-            <option [ngValue]="15">15 {{ t('minutes', 'دقيقة') }}</option>
-            <option [ngValue]="30">30 {{ t('minutes', 'دقيقة') }}</option>
-            <option [ngValue]="45">45 {{ t('minutes', 'دقيقة') }}</option>
-            <option [ngValue]="60">60 {{ t('minutes', 'دقيقة') }}</option>
-            <option [ngValue]="90">90 {{ t('minutes', 'دقيقة') }}</option>
-            <option [ngValue]="120">120 {{ t('minutes', 'دقيقة') }}</option>
-          </select>
-        </label>
-        <div class="emergency-toggle-wrap" style="grid-column: 1 / -1; margin-top: 0.5rem;">
-          <label
-            class="emergency-checkbox-label"
-            style="display: inline-flex; align-items: center; gap: 0.65rem; padding: 0.5rem 0.85rem; border-radius: var(--radius-md); background: #fff5f5; border: 1.5px solid #fecdd3; cursor: pointer; color: #be123c; font-weight: 700; font-size: 0.88rem;"
-          >
-            <input
-              type="checkbox"
-              formControlName="isEmergency"
-              (change)="onEmergencyToggle()"
-              style="width: 18px; height: 18px; cursor: pointer; accent-color: #e11d48; margin: 0;"
-            />
-            <span
-              >🚨
-              {{ t('Check emergency appointment times', 'التحقق من أوقات مواعيد الطوارئ') }}</span
-            >
-          </label>
-        </div>
-      </fieldset>
-
-      <fieldset class="slots-fieldset">
-        <legend class="slots-legend">
-          <span>4. {{ t('Available slots', 'الأوقات المتاحة') }}</span>
-          @if (slots().length > 0) {
-            <span class="slots-total-pill"> {{ slots().length }} {{ t('slots', 'موعد') }} </span>
-          }
-        </legend>
-
-        @if (form.controls.isEmergency.value) {
-          <div
-            class="alert"
-            style="background: #fff1f2; color: #9f1239; border-color: #fecdd3; font-weight: 600; font-size: 0.86rem; margin-bottom: 0.85rem; display: flex; align-items: center; gap: 0.5rem;"
-          >
-            <span
-              >🚨
-              {{
-                t(
-                  'Showing emergency availability for this date.',
-                  'عرض الأوقات المتاحة للطوارئ في التاريخ المحدد.'
-                )
-              }}</span
-            >
-          </div>
-        }
-
-        @if (slotsLoading()) {
-          <div class="state-loading" role="status">
-            <span class="loading-spinner" aria-hidden="true"></span>
-            <span>{{ t('Checking availability…', 'جارٍ التحقق من المواعيد…') }}</span>
-          </div>
-        } @else if (!form.controls.doctorProfileId.value) {
-          <div class="slots-empty-notice">
-            <span class="empty-icon">👨‍⚕️</span>
-            <p>
-              {{
-                t(
-                  'Please select a doctor to view available appointment slots.',
-                  'يرجى اختيار الطبيب أولاً لعرض المواعيد المتاحة.'
-                )
-              }}
-            </p>
-          </div>
-        } @else if (availabilityError()) {
-          <div class="availability-error" role="alert">
-            <strong>{{ availabilityError() }}</strong
-            ><button type="button" (click)="loadAvailability()">
-              {{ t('Check availability again', 'إعادة التحقق من الأوقات') }}
-            </button>
-          </div>
-        } @else if (!slots().length) {
-          <div
-            class="state-warning"
-            style="display: flex; flex-direction: column; align-items: center; gap: 0.85rem; padding: 1.5rem; border-radius: var(--radius-md); background: #fff7ed; border: 1px solid #ffedd5; text-align: center;"
-          >
-            <p style="margin: 0; color: #9a3412; font-weight: 600; font-size: 0.9rem;">
-              {{
-                t(
-                  'No available slots match this date and duration.',
-                  'لا توجد أوقات متاحة للتاريخ والمدة المحددين.'
-                )
-              }}
-            </p>
-            <button
-              type="button"
-              class="button primary"
-              style="background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); border: none; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.3); font-weight: 700;"
-              (click)="enableEmergency()"
-            >
-              🚨 {{ t('Check emergency availability', 'عرض الأوقات المتاحة للطوارئ') }}
-            </button>
-          </div>
-        } @else {
-          <!-- Selected Slot Confirmation Banner -->
-          @if (selectedSlot(); as sel) {
-            <div class="selected-slot-banner">
-              <div class="banner-badge">✓</div>
-              <div class="banner-details">
-                <div class="banner-title">{{ t('Selected Slot', 'الموعد المختار') }}</div>
-                <div class="banner-time">
-                  {{ formatSlotRange(sel) }}
-                  <span class="banner-duration"
-                    >({{ form.controls.durationMinutes.value }} {{ t('minutes', 'دقيقة') }})</span
-                  >
-                </div>
-              </div>
-              <button
-                type="button"
-                class="banner-clear-btn"
-                (click)="selectedSlot.set(null)"
-                [title]="t('Choose another slot', 'اختيار وقت آخر')"
-              >
-                ✕ {{ t('Change', 'تغيير') }}
-              </button>
-            </div>
-          }
-
-          <!-- Toolbar: Period tabs + 12h/24h Toggle -->
-          <div class="slots-toolbar">
-            <div class="period-filter-tabs">
-              <button
-                type="button"
-                class="period-tab"
-                [class.active]="selectedPeriod() === 'all'"
-                [attr.aria-pressed]="selectedPeriod() === 'all'"
-                (click)="slotPage.set(0); selectedPeriod.set('all')"
-              >
-                <span>{{ t('All Slots', 'جميع الأوقات') }}</span>
-                <span class="tab-count">{{ slotPeriods().total }}</span>
-              </button>
-
-              @if (slotPeriods().morning.length > 0) {
-                <button
-                  type="button"
-                  class="period-tab"
-                  [class.active]="selectedPeriod() === 'morning'"
-                  [attr.aria-pressed]="selectedPeriod() === 'morning'"
-                  (click)="slotPage.set(0); selectedPeriod.set('morning')"
-                >
-                  <span>🌅 {{ t('Morning', 'صباحًا') }}</span>
-                  <span class="tab-count">{{ slotPeriods().morning.length }}</span>
-                </button>
-              }
-
-              @if (slotPeriods().evening.length > 0) {
-                <button
-                  type="button"
-                  class="period-tab"
-                  [class.active]="selectedPeriod() === 'evening'"
-                  [attr.aria-pressed]="selectedPeriod() === 'evening'"
-                  (click)="slotPage.set(0); selectedPeriod.set('evening')"
-                >
-                  <span>🌙 {{ t('Evening', 'مساءً') }}</span>
-                  <span class="tab-count">{{ slotPeriods().evening.length }}</span>
-                </button>
-              }
-            </div>
-
-            <div
-              class="time-format-toggle"
-              role="group"
-              [attr.aria-label]="t('Time display format', 'صيغة عرض الوقت')"
-            >
-              <button
-                type="button"
-                [class.active]="timeFormat() === '12h'"
-                [attr.aria-pressed]="timeFormat() === '12h'"
-                (click)="timeFormat.set('12h')"
-              >
-                12h
-              </button>
-              <button
-                type="button"
-                [class.active]="timeFormat() === '24h'"
-                [attr.aria-pressed]="timeFormat() === '24h'"
-                (click)="timeFormat.set('24h')"
-              >
-                24h
-              </button>
-            </div>
-          </div>
-
-          <div class="compact-slot-picker" data-testid="availability-slots">
-            <p>
-              {{
-                t(
-                  'Choose a start time below. Each card shows the end of your session.',
-                  'اختار وقت البداية. كل موعد موضح معاه نهاية الجلسة.'
-                )
-              }}
-            </p>
-            <div class="slot-cards-grid compact-slot-grid appointment-choice-grid">
-              @for (slot of pagedSlots(); track slot.startAt) {
-                <button
-                  type="button"
-                  class="slot-card"
-                  [class.selected]="selectedSlot()?.startAt === slot.startAt"
-                  [attr.aria-pressed]="selectedSlot()?.startAt === slot.startAt"
-                  (click)="selectedSlot.set(slot)"
-                >
-                  <div class="slot-card-primary">
-                    <span class="slot-time">{{ formatTime(slot.localStartTime) }}</span>
-                    @if (selectedSlot()?.startAt === slot.startAt) {
-                      <span aria-hidden="true">✓</span>
-                    }
-                  </div>
-                  <div class="slot-card-secondary">
-                    {{ t('Ends at', 'ينتهي') }} {{ formatTime(slot.localEndTime) }}
-                  </div>
-                  <span class="slot-available">● {{ t('Available', 'متاح') }}</span>
-                </button>
-              }
-            </div>
-            @if (slotPageCount() > 1) {
-              <nav
-                class="slot-pagination"
-                [attr.aria-label]="t('Appointment pages', 'صفحات المواعيد')"
-              >
-                <button
-                  type="button"
-                  class="secondary"
-                  [disabled]="activeSlotPage() === 0"
-                  (click)="slotPage.set(activeSlotPage() - 1)"
-                >
-                  {{ t('Previous', 'السابق') }}
-                </button>
-                <span>{{ activeSlotPage() + 1 }} / {{ slotPageCount() }}</span>
-                <button
-                  type="button"
-                  class="secondary"
-                  [disabled]="activeSlotPage() + 1 >= slotPageCount()"
-                  (click)="slotPage.set(activeSlotPage() + 1)"
-                >
-                  {{ t('Next', 'التالي') }}
-                </button>
-              </nav>
-            }
-          </div>
-        }
-      </fieldset>
-
-      <fieldset>
-        <legend>5. {{ t('Appointment details', 'تفاصيل الموعد') }}</legend>
-        <label>
-          {{ t('Type', 'النوع') }}
-          <select formControlName="type">
-            @for (x of types; track x) {
-              <option [ngValue]="x">{{ typeLabel(x) }}</option>
-            }
-          </select>
-        </label>
-        @if (rooms().length) {
-          <label class="workspace-filter-field"><span>{{ t('Room', 'الغرفة') }}</span>
-            <select formControlName="roomId">
-              <option value="">{{ t('Unassigned', 'بدون غرفة') }}</option>
-              @for (room of rooms(); track room.id) { <option [value]="room.id">{{ room.name }}</option> }
-            </select>
-          </label>
-        }
-
-        <label>
-          {{ t('Notes', 'ملاحظات') }}
-          <textarea formControlName="notes" maxlength="2000"></textarea>
-        </label>
-      </fieldset>
-
-      @if (form.invalid && form.touched) {
-        <div class="alert error" role="alert">
-          {{
-            t(
-              'Please complete all required steps and choose an appointment slot.',
-              'يرجى إكمال جميع الخطوات المطلوبة واختيار وقت الموعد.'
-            )
-          }}
-        </div>
-      }
-
-      @if (selectedSlot(); as selected) {
-        <section class="booking-review" aria-labelledby="booking-review-title">
-          <h2 id="booking-review-title">{{ t('Review before booking', 'مراجعة بيانات الحجز') }}</h2>
-          <dl>
-            <div>
-              <dt>{{ t('Patient', 'المريض') }}</dt>
-              <dd>
-                {{
-                  patientSelectComp
-                    ? patientSelectComp.selectedPatient()?.fullName
-                    : t('Selected patient', 'المريض المختار')
-                }}
-              </dd>
-            </div>
-            <div>
-              <dt>{{ t('Doctor', 'الطبيب') }}</dt>
-              <dd>
-                {{
-                  doctorSelectComp?.selectedDoctor()?.displayName ||
-                    t('Selected doctor', 'الطبيب المختار')
-                }}
-              </dd>
-            </div>
-            <div>
-              <dt>{{ t('Date', 'التاريخ') }}</dt>
-              <dd>
-                <bdi>{{ form.controls.date.value }}</bdi>
-              </dd>
-            </div>
-            <div>
-              <dt>{{ t('Time', 'الوقت') }}</dt>
-              <dd>
-                <bdi>{{ formatSlotRange(selected) }}</bdi>
-              </dd>
-            </div>
-            <div>
-              <dt>{{ t('Duration', 'المدة') }}</dt>
-              <dd>{{ form.controls.durationMinutes.value }} {{ t('minutes', 'دقيقة') }}</dd>
-            </div>
-            <div>
-              <dt>{{ t('Visit type', 'نوع الزيارة') }}</dt>
-              <dd>{{ typeLabel(form.controls.type.value) }}</dd>
-            </div>
-          </dl>
-        </section>
-      }
-      <div class="form-actions">
-        @if (embedded()) {
-          <button class="button" type="button" [disabled]="saving()" (click)="cancelled.emit()">{{ t('Cancel', 'إلغاء') }}</button>
-        } @else {
-          <a class="button" routerLink="/appointments">{{ t('Cancel', 'إلغاء') }}</a>
-        }
-        <button class="primary" [disabled]="saving() || slotsLoading()" [attr.aria-busy]="saving()">
-          {{
-            saving() ? t('Creating…', 'جارٍ الإنشاء…') : t('Confirm appointment', 'تأكيد الموعد')
-          }}
-        </button>
-      </div>
-    </form>
-
-    <!-- Quick Add Patient Modal -->
-    @if (showNewPatientModal()) {
-      <dialog
-        #newPatientDialog
-        class="modal-overlay quick-patient-dialog"
-        aria-labelledby="quick-patient-title"
-        (cancel)="$event.preventDefault(); closeNewPatientModal()"
-        (click)="closeNewPatientModal()"
-      >
-        <div class="modal-content new-patient-modal" (click)="$event.stopPropagation()">
-          <div class="modal-header">
-            <h2 id="quick-patient-title">{{ t('Add patient', 'إضافة مريض') }}</h2>
-            <button
-              type="button"
-              class="close-btn"
-              [attr.aria-label]="t('Close patient form', 'إغلاق نموذج المريض')"
-              (click)="closeNewPatientModal()"
-              [disabled]="patientSaving()"
-            >
-              &times;
-            </button>
-          </div>
-          <div class="modal-body">
-            @if (patientError()) {
-              <div class="alert error" role="alert">{{ patientError() }}</div>
-            }
-            <form
-              [formGroup]="patientForm"
-              (ngSubmit)="saveNewPatient()"
-              class="quick-patient-form"
-              [attr.aria-busy]="patientSaving()"
-            >
-              @if (patientForm.invalid && patientForm.touched) {
-                <p class="quick-validation" role="alert">
-                  {{
-                    t(
-                      'Complete the required patient details before saving.',
-                      'أكمل بيانات المريض المطلوبة قبل الحفظ.'
-                    )
-                  }}
-                </p>
-              }
-              <label>
-                <span>{{ t('First name', 'الاسم الأول') }} <strong class="req">*</strong></span>
-                <input autofocus formControlName="firstName" maxlength="100" />
-              </label>
-              <label>
-                <span>{{ t('Second name (Middle)', 'الاسم الثاني (الأوسط)') }}</span>
-                <input formControlName="middleName" maxlength="100" />
-              </label>
-              <label>
-                <span
-                  >{{ t('Third name (Family)', 'الاسم الثالث (العائلة)') }}
-                  <strong class="req">*</strong></span
-                >
-                <input formControlName="lastName" maxlength="100" />
-              </label>
-              <label>
-                <span>{{ t('Gender', 'النوع') }} <strong class="req">*</strong></span>
-                <select formControlName="gender">
-                  <option [ngValue]="1">{{ t('Female', 'أنثى') }}</option>
-                  <option [ngValue]="2">{{ t('Male', 'ذكر') }}</option>
-                </select>
-              </label>
-              <label>
-                <span
-                  >{{ t('Date of birth', 'تاريخ الميلاد') }} <strong class="req">*</strong></span
-                >
-                <app-date-input
-                  [label]="t('Date of birth', 'تاريخ الميلاد')"
-                  formControlName="dateOfBirth"
-                  [max]="today()"
-                  [isInvalid]="
-                    patientForm.controls.dateOfBirth.touched &&
-                    patientForm.controls.dateOfBirth.invalid
-                  "
-                ></app-date-input>
-                @if (
-                  patientForm.controls.dateOfBirth.touched &&
-                  patientForm.controls.dateOfBirth.invalid
-                ) {
-                  <span
-                    class="field-error"
-                    style="display: block; color: #dc2626; font-size: 0.8rem; margin-top: 0.25rem;"
-                  >
-                    {{ t('Date of birth is required.', 'تاريخ الميلاد مطلوب.') }}
-                  </span>
-                }
-              </label>
-              <div
-                style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.25rem;"
-              >
-                <span style="font-size: 0.85rem; font-weight: 600; color: #475569;"
-                  >{{ t('Phone', 'رقم الهاتف') }}
-                  <strong class="req" style="color: #dc2626;">*</strong></span
-                >
-                <app-phone-input
-                  [label]="t('Phone', 'الهاتف')"
-                  formControlName="phone"
-                  [placeholder]="t('e.g. +2010...', 'مثال: +2010...')"
-                  [class.invalid]="
-                    patientForm.controls.phone.touched && patientForm.controls.phone.invalid
-                  "
-                ></app-phone-input>
-                @if (
-                  patientForm.controls.phone.touched &&
-                  patientForm.controls.phone.errors?.['required']
-                ) {
-                  <span
-                    class="field-error"
-                    style="display: block; color: #dc2626; font-size: 0.8rem; margin-top: 0.25rem;"
-                  >
-                    {{ t('Phone number is required.', 'رقم الهاتف مطلوب.') }}
-                  </span>
-                }
-                @if (
-                  patientForm.controls.phone.touched &&
-                  patientForm.controls.phone.errors?.['invalidPhone']
-                ) {
-                  <span
-                    class="field-error"
-                    style="display: block; color: #dc2626; font-size: 0.8rem; margin-top: 0.25rem;"
-                  >
-                    {{ t('Phone number is invalid.', 'رقم الهاتف غير صحيح.') }}
-                  </span>
-                }
-              </div>
-
-              <!-- Medical Alerts & Background Section -->
-              <div
-                class="medical-section-divider"
-                style="grid-column: 1 / -1; margin-top: 0.25rem; padding-top: 0.75rem; border-top: 1.5px dashed #e2e8f0;"
-              >
-                <h3
-                  style="margin: 0 0 0.5rem; font-size: 0.92rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.4rem;"
-                >
-                  <span>🏥</span>
-                  {{
-                    t(
-                      'Medical Alerts & Health Background (Optional)',
-                      'التنبيهات الطبية والتاريخ الصحي (اختياري)'
-                    )
-                  }}
-                </h3>
-              </div>
-
-              <label style="grid-column: 1 / -1;">
-                <span
-                  style="display: flex; align-items: center; gap: 0.35rem; color: #dc2626; font-weight: 750;"
-                >
-                  <span>⚠️</span> {{ t('Allergies & Sensitivities', 'الحساسية والتحسس') }}
-                </span>
-                <app-tag-input
-                  [label]="t('Allergies', 'الحساسية')"
-                  [(tags)]="patientAllergies"
-                  theme="danger"
-                  [placeholder]="
-                    t(
-                      'Type an allergy and press Enter, or choose below…',
-                      'اكتب الحساسية واضغط Enter، أو اختر أدناه…'
-                    )
-                  "
-                  [suggestions]="allergySuggestions"
-                ></app-tag-input>
-              </label>
-
-              <label style="grid-column: 1 / -1;">
-                <span
-                  style="display: flex; align-items: center; gap: 0.35rem; color: #d97706; font-weight: 750;"
-                >
-                  <span>🩺</span> {{ t('Chronic Medical Conditions', 'الأمراض والحالات المزمنة') }}
-                </span>
-                <app-tag-input
-                  [label]="t('Medical conditions', 'الحالات المرضية')"
-                  [(tags)]="patientConditions"
-                  theme="warning"
-                  [placeholder]="
-                    t(
-                      'Type a condition and press Enter, or choose below…',
-                      'اكتب الحالة واضغط Enter، أو اختر أدناه…'
-                    )
-                  "
-                  [suggestions]="conditionSuggestions"
-                ></app-tag-input>
-              </label>
-
-              <label style="grid-column: 1 / -1;">
-                <span
-                  style="display: flex; align-items: center; gap: 0.35rem; color: #0284c7; font-weight: 750;"
-                >
-                  <span>💊</span>
-                  {{ t('Current Patient Medications', 'الأدوية والعلاجات الحالية') }}
-                </span>
-                <app-tag-input
-                  [label]="t('Current medications', 'الأدوية الحالية')"
-                  [(tags)]="patientMedications"
-                  theme="info"
-                  [placeholder]="
-                    t(
-                      'Type a medication and press Enter, or choose below…',
-                      'اكتب الدواء واضغط Enter، أو اختر أدناه…'
-                    )
-                  "
-                  [suggestions]="medicationSuggestions"
-                ></app-tag-input>
-              </label>
-
-              <div class="form-actions" style="grid-column: 1 / -1; margin-top: 0.75rem;">
-                <button
-                  type="button"
-                  class="button secondary"
-                  (click)="closeNewPatientModal()"
-                  [disabled]="patientSaving()"
-                >
-                  {{ t('Cancel', 'إلغاء') }}
-                </button>
-                <button type="submit" class="button primary" [disabled]="patientSaving()">
-                  {{
-                    patientSaving()
-                      ? t('Saving...', 'جاري الحفظ...')
-                      : t('Save Patient', 'حفظ المريض')
-                  }}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </dialog>
-    }
-  </div>`,
+  templateUrl: './appointment-create.component.html',
 })
 export class AppointmentCreateComponent implements OnInit, OnChanges {
-  private readonly injector = inject(Injector);
   private readonly api = inject(AppointmentApiService);
-  private readonly patientApi = inject(PatientApiService);
   private readonly doctorApi = inject(DoctorApiService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  readonly cancelRoute = this.route.snapshot.queryParamMap.get('from') === 'dashboard' ? '/dashboard' : '/appointments';
   readonly embedded = input(false);
   readonly rooms = signal<import('./appointment-api.service').ClinicRoom[]>([]);
   readonly initialDate = input('');
@@ -800,13 +59,18 @@ export class AppointmentCreateComponent implements OnInit, OnChanges {
   }
   private readonly destroyRef = inject(DestroyRef);
   readonly i18n = inject(LocalizationService);
-  readonly patients = signal<PatientListItem[]>([]);
   readonly doctors = signal<DoctorListItem[]>([]);
   readonly slots = signal<AvailabilitySlot[]>([]);
   readonly selectedSlot = signal<AvailabilitySlot | null>(null);
   readonly timeFormat = signal<'12h' | '24h'>('12h');
   readonly selectedPeriod = signal<'all' | 'morning' | 'evening'>('all');
-  readonly patientsLoading = signal(true);
+  private readonly slotsPerPage = 18;
+
+  get bookingStep(): number {
+    if (this.form.controls.patientId.invalid) return 1;
+    if (this.form.controls.doctorProfileId.invalid) return 2;
+    return this.selectedSlot() ? 4 : 3;
+  }
 
   getSlotPeriod(slot: AvailabilitySlot): 'morning' | 'evening' {
     return Number(slot.localStartTime.slice(0, 2)) < 12 ? 'morning' : 'evening';
@@ -816,33 +80,27 @@ export class AppointmentCreateComponent implements OnInit, OnChanges {
     evening: this.slots().filter((slot) => this.getSlotPeriod(slot) === 'evening'),
     total: this.slots().length,
   }));
-  readonly filteredPeriods = computed(() => {
-    const periods = this.slotPeriods();
-    return [
-      { key: 'morning', slots: periods.morning },
-      { key: 'evening', slots: periods.evening },
-    ].filter((period) => this.selectedPeriod() === 'all' || this.selectedPeriod() === period.key);
-  });
   readonly slotPage = signal(0);
-  readonly filteredSlots = computed(() =>
-    this.filteredPeriods()
-      .flatMap((period) => period.slots)
-      .sort((a, b) => a.startAt.localeCompare(b.startAt)),
-  );
-  readonly slotPageCount = computed(() => Math.ceil(this.filteredSlots().length / 9));
+  readonly filteredSlots = computed(() => {
+    const filter = this.selectedPeriod();
+    const slots = filter === 'all' ? this.slots() : this.slotPeriods()[filter];
+    return [...slots].sort((a, b) =>
+      a.localStartTime.localeCompare(b.localStartTime) || a.startAt.localeCompare(b.startAt),
+    );
+  });
+  readonly slotPageCount = computed(() => Math.ceil(this.filteredSlots().length / this.slotsPerPage));
   readonly activeSlotPage = computed(() =>
     Math.max(0, Math.min(this.slotPage(), this.slotPageCount() - 1)),
   );
   readonly pagedSlots = computed(() =>
-    this.filteredSlots().slice(this.activeSlotPage() * 9, this.activeSlotPage() * 9 + 9),
+    this.filteredSlots().slice(this.activeSlotPage() * this.slotsPerPage, (this.activeSlotPage() + 1) * this.slotsPerPage),
   );
   readonly slotsLoading = signal(false);
   readonly saving = signal(false);
   readonly error = signal('');
   readonly availabilityError = signal('');
   private availabilityRequestId = 0;
-  private previousBodyOverflow: string | null = null;
-  readonly types = [1, 2, 3, 4, 5, 6];
+  readonly types = [3, 2];
   readonly form = inject(FormBuilder).nonNullable.group({
     patientId: ['', Validators.required],
     doctorProfileId: ['', Validators.required],
@@ -853,37 +111,16 @@ export class AppointmentCreateComponent implements OnInit, OnChanges {
     roomId: '',
     notes: ['', [Validators.maxLength(2000)]],
   });
-  readonly showNewPatientModal = signal(false);
-  readonly patientSaving = signal(false);
-  readonly patientError = signal('');
-  @ViewChildren(TagInputComponent) medicalInputs!: QueryList<TagInputComponent>;
-  patientAllergies: string[] = [];
-  patientConditions: string[] = [];
-  patientMedications: string[] = [];
-  readonly allergySuggestions = COMMON_ALLERGIES;
-  readonly conditionSuggestions = COMMON_CONDITIONS;
-  readonly medicationSuggestions = COMMON_MEDICATIONS;
-  readonly patientForm = inject(FormBuilder).nonNullable.group({
-    firstName: ['', Validators.required],
-    middleName: [''],
-    lastName: ['', Validators.required],
-    gender: [1, Validators.required],
-    dateOfBirth: ['', Validators.required],
-    phone: ['', Validators.required],
-  });
-
   private readonly treatmentApi = inject(TreatmentApiService);
 
   readonly activeTreatmentPlans = signal<TreatmentPlanList[]>([]);
   readonly activeTreatments = signal<Treatment[]>([]);
   readonly loadingTreatments = signal(false);
 
-  @ViewChild('patientSelect') patientSelectComp!: PatientSelectComponent;
+  @ViewChild('patientSelect') patientSelectComp?: PatientSelectComponent;
   @ViewChild(DoctorSelectComponent) doctorSelectComp?: DoctorSelectComponent;
-  @ViewChild('newPatientDialog') newPatientDialog?: ElementRef<HTMLDialogElement>;
 
   constructor() {
-    this.destroyRef.onDestroy(() => this.restoreDialogScroll());
     this.api.rooms().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: rooms => this.rooms.set(rooms),
       error: () => {},
@@ -1010,91 +247,13 @@ export class AppointmentCreateComponent implements OnInit, OnChanges {
     this.form.controls.type.setValue(2);
   }
 
-  openNewPatientModal() {
-    this.patientForm.reset({ gender: 1, dateOfBirth: '' });
-    this.patientAllergies = [];
-    this.patientConditions = [];
-    this.patientMedications = [];
-    this.patientError.set('');
-    this.showNewPatientModal.set(true);
-    afterNextRender(
-      () => {
-        const dialog = this.newPatientDialog?.nativeElement;
-        if (dialog && this.showNewPatientModal() && typeof dialog.showModal === 'function') {
-          this.previousBodyOverflow = document.body.style.overflow;
-          document.body.style.overflow = 'hidden';
-          dialog.showModal();
-        }
-      },
-      { injector: this.injector },
-    );
-  }
-
-  closeNewPatientModal(): void {
-    if (this.patientSaving()) return;
-    const dialog = this.newPatientDialog?.nativeElement;
-    if (dialog?.open && typeof dialog.close === 'function') dialog.close();
-    this.showNewPatientModal.set(false);
-    this.restoreDialogScroll();
-  }
-  private restoreDialogScroll(): void {
-    if (this.previousBodyOverflow !== null)
-      document.body.style.overflow = this.previousBodyOverflow;
-    this.previousBodyOverflow = null;
-  }
-
-  saveNewPatient() {
-    if (this.patientSaving()) return;
-    this.medicalInputs?.forEach((input) => input.commitPending());
-    this.patientForm.markAllAsTouched();
-    if (this.patientForm.invalid) return;
-
-    this.patientSaving.set(true);
-    this.patientError.set('');
-    const raw = this.patientForm.getRawValue();
-    const val = {
-      ...raw,
-      middleName: raw.middleName.trim() || null,
-    };
-
-    this.patientApi
-      .create({
-        ...val,
-        allergies: [...this.patientAllergies],
-        medicalConditions: [...this.patientConditions],
-        medications: [...this.patientMedications],
-      })
-      .subscribe({
-        next: (newId) => {
-          const patientId = newId.id;
-          this.patientSaving.set(false);
-          this.closeNewPatientModal();
-          this.patientApi.invalidateCache();
-
-          if (this.patientSelectComp) {
-            this.patientSelectComp.loadPatients();
-          }
-
-          this.form.controls.patientId.setValue(patientId);
-        },
-        error: (e) => {
-          this.patientSaving.set(false);
-          this.patientError.set(
-            parseApiError(e, this.t('Could not save patient', 'فشل حفظ بيانات المريض')),
-          );
-        },
-      });
-  }
-
-  onEmergencyToggle() {
-    if (this.form.controls.isEmergency.value) {
-      this.form.controls.type.setValue(5);
-    }
+  selectCreatedPatient(id: string): void {
+    this.patientSelectComp?.loadPatients();
+    this.form.controls.patientId.setValue(id);
   }
 
   enableEmergency() {
     this.form.controls.isEmergency.setValue(true);
-    this.form.controls.type.setValue(5);
   }
 
   loadAvailability(keepError = false) {
@@ -1119,6 +278,7 @@ export class AppointmentCreateComponent implements OnInit, OnChanges {
           if (requestId !== this.availabilityRequestId) return;
           this.slotPage.set(0);
           this.slots.set(s);
+          if (!this.filteredSlots().length) this.selectedPeriod.set('all');
           this.slotsLoading.set(false);
         },
         error: (err) => {
@@ -1154,6 +314,7 @@ export class AppointmentCreateComponent implements OnInit, OnChanges {
         patientId: x.patientId,
         doctorProfileId: x.doctorProfileId,
         type: x.type,
+        useEmergencyAvailability: x.isEmergency || undefined,
         time: {
           date: x.date,
           startTime: this.selectedSlot()!.localStartTime,
@@ -1169,6 +330,7 @@ export class AppointmentCreateComponent implements OnInit, OnChanges {
             this.created.emit();
           } else {
             void this.router.navigate(['/appointments'], {
+              queryParams: { date: x.date },
               state: { message: this.t('Appointment created.', 'تم إنشاء الموعد.') },
             });
           }
@@ -1211,6 +373,7 @@ export class AppointmentCreateComponent implements OnInit, OnChanges {
   }
 
   typeLabel(x: number) {
+    if (x === 3) return this.t('Examination', 'كشف');
     return appointmentType(x, this.i18n.language());
   }
 

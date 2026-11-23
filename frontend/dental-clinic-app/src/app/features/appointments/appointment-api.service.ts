@@ -124,6 +124,7 @@ export class AppointmentApiService {
     doctorProfileId: string;
     type: number;
     time: AppointmentTime;
+    useEmergencyAvailability?: boolean;
     notes?: string;
     roomId?: string;
   }) {

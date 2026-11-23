@@ -45,46 +45,6 @@
   }
 }
 
-// ── Navigation tabs between finance sub-pages ──
-.finance-nav {
-  display: flex;
-  gap: 0.5rem;
-  margin-block-end: 1.5rem;
-  border-block-end: 2px solid var(--border);
-  padding-block-end: 0;
-  overflow-x: auto;
-
-  &::-webkit-scrollbar { height: 0; }
-
-  a {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.75rem 1.25rem;
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: var(--muted);
-    text-decoration: none;
-    border: none;
-    border-block-end: 3px solid transparent;
-    margin-block-end: -2px;
-    border-radius: 0;
-    white-space: nowrap;
-    transition: all 0.15s ease;
-
-    &:hover {
-      color: var(--ink);
-      text-decoration: none;
-    }
-
-    &.active,
-    &.router-link-active {
-      color: var(--brand);
-      border-block-end-color: var(--brand);
-    }
-  }
-}
-
 // ── Modern Filters Toolbar ──
 .finance-filters {
   display: flex;

@@ -41,6 +41,14 @@ public sealed partial class DentalWorkflowTests
             await scope.ServiceProvider.GetRequiredService<IExpenseService>().CreateAsync(new(expenseCategory.Id, 100, null, "Dental material", "Supplier", "INV-1", Monday, new(0, 30), null), CancellationToken.None);
             var balance = (await finance.PatientBalanceAsync(setup.PatientId, CancellationToken.None))!; Assert.Equal(1000, balance.TotalRevenue); Assert.Equal(400, balance.TotalPaid); Assert.Equal(600, balance.Outstanding);
             var dashboard = await finance.DashboardAsync(new(FinancePeriod.Today), CancellationToken.None); Assert.Equal(1000, dashboard.Revenue); Assert.Equal(400, dashboard.Payments); Assert.Equal(100, dashboard.Expenses); Assert.Equal(200, dashboard.DoctorCompensation); Assert.Equal(700, dashboard.NetProfit);
+            Assert.Equal(new FinanceRevenueComparison(0, Monday.AddDays(-1), Monday.AddDays(-1)), dashboard.RevenueComparison);
+            var nextDay = Monday.AddDays(1);
+            var nextDayDashboard = await finance.DashboardAsync(new(FinancePeriod.Custom, nextDay, nextDay), CancellationToken.None);
+            Assert.Equal(0, nextDayDashboard.Revenue);
+            Assert.Equal(new FinanceRevenueComparison(1000, Monday, Monday), nextDayDashboard.RevenueComparison);
+            var lastMonth = await finance.DashboardAsync(new(FinancePeriod.LastMonth), CancellationToken.None);
+            var firstOfMonth = new DateOnly(Monday.Year, Monday.Month, 1);
+            Assert.Equal(new FinanceRevenueComparison(0, firstOfMonth.AddMonths(-2), firstOfMonth.AddMonths(-1).AddDays(-1)), lastMonth.RevenueComparison);
         }
         test.User.UserId = setup.DoctorUserId;
         await using (var ownScope = test.Provider.CreateAsyncScope())

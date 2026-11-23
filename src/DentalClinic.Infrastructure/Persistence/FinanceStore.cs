@@ -69,12 +69,38 @@ internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock cl
             case FinancePeriod.Today: from = to = today; break;
             case FinancePeriod.ThisWeek: from = today.AddDays(-((7 + (int)today.DayOfWeek - (int)DayOfWeek.Monday) % 7)); to = today; break;
             case FinancePeriod.ThisMonth: from = new(today.Year, today.Month, 1); to = today; break;
+            case FinancePeriod.LastMonth: to = new DateOnly(today.Year, today.Month, 1).AddDays(-1); from = new(to.Year, to.Month, 1); break;
             case FinancePeriod.ThisYear: from = new(today.Year, 1, 1); to = today; break;
             case FinancePeriod.Custom: from = filter.From ?? new DateOnly(1900, 1, 1); to = filter.To ?? new DateOnly(2200, 12, 31); break;
             default: throw new ArgumentException("Invalid finance period.");
         }
         if (from > to) throw new ArgumentException("From date cannot exceed to date.");
-        return new(ToUtc(from, zone), ToUtc(to.AddDays(1), zone), config.TimeZone, config.Currency);
+        return new(ToUtc(from, zone), ToUtc(to.AddDays(1), zone), config.TimeZone, config.Currency)
+        {
+            Comparison = filter.IncludeComparison ? ResolveComparison(filter, from, to, zone) : null,
+        };
+    }
+
+    private static FinanceComparisonRange? ResolveComparison(FinanceDateFilter filter, DateOnly from, DateOnly to, TimeZoneInfo zone)
+    {
+        var dayCount = to.DayNumber - from.DayNumber + 1;
+        if (filter.Period == FinancePeriod.Custom &&
+            (filter.From is null || filter.To is null || from.DayNumber <= dayCount))
+            return null;
+
+        var previousFrom = filter.Period switch
+        {
+            FinancePeriod.ThisMonth or FinancePeriod.LastMonth => from.AddMonths(-1),
+            FinancePeriod.ThisYear => from.AddYears(-1),
+            _ => from.AddDays(-dayCount),
+        };
+        var previousTo = filter.Period switch
+        {
+            FinancePeriod.ThisMonth => to.AddMonths(-1),
+            FinancePeriod.ThisYear => to.AddYears(-1),
+            _ => from.AddDays(-1),
+        };
+        return new(ToUtc(previousFrom, zone), ToUtc(previousTo.AddDays(1), zone), previousFrom, previousTo);
     }
     public Task<string> CurrencyAsync(CancellationToken token) => context.TenantConfigurations.AsNoTracking().Select(x => x.Currency).SingleAsync(token);
     public Task<FinancePatient?> FindPatientAsync(Guid id, CancellationToken token) => context.Patients.AsNoTracking().Where(x => x.Id == id).Select(x => new FinancePatient(x.Id, x.FirstName + " " + x.LastName, x.Status == Domain.Patients.PatientStatus.Active)).SingleOrDefaultAsync(token);
@@ -118,6 +144,14 @@ internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock cl
     {
         var revenues = context.Revenues.AsNoTracking().Where(x => x.OccurredAt >= range.From && x.OccurredAt < range.To);
         var revenue = await revenues.SumAsync(x => (decimal?)x.Amount, token) ?? 0;
+        FinanceRevenueComparison? revenueComparison = null;
+        if (range.Comparison is { } comparison)
+        {
+            var previousRevenue = await context.Revenues.AsNoTracking()
+                .Where(x => x.OccurredAt >= comparison.From && x.OccurredAt < comparison.To)
+                .SumAsync(x => (decimal?)x.Amount, token) ?? 0;
+            revenueComparison = new(previousRevenue, comparison.FromDate, comparison.ToDate);
+        }
         var payments = await context.Payments.AsNoTracking().Where(x => x.PaidAt >= range.From && x.PaidAt < range.To).SumAsync(x => (decimal?)x.Amount, token) ?? 0;
         var paidAgainstRevenue = await context.Payments.AsNoTracking().Where(p => context.Revenues.Any(r => r.Id == p.RevenueId && r.OccurredAt >= range.From && r.OccurredAt < range.To)).SumAsync(x => (decimal?)x.Amount, token) ?? 0;
         var expenses = await context.Expenses.AsNoTracking().Where(x => x.ExpenseDate >= range.From && x.ExpenseDate < range.To).SumAsync(x => (decimal?)x.Amount, token) ?? 0;
@@ -144,7 +178,10 @@ internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock cl
             """).ToListAsync(token);
         var revenueByDay = revenueDayRows.Select(x => new FinanceDailyAmount(x.Date, x.Amount)).ToArray();
         var expenseByDay = expenseDayRows.Select(x => new FinanceDailyAmount(x.Date, x.Amount)).ToArray();
-        return new(revenue, payments, revenue - paidAgainstRevenue, expenses, compensation, revenue - expenses - compensation, range.Currency, range.From, range.To, range.TimeZone, revenueByCategory, revenueByDoctor, expenseByCategory, revenueByDay, expenseByDay);
+        return new(revenue, payments, revenue - paidAgainstRevenue, expenses, compensation, revenue - expenses - compensation, range.Currency, range.From, range.To, range.TimeZone, revenueByCategory, revenueByDoctor, expenseByCategory, revenueByDay, expenseByDay)
+        {
+            RevenueComparison = revenueComparison,
+        };
     }
     public async Task<PagedResult<RevenueItem>> RevenuesAsync(RevenueSearch x, FinanceRange range, CancellationToken token)
     { var q = context.Revenues.AsNoTracking().Where(r => r.OccurredAt >= range.From && r.OccurredAt < range.To); if (!string.IsNullOrWhiteSpace(x.Search)) q = q.Where(r => EF.Functions.ILike(r.Description, $"%{x.Search}%")); if (x.PatientId.HasValue) q = q.Where(r => r.PatientId == x.PatientId); if (x.DoctorProfileId.HasValue) q = q.Where(r => r.DoctorProfileId == x.DoctorProfileId); if (x.TreatmentId.HasValue) q = q.Where(r => r.TreatmentId == x.TreatmentId); if (x.CategoryId.HasValue) q = q.Where(r => r.CategoryId == x.CategoryId); var total = await q.CountAsync(token); var items = await RevenueProjection(q.OrderByDescending(r => r.OccurredAt).Skip((x.Page - 1) * x.PageSize).Take(x.PageSize)).ToListAsync(token); return new(items, x.Page, x.PageSize, total); }

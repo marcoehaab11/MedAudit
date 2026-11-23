@@ -7,6 +7,10 @@
     </div>
     <div class="hero-mark" aria-hidden="true">?</div>
   </header>
+  <app-patient-create-dialog #addPatient (created)="savedPatient.set(true)" />
+  @if (savedPatient()) {
+    <p class="alert success" role="status">{{ t('Patient saved successfully.', 'تم حفظ المريض بنجاح.') }}</p>
+  }
 
   <div class="guide-search">
     <span aria-hidden="true">⌕</span>
@@ -48,7 +52,13 @@
                   <h3>{{ text(step.title) }}</h3>
                   <p>{{ text(step.detail) }}</p>
                   @if (step.path && canOpen(step.permission)) {
-                    <a [routerLink]="step.path">{{ t('Open page', 'افتح الصفحة') }} <span aria-hidden="true">↗</span></a>
+                    @if (step.path === '/patients/create') {
+                      <button type="button" class="add-patient-action" aria-haspopup="dialog" (click)="savedPatient.set(false); addPatient.open()">
+                        {{ t('Add patient', 'إضافة مريض') }}
+                      </button>
+                    } @else {
+                      <a [routerLink]="step.path">{{ t('Open page', 'افتح الصفحة') }} <span aria-hidden="true">↗</span></a>
+                    }
                   } @else if (step.permission) {
                     <small class="restricted">{{ t('Ask your clinic admin for access to this page.', 'اطلب صلاحية فتح الصفحة من مسؤول العيادة.') }}</small>
                   }

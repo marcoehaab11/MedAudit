@@ -5,12 +5,13 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LocalizationService } from '../../core/localization.service';
 import { AuthService } from '../../core/auth.service';
 import { PagedPatients, PatientApiService } from './patient-api.service';
+import { PatientCreateDialogComponent } from './patient-create-dialog.component';
 
 @Component({
   styleUrl: './patients.scss',
 
   selector: 'app-patients-page',
-  imports: [ReactiveFormsModule, RouterLink, DatePipe],
+  imports: [ReactiveFormsModule, RouterLink, DatePipe, PatientCreateDialogComponent],
   template: ` <section class="workspace-page-head">
       <div>
 
@@ -20,11 +21,15 @@ import { PagedPatients, PatientApiService } from './patient-api.service';
         </p>
       </div>
       @if (auth.hasPermission('Patients.Create')) {
-        <a class="button primary" routerLink="/patients/create">{{
+        <button class="button primary" type="button" aria-haspopup="dialog" (click)="addPatient.open()">{{
           t('Add patient', 'إضافة مريض')
-        }}</a>
+        }}</button>
       }
     </section>
+    <app-patient-create-dialog #addPatient (created)="patientCreated()" />
+    @if (success()) {
+      <p class="alert success" role="status">{{ success() }}</p>
+    }
     @if (error()) {
       <div class="alert error" role="alert">{{ error() }}</div>
     }
@@ -175,6 +180,7 @@ export class PatientsPageComponent {
   readonly result = signal<PagedPatients | null>(null);
   readonly loading = signal(true);
   readonly error = signal('');
+  readonly success = signal('');
   readonly filters = inject(FormBuilder).nonNullable.group({
     search: '',
     status: '',
@@ -187,6 +193,10 @@ export class PatientsPageComponent {
   }
   resetFilters(): void {
     this.filters.reset({ search: '', status: '', gender: '', sortBy: '1' });
+    this.load(1);
+  }
+  patientCreated(): void {
+    this.success.set(this.t('Patient saved successfully.', 'تم حفظ المريض بنجاح.'));
     this.load(1);
   }
   load(page: number): void {

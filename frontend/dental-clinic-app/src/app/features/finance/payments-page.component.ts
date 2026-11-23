@@ -7,7 +7,7 @@ import { AuthService } from '../../core/auth.service';
 import { DateInputComponent } from '../../shared/date-input/date-input.component';
 import { FinanceApiService, Page, Payment, Revenue } from './finance-api.service';
 import { money, paymentError, paymentMethod } from './finance-ui';
-import { FinanceNavComponent } from './finance-dashboard.component';
+import { FinanceNavComponent } from './finance-nav.component';
 
 @Component({
   styleUrl: './finance.scss',
@@ -124,8 +124,9 @@ export class PaymentsPageComponent {
   styleUrl: './finance.scss',
   selector: 'app-payment-form',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, DateInputComponent],
+  imports: [ReactiveFormsModule, RouterLink, DateInputComponent, FinanceNavComponent],
   template: `
+    <app-finance-nav />
     <div class="finance-form-page">
       <a class="back-link" routerLink="/finance/payments">
         ← {{ t('Back to payments', 'العودة للمدفوعات') }}

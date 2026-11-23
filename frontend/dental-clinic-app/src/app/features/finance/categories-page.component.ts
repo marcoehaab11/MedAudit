@@ -3,7 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { LocalizationService } from '../../core/localization.service';
 import { Category, FinanceApiService } from './finance-api.service';
-import { FinanceNavComponent } from './finance-dashboard.component';
+import { FinanceNavComponent } from './finance-nav.component';
 import { FINANCIAL_CATEGORY_PRESETS, CategoryPreset, localizeCategory } from './finance-ui';
 
 @Component({

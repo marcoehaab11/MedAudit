@@ -1,8 +1,10 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { getDebugNode } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { AppointmentCreateComponent } from './appointment-create.component';
+import { PatientFormComponent } from '../patients/patient-form.component';
 
 describe('AppointmentCreateComponent', () => {
   beforeEach(async () => {
@@ -27,62 +29,67 @@ describe('AppointmentCreateComponent', () => {
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
     flushLookups(http);
-    c.openNewPatientModal();
-    c.patientForm.patchValue({
-      firstName: 'Booking',
-      lastName: 'MedicalTest',
+    const patient = openPatientForm(fixture);
+    patient.fullName.setValue('Booking Samir MedicalTest');
+    patient.form.patchValue({
       dateOfBirth: '1990-01-01',
       phone: '01012345678',
+      occupation: 'Teacher',
     });
     fixture.detectChanges();
     await fixture.whenStable();
     const groups = fixture.nativeElement.querySelectorAll(
       'app-tag-input',
     ) as NodeListOf<HTMLElement>;
+    groups[0].querySelector<HTMLButtonElement>('.suggestion-toggle')!.click();
+    groups[1].querySelector<HTMLButtonElement>('.suggestion-toggle')!.click();
+    fixture.detectChanges();
     groups[0].querySelector<HTMLButtonElement>('.chip-suggest')!.click();
     groups[1].querySelector<HTMLButtonElement>('.chip-suggest')!.click();
     const medication = groups[2].querySelector('input')!;
     medication.value = 'Metformin';
     medication.dispatchEvent(new Event('input'));
-    c.saveNewPatient();
+    patient.save();
     const request = http.expectOne((r) => r.url === '/api/patients' && r.method === 'POST');
     expect(request.request.body).toMatchObject({
-      allergies: [c.allergySuggestions[0].ar],
-      medicalConditions: [c.conditionSuggestions[0].ar],
+      firstName: 'Booking',
+      middleName: 'Samir',
+      lastName: 'MedicalTest',
+      occupation: 'Teacher',
+      allergies: [patient.allergySuggestions[0].ar],
+      medicalConditions: [patient.conditionSuggestions[0].ar],
       medications: ['Metformin'],
     });
     request.flush({ id: 'p-new' });
     for (const r of http.match((r) => r.url === '/api/patients' && r.method === 'GET'))
       r.flush({ items: [], totalCount: 0 });
     expect(c.form.controls.patientId.value).toBe('p-new');
-    expect(c.showNewPatientModal()).toBe(false);
+    expect(fixture.nativeElement.querySelector('app-patient-create-dialog dialog').open).toBe(false);
     http.expectNone((r) => /\/patients\/p-new\/(allergies|conditions|medications)/.test(r.url));
   }, 15_000);
 
   it('submits typed allergy and chronic condition through the quick add form submit event', async () => {
-    const fixture = TestBed.createComponent(AppointmentCreateComponent),
-      c = fixture.componentInstance;
+    const fixture = TestBed.createComponent(AppointmentCreateComponent);
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
     flushLookups(http);
-    c.openNewPatientModal();
-    c.patientForm.patchValue({
-      firstName: 'Quick',
-      lastName: 'Submit',
+    const patient = openPatientForm(fixture);
+    patient.fullName.setValue('Quick Submit');
+    patient.form.patchValue({
       dateOfBirth: '1990-01-01',
       phone: '01012345678',
     });
     fixture.detectChanges();
     await fixture.whenStable();
     const inputs = fixture.nativeElement.querySelectorAll(
-      '.quick-patient-form app-tag-input input',
+      '.compact-patient-form app-tag-input input',
     ) as NodeListOf<HTMLInputElement>;
     ['Penicillin', 'Diabetes', 'Metformin'].forEach((value, index) => {
       inputs[index].value = value;
       inputs[index].dispatchEvent(new Event('input'));
     });
     fixture.nativeElement
-      .querySelector('.quick-patient-form')
+      .querySelector('.compact-patient-form')
       .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     const request = http.expectOne((r) => r.url === '/api/patients' && r.method === 'POST');
     expect(request.request.body).toMatchObject({
@@ -91,8 +98,8 @@ describe('AppointmentCreateComponent', () => {
       medications: ['Metformin'],
     });
     request.flush({ detail: 'Keep test on form' }, { status: 409, statusText: 'Conflict' });
-    expect(c.showNewPatientModal()).toBe(true);
-    expect(c.patientConditions).toEqual(['Diabetes']);
+    expect(fixture.nativeElement.querySelector('app-patient-create-dialog dialog').open).toBe(true);
+    expect(patient.conditions).toEqual(['Diabetes']);
   }, 15_000);
 
   it('keeps the booking dialog and medical selections on a failed atomic patient save', () => {
@@ -101,27 +108,26 @@ describe('AppointmentCreateComponent', () => {
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
     flushLookups(http);
-    c.openNewPatientModal();
-    c.patientForm.patchValue({
-      firstName: 'Booking',
-      lastName: 'MedicalTest',
+    const patient = openPatientForm(fixture);
+    patient.fullName.setValue('Booking MedicalTest');
+    patient.form.patchValue({
       dateOfBirth: '1990-01-01',
       phone: '01012345678',
     });
-    c.patientAllergies = ['Penicillin'];
-    c.patientConditions = ['Diabetes'];
-    c.saveNewPatient();
+    patient.allergies = ['Penicillin'];
+    patient.conditions = ['Diabetes'];
+    patient.save();
     http
       .expectOne((r) => r.url === '/api/patients' && r.method === 'POST')
       .flush(
         { detail: 'Medical history could not be saved' },
         { status: 409, statusText: 'Conflict' },
       );
-    expect(c.patientError()).toBeTruthy();
-    expect(c.patientSaving()).toBe(false);
-    expect(c.showNewPatientModal()).toBe(true);
-    expect(c.patientAllergies).toEqual(['Penicillin']);
-    expect(c.patientConditions).toEqual(['Diabetes']);
+    expect(patient.error()).toBeTruthy();
+    expect(patient.saving()).toBe(false);
+    expect(fixture.nativeElement.querySelector('app-patient-create-dialog dialog').open).toBe(true);
+    expect(patient.allergies).toEqual(['Penicillin']);
+    expect(patient.conditions).toEqual(['Diabetes']);
     expect(c.form.controls.patientId.value).toBe('');
   });
 
@@ -183,6 +189,41 @@ describe('AppointmentCreateComponent', () => {
       (fixture.nativeElement as HTMLElement).querySelector('[data-testid="availability-slots"]')
         ?.textContent,
     ).toContain('09:00');
+  });
+
+  it('checks emergency slots and keeps the chosen visit type on save', () => {
+    const fixture = TestBed.createComponent(AppointmentCreateComponent);
+    fixture.componentRef.setInput('embedded', true);
+    const http = TestBed.inject(HttpTestingController);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+    flushLookups(http);
+    expect(fixture.nativeElement.textContent).toContain('يرجى اختيار الطبيب أولًا لعرض المواعيد المتاحة.');
+    http.expectNone((request) => request.url === '/api/appointments/availability');
+
+    component.form.patchValue({ patientId: 'p1', doctorProfileId: 'd1', type: 2 });
+    component.enableEmergency();
+    component.loadAvailability();
+    const slot = {
+      startAt: '2026-08-17T04:00:00Z',
+      endAt: '2026-08-17T04:45:00Z',
+      localDate: '2026-08-17',
+      localStartTime: '07:00:00',
+      localEndTime: '07:45:00',
+      timeZone: 'Africa/Cairo',
+    };
+    const availability = http.expectOne((request) => request.url === '/api/appointments/availability');
+    expect(availability.request.params.get('isEmergency')).toBe('true');
+    availability.flush([slot]);
+    component.selectedSlot.set(slot);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[formControlName="type"]').options.length).toBe(2);
+    expect(fixture.nativeElement.querySelector('.booking-review').textContent).toContain('P-000001');
+
+    component.save();
+    const creation = http.expectOne('/api/appointments');
+    expect(creation.request.body).toMatchObject({ type: 2, useEmergencyAvailability: true });
+    creation.flush({ id: 'appointment-1' });
   });
 
   it('shows conflict feedback and refreshes availability after a 409', () => {
@@ -351,28 +392,42 @@ describe('AppointmentCreateComponent', () => {
   });
   it('keeps the quick patient dialog open during a single pending save', () => {
     const fixture = TestBed.createComponent(AppointmentCreateComponent),
-      c = fixture.componentInstance,
       http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
     flushLookups(http);
-    c.openNewPatientModal();
-    c.patientForm.patchValue({
-      firstName: 'Mona',
-      lastName: 'Hassan',
+    const patient = openPatientForm(fixture);
+    patient.fullName.setValue('Mona Hassan');
+    patient.form.patchValue({
       dateOfBirth: '1990-01-01',
       phone: '01012345678',
     });
-    c.saveNewPatient();
-    c.closeNewPatientModal();
-    c.saveNewPatient();
-    expect(c.showNewPatientModal()).toBe(true);
+    patient.save();
+    fixture.detectChanges();
+    const dialog: HTMLDialogElement = fixture.nativeElement.querySelector('app-patient-create-dialog dialog');
+    expect(dialog.dispatchEvent(new Event('cancel', { cancelable: true }))).toBe(false);
+    fixture.nativeElement.querySelector('app-patient-create-dialog header button').click();
+    patient.save();
+    expect(fixture.nativeElement.querySelector('app-patient-create-dialog dialog').open).toBe(true);
     http
       .expectOne((r) => r.url === '/api/patients' && r.method === 'POST')
       .flush({}, { status: 403, statusText: 'Forbidden' });
-    expect(c.patientForm.controls.firstName.value).toBe('Mona');
-    expect(c.patientSaving()).toBe(false);
+    expect(patient.form.controls.firstName.value).toBe('Mona');
+    expect(patient.saving()).toBe(false);
   });
 });
+
+function openPatientForm(fixture: ComponentFixture<AppointmentCreateComponent>): PatientFormComponent {
+  const dialog: HTMLDialogElement = fixture.nativeElement.querySelector('app-patient-create-dialog dialog');
+  dialog.showModal ??= () => { dialog.open = true; };
+  dialog.close ??= () => {
+    dialog.open = false;
+    dialog.dispatchEvent(new Event('close'));
+  };
+  fixture.nativeElement.querySelector('.booking-patient-choice > button').click();
+  fixture.detectChanges();
+  const form = fixture.nativeElement.querySelector('app-patient-form');
+  return getDebugNode(form)!.injector.get(PatientFormComponent);
+}
 
 function flushLookups(http: HttpTestingController): void {
   http.expectOne('/api/appointments/rooms').flush([]);

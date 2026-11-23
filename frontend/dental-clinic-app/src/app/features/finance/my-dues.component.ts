@@ -3,8 +3,10 @@ import { RouterLink } from '@angular/router';
 import { FinanceApiService, DoctorDues } from './finance-api.service';
 import { LocalizationService } from '../../core/localization.service';
 import { money } from './finance-ui';
+import { FinanceNavComponent } from './finance-nav.component';
 
-@Component({selector: 'app-my-dues', imports: [RouterLink], template: `
+@Component({selector: 'app-my-dues', imports: [RouterLink, FinanceNavComponent], template: `
+  <app-finance-nav />
   <section class="panel"><a routerLink="/dashboard">{{ t('Overview', 'نظرة عامة') }}</a>
     <h1>{{ t('My recorded compensation', 'مستحقاتي المسجلة') }}</h1>
     @if (error()) { <p role="alert">{{ error() }}</p> }
@@ -17,7 +19,14 @@ export class MyDuesComponent {
   private readonly i18n = inject(LocalizationService);
   readonly data = signal<DoctorDues | null>(null);
   readonly error = signal('');
-  constructor() { this.api.myDues().subscribe({ next: value => this.data.set(value), error: () => this.error.set(this.t('Could not load your compensation.', 'تعذر تحميل مستحقاتك.')) }); }
+  constructor() {
+    this.api.myDues().subscribe({
+      next: value => this.data.set(value),
+      error: (error) => this.error.set(error.status === 404
+        ? this.t('There is no doctor profile linked to this account.', 'لا يوجد ملف طبيب مرتبط بهذا الحساب.')
+        : this.t('Could not load your compensation.', 'تعذر تحميل مستحقاتك.')),
+    });
+  }
   t(en: string, ar: string) { return this.i18n.language() === 'ar' ? ar : en; }
   format(value: number, currency: string) { return money(value, currency, this.i18n.language()); }
 }

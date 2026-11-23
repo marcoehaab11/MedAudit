@@ -37,6 +37,7 @@
 .step-content p { color: #617886; font-size: .86rem; margin: 0 0 10px; line-height: 1.9; overflow-wrap: anywhere; }
 .step-content a { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 5px 11px; background: #f0f7f5; border: 1px solid #dcebe5; border-radius: 8px; color: #137864; text-decoration: none; font-size: .78rem; font-weight: 750; }
 .step-content a:hover { background: #e1f1e9; }
+.step-content .add-patient-action { min-height: 44px; background: var(--brand-surface); border: 1px solid var(--border); color: var(--brand-dark); box-shadow: none; }
 .restricted { display: block; color: #946b31; font-size: .78rem; line-height: 1.7; }
 .article-footer { display: flex; align-items: start; gap: 10px; border-top: 1px solid #edf1f3; padding-top: 16px; color: #748794; }
 .article-footer span { color: #197964; }

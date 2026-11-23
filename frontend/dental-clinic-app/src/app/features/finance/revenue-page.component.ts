@@ -6,7 +6,7 @@ import { LocalizationService } from '../../core/localization.service';
 import { AuthService } from '../../core/auth.service';
 import { FinanceApiService, Page, Revenue } from './finance-api.service';
 import { categoryTitle, money } from './finance-ui';
-import { FinanceNavComponent } from './finance-dashboard.component';
+import { FinanceNavComponent } from './finance-nav.component';
 
 @Component({
   styleUrl: './finance.scss',

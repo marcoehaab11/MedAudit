@@ -5,7 +5,7 @@ namespace DentalClinic.Application.Appointments;
 
 public sealed record AppointmentTimeInput(DateOnly Date, TimeOnly StartTime, int DurationMinutes);
 public sealed record CreateAppointmentCommand(Guid PatientId, Guid DoctorProfileId, AppointmentType Type,
-    AppointmentTimeInput Time, string? Notes, Guid? RoomId = null);
+    AppointmentTimeInput Time, string? Notes, Guid? RoomId = null, bool UseEmergencyAvailability = false);
 public sealed record RescheduleAppointmentCommand(Guid AppointmentId, AppointmentTimeInput Time);
 public sealed record AppointmentSearchQuery(DateOnly From, DateOnly To, Guid? DoctorProfileId = null,
     Guid? PatientId = null, AppointmentStatus? Status = null, AppointmentType? Type = null,

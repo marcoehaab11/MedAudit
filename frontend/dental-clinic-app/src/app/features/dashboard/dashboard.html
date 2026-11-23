@@ -4,8 +4,8 @@
       <h1>{{ t('Welcome,', 'مرحبًا،') }} {{ displayName() }}</h1>
       <p>{{ t('Wishing you a productive day.', 'نتمنى لك يومًا مليئًا بالنجاحات') }}</p>
     </div>
-    <app-appointment-intake-actions [date]="selectedDate()"
-      (appointmentCreated)="loadDashboardData()" (patientCreated)="loadDashboardData()" />
+    <app-appointment-intake-actions [date]="selectedDate()" [bookingPage]="true"
+      (patientCreated)="loadDashboardData()" />
     <img class="dashboard-illustration" src="/dashboard-dental.webp" alt="" width="240" height="150" />
   </header>
 
@@ -231,7 +231,7 @@
                   <a
                     class="button primary"
                     routerLink="/appointments/create"
-                    [queryParams]="{ date: selectedDate() }"
+                    [queryParams]="{ date: selectedDate(), from: 'dashboard' }"
                   >
                     + {{ t('Book for this date', 'حجز موعد لهذا اليوم') }}
                   </a>

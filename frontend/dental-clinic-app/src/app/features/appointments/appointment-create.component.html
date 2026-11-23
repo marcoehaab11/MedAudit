@@ -1,0 +1,457 @@
+<div class="workspace-intake booking-intake">
+    @if (!embedded()) {
+    <section class="workspace-page-head booking-heading">
+      <div>
+        <h1>{{ t('New appointment', 'موعد جديد') }}</h1>
+        <p class="page-description">
+          {{
+            t(
+              'Choose the patient, doctor and an available time, then review the booking.',
+              'اختر المريض والطبيب ووقتًا متاحًا، ثم راجع بيانات الحجز.'
+            )
+          }}
+        </p>
+      </div>
+    </section>
+    }
+
+    @if (error()) {
+      <div class="alert error" role="alert">{{ error() }}</div>
+    }
+
+    <ol class="steps" [attr.aria-label]="t('Booking progress', 'خطوات الحجز')">
+      <li [class.done]="form.controls.patientId.valid" [attr.aria-current]="bookingStep === 1 ? 'step' : null">1. {{ t('Patient', 'المريض') }}</li>
+      <li [class.done]="form.controls.doctorProfileId.valid" [attr.aria-current]="bookingStep === 2 ? 'step' : null">2. {{ t('Doctor', 'الطبيب') }}</li>
+      <li [class.done]="selectedSlot()" [attr.aria-current]="bookingStep === 3 ? 'step' : null">3. {{ t('Time slot', 'الوقت') }}</li>
+      <li [attr.aria-current]="bookingStep === 4 ? 'step' : null">4. {{ t('Confirm', 'التأكيد') }}</li>
+    </ol>
+
+    @if (saving()) {
+      <p class="booking-saving" role="status">
+        {{ t('Creating the appointment…', 'جارٍ إنشاء الموعد…') }}
+      </p>
+    }
+    <form
+      class="panel appointment-form"
+      [attr.aria-busy]="saving()"
+      [inert]="saving()"
+      [formGroup]="form"
+      (ngSubmit)="save()"
+    >
+      <fieldset>
+        <legend>1. {{ t('Choose patient', 'اختيار مريض') }} <strong class="req">*</strong></legend>
+        <div>
+          <div class="booking-patient-choice">
+            <app-patient-select
+              #patientSelect
+              class="booking-picker"
+              formControlName="patientId"
+              [allowClear]="false"
+              [isInvalid]="form.controls.patientId.touched && form.controls.patientId.invalid"
+            ></app-patient-select>
+            <button
+              type="button"
+              class="button outline"
+              aria-haspopup="dialog" (click)="addPatient.open()"
+              [attr.aria-label]="
+                t('Add a patient without leaving this booking', 'إضافة مريض دون مغادرة الحجز')
+              "
+            >
+              + {{ t('Add new patient', 'مريض جديد') }}
+            </button>
+          </div>
+          @if (form.controls.patientId.touched && form.controls.patientId.invalid) {
+            <span
+              class="field-error"
+              style="display: block; color: #dc2626; font-size: 0.8rem; margin-top: 0.25rem;"
+            >
+              {{ t('Please select a patient.', 'يرجى اختيار مريض.') }}
+            </span>
+          }
+
+          @if (activeTreatmentPlans().length > 0 || activeTreatments().length > 0) {
+            <div class="patient-ongoing-treatment-alert">
+              <div class="alert-icon">📋</div>
+              <div class="alert-content">
+                <div class="alert-title-row">
+                  <strong class="alert-title">
+                    ⚠️
+                    {{
+                      t(
+                        'Patient Has Ongoing Treatment / Incomplete Work!',
+                        'تنبيه: المريض لديه خطة علاج جارية / عمل غير مكتمل!'
+                      )
+                    }}
+                  </strong>
+                  <span class="alert-badge"
+                    >{{ activeTreatmentPlans().length || activeTreatments().length }}
+                    {{ t('active item(s)', 'علاج نشط') }}</span
+                  >
+                </div>
+                <p class="alert-detail">
+                  {{ t('Incomplete Treatment:', 'العمل والعلاج المتبقي:') }}
+                  <span class="highlight-work">{{ remainingTreatmentsSummary() }}</span>
+                </p>
+                <div class="alert-btn-row">
+                  @for (plan of activeTreatmentPlans(); track plan.id) {
+                    <button
+                      type="button"
+                      class="btn-use-plan-reason"
+                      (click)="applyPlanToNotes(plan)"
+                    >
+                      ✓ {{ t('Set as Appointment Reason:', 'اعتماد كسبب للموعد:') }}
+                      {{ plan.title }}
+                    </button>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>2. {{ t('Choose doctor', 'اختيار طبيب') }} <strong class="req">*</strong></legend>
+        <div>
+          <app-doctor-select
+            class="booking-picker"
+            formControlName="doctorProfileId"
+            [allowClear]="false"
+            [isInvalid]="
+              form.controls.doctorProfileId.touched && form.controls.doctorProfileId.invalid
+            "
+          ></app-doctor-select>
+          @if (form.controls.doctorProfileId.touched && form.controls.doctorProfileId.invalid) {
+            <span
+              class="field-error"
+              style="display: block; color: #dc2626; font-size: 0.8rem; margin-top: 0.25rem;"
+            >
+              {{ t('Please select a doctor.', 'يرجى اختيار طبيب.') }}
+            </span>
+          }
+        </div>
+      </fieldset>
+
+      <fieldset class="timing">
+        <legend>3. {{ t('Date & time', 'التاريخ والوقت') }}</legend>
+        <label class="booking-date">
+          {{ t('Date', 'التاريخ') }}
+          <app-date-input
+            [label]="t('Appointment date', 'تاريخ الموعد')"
+            formControlName="date"
+            [isInvalid]="form.controls.date.touched && form.controls.date.invalid"
+          ></app-date-input>
+        </label>
+        <label>
+          {{ t('Duration', 'المدة') }}
+          <select formControlName="durationMinutes">
+            @if (![15, 20, 30, 45, 60, 90, 120].includes(form.controls.durationMinutes.value)) {
+              <option [ngValue]="form.controls.durationMinutes.value">
+                {{ form.controls.durationMinutes.value }} {{ t('minutes', 'دقيقة') }}
+              </option>
+            }
+            <option [ngValue]="20">20 {{ t('minutes', 'دقيقة') }}</option>
+            <option [ngValue]="15">15 {{ t('minutes', 'دقيقة') }}</option>
+            <option [ngValue]="30">30 {{ t('minutes', 'دقيقة') }}</option>
+            <option [ngValue]="45">45 {{ t('minutes', 'دقيقة') }}</option>
+            <option [ngValue]="60">60 {{ t('minutes', 'دقيقة') }}</option>
+            <option [ngValue]="90">90 {{ t('minutes', 'دقيقة') }}</option>
+            <option [ngValue]="120">120 {{ t('minutes', 'دقيقة') }}</option>
+          </select>
+        </label>
+        <label class="emergency-checkbox-label">
+          <input type="checkbox" formControlName="isEmergency" />
+          <span>{{ t('Check emergency appointment times', 'التحقق من أوقات مواعيد الطوارئ') }}</span>
+        </label>
+      </fieldset>
+
+      <fieldset class="slots-fieldset">
+        <legend class="slots-legend">
+          <span>{{ t('Available slots', 'الأوقات المتاحة') }}</span>
+        @if (form.controls.doctorProfileId.value && form.controls.date.value && !slotsLoading() && !availabilityError()) {
+            <span class="slots-total-pill"> {{ slots().length }} {{ t('slots', 'موعد') }} </span>
+          }
+        </legend>
+
+        @if (!form.controls.doctorProfileId.value) {
+          <div class="slots-empty-notice" role="status">
+            <p>
+              {{
+                t(
+                  'Please select a doctor to view available appointment slots.',
+                  'يرجى اختيار الطبيب أولًا لعرض المواعيد المتاحة.'
+                )
+              }}
+            </p>
+          </div>
+        } @else if (!form.controls.date.value) {
+          <p class="slots-empty-notice">{{ t('Choose a date to check availability.', 'اختر التاريخ لعرض المواعيد المتاحة.') }}</p>
+        } @else if (slotsLoading()) {
+          <div class="state-loading" role="status">
+            <span class="loading-spinner" aria-hidden="true"></span>
+            <span>{{ t('Checking availability…', 'جارٍ التحقق من المواعيد…') }}</span>
+          </div>
+        } @else if (availabilityError()) {
+          <div class="availability-error" role="alert">
+            <strong>{{ availabilityError() }}</strong
+            ><button type="button" (click)="loadAvailability()">
+              {{ t('Check availability again', 'إعادة التحقق من الأوقات') }}
+            </button>
+          </div>
+        } @else if (!slots().length) {
+          <div class="state-warning">
+            <p>
+              {{
+                t(
+                  'No available slots match this date and duration.',
+                  'لا توجد أوقات متاحة للتاريخ والمدة المحددين.'
+                )
+              }}
+            </p>
+            @if (!form.controls.isEmergency.value) {
+              <button type="button" class="button outline" (click)="enableEmergency()">
+                {{ t('Check emergency availability', 'عرض الأوقات المتاحة للطوارئ') }}
+              </button>
+            }
+          </div>
+        } @else {
+          <!-- Selected Slot Confirmation Banner -->
+          @if (selectedSlot(); as sel) {
+            <div class="selected-slot-banner">
+              <div class="banner-badge">✓</div>
+              <div class="banner-details">
+                <div class="banner-title">{{ t('Selected Slot', 'الموعد المختار') }}</div>
+                <div class="banner-time">
+                  <bdi dir="ltr">{{ formatSlotRange(sel) }}</bdi>
+                  <span class="banner-duration"
+                    >({{ form.controls.durationMinutes.value }} {{ t('minutes', 'دقيقة') }})</span
+                  >
+                </div>
+              </div>
+              <button
+                type="button"
+                class="banner-clear-btn"
+                (click)="selectedSlot.set(null)"
+                [title]="t('Choose another slot', 'اختيار وقت آخر')"
+              >
+                ✕ {{ t('Change', 'تغيير') }}
+              </button>
+            </div>
+          }
+
+          <!-- Toolbar: Period tabs + 12h/24h Toggle -->
+          <div class="slots-toolbar">
+            <div class="period-filter-tabs">
+              <button
+                type="button"
+                class="period-tab"
+                [class.active]="selectedPeriod() === 'all'"
+                [attr.aria-pressed]="selectedPeriod() === 'all'"
+                (click)="slotPage.set(0); selectedPeriod.set('all')"
+              >
+                <span>{{ t('All Slots', 'جميع الأوقات') }}</span>
+                <span class="tab-count">{{ slotPeriods().total }}</span>
+              </button>
+
+              @if (slotPeriods().morning.length > 0) {
+                <button
+                  type="button"
+                  class="period-tab"
+                  [class.active]="selectedPeriod() === 'morning'"
+                  [attr.aria-pressed]="selectedPeriod() === 'morning'"
+                  (click)="slotPage.set(0); selectedPeriod.set('morning')"
+                >
+                  <span>🌅 {{ t('Morning', 'صباحًا') }}</span>
+                  <span class="tab-count">{{ slotPeriods().morning.length }}</span>
+                </button>
+              }
+
+              @if (slotPeriods().evening.length > 0) {
+                <button
+                  type="button"
+                  class="period-tab"
+                  [class.active]="selectedPeriod() === 'evening'"
+                  [attr.aria-pressed]="selectedPeriod() === 'evening'"
+                  (click)="slotPage.set(0); selectedPeriod.set('evening')"
+                >
+                  <span>🌙 {{ t('Evening', 'مساءً') }}</span>
+                  <span class="tab-count">{{ slotPeriods().evening.length }}</span>
+                </button>
+              }
+            </div>
+
+            <div
+              class="time-format-toggle"
+              role="group"
+              [attr.aria-label]="t('Time display format', 'صيغة عرض الوقت')"
+            >
+              <button
+                type="button"
+                [class.active]="timeFormat() === '12h'"
+                [attr.aria-pressed]="timeFormat() === '12h'"
+                (click)="timeFormat.set('12h')"
+              >
+                12h
+              </button>
+              <button
+                type="button"
+                [class.active]="timeFormat() === '24h'"
+                [attr.aria-pressed]="timeFormat() === '24h'"
+                (click)="timeFormat.set('24h')"
+              >
+                24h
+              </button>
+            </div>
+          </div>
+
+          <div class="compact-slot-picker" data-testid="availability-slots">
+            <div class="slot-cards-grid compact-slot-grid appointment-choice-grid">
+              @for (slot of pagedSlots(); track slot.startAt) {
+                <button
+                  type="button"
+                  class="slot-card"
+                  [class.selected]="selectedSlot()?.startAt === slot.startAt"
+                  [attr.aria-pressed]="selectedSlot()?.startAt === slot.startAt"
+                  (click)="selectedSlot.set(slot)"
+                >
+                  <span class="slot-card-primary">
+                    <bdi class="slot-time">{{ formatTime(slot.localStartTime) }}</bdi>
+                    @if (selectedSlot()?.startAt === slot.startAt) {
+                      <span aria-hidden="true">✓</span>
+                    }
+                  </span>
+                  <span class="slot-available">{{ t('Available', 'متاح') }}</span>
+                  <span class="slot-card-secondary">
+                    {{ t('Ends at', 'ينتهي') }} <bdi>{{ formatTime(slot.localEndTime) }}</bdi>
+                  </span>
+                </button>
+              }
+            </div>
+            @if (slotPageCount() > 1) {
+              <nav
+                class="slot-pagination"
+                [attr.aria-label]="t('Appointment pages', 'صفحات المواعيد')"
+              >
+                <button
+                  type="button"
+                  class="secondary"
+                  [disabled]="activeSlotPage() === 0"
+                  (click)="slotPage.set(activeSlotPage() - 1)"
+                >
+                  {{ t('Previous', 'السابق') }}
+                </button>
+                <span>{{ activeSlotPage() + 1 }} / {{ slotPageCount() }}</span>
+                <button
+                  type="button"
+                  class="secondary"
+                  [disabled]="activeSlotPage() + 1 >= slotPageCount()"
+                  (click)="slotPage.set(activeSlotPage() + 1)"
+                >
+                  {{ t('Next', 'التالي') }}
+                </button>
+              </nav>
+            }
+          </div>
+        }
+      </fieldset>
+
+      @if (selectedSlot()) {
+      <fieldset class="booking-details">
+        <legend>4. {{ t('Appointment details', 'تفاصيل الموعد') }}</legend>
+        <label>
+          {{ t('Type', 'النوع') }}
+          <select formControlName="type">
+            @for (x of types; track x) {
+              <option [ngValue]="x">{{ typeLabel(x) }}</option>
+            }
+          </select>
+        </label>
+        @if (rooms().length) {
+          <label class="workspace-filter-field"><span>{{ t('Room', 'الغرفة') }}</span>
+            <select formControlName="roomId">
+              <option value="">{{ t('Unassigned', 'بدون غرفة') }}</option>
+              @for (room of rooms(); track room.id) { <option [value]="room.id">{{ room.name }}</option> }
+            </select>
+          </label>
+        }
+
+        <label class="booking-notes">
+          {{ t('Notes (optional)', 'الملاحظات (اختياري)') }}
+          <textarea formControlName="notes" rows="2" maxlength="2000"></textarea>
+        </label>
+      </fieldset>
+      }
+
+      @if (form.invalid && form.touched) {
+        <div class="alert error" role="alert">
+          {{
+            t(
+              'Please complete all required steps and choose an appointment slot.',
+              'يرجى إكمال جميع الخطوات المطلوبة واختيار وقت الموعد.'
+            )
+          }}
+        </div>
+      }
+
+      @if (selectedSlot(); as selected) {
+        <section class="booking-review" aria-labelledby="booking-review-title">
+          <h2 id="booking-review-title">{{ t('Review before booking', 'مراجعة بيانات الحجز') }}</h2>
+          <dl>
+            <div>
+              <dt>{{ t('Patient', 'المريض') }}</dt>
+              <dd>
+                {{
+                  patientSelectComp
+                    ? patientSelectComp.selectedPatient()?.fullName
+                    : t('Selected patient', 'المريض المختار')
+                }}
+              </dd>
+            </div>
+            <div>
+              <dt>{{ t('Patient ID', 'رقم المريض') }}</dt>
+              <dd><bdi>{{ patientSelectComp?.selectedPatient()?.patientNumber || '—' }}</bdi></dd>
+            </div>
+            <div>
+              <dt>{{ t('Doctor', 'الطبيب') }}</dt>
+              <dd>
+                {{
+                  doctorSelectComp?.selectedDoctor()?.displayName ||
+                    t('Selected doctor', 'الطبيب المختار')
+                }}
+              </dd>
+            </div>
+            <div>
+              <dt>{{ t('Date', 'التاريخ') }}</dt>
+              <dd>
+                <bdi>{{ form.controls.date.value }}</bdi>
+              </dd>
+            </div>
+            <div>
+              <dt>{{ t('Time', 'الوقت') }}</dt>
+              <dd>
+                <bdi dir="ltr">{{ formatSlotRange(selected) }}</bdi>
+              </dd>
+            </div>
+            <div>
+              <dt>{{ t('Duration', 'المدة') }}</dt>
+              <dd>{{ form.controls.durationMinutes.value }} {{ t('minutes', 'دقيقة') }}</dd>
+            </div>
+          </dl>
+        </section>
+      }
+      <div class="form-actions">
+        @if (embedded()) {
+          <button class="button" type="button" [disabled]="saving()" (click)="cancelled.emit()">{{ t('Cancel', 'إلغاء') }}</button>
+        } @else {
+          <a class="button outline" [routerLink]="cancelRoute">{{ t('Cancel', 'إلغاء') }}</a>
+        }
+        <button type="submit" class="button primary" [disabled]="saving() || slotsLoading()" [attr.aria-busy]="saving()">
+          {{
+            saving() ? t('Creating…', 'جارٍ الإنشاء…') : t('Confirm appointment', 'تأكيد الموعد')
+          }}
+        </button>
+      </div>
+    </form>
+
+    <app-patient-create-dialog #addPatient (created)="selectCreatedPatient($event)" />
+</div>
