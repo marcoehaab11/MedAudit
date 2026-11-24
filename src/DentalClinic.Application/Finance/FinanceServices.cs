@@ -2,6 +2,7 @@ using System.Globalization;
 using DentalClinic.Application.Common.Interfaces;
 using DentalClinic.Application.Identity;
 using DentalClinic.Application.Tenants.Models;
+using DentalClinic.Application.Treatments;
 using DentalClinic.Domain.Doctors;
 using DentalClinic.Domain.Finance;
 using DentalClinic.Domain.Platform;
@@ -21,7 +22,8 @@ public sealed class DoctorCompensationCalculator : IDoctorCompensationCalculator
     }
 }
 
-internal sealed class FinanceQueries(IFinanceStore store, IPermissionService permissions, ICurrentUser user) : IFinanceQueries
+internal sealed class FinanceQueries(IFinanceStore store, IPermissionService permissions, ICurrentUser user,
+    TreatmentAccess treatmentAccess) : IFinanceQueries
 {
     public async Task<DoctorDues?> MyDuesAsync(CancellationToken token)
     {
@@ -39,8 +41,25 @@ internal sealed class FinanceQueries(IFinanceStore store, IPermissionService per
         var range = await store.ResolveRangeAsync(filter with { IncludeComparison = true }, token);
         return await store.DashboardAsync(range, token);
     }
-    public async Task<PagedResult<RevenueItem>> RevenuesAsync(RevenueSearch x, CancellationToken token)
-    { await permissions.EnsurePermissionAsync(Permissions.FinanceRevenueView, token); Validate(x.Page, x.PageSize, x.From, x.To); return await store.RevenuesAsync(x, await store.ResolveRangeAsync(new(FinancePeriod.Custom, x.From, x.To), token), token); }
+    public async Task<RevenuePage> RevenuesAsync(RevenueSearch x, CancellationToken token)
+    {
+        await permissions.EnsurePermissionAsync(Permissions.FinanceRevenueView, token);
+        Validate(x.Page, x.PageSize, x.From, x.To);
+        if (!string.IsNullOrWhiteSpace(x.Search))
+        {
+            var canReadTreatments = await permissions.HasPermissionAsync(Permissions.TreatmentsView, token);
+            x = x with
+            {
+                SearchTreatmentNotes = canReadTreatments,
+                TreatmentNotesDoctorId = canReadTreatments
+                    ? await treatmentAccess.VisibleDoctorAsync(Permissions.TreatmentsView, token)
+                    : null,
+                SearchPaymentNotes = await permissions.HasPermissionAsync(Permissions.FinancePaymentsView, token),
+            };
+        }
+        var range = await store.ResolveRangeAsync(new(FinancePeriod.Custom, x.From, x.To), token);
+        return await store.RevenuesAsync(x, range, token);
+    }
     public async Task<PagedResult<PaymentItem>> PaymentsAsync(PaymentSearch x, CancellationToken token)
     { await permissions.EnsurePermissionAsync(Permissions.FinancePaymentsView, token); Validate(x.Page, x.PageSize, x.From, x.To); return await store.PaymentsAsync(x, await store.ResolveRangeAsync(new(FinancePeriod.Custom, x.From, x.To), token), token); }
     public async Task<PagedResult<ExpenseItem>> ExpensesAsync(ExpenseSearch x, CancellationToken token)
@@ -158,7 +177,44 @@ internal sealed class ExpenseService(IFinanceStore store, IPermissionService per
     ICurrentUser user, ISystemClock clock) : IExpenseService
 {
     public async Task<Guid> CreateAsync(ExpenseInput x, CancellationToken token)
-    { await permissions.EnsurePermissionAsync(Permissions.FinanceExpensesCreate, token); var category = await store.FindCategoryAsync(x.CategoryId, false, token); if (category is null || !category.IsActive || category.Type != FinancialCategoryType.Expense) throw new ArgumentException("An active expense category is required."); var range = await store.ResolveRangeAsync(new(FinancePeriod.Custom, x.ExpenseDate, x.ExpenseDate), token); var currency = string.IsNullOrWhiteSpace(x.Currency) ? range.Currency : x.Currency; if (!string.Equals(currency, range.Currency, StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("Expense currency must match the clinic currency."); var occurred = PaymentService.ToUtc(x.ExpenseDate, x.ExpenseTime, range.TimeZone); var item = new Expense(tenant.RequireTenantId(), category.Id, x.Amount, currency!, x.Description, x.VendorName, x.Reference, occurred, user.UserId ?? throw new InvalidOperationException("Authenticated user is required."), x.Notes, clock.UtcNow); store.AddExpense(item); store.AddTransaction(new(item.TenantId, FinancialTransactionType.Expense, item.Amount, item.Currency, item.ExpenseDate, FinancialSourceType.Expense, item.Id, item.Description, item.CreatedAt)); store.AddAudit(new(item.TenantId, user.UserId, PlatformAuditAction.ExpenseCreated, nameof(Expense), item.Id, clock.UtcNow, null)); await store.SaveChangesAsync(token); return item.Id; }
+    {
+        await permissions.EnsurePermissionAsync(Permissions.FinanceExpensesCreate, token);
+        var range = await store.ResolveRangeAsync(new(FinancePeriod.Custom, x.ExpenseDate, x.ExpenseDate), token);
+        await using var transaction = x.FixedDueId.HasValue ? await store.BeginTransactionAsync(token) : null;
+        FixedExpenseDue? due = null;
+        var currency = string.IsNullOrWhiteSpace(x.Currency) ? range.Currency : x.Currency;
+        if (x.FixedDueId is { } dueId)
+        {
+            due = await store.LockFixedExpenseDueAsync(dueId, token)
+                ?? throw new FinanceNotFoundException("The outstanding expense was not found.");
+            if (due.ExpenseId.HasValue) throw new FinanceConflictException("This expense has already been paid.");
+            var schedule = await store.FixedExpenseScheduleAsync(due.ScheduleId, token);
+            x = x with { CategoryId = schedule.CategoryId, Amount = schedule.MonthlyAmount,
+                Description = schedule.Name, VendorName = schedule.Beneficiary };
+            currency = due.Currency;
+        }
+        else
+        {
+            var category = await store.FindCategoryAsync(x.CategoryId, false, token);
+            if (category is null || !category.IsActive || category.Type != FinancialCategoryType.Expense)
+                throw new ArgumentException("An active expense category is required.");
+            if (!string.Equals(currency, range.Currency, StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("Expense currency must match the clinic currency.");
+        }
+
+        var occurred = PaymentService.ToUtc(x.ExpenseDate, x.ExpenseTime, range.TimeZone);
+        var now = clock.UtcNow;
+        var item = new Expense(tenant.RequireTenantId(), x.CategoryId, x.Amount, currency, x.Description,
+            x.VendorName, x.Reference, occurred, user.UserId ?? throw new InvalidOperationException("Authenticated user is required."), x.Notes, now);
+        store.AddExpense(item);
+        due?.Settle(item.Id);
+        store.AddTransaction(new(item.TenantId, FinancialTransactionType.Expense, item.Amount, item.Currency,
+            item.ExpenseDate, FinancialSourceType.Expense, item.Id, item.Description, now));
+        store.AddAudit(new(item.TenantId, user.UserId, PlatformAuditAction.ExpenseCreated, nameof(Expense), item.Id, now, null));
+        await store.SaveChangesAsync(token);
+        if (transaction is not null) await transaction.CommitAsync(token);
+        return item.Id;
+    }
 }
 
 internal sealed class TreatmentRevenueCreator(IFinanceStore store, IDoctorCompensationCalculator calculator,

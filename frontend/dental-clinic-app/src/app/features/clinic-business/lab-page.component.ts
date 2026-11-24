@@ -66,7 +66,16 @@ export class LabPageComponent implements OnInit {
   filterPatientId = '';
   patientSearch = '';
   readonly statuses = [{ id: 2, en: 'Sent', ar: 'اترسل' }, { id: 3, en: 'Received by lab', ar: 'المعمل استلمه' }, { id: 4, en: 'In production', ar: 'تحت التصنيع' }, { id: 5, en: 'Ready', ar: 'جاهز' }, { id: 6, en: 'Delivered', ar: 'وصل العيادة' }, { id: 7, en: 'Fitted', ar: 'اتركب' }, { id: 8, en: 'Remake', ar: 'إعادة شغل' }, { id: 9, en: 'Cancelled', ar: 'ملغي' }];
-  ngOnInit() { this.filterPatientId = this.route.snapshot.queryParamMap.get('patientId') || ''; this.caseForm.patientId = this.filterPatientId; this.refresh(); this.patientApi.listAll().subscribe({ next: x => { this.patients = x; this.ensureSelectedPatient(); } }); if (this.filterPatientId) this.loadTreatments(); }
+  ngOnInit() {
+    const params = this.route.snapshot.queryParamMap;
+    this.filterPatientId = params.get('patientId') || '';
+    this.caseForm.patientId = this.filterPatientId;
+    this.refresh();
+    this.patientApi.listAll().subscribe({ next: x => { this.patients = x; this.ensureSelectedPatient(); } });
+    if (this.filterPatientId) this.loadTreatments();
+    const statementId = params.get('statementId');
+    if (statementId) this.openStatement(statementId);
+  }
   searchPatients() { this.patientApi.patients({ search: this.patientSearch, pageSize: 50 }).subscribe({ next: x => { this.patients = x.items; this.ensureSelectedPatient(); }, error: e => this.fail(e) }); }
   ensureSelectedPatient() { if (!this.filterPatientId || this.patients.some(x => x.id === this.filterPatientId)) return; this.patientApi.patient(this.filterPatientId).subscribe({ next: p => this.patients = [...this.patients, { id: p.id, patientNumber: p.patientNumber, fullName: [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' '), gender: p.gender, phone: p.phone, email: p.email, status: p.status, createdAt: p.createdAt }] }); }
   t(en: string, ar: string) { return this.i18n.language() === 'ar' ? ar : en; }

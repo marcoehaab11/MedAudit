@@ -29,13 +29,15 @@ public interface IFinanceStore
     Task<Revenue?> FindLatestOutstandingRevenueByPatientAsync(Guid patientId, CancellationToken token);
     Task<RevenueItem?> RevenueAsync(Guid id, CancellationToken token);
     Task<FinanceSummary> DashboardAsync(FinanceRange range, CancellationToken token);
-    Task<PagedResult<RevenueItem>> RevenuesAsync(RevenueSearch search, FinanceRange range, CancellationToken token);
+    Task<RevenuePage> RevenuesAsync(RevenueSearch search, FinanceRange range, CancellationToken token);
     Task<PagedResult<PaymentItem>> PaymentsAsync(PaymentSearch search, FinanceRange range, CancellationToken token);
     Task<PagedResult<ExpenseItem>> ExpensesAsync(ExpenseSearch search, FinanceRange range, CancellationToken token);
     Task<PatientBalance?> PatientBalanceAsync(Guid patientId, CancellationToken token);
     Task<decimal> PaidForRevenueAsync(Guid revenueId, CancellationToken token);
     Task<IFinanceTransaction> BeginTransactionAsync(CancellationToken token);
     Task LockRevenueAsync(Guid revenueId, CancellationToken token);
+    Task<FixedExpenseDue?> LockFixedExpenseDueAsync(Guid id, CancellationToken token);
+    Task<FixedExpenseSchedule> FixedExpenseScheduleAsync(Guid id, CancellationToken token);
     void AddCategory(FinancialCategory item); void AddRevenue(Revenue item); void AddPayment(Payment item);
     void AddExpense(Expense item); void AddDoctorCost(DoctorCompensationCost item); void AddTransaction(FinancialTransaction item);
     void AddAudit(PlatformAuditLog item);

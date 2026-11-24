@@ -69,6 +69,7 @@ public static class DependencyInjection
         services.AddScoped<IInventoryStore, InventoryStore>();
         services.AddScoped<IPharmacyStore, PharmacyStore>();
         services.AddScoped<ClinicBusinessService>();
+        services.AddScoped<ExpenseObligationsService>();
         services.AddScoped<ImplantService>();
         services.AddScoped<ClinicalWorkflowService>();
         services.AddScoped<RootTreatmentFlowService>();

@@ -3,6 +3,7 @@ using DentalClinic.Application;
 using DentalClinic.Application.Common.Exceptions;
 using DentalClinic.Application.Finance;
 using DentalClinic.Application.Identity;
+using DentalClinic.Application.Treatments;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DentalClinic.UnitTests;
@@ -17,7 +18,8 @@ public sealed class FinanceQuerySecurityTests
         var spy = (StoreSpy)store;
         var permissions = new PermissionStub(true);
         using var services = new ServiceCollection().AddApplication()
-            .AddSingleton(store).AddSingleton<IPermissionService>(permissions)
+            .AddSingleton(store).AddSingleton(DispatchProxy.Create<ITreatmentStore, StoreSpy>())
+            .AddSingleton<IPermissionService>(permissions)
             .AddSingleton<ICurrentUser>(new ActorStub(actor)).BuildServiceProvider();
         var value = await services.GetRequiredService<IFinanceQueries>().MyDuesAsync(CancellationToken.None);
         Assert.Equal(actor, spy.ActorRequested);
@@ -32,7 +34,8 @@ public sealed class FinanceQuerySecurityTests
         var spy = (StoreSpy)store;
         var permissions = new PermissionStub(false);
         using var services = new ServiceCollection().AddApplication()
-            .AddSingleton(store).AddSingleton<IPermissionService>(permissions)
+            .AddSingleton(store).AddSingleton(DispatchProxy.Create<ITreatmentStore, StoreSpy>())
+            .AddSingleton<IPermissionService>(permissions)
             .AddSingleton<ICurrentUser>(new ActorStub(Guid.NewGuid())).BuildServiceProvider();
         await Assert.ThrowsAsync<ForbiddenAccessException>(() => services.GetRequiredService<IFinanceQueries>().BillingQueueAsync(CancellationToken.None));
         Assert.Equal(Permissions.FinanceRevenueView, permissions.LastRequested);

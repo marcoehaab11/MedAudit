@@ -15,6 +15,70 @@ namespace DentalClinic.IntegrationTests;
 public sealed partial class DentalWorkflowTests
 {
     [Fact]
+    public async Task RevenueSummaryUsesAllMatchingRowsAndGroupsByCatalogService()
+    {
+        await using var test = await CreateContextAsync();
+        var clinic = await CreateClinicAsync(test, "finance-results", "admin@finance-results.example");
+        await AcceptAsync(test, "admin@finance-results.example");
+        SetActor(test, clinic);
+        var setup = await CreateStartedAppointmentAsync(test, clinic, "Revenue", "Patient", "FIN-RSLT");
+        await using var scope = test.Provider.CreateAsyncScope();
+        var catalog = scope.ServiceProvider.GetRequiredService<ITreatmentCatalogService>();
+        var treatments = scope.ServiceProvider.GetRequiredService<ITreatmentService>();
+        var finance = scope.ServiceProvider.GetRequiredService<IFinanceQueries>();
+        var filling = await catalog.CreateAsync(new(TreatmentType.Filling, "Composite", "FIN-COMP", null, 300), CancellationToken.None);
+        var extraction = await catalog.CreateAsync(new(TreatmentType.Extraction, "Tooth extraction", "FIN-EXT", null, 1000), CancellationToken.None);
+
+        async Task<Guid> CompleteAsync(Guid service, int tooth, string notes)
+        {
+            var id = await treatments.CreateAsync(new(setup.PatientId, setup.DoctorProfileId, service, setup.Id, null, null, [tooth], notes), CancellationToken.None);
+            var item = (await treatments.GetAsync(id, CancellationToken.None))!;
+            await treatments.TransitionAsync(id, "start", item.Version, CancellationToken.None);
+            item = (await treatments.GetAsync(id, CancellationToken.None))!;
+            await treatments.TransitionAsync(id, "complete", item.Version, CancellationToken.None);
+            return id;
+        }
+
+        await CompleteAsync(filling, 34, "Included");
+        await CompleteAsync(filling, 35, "Included");
+        var extractionId = await CompleteAsync(extraction, 36, "Included");
+        await CompleteAsync(filling, 37, "Excluded");
+        var extractionRevenue = Assert.Single((await finance.RevenuesAsync(new(TreatmentId: extractionId), CancellationToken.None)).Items);
+        await scope.ServiceProvider.GetRequiredService<IPaymentService>().CreateAsync(
+            new(setup.PatientId, extractionRevenue.Id, extractionId, 600, PaymentMethod.Cash, null, "Collected", Monday, new(10, 0)), CancellationToken.None);
+
+        var search = new RevenueSearch(Search: "Included", From: Monday, To: Monday, PageSize: 1, IncludeSummary: true);
+        var page = await finance.RevenuesAsync(search, CancellationToken.None);
+        var row = Assert.Single(page.Items);
+        Assert.Equal(setup.PatientId, row.PatientId);
+        Assert.Equal("Revenue Patient", row.PatientName);
+        Assert.False(string.IsNullOrEmpty(row.PatientNumber));
+        await using var db = CreateDbContext(test.ConnectionString, clinic.TenantId);
+        Assert.Equal(await db.Patients.Where(p => p.Id == setup.PatientId).Select(p => p.PatientNumber).SingleAsync(), row.PatientNumber);
+        Assert.Equal(3, page.TotalCount);
+        Assert.Equal(3, page.TotalPages);
+        var summary = Assert.IsType<RevenueResultsSummary>(page.Summary);
+        Assert.Equal(new RevenueCurrencyTotals(row.Currency, 1600, 600, 1000), Assert.Single(summary.Totals));
+        Assert.Collection(summary.Services,
+            item => Assert.Equal(new RevenueServiceTotal(extraction, "Tooth extraction", TreatmentType.Extraction, row.Currency, 1000), item),
+            item => Assert.Equal(new RevenueServiceTotal(filling, "Composite", TreatmentType.Filling, row.Currency, 600), item));
+
+        var secondPage = await finance.RevenuesAsync(search with { Page = 2 }, CancellationToken.None);
+        Assert.NotEqual(row.Id, Assert.Single(secondPage.Items).Id);
+        Assert.Equal(summary.Totals, secondPage.Summary!.Totals);
+        Assert.Equal(summary.Services, secondPage.Summary.Services);
+
+        var matchedPayment = await finance.RevenuesAsync(search with { Search = "Collected" }, CancellationToken.None);
+        Assert.Equal(400, Assert.Single(matchedPayment.Items).Outstanding);
+        Assert.Equal(600, Assert.Single(matchedPayment.Summary!.Totals).Paid);
+
+        var empty = await finance.RevenuesAsync(search with { From = Monday.AddDays(1), To = Monday.AddDays(1) }, CancellationToken.None);
+        Assert.Empty(empty.Items);
+        Assert.Empty(empty.Summary!.Services);
+        Assert.Equal(new RevenueCurrencyTotals(row.Currency, 0, 0, 0), Assert.Single(empty.Summary.Totals));
+    }
+
+    [Fact]
     public async Task CompletedTreatmentCreatesOneRevenueDoctorCostPaymentExpenseAndBalance()
     {
         await using var test = await CreateContextAsync(); var clinic = await CreateClinicAsync(test, "finance-flow", "admin@finance-flow.example");

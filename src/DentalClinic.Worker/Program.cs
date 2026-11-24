@@ -20,6 +20,7 @@ builder.Services.AddHostedService<Worker>();
 builder.Services.AddHostedService<NotificationOutboxProcessorHost>();
 builder.Services.AddHostedService<BookingReminderHost>();
 builder.Services.AddHostedService<ClinicOperationsAlertHost>();
+builder.Services.AddHostedService<FixedExpenseHost>();
 
 var host = builder.Build();
 await DentalClinic.Infrastructure.Persistence.DatabaseSecurityBootstrap.VerifyRuntimeAsync(host.Services);

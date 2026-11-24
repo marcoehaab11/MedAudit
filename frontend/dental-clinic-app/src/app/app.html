@@ -94,8 +94,8 @@
         (scroll)="navTooltip.set(null)"
       >
         @for (group of navigationGroups(); track group.id) {
-          <section class="nav-group" [attr.aria-labelledby]="group.id === 'finance' ? null : 'nav-heading-' + group.id">
-            @if (group.id !== 'finance') {
+          <section class="nav-group" [attr.aria-labelledby]="group.direct ? null : 'nav-heading-' + group.id">
+            @if (!group.direct) {
             <button
               type="button"
               class="nav-group-toggle"
@@ -120,7 +120,7 @@
             <div
               class="nav-links"
               [id]="'nav-links-' + group.id"
-              [hidden]="group.id !== 'finance' && !isGroupOpen(group) && !(sidebarCollapsed() && !isMobile())"
+              [hidden]="!group.direct && !isGroupOpen(group) && !(sidebarCollapsed() && !isMobile())"
             >
               @for (item of group.items; track item.path) {
                 <a

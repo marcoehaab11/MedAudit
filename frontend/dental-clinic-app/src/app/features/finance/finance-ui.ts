@@ -134,6 +134,8 @@ const CATEGORY_AR_MAP: Record<string, string> = {
   LAB: 'معامل وتركيبات أسنان',
   LABORATORY: 'معامل وتركيبات أسنان',
   'DENTAL LAB': 'معامل وتركيبات أسنان',
+  LAB_COST: 'معامل وتركيبات أسنان',
+  'DENTAL LABORATORY': 'معامل وتركيبات أسنان',
   'DENTAL LAB & PROSTHETICS': 'معامل وتركيبات أسنان',
   STERILIZATION: 'أدوات تعقيم ومكافحة عدوى',
   'STERILIZATION & INFECTION CONTROL': 'أدوات تعقيم ومكافحة عدوى',
@@ -157,7 +159,7 @@ const CATEGORY_AR_MAP: Record<string, string> = {
 
 export function categoryTitle(nameOrCode: string | null | undefined, language: string = 'ar'): string {
   if (!nameOrCode) return '—';
-  if (language !== 'ar') return nameOrCode;
+  if (language !== 'ar') return nameOrCode === 'LAB_COST' ? 'Dental laboratory' : nameOrCode;
   const key = nameOrCode.trim().toUpperCase();
   return CATEGORY_AR_MAP[key] || CATEGORY_AR_MAP[nameOrCode.trim()] || nameOrCode;
 }

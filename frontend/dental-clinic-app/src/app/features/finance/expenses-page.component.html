@@ -1,0 +1,171 @@
+
+<header class="expenses-head">
+  <h1>{{ t('Expenses', 'المصروفات') }}</h1>
+  @if (auth.hasPermission('Finance.Expenses.Create')) {
+    <div class="expense-actions">
+      <button class="expense-control" type="button" aria-haspopup="dialog" (click)="openFixed()">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10V6h13l-3-3m3 3-3 3M20 14v4H7l3-3m-3 3 3 3"/></svg>
+        {{ t('Manage fixed expenses', 'إدارة المصروفات الثابتة') }}
+      </button>
+      <a class="expense-control primary-expense" routerLink="/finance/expenses/create">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        {{ t('New expense', 'تسجيل مصروف جديد') }}
+      </a>
+    </div>
+  }
+</header>
+<app-finance-nav />
+
+<div class="expense-results" [attr.aria-busy]="loading()">
+  @if (loadError()) {
+    <div class="expense-surface expense-state" role="alert">
+      <p>{{ t('Could not load expenses.', 'تعذر تحميل المصروفات.') }}</p>
+      <button class="expense-control" type="button" (click)="loadExpenses()">{{ t('Try again', 'إعادة المحاولة') }}</button>
+    </div>
+  } @else if (loading()) {
+    <p class="expense-surface expense-state" role="status">{{ t('Loading expenses…', 'جاري تحميل المصروفات…') }}</p>
+  } @else {
+    @if (paid(); as page) {
+      <section class="expense-surface" aria-labelledby="paid-expenses-title">
+        <header class="expense-table-head">
+          <span class="expense-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h13v5M4 8h16v12H6a2 2 0 0 1-2-2V8Zm16 4h-5v4h5"/></svg></span>
+          <h2 id="paid-expenses-title">{{ t('Paid expenses', 'المصروفات المدفوعة') }}</h2>
+          <span class="expense-count"><bdi>{{ number(page.totalCount) }}</bdi> {{ t('records', 'سجل') }}</span>
+        </header>
+        <div class="table-scroll" tabindex="0" role="region" aria-labelledby="paid-expenses-title">
+          <table id="paid-expenses-table">
+            <thead><tr>
+              <th scope="col">{{ t('Payment date', 'تاريخ الدفع') }}</th>
+              <th scope="col">{{ t('Type', 'النوع') }}</th>
+              <th scope="col">{{ t('Category', 'التصنيف') }}</th>
+              <th scope="col">{{ t('Description', 'الوصف / البيان') }}</th>
+              <th scope="col">{{ t('Vendor / Beneficiary', 'المورد / الجهة المستفيدة') }}</th>
+              <th scope="col" class="expense-amount">{{ t('Amount', 'المبلغ') }}</th>
+            </tr></thead>
+            <tbody>
+              @for (row of page.items; track row.id) {
+                <tr>
+                  <td class="expense-date"><bdi>{{ row.expenseDate | date: 'dd/MM/yyyy' }}</bdi></td>
+                  <td><span class="expense-badge" [class.fixed-expense]="row.isFixed">{{ row.isFixed ? t('Fixed', 'ثابت') : t('Variable', 'متغير') }}</span></td>
+                  <td>{{ category(row.categoryName) }}</td>
+                  <td><bdi>{{ row.description }}</bdi></td>
+                  <td><bdi>{{ row.vendorName || '—' }}</bdi></td>
+                  <td class="expense-amount"><bdi>{{ format(row.amount, row.currency) }}</bdi></td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6" class="expense-state">{{ t('No paid expenses recorded.', 'لا توجد مصروفات مدفوعة مسجلة.') }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (page.totalPages > 1) {
+          <nav class="expense-pagination" [attr.aria-label]="t('Paid expense pages', 'صفحات المصروفات المدفوعة')">
+            <button class="expense-control" type="button" [disabled]="paidPage === 1" (click)="changePage('paid', paidPage - 1)">{{ t('Previous', 'السابق') }}</button>
+            <bdi>{{ number(paidPage) }} / {{ number(page.totalPages) }}</bdi>
+            <button class="expense-control" type="button" [disabled]="paidPage >= page.totalPages" (click)="changePage('paid', paidPage + 1)">{{ t('Next', 'التالي') }}</button>
+          </nav>
+        }
+      </section>
+    }
+
+    @if (due(); as page) {
+      <section class="expense-surface" aria-labelledby="due-expenses-title">
+        <header class="expense-table-head">
+          <span class="expense-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3M7 2v4m10-4v4M3 9h18m-5 4v4l2 1"/><circle cx="16" cy="17" r="5"/></svg></span>
+          <h2 id="due-expenses-title">{{ t('Outstanding expenses', 'المصروفات المستحقة') }}</h2>
+          <span class="expense-count"><bdi>{{ number(page.totalCount) }}</bdi> {{ t('records', 'سجل') }}</span>
+        </header>
+        <div class="table-scroll" tabindex="0" role="region" aria-labelledby="due-expenses-title">
+          <table id="due-expenses-table">
+            <thead><tr>
+              <th scope="col">{{ t('Due date', 'تاريخ الاستحقاق') }}</th>
+              <th scope="col">{{ t('Type', 'النوع') }}</th>
+              <th scope="col">{{ t('Category', 'التصنيف') }}</th>
+              <th scope="col">{{ t('Description', 'الوصف / البيان') }}</th>
+              <th scope="col">{{ t('Vendor / Beneficiary', 'المورد / الجهة المستفيدة') }}</th>
+              <th scope="col" class="expense-amount">{{ t('Amount', 'المبلغ') }}</th>
+              <th scope="col">{{ t('Status', 'الحالة') }}</th>
+            </tr></thead>
+            <tbody>
+              @for (row of page.items; track row.id) {
+                <tr>
+                  <td class="expense-date"><bdi>{{ row.dueDate | date: 'dd/MM/yyyy' }}</bdi></td>
+                  <td><span class="expense-badge" [class.fixed-expense]="row.isFixed">{{ row.isFixed ? t('Fixed', 'ثابت') : t('Variable', 'متغير') }}</span></td>
+                  <td>{{ category(row.categoryName) }}</td>
+                  <td><bdi>{{ row.description }}</bdi></td>
+                  <td><bdi>{{ row.vendorName || '—' }}</bdi></td>
+                  <td class="expense-amount"><bdi>{{ format(row.amount, row.currency) }}</bdi></td>
+                  <td><div class="expense-status">
+                    <span class="expense-badge fixed-expense">{{ t('Unpaid', 'غير مدفوع') }}</span>
+                    @if (row.isFixed && auth.hasPermission('Finance.Expenses.Create')) {
+                      <a routerLink="/finance/expenses/create" [queryParams]="{ fixedDueId: row.id }">{{ t('Record payment', 'تسجيل السداد') }}</a>
+                    } @else if (!row.isFixed && auth.hasPermission('Lab.View')) {
+                      <a routerLink="/lab" [queryParams]="{ patientId: row.labPatientId, statementId: row.labStatementId }">
+                        {{ row.labStatementId ? t('View statement', 'عرض كشف الحساب') : t('Open lab cases', 'فتح حالات المعمل') }}
+                      </a>
+                    }
+                  </div></td>
+                </tr>
+              } @empty {
+                <tr><td colspan="7" class="expense-state">{{ t('No outstanding expenses.', 'لا توجد مصروفات مستحقة.') }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (page.totalPages > 1) {
+          <nav class="expense-pagination" [attr.aria-label]="t('Outstanding expense pages', 'صفحات المصروفات المستحقة')">
+            <button class="expense-control" type="button" [disabled]="duePage === 1" (click)="changePage('due', duePage - 1)">{{ t('Previous', 'السابق') }}</button>
+            <bdi>{{ number(duePage) }} / {{ number(page.totalPages) }}</bdi>
+            <button class="expense-control" type="button" [disabled]="duePage >= page.totalPages" (click)="changePage('due', duePage + 1)">{{ t('Next', 'التالي') }}</button>
+          </nav>
+        }
+      </section>
+    }
+  }
+</div>
+
+<dialog #fixedDialog class="fixed-expense-dialog" aria-labelledby="fixed-expenses-title">
+  <div class="fixed-dialog-layout">
+    <header class="fixed-dialog-head">
+      <h2 id="fixed-expenses-title">{{ t('Manage fixed expenses', 'إدارة المصروفات الثابتة') }}</h2>
+      <form method="dialog"><button class="expense-control" type="submit" autofocus>{{ t('Close', 'إغلاق') }}</button></form>
+    </header>
+    <div class="fixed-dialog-scroll">
+      @if (loadingFixed()) {
+        <p role="status">{{ t('Loading fixed expenses…', 'جاري تحميل المصروفات الثابتة…') }}</p>
+      } @else if (fixedLoadError()) {
+        <div role="alert">
+          <p>{{ t('Could not load fixed expenses.', 'تعذر تحميل المصروفات الثابتة.') }}</p>
+          <button class="expense-control" type="button" (click)="refreshFixed()">{{ t('Try again', 'إعادة المحاولة') }}</button>
+        </div>
+      } @else {
+        @if (schedules().length) {
+          <ul class="fixed-schedules">
+            @for (item of schedules(); track item.id) {
+              <li><bdi>{{ item.name }}</bdi><bdi>{{ format(item.monthlyAmount, item.currency) }}</bdi></li>
+            }
+          </ul>
+        }
+
+        <form class="fixed-expense-form" [formGroup]="fixedForm" (ngSubmit)="saveFixed()">
+          <label><span>{{ t('Expense name', 'اسم المصروف') }}</span><input formControlName="name" type="text" maxlength="500" required /></label>
+          <label><span>{{ t('Category', 'التصنيف') }}</span><select formControlName="categoryId" required>
+            <option value="">{{ t('Choose a category', 'اختر التصنيف') }}</option>
+            @for (item of categories(); track item.id) { <option [value]="item.id">{{ categoryOption(item) }}</option> }
+          </select></label>
+          <label><span>{{ t('Beneficiary', 'الجهة المستفيدة') }}</span><input formControlName="beneficiary" type="text" maxlength="200" required /></label>
+          <label><span>{{ t('Monthly amount', 'المبلغ الشهري') }}</span><input formControlName="monthlyAmount" type="number" min="0.01" step="0.01" required /></label>
+          <label><span>{{ t('Day of month', 'يوم الاستحقاق من الشهر') }}</span><input formControlName="dueDay" type="number" min="1" max="31" step="1" required /></label>
+          <label><span>{{ t('Start date', 'تاريخ بداية التكرار') }}</span><input formControlName="startsOn" type="date" min="1900-01-01" max="9998-12-31" required /></label>
+          <div class="fixed-form-actions">
+            @if (saveError()) { <p role="alert" class="fixed-form-error">{{ saveError() }}</p> }
+            @if (saved()) { <p role="status">{{ t('Fixed expense saved.', 'تم حفظ المصروف الثابت.') }}</p> }
+            <button class="expense-control primary-expense" type="submit" [disabled]="fixedForm.invalid || saving()">
+              {{ saving() ? t('Saving…', 'جارٍ الحفظ…') : t('Save fixed expense', 'حفظ المصروف الثابت') }}
+            </button>
+          </div>
+        </form>
+      }
+    </div>
+  </div>
+</dialog>

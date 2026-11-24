@@ -12,6 +12,7 @@ export interface NavigationGroup {
   en: string;
   ar: string;
   defaultOpen: boolean;
+  direct?: boolean;
   items: readonly NavigationItem[];
 }
 
@@ -20,12 +21,11 @@ export const FINANCE_TABS = [
   { path: '/finance/revenue', en: 'Revenue', ar: 'الإيرادات', permissions: ['Finance.Revenue.View'] },
   { path: '/finance/payments', en: 'Payments', ar: 'المدفوعات', permissions: ['Finance.Payments.View'] },
   { path: '/finance/expenses', en: 'Expenses', ar: 'المصروفات', permissions: ['Finance.Expenses.View'] },
-  { path: '/finance/categories', en: 'Categories', ar: 'التصنيفات', permissions: ['Finance.Categories.View'] },
-  { path: '/finance/my-dues', en: 'My dues', ar: 'مستحقاتي', permissions: ['Finance.View'] },
 ] as const;
 export const NAVIGATION_GROUPS: readonly NavigationGroup[] = [
   {
     id: 'overview',
+    direct: true,
     en: 'Overview',
     ar: 'نظرة عامة',
     defaultOpen: true,
@@ -41,6 +41,7 @@ export const NAVIGATION_GROUPS: readonly NavigationGroup[] = [
   },
   {
     id: 'daily',
+    direct: true,
     en: 'Daily work',
     ar: 'العمل اليومي',
     defaultOpen: true,
@@ -106,6 +107,7 @@ export const NAVIGATION_GROUPS: readonly NavigationGroup[] = [
   },
   {
     id: 'finance',
+    direct: true,
     en: 'Finance',
     ar: 'المالية',
     defaultOpen: false,
@@ -120,13 +122,14 @@ export const NAVIGATION_GROUPS: readonly NavigationGroup[] = [
   },
   {
     id: 'relationships',
+    direct: true,
     en: 'Relationships',
     ar: 'علاقات المرضى',
     defaultOpen: false,
     items: [
       {
         path: '/crm',
-        en: 'CRM overview',
+        en: 'Patient relationships',
         ar: 'إدارة علاقات المرضى',
         icon: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75',
         permission: 'CRM.View',
@@ -142,10 +145,11 @@ export const NAVIGATION_GROUPS: readonly NavigationGroup[] = [
     ],
   },
   {
-    id: 'operations',
-    en: 'Operations',
-    ar: 'العمليات',
-    defaultOpen: false,
+    id: 'direct-operations',
+    en: '',
+    ar: '',
+    direct: true,
+    defaultOpen: true,
     items: [
       {
         path: '/lab',
@@ -162,18 +166,26 @@ export const NAVIGATION_GROUPS: readonly NavigationGroup[] = [
         permission: 'Insurance.View',
       },
       {
-        path: '/inventory',
-        en: 'Inventory',
-        ar: 'المخزون',
-        icon: 'M12 2l9 5v10l-9 5-9-5V7z M3 7l9 5 9-5 M12 12v10 M7.5 4.5l9 5',
-        permission: 'Inventory.View',
-      },
-      {
         path: '/online-booking',
         en: 'Online booking',
         ar: 'الحجز الإلكتروني',
         icon: 'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0 M2 12h20 M12 2c5 5 5 15 0 20-5-5-5-15 0-20',
         permission: 'Settings.PublicBooking',
+      },
+    ],
+  },
+  {
+    id: 'operations',
+    en: 'Operations',
+    ar: 'العمليات',
+    defaultOpen: false,
+    items: [
+      {
+        path: '/inventory',
+        en: 'Inventory',
+        ar: 'المخزون',
+        icon: 'M12 2l9 5v10l-9 5-9-5V7z M3 7l9 5 9-5 M12 12v10 M7.5 4.5l9 5',
+        permission: 'Inventory.View',
       },
       {
         path: '/notifications',
@@ -186,6 +198,7 @@ export const NAVIGATION_GROUPS: readonly NavigationGroup[] = [
   },
   {
     id: 'insights',
+    direct: true,
     en: 'Insights',
     ar: 'التحليلات',
     defaultOpen: false,

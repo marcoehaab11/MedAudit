@@ -20,9 +20,24 @@ public sealed record FinancialCategoryItem(Guid Id, string Name, string Code, Fi
     string? ParentName, bool IsActive, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, Guid Version);
 public sealed record RevenueItem(Guid Id, Guid CategoryId, string CategoryName, Guid? PatientId, string? PatientName,
     Guid? TreatmentId, string? TreatmentName, Guid? DoctorProfileId, string? DoctorName, decimal Amount, decimal Paid,
-    decimal Outstanding, string Currency, string Description, DateTimeOffset OccurredAt);
+    decimal Outstanding, string Currency, string Description, DateTimeOffset OccurredAt,
+    string? PatientNumber = null, TreatmentType? ServiceType = null);
 public sealed record RevenueSearch(string? Search = null, Guid? PatientId = null, Guid? DoctorProfileId = null,
-    Guid? TreatmentId = null, Guid? CategoryId = null, DateOnly? From = null, DateOnly? To = null, int Page = 1, int PageSize = 20);
+    Guid? TreatmentId = null, Guid? CategoryId = null, DateOnly? From = null, DateOnly? To = null, int Page = 1, int PageSize = 20,
+    bool IncludeSummary = false)
+{
+    public bool SearchTreatmentNotes { get; internal init; }
+    public Guid? TreatmentNotesDoctorId { get; internal init; }
+    public bool SearchPaymentNotes { get; internal init; }
+}
+public sealed record RevenuePage(IReadOnlyList<RevenueItem> Items, int Page, int PageSize, int TotalCount,
+    RevenueResultsSummary? Summary)
+{
+    public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
+}
+public sealed record RevenueResultsSummary(IReadOnlyList<RevenueCurrencyTotals> Totals, IReadOnlyList<RevenueServiceTotal> Services);
+public sealed record RevenueCurrencyTotals(string Currency, decimal Revenue, decimal Paid, decimal Outstanding);
+public sealed record RevenueServiceTotal(Guid CatalogItemId, string Name, TreatmentType ServiceType, string Currency, decimal Revenue);
 public sealed record PaymentInput(Guid? PatientId, Guid? RevenueId, Guid? TreatmentId, decimal Amount,
     PaymentMethod PaymentMethod, string? Reference, string? Notes, DateOnly PaidDate, TimeOnly PaidTime);
 public sealed record PaymentItem(Guid Id, Guid? PatientId, string? PatientName, Guid RevenueId, Guid? TreatmentId,
@@ -30,9 +45,10 @@ public sealed record PaymentItem(Guid Id, Guid? PatientId, string? PatientName, 
 public sealed record PaymentSearch(Guid? PatientId = null, Guid? RevenueId = null, Guid? TreatmentId = null,
     DateOnly? From = null, DateOnly? To = null, int Page = 1, int PageSize = 20);
 public sealed record ExpenseInput(Guid CategoryId, decimal Amount, string? Currency, string Description, string? VendorName,
-    string? Reference, DateOnly ExpenseDate, TimeOnly ExpenseTime, string? Notes);
+    string? Reference, DateOnly ExpenseDate, TimeOnly ExpenseTime, string? Notes, Guid? FixedDueId = null);
 public sealed record ExpenseItem(Guid Id, Guid CategoryId, string CategoryName, decimal Amount, string Currency,
-    string Description, string? VendorName, string? Reference, DateTimeOffset ExpenseDate, DateTimeOffset CreatedAt);
+    string Description, string? VendorName, string? Reference, DateTimeOffset ExpenseDate, DateTimeOffset CreatedAt,
+    bool IsFixed = false);
 public sealed record ExpenseSearch(Guid? CategoryId = null, DateOnly? From = null, DateOnly? To = null, int Page = 1, int PageSize = 20);
 public sealed record PatientBalance(Guid PatientId, decimal TotalRevenue, decimal TotalPaid, decimal Outstanding, string Currency);
 public sealed record FinanceSummary(decimal Revenue, decimal Payments, decimal Outstanding, decimal Expenses,
@@ -64,7 +80,7 @@ public interface IFinanceQueries
     Task<DoctorDues?> MyDuesAsync(CancellationToken token);
     Task<IReadOnlyCollection<BillingQueueItem>> BillingQueueAsync(CancellationToken token);
     Task<FinanceSummary> DashboardAsync(FinanceDateFilter filter, CancellationToken token);
-    Task<PagedResult<RevenueItem>> RevenuesAsync(RevenueSearch search, CancellationToken token);
+    Task<RevenuePage> RevenuesAsync(RevenueSearch search, CancellationToken token);
     Task<PagedResult<PaymentItem>> PaymentsAsync(PaymentSearch search, CancellationToken token);
     Task<PagedResult<ExpenseItem>> ExpensesAsync(ExpenseSearch search, CancellationToken token);
     Task<PatientBalance?> PatientBalanceAsync(Guid patientId, CancellationToken token);

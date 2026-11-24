@@ -313,7 +313,7 @@ export const routes: Routes = [
     path: 'finance/expenses/create',
     canActivate: [authGuard, permissionGuard],
     loadComponent: () =>
-      import('./features/finance/expenses-page.component').then((x) => x.ExpenseFormComponent),
+      import('./features/finance/expense-form.component').then((x) => x.ExpenseFormComponent),
   },
   {
     path: 'finance/categories',

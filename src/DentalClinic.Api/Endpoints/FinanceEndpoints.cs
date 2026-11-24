@@ -3,6 +3,7 @@ using DentalClinic.Application.Identity;
 using DentalClinic.Contracts.Finance;
 using DentalClinic.Domain.Finance;
 using DentalClinic.Infrastructure.Identity;
+using DentalClinic.Infrastructure.Services;
 
 namespace DentalClinic.Api.Endpoints;
 
@@ -24,11 +25,21 @@ internal static class FinanceEndpoints
         api.MapGet("/payments", SearchPayments).RequireAuthorization(Permissions.FinancePaymentsView);
         api.MapPost("/payments", async (PaymentRequest r, IPaymentService x, CancellationToken t) => { var id = await x.CreateAsync(new(r.PatientId, r.RevenueId, r.TreatmentId, r.Amount, (PaymentMethod)r.PaymentMethod, r.Reference, r.Notes, r.PaidDate, r.PaidTime), t); return Results.Created($"/api/finance/payments/{id:D}", new { id }); }).RequireAuthorization(Permissions.FinancePaymentsCreate);
         api.MapGet("/expenses", SearchExpenses).RequireAuthorization(Permissions.FinanceExpensesView);
-        api.MapPost("/expenses", async (ExpenseRequest r, IExpenseService x, CancellationToken t) => { var id = await x.CreateAsync(new(r.CategoryId, r.Amount, r.Currency, r.Description, r.VendorName, r.Reference, r.ExpenseDate, r.ExpenseTime, r.Notes), t); return Results.Created($"/api/finance/expenses/{id:D}", new { id }); }).RequireAuthorization(Permissions.FinanceExpensesCreate);
+        api.MapPost("/expenses", async (ExpenseRequest r, IExpenseService x, CancellationToken t) => { var id = await x.CreateAsync(new(r.CategoryId, r.Amount, r.Currency, r.Description, r.VendorName, r.Reference, r.ExpenseDate, r.ExpenseTime, r.Notes, r.FixedDueId), t); return Results.Created($"/api/finance/expenses/{id:D}", new { id }); }).RequireAuthorization(Permissions.FinanceExpensesCreate);
+        api.MapGet("/expenses/ledger", (int? paidPage, int? duePage, ExpenseObligationsService x, CancellationToken t) =>
+            x.LedgerAsync(paidPage ?? 1, duePage ?? 1, t)).RequireAuthorization(Permissions.FinanceExpensesView);
+        api.MapGet("/expenses/due/{id:guid}", async (Guid id, ExpenseObligationsService x, CancellationToken t) =>
+            await x.FixedDueAsync(id, t) is { } item ? Results.Ok(item) : Results.NotFound())
+            .RequireAuthorization(Permissions.FinanceExpensesView, Permissions.FinanceExpensesCreate);
+        api.MapGet("/expenses/fixed", (ExpenseObligationsService x, CancellationToken t) =>
+            x.SchedulesAsync(t)).RequireAuthorization(Permissions.FinanceExpensesView, Permissions.FinanceExpensesCreate);
+        api.MapPost("/expenses/fixed", async (FixedExpenseInput r, ExpenseObligationsService x, CancellationToken t) =>
+            Results.Ok(new { id = await x.AddScheduleAsync(r, t) }))
+            .RequireAuthorization(Permissions.FinanceExpensesView, Permissions.FinanceExpensesCreate);
         api.MapGet("/patients/{patientId:guid}/balance", async (Guid patientId, IFinanceQueries x, CancellationToken t) => await x.PatientBalanceAsync(patientId, t) is { } item ? Results.Ok(item) : Results.NotFound()).RequireAuthorization(Permissions.FinanceView);
         return endpoints;
     }
-    private static Task<DentalClinic.Application.Tenants.Models.PagedResult<RevenueItem>> SearchRevenue(string? search, Guid? patientId, Guid? doctorProfileId, Guid? treatmentId, Guid? categoryId, DateOnly? from, DateOnly? to, int page, int pageSize, IFinanceQueries x, CancellationToken t) => x.RevenuesAsync(new(search, patientId, doctorProfileId, treatmentId, categoryId, from, to, page == 0 ? 1 : page, pageSize == 0 ? 20 : pageSize), t);
+    private static Task<RevenuePage> SearchRevenue(string? search, Guid? patientId, Guid? doctorProfileId, Guid? treatmentId, Guid? categoryId, DateOnly? from, DateOnly? to, int page, int pageSize, bool? includeSummary, IFinanceQueries x, CancellationToken t) => x.RevenuesAsync(new(search, patientId, doctorProfileId, treatmentId, categoryId, from, to, page == 0 ? 1 : page, pageSize == 0 ? 20 : pageSize, includeSummary == true), t);
     private static Task<DentalClinic.Application.Tenants.Models.PagedResult<PaymentItem>> SearchPayments(Guid? patientId, Guid? revenueId, Guid? treatmentId, DateOnly? from, DateOnly? to, int page, int pageSize, IFinanceQueries x, CancellationToken t) => x.PaymentsAsync(new(patientId, revenueId, treatmentId, from, to, page == 0 ? 1 : page, pageSize == 0 ? 20 : pageSize), t);
     private static Task<DentalClinic.Application.Tenants.Models.PagedResult<ExpenseItem>> SearchExpenses(Guid? categoryId, DateOnly? from, DateOnly? to, int page, int pageSize, IFinanceQueries x, CancellationToken t) => x.ExpensesAsync(new(categoryId, from, to, page == 0 ? 1 : page, pageSize == 0 ? 20 : pageSize), t);
 }

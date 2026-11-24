@@ -1,0 +1,201 @@
+<h1>{{ t('Revenue', 'الإيرادات') }}</h1>
+<app-finance-nav />
+
+<form class="surface revenue-filters" (ngSubmit)="applyFilters()">
+  <label>
+    <span>{{ t('Search description or notes', 'بحث في الوصف أو الملاحظات') }}</span>
+    <input type="search" name="search" [(ngModel)]="search"
+      [placeholder]="t('Search description or notes…', 'ابحث في الوصف أو الملاحظات…')" />
+  </label>
+  <label>
+    <span>{{ t('From date', 'من تاريخ') }}</span>
+    <input type="date" name="from" [(ngModel)]="from" />
+  </label>
+  <label>
+    <span>{{ t('To date', 'إلى تاريخ') }}</span>
+    <input type="date" name="to" [(ngModel)]="to" />
+  </label>
+  <button class="control primary-action" type="submit">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg>
+    {{ t('Search', 'بحث وتصفية') }}
+  </button>
+</form>
+
+<div class="results" [attr.aria-busy]="loading()">
+  @if (loadError()) {
+    <div class="surface state" role="alert">
+      <p>{{ t('Could not load these records. Please try again.', 'تعذر تحميل السجلات. يرجى إعادة المحاولة.') }}</p>
+      <button type="button" class="control" (click)="load()">{{ t('Try again', 'إعادة المحاولة') }}</button>
+    </div>
+  } @else if (loading()) {
+    <p class="surface state" role="status">{{ t('Loading revenue records…', 'جاري تحميل سجلات الإيرادات…') }}</p>
+  } @else if (data(); as result) {
+    <section aria-labelledby="revenue-summary">
+      <h2 id="revenue-summary" class="summary-heading">{{ t('Summary of matching results', 'ملخص النتائج المطابقة للبحث والفترة') }}</h2>
+      <dl class="metrics">
+        @for (metric of metrics; track metric.key) {
+          <div class="surface metric">
+            <dt>
+              <span class="metric-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  @switch (metric.icon) {
+                    @case ('revenue') { <circle cx="12" cy="12" r="9"/><path d="M12 6v12m3-9H11a1.5 1.5 0 0 0 0 3h2a1.5 1.5 0 0 1 0 3H9"/> }
+                    @case ('paid') { <path d="M20 8V5H6a2 2 0 0 0 0 4h15v9H6a2 2 0 0 1-2-2V7m17 5h-5v3h5"/> }
+                    @case ('outstanding') { <path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6m-6 4h6m-6 4h3"/> }
+                    @case ('count') { <path d="m3 7 2 2 4-4m-6 11 2 2 4-4m3-7h9m-9 9h9"/> }
+                  }
+                </svg>
+              </span>
+              {{ t(metric.en, metric.ar) }}
+            </dt>
+            <dd>
+              @if (metric.key === 'count') {
+                <bdi>{{ formatCount(result.totalCount) }}</bdi>
+              } @else {
+                @for (total of result.summary?.totals; track total.currency) {
+                  <bdi>{{ format(total[metric.key], total.currency) }}</bdi>
+                } @empty { <span [attr.aria-label]="t('Unavailable', 'غير متاح')">—</span> }
+              }
+            </dd>
+          </div>
+        }
+      </dl>
+    </section>
+
+    <section class="surface top-services" aria-labelledby="revenue-top-services">
+      <h2 id="revenue-top-services">
+        {{ serviceGroups().length > 1
+          ? t('Top 3 services per currency', 'أعلى ٣ خدمات دخلًا لكل عملة')
+          : t('Top 3 services by revenue', 'أعلى ٣ خدمات دخلًا') }}
+      </h2>
+      <div class="service-preview">
+        @for (group of serviceGroups(); track group.currency) {
+          <ol>
+            @for (service of group.services.slice(0, 3); track service.catalogItemId) {
+              <li><bdi>{{ service.name }}</bdi><bdi class="amount">{{ format(service.revenue, service.currency) }}</bdi></li>
+            }
+          </ol>
+        } @empty {
+          <p>{{ result.summary ? t('No services in these results.', 'لا توجد خدمات في هذه النتائج.') : '—' }}</p>
+        }
+      </div>
+      <button class="control" type="button" aria-haspopup="dialog" [disabled]="!result.summary" (click)="openServices()">
+        {{ t('View all services', 'عرض كل الخدمات') }}
+        <svg class="directional" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg>
+      </button>
+    </section>
+
+    <section id="revenue-ledger" class="surface ledger" [attr.aria-label]="t('Revenue records', 'سجلات الإيرادات')">
+      <div class="table-scroll" tabindex="0">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{{ t('Date', 'التاريخ') }}</th>
+              <th scope="col">{{ t('Patient', 'المريض') }}</th>
+              <th scope="col">{{ t('Treatment', 'العلاج') }}</th>
+              <th scope="col">{{ t('Category', 'التصنيف') }}</th>
+              <th scope="col" class="amount">{{ t('Revenue', 'الإيراد') }}</th>
+              <th scope="col" class="amount">{{ t('Paid', 'المدفوع') }}</th>
+              <th scope="col" class="amount">{{ t('Outstanding', 'المستحق') }}</th>
+              @if (auth.hasPermission('Finance.Payments.Create')) {
+                <th scope="col"><span class="sr-only">{{ t('Payment action', 'إجراء الدفع') }}</span></th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of result.items; track row.id) {
+              <tr>
+                <td class="ledger-date"><bdi>{{ row.occurredAt | date: 'dd/MM/yyyy' }}</bdi></td>
+                <td>
+                  @if (row.patientId && row.patientName && auth.hasPermission('Patients.View')) {
+                    <a class="patient" [routerLink]="['/patients', row.patientId]">
+                      <bdi>{{ row.patientName }}</bdi>
+                      @if (row.patientNumber) { <bdi class="file-number">{{ row.patientNumber }}</bdi> }
+                    </a>
+                  } @else {
+                    <span class="patient"><bdi>{{ row.patientName || '—' }}</bdi>
+                      @if (row.patientNumber) { <bdi class="file-number">{{ row.patientNumber }}</bdi> }
+                    </span>
+                  }
+                </td>
+                <td><bdi>{{ row.treatmentName || '—' }}</bdi></td>
+                <td><span class="category">{{ category(row.serviceType, row.categoryName) }}</span></td>
+                <td class="amount"><bdi>{{ format(row.amount, row.currency) }}</bdi></td>
+                <td class="amount"><bdi>{{ format(row.paid, row.currency) }}</bdi></td>
+                <td class="amount"><bdi>{{ format(row.outstanding, row.currency) }}</bdi></td>
+                @if (auth.hasPermission('Finance.Payments.Create')) {
+                  <td>
+                    @if (row.outstanding > 0) {
+                      <a class="payment-link" [routerLink]="['/finance/payments/create']" [queryParams]="{ revenueId: row.id }">
+                        {{ t('Pay', 'تسجيل دفعة') }}
+                      </a>
+                    }
+                  </td>
+                }
+              </tr>
+            } @empty {
+              <tr><td class="state" [attr.colspan]="auth.hasPermission('Finance.Payments.Create') ? 8 : 7">
+                {{ t('No revenue records match these filters.', 'لا توجد سجلات إيرادات مطابقة للفلاتر.') }}
+              </td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (result.totalPages > 1) {
+        <nav class="pagination" [attr.aria-label]="t('Revenue pages', 'صفحات الإيرادات')">
+          <button class="control" type="button" [disabled]="page === 1" (click)="changePage(page - 1)">
+            {{ t('Previous', 'السابق') }}
+          </button>
+          <bdi>{{ formatCount(page) }} / {{ formatCount(result.totalPages) }}</bdi>
+          <button class="control" type="button" [disabled]="page >= result.totalPages" (click)="changePage(page + 1)">
+            {{ t('Next', 'التالي') }}
+          </button>
+        </nav>
+      }
+    </section>
+  }
+</div>
+
+<dialog #serviceDialog id="revenue-services" class="services-dialog" aria-labelledby="all-services-title">
+  <div class="dialog-body">
+    <header>
+      <h2 id="all-services-title">{{ t('All services', 'كل الخدمات') }}</h2>
+      <form method="dialog">
+        <button class="control" type="submit" autofocus>{{ t('Close', 'إغلاق') }}</button>
+      </form>
+    </header>
+    <div class="dialog-list" tabindex="0">
+      @for (group of serviceGroups(); track group.currency) {
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{{ t('Service', 'الخدمة') }}</th>
+              <th scope="col">{{ t('Category', 'التصنيف') }}</th>
+              <th scope="col" class="amount">{{ t('Revenue', 'الإيراد') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (service of group.services; track service.catalogItemId) {
+              <tr>
+                <td><bdi>{{ service.name }}</bdi></td>
+                <td><span class="category">{{ category(service.serviceType) }}</span></td>
+                <td class="amount"><bdi>{{ format(service.revenue, service.currency) }}</bdi></td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" colspan="2">{{ t('Total service revenue', 'إجمالي إيرادات الخدمات') }}</th>
+              <td class="amount"><bdi>{{ format(group.total, group.currency) }}</bdi></td>
+            </tr>
+          </tfoot>
+        </table>
+      } @empty {
+        <p class="state">{{ t('No services in these results.', 'لا توجد خدمات في هذه النتائج.') }}</p>
+        @if (data()?.summary?.totals?.[0]; as total) {
+          <p class="empty-total">{{ t('Total service revenue', 'إجمالي إيرادات الخدمات') }} <bdi>{{ format(0, total.currency) }}</bdi></p>
+        }
+      }
+    </div>
+  </div>
+</dialog>

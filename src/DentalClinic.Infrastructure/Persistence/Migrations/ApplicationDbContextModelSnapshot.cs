@@ -1642,6 +1642,83 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                     b.ToTable("financial_transactions", (string)null);
                 });
 
+            modelBuilder.Entity("DentalClinic.Domain.Finance.FixedExpenseDue", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("ExpenseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Month")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("ScheduleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ExpenseId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "ScheduleId", "Month")
+                        .IsUnique();
+
+                    b.ToTable("fixed_expenses_due", (string)null);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Finance.FixedExpenseSchedule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Beneficiary")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DueDay")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("MonthlyAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateOnly>("StartsOn")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "CategoryId");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("fixed_expense_schedules", (string)null);
+                });
+
             modelBuilder.Entity("DentalClinic.Domain.Finance.Payment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5029,6 +5106,32 @@ namespace DentalClinic.Infrastructure.Persistence.Migrations
                         .HasForeignKey("TenantId", "ParentId")
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Finance.FixedExpenseDue", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Finance.Expense", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ExpenseId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("DentalClinic.Domain.Finance.FixedExpenseSchedule", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ScheduleId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DentalClinic.Domain.Finance.FixedExpenseSchedule", b =>
+                {
+                    b.HasOne("DentalClinic.Domain.Finance.FinancialCategory", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "CategoryId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("DentalClinic.Domain.Finance.Payment", b =>

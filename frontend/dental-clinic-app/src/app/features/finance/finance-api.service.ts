@@ -55,8 +55,10 @@ export interface Revenue {
   categoryName: string;
   patientId?: string;
   patientName?: string;
+  patientNumber?: string;
   treatmentId?: string;
   treatmentName?: string;
+  serviceType?: number;
   doctorProfileId?: string;
   doctorName?: string;
   amount: number;
@@ -65,6 +67,22 @@ export interface Revenue {
   currency: string;
   description: string;
   occurredAt: string;
+}
+export interface RevenueCurrencyTotals {
+  currency: string;
+  revenue: number;
+  paid: number;
+  outstanding: number;
+}
+export interface RevenueServiceTotal {
+  catalogItemId: string;
+  name: string;
+  serviceType: number;
+  currency: string;
+  revenue: number;
+}
+export interface RevenuePage extends Page<Revenue> {
+  summary: { totals: RevenueCurrencyTotals[]; services: RevenueServiceTotal[] } | null;
 }
 export interface Payment {
   id: string;
@@ -90,6 +108,32 @@ export interface Expense {
   reference?: string;
   expenseDate: string;
   createdAt: string;
+  isFixed?: boolean;
+}
+export interface DueExpense {
+  id: string;
+  dueDate: string;
+  isFixed: boolean;
+  categoryId?: string;
+  categoryName: string;
+  description: string;
+  vendorName?: string;
+  amount: number;
+  currency: string;
+  labPatientId?: string;
+  labStatementId?: string;
+}
+export interface FixedExpenseInput {
+  name: string;
+  categoryId: string;
+  beneficiary: string;
+  monthlyAmount: number;
+  dueDay: number;
+  startsOn: string;
+}
+export interface FixedExpenseSchedule extends FixedExpenseInput {
+  id: string;
+  currency: string;
 }
 export interface PatientBalance {
   patientId: string;
@@ -132,8 +176,8 @@ export class FinanceApiService {
       version: item.version,
     });
   }
-  revenues(filters: Record<string, string | number | undefined>) {
-    return this.http.get<Page<Revenue>>('/api/finance/revenue', {
+  revenues(filters: Record<string, string | number | boolean | undefined>) {
+    return this.http.get<RevenuePage>('/api/finance/revenue', {
       params: clean({ page: 1, pageSize: 20, ...filters }),
     });
   }
@@ -155,6 +199,20 @@ export class FinanceApiService {
   }
   createExpense(value: object) {
     return this.http.post<{ id: string }>('/api/finance/expenses', value);
+  }
+  expenseLedger(paidPage: number, duePage: number) {
+    return this.http.get<{ paid: Page<Expense>; due: Page<DueExpense> }>('/api/finance/expenses/ledger', {
+      params: { paidPage, duePage },
+    });
+  }
+  fixedDueExpense(id: string) {
+    return this.http.get<DueExpense>(`/api/finance/expenses/due/${encodeURIComponent(id)}`);
+  }
+  fixedExpenses() {
+    return this.http.get<FixedExpenseSchedule[]>('/api/finance/expenses/fixed');
+  }
+  createFixedExpense(value: FixedExpenseInput) {
+    return this.http.post<{ id: string }>('/api/finance/expenses/fixed', value);
   }
   patientBalance(id: string) {
     return this.http.get<PatientBalance>(`/api/finance/patients/${id}/balance`);

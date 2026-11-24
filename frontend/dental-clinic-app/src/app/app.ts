@@ -296,10 +296,13 @@ export class App implements OnDestroy {
   protected switchClinic(event: Event): void {
     const tenantId = (event.target as HTMLSelectElement).value;
     if (!tenantId || tenantId === this.auth.tenantId()) return;
+    const stayOnRevenue = window.location.pathname === '/finance/revenue';
     this.switchingClinic.set(true);
     this.clinicSwitchError.set('');
     this.auth.switchClinic(tenantId).subscribe({
-      next: () => window.location.assign('/dashboard'),
+      next: () => window.location.assign(
+        stayOnRevenue && this.auth.hasPermission('Finance.Revenue.View') ? '/finance/revenue' : '/dashboard',
+      ),
       error: () => {
         this.switchingClinic.set(false);
         this.clinicSwitchError.set(this.t('Could not open this clinic.', 'تعذر فتح العيادة.'));

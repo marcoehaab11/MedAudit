@@ -183,12 +183,74 @@ internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock cl
             RevenueComparison = revenueComparison,
         };
     }
-    public async Task<PagedResult<RevenueItem>> RevenuesAsync(RevenueSearch x, FinanceRange range, CancellationToken token)
-    { var q = context.Revenues.AsNoTracking().Where(r => r.OccurredAt >= range.From && r.OccurredAt < range.To); if (!string.IsNullOrWhiteSpace(x.Search)) q = q.Where(r => EF.Functions.ILike(r.Description, $"%{x.Search}%")); if (x.PatientId.HasValue) q = q.Where(r => r.PatientId == x.PatientId); if (x.DoctorProfileId.HasValue) q = q.Where(r => r.DoctorProfileId == x.DoctorProfileId); if (x.TreatmentId.HasValue) q = q.Where(r => r.TreatmentId == x.TreatmentId); if (x.CategoryId.HasValue) q = q.Where(r => r.CategoryId == x.CategoryId); var total = await q.CountAsync(token); var items = await RevenueProjection(q.OrderByDescending(r => r.OccurredAt).Skip((x.Page - 1) * x.PageSize).Take(x.PageSize)).ToListAsync(token); return new(items, x.Page, x.PageSize, total); }
+    public async Task<RevenuePage> RevenuesAsync(RevenueSearch x, FinanceRange range, CancellationToken token)
+    {
+        var query = context.Revenues.AsNoTracking().Where(r => r.OccurredAt >= range.From && r.OccurredAt < range.To);
+        if (!string.IsNullOrWhiteSpace(x.Search))
+        {
+            var pattern = $"%{x.Search}%";
+            query = query.Where(r => EF.Functions.ILike(r.Description, pattern) ||
+                x.SearchTreatmentNotes && context.Treatments.Any(t => t.Id == r.TreatmentId &&
+                    (!x.TreatmentNotesDoctorId.HasValue || t.DoctorProfileId == x.TreatmentNotesDoctorId) &&
+                    t.Notes != null && EF.Functions.ILike(t.Notes, pattern)) ||
+                x.SearchPaymentNotes && context.Payments.Any(p => p.RevenueId == r.Id &&
+                    p.Notes != null && EF.Functions.ILike(p.Notes, pattern)));
+        }
+        if (x.PatientId.HasValue) query = query.Where(r => r.PatientId == x.PatientId);
+        if (x.DoctorProfileId.HasValue) query = query.Where(r => r.DoctorProfileId == x.DoctorProfileId);
+        if (x.TreatmentId.HasValue) query = query.Where(r => r.TreatmentId == x.TreatmentId);
+        if (x.CategoryId.HasValue) query = query.Where(r => r.CategoryId == x.CategoryId);
+
+        // The table and totals must agree even when a payment posts during the request.
+        await using var snapshot = x.IncludeSummary
+            ? await context.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, token)
+            : null;
+        var total = await query.CountAsync(token);
+        var items = await RevenueProjection(query.OrderByDescending(r => r.OccurredAt).ThenByDescending(r => r.Id)
+            .Skip((x.Page - 1) * x.PageSize).Take(x.PageSize)).ToListAsync(token);
+        var summary = x.IncludeSummary ? await SummarizeRevenuesAsync(query, range.Currency, token) : null;
+        if (snapshot is not null) await snapshot.CommitAsync(token);
+        return new(items, x.Page, x.PageSize, total, summary);
+    }
+
+    private async Task<RevenueResultsSummary> SummarizeRevenuesAsync(
+        IQueryable<Revenue> query, string currency, CancellationToken token)
+    {
+        var amounts = await query.GroupBy(r => r.Currency)
+            .Select(g => new
+            {
+                Currency = g.Key,
+                Revenue = g.Sum(r => r.Amount),
+                Paid = g.Sum(r => context.Payments.Where(p => p.RevenueId == r.Id).Sum(p => (decimal?)p.Amount) ?? 0),
+            }).ToListAsync(token);
+        var totals = amounts.OrderByDescending(x => x.Currency == currency).ThenBy(x => x.Currency)
+            .Select(x => new RevenueCurrencyTotals(x.Currency, x.Revenue, x.Paid, x.Revenue - x.Paid)).ToArray();
+
+        var services = await (from r in query
+                              join t in context.Treatments on r.TreatmentId equals (Guid?)t.Id
+                              join c in context.TreatmentCatalogItems on t.TreatmentCatalogItemId equals c.Id
+                              group r by new { c.Id, c.Name, c.Type, r.Currency } into g
+                              select new RevenueServiceTotal(g.Key.Id, g.Key.Name, g.Key.Type, g.Key.Currency, g.Sum(r => r.Amount)))
+            .ToListAsync(token);
+        var ranked = services.OrderByDescending(s => s.Currency == currency).ThenBy(s => s.Currency)
+            .ThenByDescending(s => s.Revenue).ThenBy(s => s.Name).ThenBy(s => s.CatalogItemId).ToArray();
+        return new(totals.Length == 0 ? [new(currency, 0, 0, 0)] : totals, ranked);
+    }
     public async Task<PagedResult<PaymentItem>> PaymentsAsync(PaymentSearch x, FinanceRange range, CancellationToken token)
     { var q = context.Payments.AsNoTracking().Where(p => p.PaidAt >= range.From && p.PaidAt < range.To); if (x.PatientId.HasValue) q = q.Where(p => p.PatientId == x.PatientId); if (x.RevenueId.HasValue) q = q.Where(p => p.RevenueId == x.RevenueId); if (x.TreatmentId.HasValue) q = q.Where(p => p.TreatmentId == x.TreatmentId); var total = await q.CountAsync(token); var items = await q.OrderByDescending(p => p.PaidAt).Skip((x.Page - 1) * x.PageSize).Take(x.PageSize).Select(p => new PaymentItem(p.Id, p.PatientId, context.Patients.Where(a => a.Id == p.PatientId).Select(a => a.FirstName + " " + a.LastName).FirstOrDefault(), p.RevenueId, p.TreatmentId, p.Amount, p.Currency, p.PaymentMethod, p.Reference, p.PaidAt, p.CreatedAt)).ToListAsync(token); return new(items, x.Page, x.PageSize, total); }
     public async Task<PagedResult<ExpenseItem>> ExpensesAsync(ExpenseSearch x, FinanceRange range, CancellationToken token)
-    { var q = context.Expenses.AsNoTracking().Where(e => e.ExpenseDate >= range.From && e.ExpenseDate < range.To); if (x.CategoryId.HasValue) q = q.Where(e => e.CategoryId == x.CategoryId); var total = await q.CountAsync(token); var items = await q.OrderByDescending(e => e.ExpenseDate).Skip((x.Page - 1) * x.PageSize).Take(x.PageSize).Select(e => new ExpenseItem(e.Id, e.CategoryId, context.FinancialCategories.Where(c => c.Id == e.CategoryId).Select(c => c.Name).Single(), e.Amount, e.Currency, e.Description, e.VendorName, e.Reference, e.ExpenseDate, e.CreatedAt)).ToListAsync(token); return new(items, x.Page, x.PageSize, total); }
+    {
+        var query = context.Expenses.AsNoTracking().Where(e => e.ExpenseDate >= range.From && e.ExpenseDate < range.To);
+        if (x.CategoryId.HasValue) query = query.Where(e => e.CategoryId == x.CategoryId);
+        var total = await query.CountAsync(token);
+        var items = await query.OrderByDescending(e => e.ExpenseDate).ThenByDescending(e => e.Id)
+            .Skip((x.Page - 1) * x.PageSize).Take(x.PageSize)
+            .Select(e => new ExpenseItem(e.Id, e.CategoryId,
+                context.FinancialCategories.Where(c => c.Id == e.CategoryId).Select(c => c.Name).Single(),
+                e.Amount, e.Currency, e.Description, e.VendorName, e.Reference, e.ExpenseDate, e.CreatedAt,
+                context.FixedExpensesDue.Any(d => d.ExpenseId == e.Id))).ToListAsync(token);
+        return new(items, x.Page, x.PageSize, total);
+    }
     public async Task<PatientBalance?> PatientBalanceAsync(Guid patientId, CancellationToken token)
     {
         if (!await context.Patients.AnyAsync(x => x.Id == patientId, token)) return null;
@@ -222,9 +284,29 @@ internal sealed class FinanceStore(ApplicationDbContext context, ISystemClock cl
     public async Task<decimal> PaidForRevenueAsync(Guid revenueId, CancellationToken token) => await context.Payments.Where(x => x.RevenueId == revenueId).SumAsync(x => (decimal?)x.Amount, token) ?? 0;
     public async Task<IFinanceTransaction> BeginTransactionAsync(CancellationToken token) => new FinanceTransaction(await context.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, token));
     public async Task LockRevenueAsync(Guid revenueId, CancellationToken token) { _ = await context.Revenues.FromSqlInterpolated($"SELECT * FROM revenues WHERE \"Id\" = {revenueId} FOR UPDATE").AsNoTracking().SingleOrDefaultAsync(token) ?? throw new FinanceNotFoundException("Revenue was not found."); }
+    public Task<FixedExpenseDue?> LockFixedExpenseDueAsync(Guid id, CancellationToken token) =>
+        context.FixedExpensesDue.FromSqlInterpolated($"SELECT * FROM fixed_expenses_due WHERE \"Id\" = {id} FOR UPDATE").SingleOrDefaultAsync(token);
+    public Task<FixedExpenseSchedule> FixedExpenseScheduleAsync(Guid id, CancellationToken token) =>
+        context.FixedExpenseSchedules.AsNoTracking().SingleAsync(x => x.Id == id, token);
     public void AddCategory(FinancialCategory x) => context.FinancialCategories.Add(x); public void AddRevenue(Revenue x) => context.Revenues.Add(x); public void AddPayment(Payment x) => context.Payments.Add(x); public void AddExpense(Expense x) => context.Expenses.Add(x); public void AddDoctorCost(DoctorCompensationCost x) => context.DoctorCompensationCosts.Add(x); public void AddTransaction(FinancialTransaction x) => context.FinancialTransactions.Add(x); public void AddAudit(PlatformAuditLog x) => context.PlatformAuditLogs.Add(x);
     public async Task SaveChangesAsync(CancellationToken token) { try { await context.SaveChangesAsync(token); } catch (DbUpdateConcurrencyException) { throw new FinanceConcurrencyException("The financial record changed. Reload it before continuing."); } catch (DbUpdateException x) when (x.InnerException is PostgresException p && p.SqlState == PostgresErrorCodes.UniqueViolation) { throw new FinanceConflictException("The financial source has already been posted."); } }
-    private IQueryable<RevenueItem> RevenueProjection(IQueryable<Revenue> q) => q.Select(r => new RevenueItem(r.Id, r.CategoryId, context.FinancialCategories.Where(c => c.Id == r.CategoryId).Select(c => c.Name).Single(), r.PatientId, context.Patients.Where(p => p.Id == r.PatientId).Select(p => p.FirstName + " " + p.LastName).FirstOrDefault(), r.TreatmentId, context.Treatments.Where(t => t.Id == r.TreatmentId).Select(t => t.TreatmentName).FirstOrDefault(), r.DoctorProfileId, context.DoctorProfiles.Where(d => d.Id == r.DoctorProfileId).Select(d => context.ClinicUsers.Where(u => u.Id == d.ClinicUserId).Select(u => u.DisplayName).Single()).FirstOrDefault(), r.Amount, context.Payments.Where(p => p.RevenueId == r.Id).Sum(p => (decimal?)p.Amount) ?? 0, r.Amount - (context.Payments.Where(p => p.RevenueId == r.Id).Sum(p => (decimal?)p.Amount) ?? 0), r.Currency, r.Description, r.OccurredAt));
+    private IQueryable<RevenueItem> RevenueProjection(IQueryable<Revenue> query) =>
+        from r in query
+        join patient in context.Patients on r.PatientId equals (Guid?)patient.Id into patients
+        from p in patients.DefaultIfEmpty()
+        join treatment in context.Treatments on r.TreatmentId equals (Guid?)treatment.Id into treatments
+        from t in treatments.DefaultIfEmpty()
+        join catalog in context.TreatmentCatalogItems on t.TreatmentCatalogItemId equals catalog.Id into catalogs
+        from c in catalogs.DefaultIfEmpty()
+        let paid = context.Payments.Where(p => p.RevenueId == r.Id).Sum(p => (decimal?)p.Amount) ?? 0
+        select new RevenueItem(r.Id, r.CategoryId,
+            context.FinancialCategories.Where(category => category.Id == r.CategoryId).Select(category => category.Name).Single(),
+            r.PatientId, p == null ? null : (p.FirstName + " " + (p.MiddleName ?? "") + " " + p.LastName).Replace("  ", " "),
+            r.TreatmentId, t == null ? null : t.TreatmentName,
+            r.DoctorProfileId, context.DoctorProfiles.Where(d => d.Id == r.DoctorProfileId)
+                .Select(d => context.ClinicUsers.Where(u => u.Id == d.ClinicUserId).Select(u => u.DisplayName).Single()).FirstOrDefault(),
+            r.Amount, paid, r.Amount - paid, r.Currency, r.Description, r.OccurredAt,
+            p == null ? null : p.PatientNumber, c == null ? null : c.Type);
     private static DateTimeOffset ToUtc(DateOnly date, TimeZoneInfo zone) => new(TimeZoneInfo.ConvertTimeToUtc(date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Unspecified), zone), TimeSpan.Zero);
     private sealed class FinanceTransaction(IDbContextTransaction transaction) : IFinanceTransaction { public Task CommitAsync(CancellationToken token) => transaction.CommitAsync(token); public ValueTask DisposeAsync() => transaction.DisposeAsync(); }
     private sealed class DailyTotal { public DateOnly Date { get; init; } public decimal Amount { get; init; } }

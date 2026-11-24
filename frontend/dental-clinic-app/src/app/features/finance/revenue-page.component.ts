@@ -1,159 +1,131 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, viewChild, ElementRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { LocalizationService } from '../../core/localization.service';
+import { catchError, map, of, Subject, switchMap } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
-import { FinanceApiService, Page, Revenue } from './finance-api.service';
-import { categoryTitle, money } from './finance-ui';
+import { LocalizationService } from '../../core/localization.service';
+import { FinanceApiService, RevenuePage, RevenueServiceTotal } from './finance-api.service';
 import { FinanceNavComponent } from './finance-nav.component';
+import { categoryTitle, money } from './finance-ui';
 
 @Component({
-  styleUrl: './finance.scss',
   selector: 'app-revenue-page',
-  standalone: true,
   imports: [FormsModule, RouterLink, FinanceNavComponent, DatePipe],
-  template: `
-    <section class="page-head">
-      <h1>{{ t('Revenue', 'الإيرادات') }}</h1>
-    </section>
-
-    <app-finance-nav />
-
-    <section class="panel finance-filters">
-      <label class="workspace-filter-field"><span>{{ t('Search description…', 'بحث في الوصف أو الملاحظات…') }}</span><input
-        class="filter-search-input"
-        [(ngModel)]="search"
-        [placeholder]="t('Search description…', 'بحث في الوصف أو الملاحظات…')"
-      /></label>
-      <label class="workspace-filter-field"><span>{{ t('From date', 'من تاريخ') }}</span><input
-        class="filter-date-input"
-        type="date"
-        [(ngModel)]="from"
-        [title]="t('From date', 'من تاريخ')"
-      /></label>
-      <label class="workspace-filter-field"><span>{{ t('To date', 'إلى تاريخ') }}</span><input
-        class="filter-date-input"
-        type="date"
-        [(ngModel)]="to"
-        [title]="t('To date', 'إلى تاريخ')"
-      /></label>
-      <button type="button" class="btn-filter" (click)="page = 1; load()">
-        🔍 {{ t('Search', 'بحث وتصفية') }}
-      </button>
-    </section>
-
-    @if (loadError()) { <div class="alert error" role="alert"><p>{{ loadError() }}</p><button type="button" (click)="load()">{{ t('Try again', 'إعادة المحاولة') }}</button></div> }
-    @if (loading()) {
-      <div class="state">{{ t('Loading revenue records…', 'جاري تحميل سجلات الإيرادات…') }}</div>
-    } @else if (!loadError()) {
-      <section class="panel table-panel">
-        <div class="table-responsive"><table class="finance-table">
-          <thead>
-            <tr>
-              <th>{{ t('Date', 'التاريخ') }}</th>
-              <th>{{ t('Patient', 'المريض') }}</th>
-              <th>{{ t('Treatment', 'العلاج') }}</th>
-              <th>{{ t('Category', 'التصنيف') }}</th>
-              <th>{{ t('Revenue', 'الإيراد') }}</th>
-              <th>{{ t('Paid', 'المدفوع') }}</th>
-              <th>{{ t('Outstanding', 'المستحق') }}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (x of data()?.items; track x.id) {
-              <tr>
-                <td>{{ x.occurredAt | date: 'dd/MM/yyyy' }}</td>
-                <td><strong>{{ x.patientName || '—' }}</strong></td>
-                <td>{{ x.treatmentName || '—' }}</td>
-                <td>{{ getCategoryName(x.categoryName) }}</td>
-                <td class="amount-neutral">{{ format(x.amount, x.currency) }}</td>
-                <td class="amount-positive">{{ format(x.paid, x.currency) }}</td>
-                <td [class.amount-negative]="x.outstanding > 0">{{ format(x.outstanding, x.currency) }}</td>
-                <td>
-                  @if (x.outstanding > 0 && auth.hasPermission('Finance.Payments.Create')) {
-                    <a
-                      class="button sm primary"
-                      [routerLink]="['/finance/payments/create']"
-                      [queryParams]="{ revenueId: x.id }"
-                    >
-                      💳 {{ t('Pay', 'تسجيل دفعة') }}
-                    </a>
-                  }
-                </td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="8" style="text-align: center; padding: 3rem 1rem; color: var(--muted);">
-                  {{ t('No revenue records found.', 'لا توجد سجلات إيرادات.') }}
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table></div>
-
-        <div class="pagination">
-          <button [disabled]="page === 1" (click)="page = page - 1; load()">‹</button>
-          <span>{{ page }} / {{ data()?.totalPages || 1 }}</span>
-          <button [disabled]="page >= (data()?.totalPages || 1)" (click)="page = page + 1; load()">›</button>
-        </div>
-      </section>
-    }
-  `,
+  templateUrl: './revenue-page.component.html',
+  styleUrl: './revenue-page.component.scss',
+  host: { '(window:focus)': 'refreshOnFocus()' },
 })
 export class RevenuePageComponent {
-  readonly auth = inject(AuthService);
-  private api = inject(FinanceApiService);
-  private route = inject(ActivatedRoute);
-  i18n = inject(LocalizationService);
-  data = signal<Page<Revenue> | null>(null);
-  loading = signal(true);
-  loadError = signal('');
-  page = 1;
-  search = '';
-  from = '';
-  to = '';
-  patientId = this.route.snapshot.queryParamMap.get('patientId') || '';
-  treatmentId = this.route.snapshot.queryParamMap.get('treatmentId') || '';
+  protected readonly auth = inject(AuthService);
+  private readonly api = inject(FinanceApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly i18n = inject(LocalizationService);
+  private readonly requests = new Subject<void>();
+  private readonly serviceDialog = viewChild.required<ElementRef<HTMLDialogElement>>('serviceDialog');
+
+  protected readonly data = signal<RevenuePage | null>(null);
+  protected readonly loading = signal(true);
+  protected readonly loadError = signal(false);
+  protected readonly metrics = [
+    { key: 'revenue', en: 'Total revenue', ar: 'إجمالي الإيرادات', icon: 'revenue' },
+    { key: 'paid', en: 'Total paid', ar: 'إجمالي المدفوع', icon: 'paid' },
+    { key: 'outstanding', en: 'Total outstanding', ar: 'إجمالي المستحق', icon: 'outstanding' },
+    { key: 'count', en: 'Transactions', ar: 'عدد المعاملات', icon: 'count' },
+  ] as const;
+  protected readonly serviceGroups = computed(() => {
+    const groups = new Map<string, { currency: string; services: RevenueServiceTotal[]; total: number }>();
+    for (const service of this.data()?.summary?.services ?? []) {
+      let group = groups.get(service.currency);
+      if (!group) {
+        group = { currency: service.currency, services: [], total: 0 };
+        groups.set(service.currency, group);
+      }
+      group.services.push(service);
+      group.total += service.revenue;
+    }
+    return [...groups.values()];
+  });
+
+  protected page = 1;
+  protected search = '';
+  protected from = '';
+  protected to = '';
+  private applied = { search: '', from: '', to: '' };
 
   constructor() {
+    this.requests.pipe(
+      switchMap(() => this.api.revenues({
+        ...this.applied,
+        page: this.page,
+        includeSummary: true,
+        patientId: this.route.snapshot.queryParamMap.get('patientId') || '',
+        treatmentId: this.route.snapshot.queryParamMap.get('treatmentId') || '',
+      }).pipe(
+        map((data) => ({ data, error: false })),
+        catchError(() => of({ data: null, error: true })),
+      )),
+      takeUntilDestroyed(),
+    ).subscribe(({ data, error }) => {
+      if (data && this.page > Math.max(1, data.totalPages)) {
+        this.changePage(Math.max(1, data.totalPages));
+        return;
+      }
+      this.data.set(data);
+      this.loadError.set(error);
+      this.loading.set(false);
+    });
     this.load();
   }
 
-  load() {
-    this.loadError.set('');
+  protected applyFilters() {
+    this.applied = { search: this.search, from: this.from, to: this.to };
+    this.changePage(1);
+  }
+
+  protected changePage(page: number) {
+    this.page = page;
+    this.load();
+  }
+
+  protected load() {
+    this.loadError.set(false);
     this.loading.set(true);
-    this.loading.set(true);
-    this.api
-      .revenues({
-        page: this.page,
-        search: this.search,
-        from: this.from,
-        to: this.to,
-        patientId: this.patientId,
-        treatmentId: this.treatmentId,
-      })
-      .subscribe({
-        next: (x) => {
-          this.data.set(x);
-          this.loading.set(false);
-        },
-        error: () => { this.loading.set(false); this.loadError.set(this.t('Could not load these records. Please try again.', 'تعذر تحميل السجلات. يرجى إعادة المحاولة.')); },
-      });
+    this.requests.next();
   }
 
-  getCategoryName(name: string) {
-    return categoryTitle(name, this.i18n.language());
+  protected refreshOnFocus() {
+    if (!this.loading() && !this.serviceDialog().nativeElement.open && !this.loadError()) {
+      this.requests.next();
+    }
   }
 
-  format(v: number, c: string) {
-    return money(v, c, this.i18n.language());
+  protected openServices() {
+    this.serviceDialog().nativeElement.showModal();
   }
 
-  t(e: string, a: string) {
-    return this.i18n.language() === 'en' ? e : a;
+  protected category(type: number | undefined, fallback?: string) {
+    switch (type) {
+      case 1: return this.t('Fillings and restorations', 'الحشوات والترميمات');
+      case 2: return this.t('Extraction and surgery', 'الخلع والجراحة');
+      case 3: return this.t('Implants', 'زراعة الأسنان');
+      case 4: return this.t('Root canal', 'علاج العصب');
+      case 5: return this.t('Crowns', 'التيجان');
+      case 6: return this.t('Other services', 'خدمات أخرى');
+      default: return categoryTitle(fallback, this.i18n.language());
+    }
+  }
+
+  protected format(value: number, currency: string) {
+    return money(value, currency, this.i18n.language());
+  }
+
+  protected formatCount(value: number) {
+    return value.toLocaleString(this.i18n.language() === 'ar' ? 'ar-EG' : 'en-US');
+  }
+
+  protected t(en: string, ar: string) {
+    return this.i18n.language() === 'en' ? en : ar;
   }
 }
-
-
