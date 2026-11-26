@@ -1,14 +1,12 @@
+@use './appointment-booking-colors' as appointments;
+
 .room-schedule { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: .75rem; align-items: stretch; }
 .room-column { min-inline-size: 0; background: #fff; border: 1px solid #d7e8e9; border-radius: 14px; overflow: hidden; }
 .room-column h2 { text-align: center; margin: 0; padding: .75rem; background: #eff6f8; color: #153e4b; font-size: 1.05rem; }
 .room-appointments { display: flex; flex-direction: column; gap: .65rem; padding: .55rem; min-block-size: 15rem; max-block-size: max(24rem, 64dvh); overflow: auto; }
 .room-column.dense .room-appointments { gap: .4rem; }
 .room-column.compact .room-appointments { gap: .26rem; }
-[data-state='unconfirmed'] { --state-ink: #844300; --state-fill: #fff2dc; --state-edge: #f1d5a7; }
-[data-state='confirmed'] { --state-ink: #165691; --state-fill: #e7f3ff; --state-edge: #c6def2; }
-[data-state='attended'] { --state-ink: #146041; --state-fill: #e3f7ed; --state-edge: #bee8d2; }
-[data-state='no-show'] { --state-ink: #9a2834; --state-fill: #ffedf0; --state-edge: #f0c7cf; }
-[data-state='cancelled'] { --state-ink: #435763; --state-fill: #f0f3f5; --state-edge: #d9e1e5; }
+@include appointments.booking-colors('data-state');
 .room-column .room-card {
   display: grid; grid-template-columns: auto 1fr auto; gap: .65rem; align-items: center;
   min-block-size: 90px; block-size: auto; flex-shrink: 0; padding: .65rem; text-align: start;

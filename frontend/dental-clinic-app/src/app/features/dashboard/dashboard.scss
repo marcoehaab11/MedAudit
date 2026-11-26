@@ -1,4 +1,5 @@
 @use '../../shared/styles/workspace-calendar';
+@use '../appointments/appointment-booking-colors' as appointments;
 
 // ─── MedAudit Dental Practice Dashboard Styles ────────────────────────────────
 
@@ -217,71 +218,6 @@ button.primary {
     background: #fff1f2;
     color: #be123c;
     border-color: #fecdd3;
-  }
-}
-
-// ── Details Panel ──
-.details {
-  position: sticky;
-  inset-block-start: calc(62px + 1.5rem);
-  align-self: start;
-  background: #ffffff;
-
-  .details-header-badges {
-    display: flex;
-    gap: 0.45rem;
-    align-items: center;
-    margin-block-end: 0.75rem;
-    flex-wrap: wrap;
-  }
-
-  .close {
-    float: inline-end;
-    background: transparent;
-    border: none;
-    font-size: 1.2rem;
-    color: var(--muted, #64748b);
-    padding: 0.2rem 0.4rem;
-    border-radius: var(--radius-sm, 8px);
-    cursor: pointer;
-    line-height: 1;
-
-    &:hover {
-      background: var(--surface, #f8fafc);
-      color: var(--ink, #0f172a);
-      transform: none;
-      box-shadow: none;
-    }
-  }
-
-  dl div {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    border-block-end: 1px solid var(--border, #e2e8f0);
-    padding-block: 0.65rem;
-
-    &:last-child {
-      border-block-end: none;
-    }
-  }
-
-  dd {
-    margin: 0;
-    text-align: end;
-    font-weight: 700;
-    color: var(--ink, #0f172a);
-  }
-
-  dt {
-    color: var(--muted, #64748b);
-    font-size: 0.86rem;
-  }
-
-  form {
-    display: grid;
-    gap: 0.5rem;
-    margin-block-start: 1rem;
   }
 }
 
@@ -763,7 +699,6 @@ button.primary {
   gap: .75rem;
   grid-template-columns: minmax(0, 1fr);
 
-  &:has(.details) { grid-template-columns: minmax(0, 1fr) minmax(250px, 290px); }
 }
 
 .calendar {
@@ -778,6 +713,8 @@ button.primary {
 }
 
 .workspace-dashboard .schedule-table {
+  @include appointments.booking-colors('data-booking-state');
+
   border-collapse: collapse;
   inline-size: 100%;
   text-align: start;
@@ -799,7 +736,14 @@ button.primary {
   }
 
   tr:last-child td { border-block-end: 0; }
-  .schedule-row:hover, .selected-row { background: #f4faf9; }
+  .schedule-row {
+    cursor: pointer;
+    background: color-mix(in srgb, var(--state-fill) 42%, white);
+    box-shadow: inset 4px 0 var(--state-edge);
+
+    &:hover, &:focus-within { background: var(--state-fill); }
+  }
+  :host-context([dir='rtl']) & .schedule-row { box-shadow: inset -4px 0 var(--state-edge); }
   .schedule-date-row th { background: #f5f9fa; color: #395761; padding-block: .55rem; }
 }
 
@@ -827,9 +771,13 @@ button.primary {
   font-variant-numeric: tabular-nums;
   svg { inline-size: 14px; block-size: 14px; vertical-align: middle; margin-inline-end: .25rem; color: #476973; }
 }
-.schedule-status .status-badge { border: 0; border-radius: 999px; font-size: .73rem; }
-.schedule-status .status-badge-2 { background: #ddf6eb; color: #11634f; }
-.schedule-status .status-badge-6 { background: #ffe6e9; color: #a52d44; }
+.schedule-status .status-badge {
+  border: 1px solid var(--state-edge);
+  border-radius: 999px;
+  background: var(--state-fill);
+  color: var(--state-ink);
+  font-size: .73rem;
+}
 .schedule-actions { white-space: nowrap; }
 .schedule-open {
   display: inline-grid;
@@ -849,15 +797,6 @@ button.primary {
   &:hover { background: #e8f5f0; color: #125d51; box-shadow: none; transform: none; }
 }
 
-.details {
-  padding: 1rem;
-  border: 1px solid #deebed;
-  border-radius: 12px;
-  box-shadow: none;
-  min-inline-size: 0;
-  background: #fff;
-  &:focus-visible { outline: 2px solid #188273; outline-offset: 2px; }
-}
 .state { padding: 1.5rem 1rem; text-align: center; color: var(--ink-secondary); }
 .state p { font-size: .88rem; }
 
@@ -871,11 +810,6 @@ button.primary {
 .compact-item { min-inline-size: 0; flex-wrap: wrap; }
 .compact-info { overflow-wrap: anywhere; }
 .patient-initials-badge { background: var(--brand-light); color: var(--brand-dark); }
-
-@media (max-width: 1150px) {
-  .calendar-layout:has(.details) { grid-template-columns: minmax(0, 1fr); }
-  .details { position: static; scroll-margin-block: 7rem 5rem; }
-}
 
 @media (max-width: 650px) {
   .dashboard-header {

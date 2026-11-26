@@ -181,7 +181,7 @@
             <select [value]="statusFilter()" (change)="onStatusChange($event)">
               <option value="">{{ t('All statuses', 'كل الحالات') }}</option>
               @for (s of statuses; track s) {
-                <option [value]="s">{{ statusLabel(s) }}</option>
+                <option [value]="s">{{ bookingStatus(s) }}</option>
               }
             </select>
           </label>
@@ -207,7 +207,7 @@
             data-testid="appointment-calendar"
             [attr.aria-busy]="appointmentsLoading()"
           >
-            @if (appointmentsLoading()) {
+            @if (appointmentsLoading() && !result()) {
               <div class="state" role="status">
                 {{ t('Loading schedule…', 'جارٍ تحميل الجدول…') }}
               </div>
@@ -255,7 +255,8 @@
                     @if (view() !== 'day' && (first || date !== localDate(result()!.page.items[index - 1].startAt, result()!.page.items[index - 1].timeZone))) {
                       <tr class="schedule-date-row"><th colspan="6">{{ dayLabel(date) }}</th></tr>
                     }
-                    <tr class="schedule-row" [class.selected-row]="selected()?.id === item.id">
+                    <tr class="schedule-row" [attr.data-booking-state]="bookingState(item.status)"
+                      (click)="detailsButton.focus(); drawer.open(item)">
                       <td class="schedule-patient">
                         <span class="schedule-patient-label">
                           <span class="schedule-avatar" aria-hidden="true">{{ patientInitials(item.patientName) }}</span>
@@ -269,16 +270,16 @@
                       </td>
                       <td class="schedule-type">{{ typeLabel(item.type) }}</td>
                       <td class="schedule-status">
-                        <span class="status-badge status-badge-{{ item.status }}">{{ statusLabel(item.status) }}</span>
+                        <span class="status-badge">{{ bookingStatus(item.status) }}</span>
                       </td>
                       <td class="schedule-actions">
-                        <button type="button" class="schedule-open" (click)="open(item, $event)"
+                        <button #detailsButton type="button" class="schedule-open" aria-haspopup="dialog" (click)="$event.stopPropagation(); drawer.open(item)"
                           [attr.aria-label]="t('View appointment for', 'عرض موعد') + ' ' + item.patientName"
                           [title]="t('View appointment', 'عرض الموعد')">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>
                         </button>
                         @if ((item.status === 3 || item.status === 4) && auth.hasPermission('Examination.View')) {
-                          <a class="schedule-open" [routerLink]="['/appointments', item.id, 'visit']"
+                          <a class="schedule-open" (click)="$event.stopPropagation()" [routerLink]="['/appointments', item.id, 'visit']"
                             [attr.aria-label]="item.status === 4 ? t('Continue visit', 'متابعة الزيارة') : t('Open visit', 'فتح الزيارة')"
                             [title]="item.status === 4 ? t('Continue visit', 'متابعة الزيارة') : t('Open visit', 'فتح الزيارة')">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5M14 4h6v6m0-6-9 9"/></svg>
@@ -292,139 +293,8 @@
             }
           </section>
 
-          @if (selected()) {
-            <aside #detailsPanel class="panel details" tabindex="-1" [attr.aria-label]="t('Appointment details', 'تفاصيل الموعد')">
-              <button class="close" type="button" (click)="closeDetails()" [attr.aria-label]="t('Close appointment details', 'إغلاق تفاصيل الموعد')">×</button>
-              <div class="details-header-badges">
-                <span class="status-badge status-badge-{{ selected()!.status }}">{{
-                  statusLabel(selected()!.status)
-                }}</span>
-                <span class="type-badge type-badge-{{ selected()!.type }}">
-                  @if (selected()!.type === 5) {
-                    🚨
-                  }
-                  {{ typeLabel(selected()!.type) }}
-                </span>
-              </div>
-              <h2>{{ selected()!.patientName }}</h2>
-              <dl>
-                <div>
-                  <dt>{{ t('Doctor', 'الطبيب') }}</dt>
-                  <dd>{{ selected()!.doctorName }}</dd>
-                </div>
-                <div>
-                  <dt>{{ t('Time', 'الوقت') }}</dt>
-                  <dd>
-                    {{ dayLabel(localDate(selected()!.startAt, selected()!.timeZone)) }} ·
-                    {{ time(selected()!.startAt, selected()!.timeZone) }}
-                  </dd>
-                </div>
-                <div>
-                  <dt>{{ t('Duration', 'المدة') }}</dt>
-                  <dd>{{ selected()!.durationMinutes }} {{ t('minutes', 'دقيقة') }}</dd>
-                </div>
-                <div>
-                  <dt>{{ t('Type', 'النوع') }}</dt>
-                  <dd>
-                    <span class="type-badge type-badge-{{ selected()!.type }}">
-                      @if (selected()!.type === 5) {
-                        🚨
-                      }
-                      {{ typeLabel(selected()!.type) }}
-                    </span>
-                  </dd>
-                </div>
-              </dl>
-              @if (selected()!.notes) {
-                <p>{{ selected()!.notes }}</p>
-              }
-              <app-appointment-card-actions
-                [appointment]="selected()!"
-                [busy]="appointmentActionPending()"
-                (action)="action($event)"
-                (cancel)="cancel()"
-              />
-              @if (
-                auth.hasPermission('TreatmentPlans.Create') ||
-                auth.hasPermission('Prescriptions.Create')
-              ) {
-                <details>
-                  <summary>{{ t('Clinical tools', 'أدوات الزيارة') }}</summary>
-                  <div class="actions">
-                    @if (auth.hasPermission('TreatmentPlans.Create')) {
-                      <a
-                        class="button"
-                        routerLink="/treatment-plans/create"
-                        [queryParams]="{
-                          appointmentId: selected()!.id,
-                          patientId: selected()!.patientId,
-                          doctorProfileId: selected()!.doctorProfileId,
-                        }"
-                      >
-                        📋 {{ t('Create treatment plan', 'إنشاء خطة علاج') }}
-                      </a>
-                    }
-                    @if (auth.hasPermission('Prescriptions.Create')) {
-                      <a
-                        class="button"
-                        routerLink="/prescriptions/create"
-                        [queryParams]="{
-                          appointmentId: selected()!.id,
-                          patientId: selected()!.patientId,
-                          doctorProfileId: selected()!.doctorProfileId,
-                        }"
-                      >
-                        💊 {{ t('Create prescription', 'إنشاء وصفة') }}
-                      </a>
-                    }
-                  </div>
-                </details>
-              }
-              @if (
-                (selected()!.status === 1 || selected()!.status === 2) &&
-                auth.hasPermission('Appointments.Edit')
-              ) {
-                <details>
-                  <summary>{{ t('Reschedule', 'إعادة الجدولة') }}</summary>
-                  <form [formGroup]="rescheduleForm" (ngSubmit)="reschedule()">
-                    <input
-                      type="date"
-                      formControlName="date"
-                      (change)="loadRescheduleAvailability()"
-                    />
-                    <input
-                      type="number"
-                      min="5"
-                      max="480"
-                      formControlName="durationMinutes"
-                      (change)="loadRescheduleAvailability()"
-                    />
-                    @if (rescheduleLoading()) {
-                      <span>{{ t('Checking availability…', 'جارٍ التحقق من الأوقات…') }}</span>
-                    } @else {
-                      <div class="slots">
-                        @for (slot of rescheduleSlots(); track slot.startAt) {
-                          <button
-                            type="button"
-                            [class.selected]="
-                              rescheduleForm.controls.startTime.value === slot.localStartTime
-                            "
-                            (click)="chooseRescheduleSlot(slot)"
-                          >
-                            {{ slot.localStartTime.slice(0, 5) }}
-                          </button>
-                        }
-                      </div>
-                    }
-                    <button [disabled]="!rescheduleForm.controls.startTime.value">
-                      {{ t('Save new time', 'حفظ الوقت الجديد') }}
-                    </button>
-                  </form>
-                </details>
-              }
-            </aside>
-          }
         </div>
+        <app-appointment-details-drawer #drawer (changed)="appointmentChanged($event)" />
       </section>
     }
 

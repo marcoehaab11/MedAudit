@@ -17,19 +17,38 @@ describe('AppointmentsPageComponent', () => {
 
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
-  it('keeps the reception appointment card open while starting and refreshing its status',()=>{
-    const fixture=TestBed.createComponent(AppointmentsPageComponent),c=fixture.componentInstance,http=TestBed.inject(HttpTestingController);
+  it('keeps the shared drawer open while starting and refreshing a reception visit', () => {
+    TestBed.inject(AuthService).permissions.update((permissions) => [...permissions, 'Appointments.Start']);
+    TestBed.inject(LocalizationService).set('en');
+    const fixture = TestBed.createComponent(AppointmentsPageComponent);
+    const http = TestBed.inject(HttpTestingController);
     http.expectOne('/api/doctors/lookup').flush([]);
     http.expectOne('/api/appointments/rooms').flush([]);
-    const empty={page:{items:[],page:1,pageSize:100,totalCount:0,totalPages:0},timeZone:'UTC'};
-    http.expectOne(r=>r.url==='/api/appointments').flush(empty);
-    const appointment={id:'a1',patientId:'p1',patientName:'Patient',doctorProfileId:'d1',doctorName:'Doctor',status:3,type:1,startAt:'2026-10-20T10:00:00Z',endAt:'2026-10-20T11:00:00Z',durationMinutes:60,timeZone:'UTC',createdAt:'',updatedAt:''};
-    c.selected.set(appointment);c.action('start');c.action('start');
+    const date = fixture.componentInstance.selectedDate();
+    const appointment = {
+      id: 'a1', patientId: 'p1', patientName: 'Patient', doctorProfileId: 'd1', doctorName: 'Doctor',
+      status: 3, type: 1, startAt: `${date}T10:00:00Z`, endAt: `${date}T11:00:00Z`,
+      durationMinutes: 60, timeZone: 'UTC',
+    };
+    const result = { page: { items: [appointment], page: 1, pageSize: 100, totalCount: 1, totalPages: 1 }, timeZone: 'UTC' };
+    http.expectOne((r) => r.url === '/api/appointments').flush(result);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const drawer = root.querySelector<HTMLDialogElement>('app-appointment-details-drawer dialog')!;
+    drawer.showModal ??= () => { drawer.open = true; };
+    root.querySelector<HTMLButtonElement>('.room-card')!.click();
+    http.expectOne('/api/appointments/a1').flush(appointment);
+    fixture.detectChanges();
+    const start = root.querySelector<HTMLButtonElement>('app-appointment-card-actions button')!;
+    start.click();
+    start.click();
     http.expectOne('/api/appointments/a1/start').flush(null);
-    expect(c.selected()?.id).toBe('a1');expect(c.appointmentActionPending()).toBe(true);
-    http.expectOne(r=>r.url==='/api/appointments').flush(empty);
-    http.expectOne('/api/appointments/a1').flush({...appointment,status:4});
-    expect(c.selected()?.status).toBe(4);expect(c.appointmentActionPending()).toBe(false);
+    const started = { ...appointment, status: 4 };
+    http.expectOne((r) => r.url === '/api/appointments').flush({ ...result, page: { ...result.page, items: [started] } });
+    http.expectOne('/api/appointments/a1').flush(started);
+    fixture.detectChanges();
+    expect(drawer.open).toBe(true);
+    expect(root.querySelector('.booking-badge')?.textContent).toContain('In progress');
   });
   it('renders appointments returned by the calendar query', () => {
     const fixture = TestBed.createComponent(AppointmentsPageComponent);

@@ -1,3 +1,19 @@
+export const bookableAppointmentTypes = [1, 2] as const;
+
+export function appointmentBookingState(status: number): string {
+  if (status === 1) return 'unconfirmed';
+  if (status === 2) return 'confirmed';
+  if (status === 6) return 'cancelled';
+  if (status === 7) return 'no-show';
+  return 'attended';
+}
+
+export function appointmentBookingStatus(status: number, language: 'en' | 'ar'): string {
+  if (status === 1) return language === 'en' ? 'Unconfirmed' : 'غير مؤكد';
+  if (status === 3) return language === 'en' ? 'Attended' : 'حضر';
+  return appointmentStatus(status, language);
+}
+
 export function appointmentStatus(value: number, language: 'en' | 'ar'): string {
   const labels =
     language === 'en'

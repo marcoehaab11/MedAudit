@@ -29,6 +29,7 @@ describe('AppointmentCreateComponent', () => {
     const http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
     flushLookups(http);
+    c.form.controls.type.setValue(2);
     const patient = openPatientForm(fixture);
     patient.fullName.setValue('Booking Samir MedicalTest');
     patient.form.patchValue({
@@ -64,6 +65,7 @@ describe('AppointmentCreateComponent', () => {
     for (const r of http.match((r) => r.url === '/api/patients' && r.method === 'GET'))
       r.flush({ items: [], totalCount: 0 });
     expect(c.form.controls.patientId.value).toBe('p-new');
+    expect(c.form.controls.type.value).toBe(1);
     expect(fixture.nativeElement.querySelector('app-patient-create-dialog dialog').open).toBe(false);
     http.expectNone((r) => /\/patients\/p-new\/(allergies|conditions|medications)/.test(r.url));
   }, 15_000);
@@ -217,7 +219,8 @@ describe('AppointmentCreateComponent', () => {
     availability.flush([slot]);
     component.selectedSlot.set(slot);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('[formControlName="type"]').options.length).toBe(2);
+    const types = fixture.nativeElement.querySelector('[formControlName="type"]') as HTMLSelectElement;
+    expect(Array.from(types.options, (option) => option.textContent?.trim())).toEqual(['مريض جديد', 'متابعة']);
     expect(fixture.nativeElement.querySelector('.booking-review').textContent).toContain('P-000001');
 
     component.save();
@@ -249,7 +252,9 @@ describe('AppointmentCreateComponent', () => {
     };
     component.selectedSlot.set(slot);
     component.save();
-    http.expectOne('/api/appointments').flush({}, { status: 409, statusText: 'Conflict' });
+    const creation = http.expectOne('/api/appointments');
+    expect(creation.request.body.type).toBe(1);
+    creation.flush({}, { status: 409, statusText: 'Conflict' });
     http.expectOne((r) => r.url === '/api/appointments/availability').flush([]);
 
     expect(component.error()).toContain('تم حجز هذا الموعد');

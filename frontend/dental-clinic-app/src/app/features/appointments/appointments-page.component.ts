@@ -1,36 +1,30 @@
 import { AppointmentIntakeActionsComponent } from './appointment-intake-actions.component';
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
-import { AppointmentCardActionsComponent } from './appointment-card-actions.component';
 import { BillingQueueComponent } from '../finance/billing-queue.component';
-import { Component, HostListener, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { Component, HostListener, computed, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { LocalizationService } from '../../core/localization.service';
 import { DoctorApiService, DoctorLookupItem } from '../doctors/doctor-api.service';
 import {
   AppointmentApiService,
-  AppointmentDetails,
   AppointmentItem,
   AppointmentSearchResult,
   ClinicRoom,
-  AvailabilitySlot,
 } from './appointment-api.service';
 import { Subscription } from 'rxjs';
-import { appointmentStatus, appointmentType } from './appointment-labels';
-import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
+import { appointmentBookingState, appointmentStatus, appointmentType, bookableAppointmentTypes } from './appointment-labels';
+import { AppointmentDetailsDrawerComponent } from './appointment-details-drawer.component';
 
 @Component({
   styleUrls: ['./appointments.scss', './appointments-rooms.scss'],
   selector: 'app-appointments-page',
   standalone: true,
   imports: [
-    AppointmentCardActionsComponent,
     AppointmentIntakeActionsComponent,
+    AppointmentDetailsDrawerComponent,
     BillingQueueComponent,
     CommonModule,
-    ReactiveFormsModule,
     RouterLink,
   ],
   template: `
@@ -169,7 +163,7 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
       </details>
     </section>
 
-    <div class="calendar-layout" [class.has-details]="selected()">
+    <div class="calendar-layout">
       <section
         class="panel calendar workspace-results"
         data-testid="appointment-calendar"
@@ -186,7 +180,7 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
                   <h2>{{ room.name }}</h2>
                   <div class="room-appointments">
                     @for (item of room.items; track item.id) {
-                      <button class="room-card" type="button" [attr.data-state]="attendanceColor(item.status)" (click)="open(item)">
+                      <button class="room-card" type="button" [attr.data-state]="attendanceColor(item.status)" (click)="drawer.open(item)" aria-haspopup="dialog">
                         <time><bdi>{{ time(item.startAt, item.timeZone) }}</bdi></time>
                         <span class="room-card-info">
                           <strong><bdi>{{ item.patientName }}</bdi></strong>
@@ -231,7 +225,7 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
                       <button
                         type="button"
                         class="appointment-card status-{{ item.status }} type-{{ item.type }}"
-                        (click)="open(item)"
+                        (click)="drawer.open(item)" aria-haspopup="dialog"
                       >
                         <div class="card-time">
                           <span class="time-range"
@@ -293,147 +287,8 @@ import { ConfirmDialogService } from '../../shared/confirm-dialog.service';
         }
       </section>
 
-      @if (selected()) {
-        <aside class="panel details">
-          <button class="close" type="button" (click)="selected.set(null)">×</button>
-          <div class="details-header-badges">
-            <span class="status-badge status-badge-{{ selected()!.status }}">{{
-              statusLabel(selected()!.status)
-            }}</span>
-            <span class="type-badge type-badge-{{ selected()!.type }}">
-              @if (selected()!.type === 5) {
-                🚨
-              }
-              {{ typeLabel(selected()!.type) }}
-            </span>
-          </div>
-          <h2>{{ selected()!.patientName }}</h2>
-          <dl>
-            <div>
-              <dt>{{ t('Doctor', 'الطبيب') }}</dt>
-              <dd>{{ selected()!.doctorName }}</dd>
-            </div>
-            <div>
-              <dt>{{ t('Time', 'الوقت') }}</dt>
-              <dd>
-                {{ dayLabel(localDate(selected()!.startAt, selected()!.timeZone)) }} ·
-                {{ time(selected()!.startAt, selected()!.timeZone) }}
-              </dd>
-            </div>
-            <div>
-              <dt>{{ t('Duration', 'المدة') }}</dt>
-              <dd>{{ selected()!.durationMinutes }} {{ t('minutes', 'دقيقة') }}</dd>
-            </div>
-            <div>
-              <dt>{{ t('Type', 'النوع') }}</dt>
-              <dd>
-                <span class="type-badge type-badge-{{ selected()!.type }}">
-                  @if (selected()!.type === 5) {
-                    🚨
-                  }
-                  {{ typeLabel(selected()!.type) }}
-                </span>
-              </dd>
-            </div>
-          </dl>
-          @if (selected()!.notes) {
-            <p>{{ selected()!.notes }}</p>
-          }
-          @if (rooms().length && auth.hasPermission('Appointments.Edit') && ![5, 6, 7].includes(selected()!.status)) {
-            <div class="room-edit">
-              <label class="workspace-filter-field"><span>{{ t('Room', 'الغرفة') }}</span>
-                <select #roomSelect [value]="selected()!.roomId ?? ''">
-                  <option value="">{{ t('No room assigned', 'بدون غرفة محددة') }}</option>
-                  @for (room of rooms(); track room.id) { <option [value]="room.id">{{ room.name }}</option> }
-                </select>
-              </label>
-              <button class="button" type="button" [disabled]="appointmentActionPending()"
-                (click)="assignRoom(roomSelect.value)">{{ t('Save room', 'حفظ الغرفة') }}</button>
-            </div>
-          }
-          <app-appointment-card-actions
-            [appointment]="selected()!"
-            [busy]="appointmentActionPending()"
-            (action)="action($event)"
-            (cancel)="cancel()"
-          />
-          @if (
-            auth.hasPermission('TreatmentPlans.Create') ||
-            auth.hasPermission('Prescriptions.Create')
-          ) {
-            <details>
-              <summary>{{ t('Clinical tools', 'أدوات الزيارة') }}</summary>
-              <div class="actions">
-                @if (auth.hasPermission('TreatmentPlans.Create')) {
-                  <a
-                    class="button"
-                    routerLink="/treatment-plans/create"
-                    [queryParams]="{
-                      appointmentId: selected()!.id,
-                      patientId: selected()!.patientId,
-                      doctorProfileId: selected()!.doctorProfileId,
-                    }"
-                  >
-                    📋 {{ t('Create treatment plan', 'إنشاء خطة علاج') }}
-                  </a>
-                }
-                @if (auth.hasPermission('Prescriptions.Create')) {
-                  <a
-                    class="button"
-                    routerLink="/prescriptions/create"
-                    [queryParams]="{
-                      appointmentId: selected()!.id,
-                      patientId: selected()!.patientId,
-                      doctorProfileId: selected()!.doctorProfileId,
-                    }"
-                  >
-                    💊 {{ t('Create prescription', 'إنشاء وصفة') }}
-                  </a>
-                }
-              </div>
-            </details>
-          }
-          @if (
-            (selected()!.status === 1 || selected()!.status === 2) &&
-            auth.hasPermission('Appointments.Edit')
-          ) {
-            <details>
-              <summary>{{ t('Reschedule', 'إعادة الجدولة') }}</summary>
-              <form [formGroup]="rescheduleForm" (ngSubmit)="reschedule()">
-                <input type="date" formControlName="date" (change)="loadRescheduleAvailability()" />
-                <input
-                  type="number"
-                  min="5"
-                  max="480"
-                  formControlName="durationMinutes"
-                  (change)="loadRescheduleAvailability()"
-                />
-                @if (rescheduleLoading()) {
-                  <span>{{ t('Checking availability…', 'جارٍ التحقق من الأوقات…') }}</span>
-                } @else {
-                  <div class="slots">
-                    @for (slot of rescheduleSlots(); track slot.startAt) {
-                      <button
-                        type="button"
-                        [class.selected]="
-                          rescheduleForm.controls.startTime.value === slot.localStartTime
-                        "
-                        (click)="chooseRescheduleSlot(slot)"
-                      >
-                        {{ slot.localStartTime.slice(0, 5) }}
-                      </button>
-                    }
-                  </div>
-                }
-                <button [disabled]="!rescheduleForm.controls.startTime.value">
-                  {{ t('Save new time', 'حفظ الوقت الجديد') }}
-                </button>
-              </form>
-            </details>
-          }
-        </aside>
-      }
     </div>
+    <app-appointment-details-drawer #drawer [rooms]="rooms()" (changed)="appointmentChanged($event)" />
     @if (auth.hasPermission('Finance.Revenue.View')) {
       <app-billing-queue />
     }
@@ -447,9 +302,7 @@ export class AppointmentsPageComponent {
   private readonly api = inject(AppointmentApiService);
   private readonly doctorApi = inject(DoctorApiService);
   protected readonly auth = inject(AuthService);
-  protected readonly confirmDialog = inject(ConfirmDialogService);
   readonly i18n = inject(LocalizationService);
-  readonly fb = inject(FormBuilder);
 
   private readonly route = inject(ActivatedRoute);
 
@@ -461,21 +314,12 @@ export class AppointmentsPageComponent {
 
   readonly result = signal<AppointmentSearchResult | null>(null);
   readonly doctors = signal<DoctorLookupItem[]>([]);
-  readonly appointmentActionPending = signal(false);
-  readonly selected = signal<AppointmentDetails | null>(null);
   readonly loading = signal(true);
   readonly error = signal('');
   readonly message = signal('');
-  readonly rescheduleSlots = signal<AvailabilitySlot[]>([]);
-  readonly rescheduleLoading = signal(false);
   readonly statuses = [1, 2, 3, 4, 5, 6, 7];
-  readonly types = [1, 2, 3, 4, 5, 6];
-
-  readonly rescheduleForm = this.fb.nonNullable.group({
-    date: '',
-    startTime: '',
-    durationMinutes: 30,
-  });
+  readonly types = bookableAppointmentTypes;
+  private readonly drawer = viewChild(AppointmentDetailsDrawerComponent);
 
   readonly isToday = computed(() => {
     return this.selectedDate() === this.iso(new Date());
@@ -528,9 +372,8 @@ export class AppointmentsPageComponent {
     });
   }
 
-  load(preserveSelection = false, quiet = false) {
+  load(quiet = false) {
     this.calendarRequest?.unsubscribe();
-    if (!preserveSelection) this.selected.set(null);
     if (!quiet) this.loading.set(true);
     this.error.set('');
     const days = this.days();
@@ -659,9 +502,7 @@ export class AppointmentsPageComponent {
     } as Record<string, string>)[state] ?? '';
   }
 
-  attendanceColor(status: number): string {
-    return ({ 1: 'unconfirmed', 2: 'confirmed', 6: 'cancelled', 7: 'no-show' } as Record<number, string>)[status] ?? 'attended';
-  }
+  readonly attendanceColor = appointmentBookingState;
 
   attendanceLabel(status: number): string {
     if (status === 6) return this.t('Cancelled', 'ملغي');
@@ -671,143 +512,21 @@ export class AppointmentsPageComponent {
 
   @HostListener('window:focus')
   refreshOnFocus(): void {
-    if (!this.loading() && !this.appointmentActionPending()) this.load(true, true);
+    if (!this.loading() && !this.drawer()?.busy()) this.load(true);
   }
 
-  assignRoom(roomId: string): void {
-    const item = this.selected();
-    if (!item || this.appointmentActionPending() || (item.roomId ?? '') === roomId) return;
-    this.appointmentActionPending.set(true);
-    this.api.assignRoom(item.id, roomId || null).subscribe({
-      next: () => {
-        if (this.selected()?.id === item.id) this.selected.set({ ...item, roomId: roomId || undefined });
-        this.appointmentActionPending.set(false);
-        this.load(true, true);
-      },
-      error: () => {
-        this.appointmentActionPending.set(false);
-        this.error.set(this.t('Could not assign the room. It may already be in use.', 'تعذر تعيين الغرفة. قد تكون مشغولة في هذا الوقت.'));
-      },
-    });
+  appointmentChanged(message: string): void {
+    this.message.set(message);
+    this.load(true);
   }
 
   appointmentCreated(): void {
     this.message.set(this.t('Appointment created.', 'تم إنشاء الموعد.'));
-    this.load(true, true);
+    this.load(true);
   }
 
   patientCreated(): void {
     this.message.set(this.t('Patient saved successfully.', 'تم حفظ المريض بنجاح.'));
-  }
-
-  open(item: AppointmentItem) {
-    this.api.appointment(item.id).subscribe((x) => {
-      this.selected.set(x);
-      this.rescheduleForm.setValue({
-        date: this.localDate(x.startAt, x.timeZone),
-        startTime: '',
-        durationMinutes: x.durationMinutes,
-      });
-      this.loadRescheduleAvailability();
-    });
-  }
-
-  loadRescheduleAvailability() {
-    if (!this.selected() || !this.rescheduleForm.controls.date.value) return;
-    this.rescheduleForm.controls.startTime.setValue('');
-    this.rescheduleLoading.set(true);
-    this.api
-      .availability(
-        this.selected()!.doctorProfileId,
-        this.rescheduleForm.controls.date.value,
-        this.rescheduleForm.controls.durationMinutes.value,
-      )
-      .subscribe({
-        next: (slots) => {
-          this.rescheduleSlots.set(slots);
-          this.rescheduleLoading.set(false);
-        },
-        error: () => {
-          this.rescheduleSlots.set([]);
-          this.rescheduleLoading.set(false);
-        },
-      });
-  }
-
-  chooseRescheduleSlot(slot: AvailabilitySlot) {
-    this.rescheduleForm.controls.startTime.setValue(slot.localStartTime);
-  }
-
-  action(action: 'confirm' | 'check-in' | 'start' | 'complete' | 'no-show') {
-    if (!this.selected() || this.appointmentActionPending()) return;
-    this.appointmentActionPending.set(true);
-    this.api.action(this.selected()!.id, action).subscribe({
-      next: () => this.refresh(this.t('Appointment updated.', 'تم تحديث الموعد.')),
-      error: () => {
-        this.appointmentActionPending.set(false);
-        this.error.set(this.t('The appointment could not be updated.', 'تعذر تحديث الموعد.'));
-      },
-    });
-  }
-
-  async cancel() {
-    const reason = prompt(this.t('Cancellation reason', 'سبب الإلغاء'));
-    if (!reason) return;
-
-    const confirmed = await this.confirmDialog.ask({
-      title: this.t('Cancel Appointment', 'إلغاء الموعد'),
-      message: this.t(
-        'Are you sure you want to cancel this appointment?',
-        'هل تريد بالتأكيد إلغاء هذا الموعد الطبي؟',
-      ),
-      confirmText: this.t('Yes, Cancel Appointment', 'نعم، إلغاء الموعد'),
-      cancelText: this.t('Back', 'تراجع'),
-      variant: 'danger',
-      icon: '⚠️',
-    });
-
-    if (!confirmed) return;
-
-    this.api.cancel(this.selected()!.id, reason).subscribe({
-      next: () => this.refresh(this.t('Appointment cancelled.', 'تم إلغاء الموعد.')),
-      error: () => this.error.set(this.t('Cancellation failed.', 'تعذر الإلغاء.')),
-    });
-  }
-
-  reschedule() {
-    this.api.reschedule(this.selected()!.id, this.rescheduleForm.getRawValue()).subscribe({
-      next: () => this.refresh(this.t('Appointment rescheduled.', 'تمت إعادة جدولة الموعد.')),
-      error: (e: HttpErrorResponse) => {
-        this.error.set(
-          e.status === 409
-            ? this.t(
-                'That slot was just booked. Choose another time.',
-                'تم حجز هذا الوقت للتو. اختر وقتًا آخر.',
-              )
-            : this.t('Rescheduling failed.', 'تعذرت إعادة الجدولة.'),
-        );
-        this.loadRescheduleAvailability();
-        this.load();
-      },
-    });
-  }
-
-  private refresh(message: string) {
-    this.message.set(message);
-    const id = this.selected()!.id;
-    this.load(true);
-    this.api.appointment(id).subscribe({
-      next: (x) => {
-        this.selected.set(x);
-        this.appointmentActionPending.set(false);
-      },
-      error: () => {
-        this.appointmentActionPending.set(false);
-        this.error.set(
-          this.t('Could not refresh appointment details.', 'تعذر تحديث بيانات الموعد.'),
-        );
-      },
-    });
   }
 
   localDate(value: string, zone: string) {

@@ -1,0 +1,114 @@
+<app-workspace-dialog [drawer]="true" width="28rem" [title]="t('Appointment details', 'تفاصيل الموعد')"
+  [closeLabel]="t('Close', 'إغلاق')" [closeDisabled]="busy()" (closed)="closed()">
+  @if (message()) { <p class="alert success" role="status">{{ message() }}</p> }
+  @if (error()) { <p class="alert error" role="alert">{{ error() }}</p> }
+
+  @if (selected(); as item) {
+    <section class="details" [attr.aria-busy]="loadingDetails() || busy()">
+      <h3>{{ item.patientName }}</h3>
+      <span class="booking-badge" [attr.data-booking-state]="state(item.status)">{{ status(item) }}</span>
+      <dl>
+        <div><dt>{{ t('Doctor', 'الطبيب') }}</dt><dd>{{ item.doctorName }}</dd></div>
+        <div><dt>{{ t('Time', 'الوقت') }}</dt><dd>{{ time(item) }}</dd></div>
+        <div><dt>{{ t('Duration', 'المدة') }}</dt><dd>{{ item.durationMinutes }} {{ t('minutes', 'دقيقة') }}</dd></div>
+        <div><dt>{{ t('Visit type', 'نوع الزيارة') }}</dt><dd>{{ type(item) }}</dd></div>
+      </dl>
+      @if (notes()) { <p>{{ notes() }}</p> }
+
+      @let disabled = busy() || loadingDetails();
+      @let availableRooms = rooms() ?? fetchedRooms();
+      @if (availableRooms?.length && auth.hasPermission('Appointments.Edit') && ![5, 6, 7].includes(item.status)) {
+        <div class="room-edit">
+          <label>
+            {{ t('Room', 'الغرفة') }}
+            <select #roomSelect [value]="item.roomId ?? ''" [disabled]="disabled">
+              <option value="">{{ t('No room assigned', 'بدون غرفة محددة') }}</option>
+              @for (room of availableRooms; track room.id) {
+                <option [value]="room.id">{{ room.name }}</option>
+              }
+            </select>
+          </label>
+          <button class="button" type="button" [disabled]="disabled" (click)="assignRoom(item, roomSelect.value)">
+            {{ t('Save room', 'حفظ الغرفة') }}
+          </button>
+        </div>
+      }
+      <app-appointment-card-actions [appointment]="item" [busy]="disabled"
+        (action)="action(item, $event)" (cancel)="cancelling.set(true)" />
+      @if (cancelling()) {
+        <form class="cancel-form" (submit)="$event.preventDefault(); cancel(item)">
+          <label>
+            {{ t('Cancellation reason', 'سبب الإلغاء') }}
+            <textarea [formControl]="reason" rows="2" required></textarea>
+          </label>
+          <div class="actions">
+            <button type="submit" class="button danger" [disabled]="disabled || !reason.value.trim()">
+              {{ t('Confirm cancellation', 'تأكيد الإلغاء') }}
+            </button>
+            <button type="button" class="button" [disabled]="disabled" (click)="cancelling.set(false)">
+              {{ t('Back', 'تراجع') }}
+            </button>
+          </div>
+        </form>
+      }
+
+      @if (auth.hasPermission('TreatmentPlans.Create') || auth.hasPermission('Prescriptions.Create')) {
+        <details>
+          <summary>{{ t('Clinical tools', 'أدوات الزيارة') }}</summary>
+          @let context = { appointmentId: item.id, patientId: item.patientId, doctorProfileId: item.doctorProfileId };
+          <div class="actions">
+            @if (auth.hasPermission('TreatmentPlans.Create')) {
+              <a class="button" routerLink="/treatment-plans/create" [queryParams]="context">
+                {{ t('Create treatment plan', 'إنشاء خطة علاج') }}
+              </a>
+            }
+            @if (auth.hasPermission('Prescriptions.Create')) {
+              <a class="button" routerLink="/prescriptions/create" [queryParams]="context">
+                {{ t('Create prescription', 'إنشاء وصفة') }}
+              </a>
+            }
+          </div>
+        </details>
+      }
+
+      @if ([1, 2].includes(item.status) && auth.hasPermission('Appointments.Edit')) {
+        <details #reschedulePanel (toggle)="reschedulePanel.open && loadRescheduleAvailability()">
+          <summary>{{ t('Reschedule', 'إعادة الجدولة') }}</summary>
+          <form [formGroup]="rescheduleForm" (ngSubmit)="reschedule(item)">
+            <fieldset [disabled]="disabled">
+              <label>
+                {{ t('Date', 'التاريخ') }}
+                <input type="date" formControlName="date" (change)="loadRescheduleAvailability()" />
+              </label>
+              <label>
+                {{ t('Duration (minutes)', 'المدة بالدقائق') }}
+                <input type="number" min="5" max="480" formControlName="durationMinutes" (change)="loadRescheduleAvailability()" />
+              </label>
+              @if (rescheduleLoading()) {
+                <span role="status">{{ t('Checking availability…', 'جارٍ التحقق من الأوقات…') }}</span>
+              } @else if (availabilityError()) {
+                <p role="alert">{{ t('Could not load available times.', 'تعذر تحميل الأوقات المتاحة.') }}</p>
+                <button type="button" class="button" (click)="loadRescheduleAvailability()">{{ t('Retry', 'إعادة المحاولة') }}</button>
+              } @else {
+                <div class="actions">
+                  @for (slot of rescheduleSlots(); track slot.startAt) {
+                    <button type="button" class="button slot"
+                      [attr.aria-pressed]="rescheduleForm.controls.startTime.value === slot.localStartTime"
+                      (click)="rescheduleForm.controls.startTime.setValue(slot.localStartTime)">
+                      {{ slot.localStartTime.slice(0, 5) }}
+                    </button>
+                  } @empty {
+                    <p>{{ t('No available times.', 'لا توجد أوقات متاحة.') }}</p>
+                  }
+                </div>
+              }
+              <button type="submit" class="button primary" [disabled]="rescheduleForm.invalid || rescheduleLoading()">
+                {{ t('Save new time', 'حفظ الوقت الجديد') }}
+              </button>
+            </fieldset>
+          </form>
+        </details>
+      }
+    </section>
+  }
+</app-workspace-dialog>

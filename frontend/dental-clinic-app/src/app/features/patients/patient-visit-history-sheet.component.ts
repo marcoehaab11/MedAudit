@@ -1,3 +1,4 @@
+import { appointmentType } from '../appointments/appointment-labels';
 import { AuthService } from '../../core/auth.service';
 import { PatientClinicalHistoryComponent } from './patient-clinical-history.component';
 import { CommonModule, DatePipe } from '@angular/common';
@@ -1229,15 +1230,7 @@ export class PatientVisitHistorySheetComponent implements OnInit, OnChanges {
   }
 
   appointmentTypeLabel(type: number): string {
-    switch (type) {
-      case 1: return this.t('Consultation', 'استشارة');
-      case 2: return this.t('Regular Checkup', 'فحص دوري');
-      case 3: return this.t('Treatment / Procedure', 'علاج / إجراء');
-      case 4: return this.t('Follow-up', 'متابعة');
-      case 5: return this.t('Emergency', 'طوارئ');
-      case 6: return this.t('Surgery', 'جراحة');
-      default: return this.t('Visit', 'زيارة');
-    }
+    return appointmentType(type, this.i18n.language());
   }
 
   appointmentStatusLabel(status: number): string {

@@ -1,0 +1,7 @@
+@mixin booking-colors($attribute) {
+  [#{$attribute}='unconfirmed'] { --state-ink: #844300; --state-fill: #fff2dc; --state-edge: #f1d5a7; }
+  [#{$attribute}='confirmed'] { --state-ink: #165691; --state-fill: #e7f3ff; --state-edge: #c6def2; }
+  [#{$attribute}='attended'] { --state-ink: #146041; --state-fill: #e3f7ed; --state-edge: #bee8d2; }
+  [#{$attribute}='no-show'] { --state-ink: #9a2834; --state-fill: #ffedf0; --state-edge: #f0c7cf; }
+  [#{$attribute}='cancelled'] { --state-ink: #435763; --state-fill: #f0f3f5; --state-edge: #d9e1e5; }
+}

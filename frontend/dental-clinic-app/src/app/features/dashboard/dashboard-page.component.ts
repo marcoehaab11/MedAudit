@@ -1,8 +1,6 @@
 import { AppointmentIntakeActionsComponent } from '../appointments/appointment-intake-actions.component';
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
-import { afterNextRender, Component, ElementRef, HostListener, Injector, computed, inject, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { Component, HostListener, computed, inject, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { forkJoin, of, Subscription } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -10,17 +8,15 @@ import { AuthService } from '../../core/auth.service';
 import { LocalizationService } from '../../core/localization.service';
 import {
   AppointmentApiService,
-  AppointmentDetails,
   AppointmentItem,
   AppointmentSearchResult,
-  AvailabilitySlot,
 } from '../appointments/appointment-api.service';
 import { money } from '../finance/finance-ui';
-import { AppointmentCardActionsComponent } from '../appointments/appointment-card-actions.component';
 import { DoctorVisitQueueComponent } from './doctor-visit-queue.component';
 import { BillingQueueComponent } from '../finance/billing-queue.component';
 import { DoctorDues, FinanceApiService } from '../finance/finance-api.service';
-import { appointmentStatus, appointmentType } from '../appointments/appointment-labels';
+import { appointmentBookingState, appointmentBookingStatus, appointmentStatus, appointmentType, bookableAppointmentTypes } from '../appointments/appointment-labels';
+import { AppointmentDetailsDrawerComponent } from '../appointments/appointment-details-drawer.component';
 import { DoctorApiService, DoctorListItem } from '../doctors/doctor-api.service';
 import { PatientApiService, PatientListItem } from '../patients/patient-api.service';
 import { DashboardReport, ReportPeriod, ReportsApiService } from '../reports/reports-api.service';
@@ -30,12 +26,11 @@ import { DashboardReport, ReportPeriod, ReportsApiService } from '../reports/rep
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule,
     RouterLink,
     BillingQueueComponent,
     DoctorVisitQueueComponent,
-    AppointmentCardActionsComponent,
     AppointmentIntakeActionsComponent,
+    AppointmentDetailsDrawerComponent,
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
@@ -43,10 +38,6 @@ import { DashboardReport, ReportPeriod, ReportsApiService } from '../reports/rep
 export class DashboardPageComponent implements OnInit, OnDestroy {
   protected readonly auth = inject(AuthService);
   protected readonly i18n = inject(LocalizationService);
-  private readonly fb = inject(FormBuilder);
-  private readonly injector = inject(Injector);
-  private readonly detailsPanel = viewChild<ElementRef<HTMLElement>>('detailsPanel');
-  private detailsTrigger?: HTMLElement;
   private readonly appointmentApi = inject(AppointmentApiService);
   private readonly doctorApi = inject(DoctorApiService);
   private readonly patientApi = inject(PatientApiService);
@@ -87,18 +78,11 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
 
   readonly result = signal<AppointmentSearchResult | null>(null);
   readonly doctors = signal<DoctorListItem[]>([]);
-  readonly appointmentActionPending = signal(false);
-  readonly selected = signal<AppointmentDetails | null>(null);
-  readonly rescheduleSlots = signal<AvailabilitySlot[]>([]);
-  readonly rescheduleLoading = signal(false);
   readonly statuses = [1, 2, 3, 4, 5, 6, 7];
-  readonly types = [1, 2, 3, 4, 5, 6];
-
-  readonly rescheduleForm = this.fb.nonNullable.group({
-    date: '',
-    startTime: '',
-    durationMinutes: 30,
-  });
+  readonly types = bookableAppointmentTypes;
+  readonly bookingState = appointmentBookingState;
+  private readonly drawer = viewChild(AppointmentDetailsDrawerComponent);
+  private readonly visitQueue = viewChild(DoctorVisitQueueComponent);
 
   readonly isToday = computed(() => {
     return this.selectedDate() === this.iso(new Date());
@@ -151,8 +135,8 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
 
   @HostListener('window:focus')
   refreshScheduleOnFocus(): void {
-    if (!this.loading() && !this.appointmentsLoading() && !this.appointmentActionPending()) {
-      this.loadAppointments();
+    if (!this.loading() && !this.appointmentsLoading() && !this.drawer()?.busy()) {
+      this.loadAppointments(true);
       this.loadTodayAppointments();
     }
   }
@@ -244,10 +228,11 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
       .subscribe((result) => this.todayAppointments.set(result));
   }
 
-  loadAppointments(): void {
+  loadAppointments(keepRows = false): void {
     if (!this.auth.hasPermission('Appointments.View')) return;
     this.scheduleRequest?.unsubscribe();
     this.appointmentsLoading.set(true);
+    if (!keepRows) this.result.set(null);
     this.scheduleError.set('');
     this.scheduleRequest = this.appointmentApi
       .appointments({
@@ -271,15 +256,6 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
           }
           this.result.set(x);
           this.appointmentsLoading.set(false);
-          if (this.selected()) {
-            const currentSelected = this.selected()!;
-            const found = x?.page?.items?.find(
-              (item: AppointmentItem) => item.id === currentSelected.id,
-            );
-            if (!found) {
-              this.selected.set(null);
-            }
-          }
         },
         error: () => {
           this.appointmentsLoading.set(false);
@@ -341,133 +317,15 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
     this.loadAppointments();
   }
 
-  open(item: AppointmentItem, event: Event) {
-    this.detailsTrigger = event.currentTarget as HTMLElement;
-    this.appointmentApi.appointment(item.id).subscribe({
-      next: (x) => {
-        this.selected.set(x);
-        this.focusDetails();
-        this.rescheduleForm.setValue({
-          date: this.localDate(x.startAt, x.timeZone),
-          startTime: '',
-          durationMinutes: x.durationMinutes,
-        });
-        this.loadRescheduleAvailability();
-      },
-      error: () => {
-        this.selected.set(item as AppointmentDetails);
-        this.focusDetails();
-      },
-    });
+  appointmentChanged(message: string): void {
+    this.showTemporarySuccess(message);
+    this.loadAppointments(true);
+    this.loadTodayAppointments();
+    this.visitQueue()?.refresh();
   }
 
-  private focusDetails(): void {
-    afterNextRender(() => this.detailsPanel()?.nativeElement.focus(), { injector: this.injector });
-  }
-
-  closeDetails(): void {
-    this.selected.set(null);
-    if (this.detailsTrigger?.isConnected) this.detailsTrigger.focus();
-    this.detailsTrigger = undefined;
-  }
-
-  loadRescheduleAvailability() {
-    if (!this.selected() || !this.rescheduleForm.controls.date.value) return;
-    this.rescheduleForm.controls.startTime.setValue('');
-    this.rescheduleLoading.set(true);
-    this.appointmentApi
-      .availability(
-        this.selected()!.doctorProfileId,
-        this.rescheduleForm.controls.date.value,
-        this.rescheduleForm.controls.durationMinutes.value,
-      )
-      .subscribe({
-        next: (slots) => {
-          this.rescheduleSlots.set(slots);
-          this.rescheduleLoading.set(false);
-        },
-        error: () => {
-          this.rescheduleSlots.set([]);
-          this.rescheduleLoading.set(false);
-        },
-      });
-  }
-
-  chooseRescheduleSlot(slot: AvailabilitySlot) {
-    this.rescheduleForm.controls.startTime.setValue(slot.localStartTime);
-  }
-
-  action(actionType: 'confirm' | 'check-in' | 'start' | 'complete' | 'no-show') {
-    if (!this.selected() || this.appointmentActionPending()) return;
-    const id = this.selected()!.id;
-    this.appointmentActionPending.set(true);
-    this.appointmentApi.action(id, actionType).subscribe({
-      next: () => {
-        this.showTemporarySuccess(this.t('Appointment updated.', 'تم تحديث الموعد بنجاح.'));
-        this.loadAppointments();
-        this.loadTodayAppointments();
-        this.appointmentApi.appointment(id).subscribe({
-          next: (x) => {
-            this.selected.set(x);
-            this.appointmentActionPending.set(false);
-          },
-          error: () => {
-            this.appointmentActionPending.set(false);
-            this.error.set(
-              this.t('Could not refresh appointment details.', 'تعذر تحديث بيانات الموعد.'),
-            );
-          },
-        });
-      },
-      error: () => {
-        this.appointmentActionPending.set(false);
-        this.error.set(this.t('The appointment could not be updated.', 'تعذر تحديث الموعد.'));
-      },
-    });
-  }
-
-  cancel() {
-    if (!this.selected()) return;
-    const reason = prompt(this.t('Cancellation reason', 'سبب الإلغاء'));
-    if (!reason || !confirm(this.t('Cancel this appointment?', 'هل تريد إلغاء هذا الموعد؟')))
-      return;
-    const id = this.selected()!.id;
-    this.appointmentApi.cancel(id, reason).subscribe({
-      next: () => {
-        this.showTemporarySuccess(this.t('Appointment cancelled.', 'تم إلغاء الموعد.'));
-        this.loadAppointments();
-        this.loadTodayAppointments();
-        this.selected.set(null);
-      },
-      error: () => this.error.set(this.t('Cancellation failed.', 'تعذر الإلغاء.')),
-    });
-  }
-
-  reschedule() {
-    if (!this.selected()) return;
-    this.appointmentApi
-      .reschedule(this.selected()!.id, this.rescheduleForm.getRawValue())
-      .subscribe({
-        next: () => {
-          this.showTemporarySuccess(this.t('Appointment rescheduled.', 'تمت إعادة جدولة الموعد.'));
-          const id = this.selected()!.id;
-          this.loadAppointments();
-          this.loadTodayAppointments();
-          this.appointmentApi.appointment(id).subscribe((x) => this.selected.set(x));
-        },
-        error: (e: HttpErrorResponse) => {
-          this.error.set(
-            e.status === 409
-              ? this.t(
-                  'That slot was just booked. Choose another time.',
-                  'تم حجز هذا الوقت للتو. اختر وقتًا آخر.',
-                )
-              : this.t('Rescheduling failed.', 'تعذرت إعادة الجدولة.'),
-          );
-          this.loadRescheduleAvailability();
-          this.loadAppointments();
-        },
-      });
+  bookingStatus(status: number): string {
+    return appointmentBookingStatus(status, this.i18n.language());
   }
 
   localDate(value: string, zone?: string): string {

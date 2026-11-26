@@ -17,7 +17,7 @@ import { parseApiError } from '../../core/error-util';
 import { DoctorApiService, DoctorListItem } from '../doctors/doctor-api.service';
 import { PatientCreateDialogComponent } from '../patients/patient-create-dialog.component';
 import { AppointmentApiService, AvailabilitySlot } from './appointment-api.service';
-import { appointmentType } from './appointment-labels';
+import { appointmentType, bookableAppointmentTypes } from './appointment-labels';
 import {
   TreatmentApiService,
   TreatmentPlanList,
@@ -100,14 +100,14 @@ export class AppointmentCreateComponent implements OnInit, OnChanges {
   readonly error = signal('');
   readonly availabilityError = signal('');
   private availabilityRequestId = 0;
-  readonly types = [3, 2];
+  readonly types = bookableAppointmentTypes;
   readonly form = inject(FormBuilder).nonNullable.group({
     patientId: ['', Validators.required],
     doctorProfileId: ['', Validators.required],
     date: [this.today(), Validators.required],
     durationMinutes: [60, [Validators.required, Validators.min(5)]],
     isEmergency: [false],
-    type: [3, Validators.required],
+    type: [1, Validators.required],
     roomId: '',
     notes: ['', [Validators.maxLength(2000)]],
   });
@@ -197,9 +197,6 @@ export class AppointmentCreateComponent implements OnInit, OnChanges {
         const active = (res.items || []).filter((p) => p.status === 1);
         this.activeTreatmentPlans.set(active);
         this.loadingTreatments.set(false);
-        if (active.length > 0) {
-          this.form.controls.type.setValue(4);
-        }
       },
       error: () => this.loadingTreatments.set(false),
     });
@@ -210,11 +207,6 @@ export class AppointmentCreateComponent implements OnInit, OnChanges {
           (t) => t.status === 3 || t.status === 1 || t.status === 2,
         );
         this.activeTreatments.set(active);
-        if (active.length > 0) {
-          this.form.controls.type.setValue(4);
-        } else if (!this.activeTreatmentPlans().length && this.form.controls.type.value === 1) {
-          this.form.controls.type.setValue(2);
-        }
       },
       error: () => {},
     });
@@ -249,6 +241,7 @@ export class AppointmentCreateComponent implements OnInit, OnChanges {
 
   selectCreatedPatient(id: string): void {
     this.patientSelectComp?.loadPatients();
+    this.form.controls.type.setValue(1);
     this.form.controls.patientId.setValue(id);
   }
 
@@ -373,7 +366,6 @@ export class AppointmentCreateComponent implements OnInit, OnChanges {
   }
 
   typeLabel(x: number) {
-    if (x === 3) return this.t('Examination', 'كشف');
     return appointmentType(x, this.i18n.language());
   }
 
